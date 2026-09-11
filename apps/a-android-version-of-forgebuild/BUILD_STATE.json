@@ -2,7 +2,7 @@
   "project": "forgebuild-a-android-version-of-forgebuild",
   "build_complete": false,
   "updated_by": "session-a-android-version-of-forgebuild",
-  "current_task": "step-5",
+  "current_task": "step-6",
   "tasks": [
     {
       "id": "step-1",
@@ -31,8 +31,8 @@
     {
       "id": "step-5",
       "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented full native Android version of ForgeBuild: App inventory dashboard with real-time GitHub API integration, detailed build & release inspector, 1-tap APK downloader via DownloadManager, AI contract prompt generator with auto-slugification and copy-to-clipboard, CI workflow run monitor with manual dispatch, and PAT configuration in Material 3 using ForgeBuildTheme and EngineIcons."
     },
     {
       "id": "step-6",
@@ -63,6 +63,10 @@
     {
       "session": "session-a-android-version-of-forgebuild",
       "event": "step-4 done: confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets."
+    },
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-5 done: implemented native ForgeBuild Android app with inventory, details, prompt generator, APK installer, and workflow trigger."
     }
   ]
 }
