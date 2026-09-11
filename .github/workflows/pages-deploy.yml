@@ -1,4 +1,4 @@
-name: Deploy Dashboard to Cloudflare Pages
+name: Deploy Dashboard to Cloudflare Pages (site/ -> forgebuild.pages.dev)
 on:
   push:
     branches: [main]

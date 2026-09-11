@@ -1,0 +1,91 @@
+name: "Build & Release App APK"
+
+# Single-repo release workflow: builds whichever apps/<slug>/ folder the
+# workflow_dispatch input names, and creates a release tagged "<app-slug>-vN"
+# (N auto-incremented from existing releases carrying the same prefix).
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_path:
+        description: "App folder to build, e.g. apps/tapcounter"
+        required: true
+      release_notes:
+        description: "Version notes (optional)"
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  APP_PATH: ${{ github.event.inputs.app_path }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate app folder
+        run: |
+          if ! echo "$APP_PATH" | grep -qE '^apps/[a-z0-9][a-z0-9-]*$'; then
+            echo "app_path must look like apps/<slug> (got: $APP_PATH)"; exit 1
+          fi
+          [ -f "$APP_PATH/settings.gradle.kts" ] || { echo "no Gradle project at $APP_PATH"; exit 1; }
+          echo "SLUG=${APP_PATH#apps/}" >> "$GITHUB_ENV"
+          echo "Building app slug: ${APP_PATH#apps/}"
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore (release signing)
+        run: |
+          mkdir -p "$APP_PATH/keystore"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$APP_PATH/keystore/release.jks"
+
+      - name: Build release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd "$APP_PATH"
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Determine next version tag (<slug>-vN)
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LAST=$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq ".[].tag_name" | grep -oP "^${SLUG}-v\K[0-9]+$" | sort -n | tail -1 || true)
+          NEXT=$(( ${LAST:-0} + 1 ))
+          TAG="${SLUG}-v${NEXT}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Latest existing tag for '$SLUG': v${LAST:-0} -> releasing $TAG"
+
+      - name: Write app manifest (metadata)
+        run: |
+          PKG=$(grep -oP 'applicationId = "\K[^"]+' "$APP_PATH/app/build.gradle.kts")
+          NAME=$(grep -oP '(?<=<string name="app_name">)[^<]+' "$APP_PATH/app/src/main/res/values/strings.xml" || echo "App")
+          PERMS=$(grep -oP 'android:name="android.permission.\K[^"]+' "$APP_PATH/app/src/main/AndroidManifest.xml" | sort -u | paste -sd, - || true)
+          NOTES="${{ github.event.inputs.release_notes || github.event.head_commit.message }}"
+          printf '{\n  "app_name": "%s",\n  "app_slug": "%s",\n  "package": "%s",\n  "version_tag": "%s",\n  "permissions": "%s",\n  "version_notes": "%s",\n  "built_by": "forgebuild single-repo release workflow"\n}\n' \
+            "$NAME" "$SLUG" "$PKG" "${{ steps.meta.outputs.tag }}" "$PERMS" "$NOTES" > forgebuild-manifest.json
+
+      - name: Rename APK
+        run: cp "$APP_PATH/app/build/outputs/apk/release/app-release.apk" "app-${{ steps.meta.outputs.tag }}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          body: ${{ github.event.inputs.release_notes || github.event.head_commit.message }}
+          files: |
+            app-${{ steps.meta.outputs.tag }}.apk
+            forgebuild-manifest.json
+          generate_release_notes: false

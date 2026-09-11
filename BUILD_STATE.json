@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-migration",
-  "current_task": "task-M1",
+  "current_task": "task-M3",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -138,17 +138,20 @@
     {
       "id": "task-M2",
       "title": "Import forgebuild-demo-tapcounter into apps/tapcounter/; apply icon fix; recreate release as tapcounter-v1; move PROMPT_HISTORY.md to PROMPT_HISTORY/tapcounter.md and BUILD_STATE.json to apps/tapcounter/BUILD_STATE.json.",
-      "status": "pending",
-      "notes": "",
-      "commits": [],
+      "status": "in_progress",
+      "notes": "Import of forgebuild-demo-tapcounter full history into apps/tapcounter/ DONE (merge -s ours + read-tree --prefix). Icon fix applied to apps/tapcounter/tools/gen_icons.py and EngineIconsGenerated.kt (same addPath fix as engine). PROMPT_HISTORY.md relocated to PROMPT_HISTORY/tapcounter.md. Per-app progress already at apps/tapcounter/BUILD_STATE.json (step-5 in_progress = release v1, never completed in old repo). Signing: original keystore secrets were sealed on the old repo and are not retrievable, so a FRESH keystore was generated and KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD set on vjumbo264/forgebuild (documented in M3 notes; signing identity changes once, acceptable since no tapcounter APK was ever released with the old key). REMAINING: create tapcounter-v1 release via the new unified workflow (task-M3 verification run doubles as the M2 release recreation), then verify APK asset downloads.",
+      "commits": [
+        "8f60862",
+        "056fd7a"
+      ],
       "files": [],
       "tests": ""
     },
     {
       "id": "task-M3",
       "title": "Adapt .github/workflows/release.yml to workflow_dispatch input for apps/<slug> folder; tag releases <app-slug>-vN auto-incremented; verify by rebuilding tapcounter end to end.",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": ".github/workflows/release.yml written: workflow_dispatch input app_path (e.g. apps/tapcounter), validates apps/<slug> form, builds with Gradle in that folder, signs with repo secrets, auto-increments tag <slug>-vN from existing releases (gh api releases, grep prefix), uploads APK + forgebuild-manifest.json via softprops/action-gh-release. Nested engine/apps workflow copies removed (GitHub only runs root .github/workflows). deploy.yml renamed to pages-deploy.yml (dashboard deploy, unchanged logic). REMAINING: push, dispatch workflow for apps/tapcounter, confirm tapcounter-v1 release + APK download.",
       "commits": [],
       "files": [],
       "tests": ""
