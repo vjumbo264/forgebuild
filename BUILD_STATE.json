@@ -2,12 +2,12 @@
   "project": "forgebuild-demo-tapcounter",
   "build_complete": false,
   "updated_by": "e2e-session",
-  "current_task": "step-1",
+  "current_task": "step-2",
   "tasks": [
     {
       "id": "step-1",
       "title": "Create repo from Engine template, set topic, seed state+history",
-      "status": "in_progress",
+      "status": "done",
       "notes": ""
     },
     {
