@@ -3,7 +3,7 @@
   "project": "forgebuild-forge-companion",
   "build_complete": false,
   "updated_by": "session-forge-companion",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -20,8 +20,8 @@
     {
       "id": "step-3",
       "title": "Adaptive icon via apps/<slug>/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Generated custom ForgeBuild Companion artwork (anvil, mobile viewport, spark motif), executed tools/make_adaptive_icon.py producing safe-zoned foreground, background (#0F172A), monochrome, and anydpi-v26 XMLs across mdpi..xxxhdpi."
     },
     {
       "id": "step-4",
@@ -56,7 +56,11 @@
     {
       "session": "session-forge-companion",
       "event": "step-2 done: namespace and applicationId set to com.forgebuild.forgecompanion, app_name set to ForgeBuild Companion in strings.xml, package updated."
+    },
+    {
+      "session": "session-forge-companion",
+      "event": "step-3 done: adaptive icons generated for ForgeBuild Companion with make_adaptive_icon.py."
     }
   ],
-  "notes": "Step 2 complete. Next: step-3 adaptive icon generation."
+  "notes": "Step 3 complete. Next: step-4 confirm repo-level signing secrets exist."
 }
