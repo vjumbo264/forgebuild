@@ -3,7 +3,7 @@
   "project": "forgebuild-forge-companion",
   "build_complete": false,
   "updated_by": "session-forge-companion",
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -14,8 +14,8 @@
     {
       "id": "step-2",
       "title": "Set identity inside apps/<slug>/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.<slug with dashes removed>), app_name in res/values/strings.xml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "namespace and applicationId set to com.forgebuild.forgecompanion, app_name set to ForgeBuild Companion in strings.xml, MainActivity moved to com.forgebuild.forgecompanion package."
     },
     {
       "id": "step-3",
@@ -52,7 +52,11 @@
     {
       "session": "session-forge-companion",
       "event": "step-1 done: chose slug 'forge-companion', copied engine/ into apps/forge-companion/, seeded BUILD_STATE.json and PROMPT_HISTORY/forge-companion.md, verified push-access proof."
+    },
+    {
+      "session": "session-forge-companion",
+      "event": "step-2 done: namespace and applicationId set to com.forgebuild.forgecompanion, app_name set to ForgeBuild Companion in strings.xml, package updated."
     }
   ],
-  "notes": "Step 1 complete. Next: step-2 set identity (package com.forgebuild.forgecompanion, app_name ForgeBuild Companion)."
+  "notes": "Step 2 complete. Next: step-3 adaptive icon generation."
 }

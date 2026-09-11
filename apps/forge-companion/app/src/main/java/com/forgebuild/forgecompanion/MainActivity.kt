@@ -1,4 +1,4 @@
-package com.forgebuild.app
+package com.forgebuild.forgecompanion
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
