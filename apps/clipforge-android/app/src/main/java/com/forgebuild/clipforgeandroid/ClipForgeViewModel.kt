@@ -376,10 +376,17 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _detailPlan = MutableStateFlow<String?>(null)
     val detailPlan: StateFlow<String?> = _detailPlan
 
-    // Append-only log stream: each unique step line appears exactly once, in first-seen order.
-    // The UI is expected to autoscroll to the bottom whenever this list grows.
-    private val _detailLogs = MutableStateFlow<List<String>>(emptyList())
-    val detailLogs: StateFlow<List<String>> = _detailLogs
+    /** Color-coding level for a single log line (maps to theme colors in the UI). */
+    enum class LogLevel { PENDING, RUNNING, SUCCESS, FAILURE, SKIPPED, CANCELLED, INFO }
+
+    /** One rendered log row. [key] is stable across polls so Compose can animate updates. */
+    data class LogLine(val key: String, val text: String, val level: LogLevel)
+
+    // Per-step log stream, rebuilt in canonical order on every poll: queued steps render
+    // as gray pending rows, the running step pulses in primary, and finished steps keep
+    // their conclusion color (success/failure/skipped/cancelled).
+    private val _detailLogs = MutableStateFlow<List<LogLine>>(emptyList())
+    val detailLogs: StateFlow<List<LogLine>> = _detailLogs
 
     /** A single video candidate discovered inside a torrent by Stage A. */
     data class TorrentFileOption(val index: Int, val name: String, val sizeBytes: Long)
@@ -390,17 +397,11 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _torrentSubmitting = MutableStateFlow(false)
     val torrentSubmitting: StateFlow<Boolean> = _torrentSubmitting
 
-    // Track already-emitted log lines for the CURRENT job so we only append truly-new lines.
-    private val seenLogLines: LinkedHashSet<String> = LinkedHashSet()
-    private var currentPollJobId: String? = null
-
     private var pollJob: Job? = null
 
     fun startPollingTask(jobId: String) {
         pollJob?.cancel()
         // Fresh log buffer for a fresh task view.
-        currentPollJobId = jobId
-        seenLogLines.clear()
         _detailLogs.value = emptyList()
         pollJob = viewModelScope.launch {
             while (isActive) {
@@ -413,19 +414,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun stopPollingTask() {
         pollJob?.cancel()
         pollJob = null
-        currentPollJobId = null
-        seenLogLines.clear()
         _detailStatus.value = null
         _detailLogs.value = emptyList()
-    }
-
-    /** Append a fresh action line (de-duplicated) to the streaming log. */
-    private fun appendLogLine(line: String) {
-        val trimmed = line.trim()
-        if (trimmed.isEmpty()) return
-        if (seenLogLines.add(trimmed)) {
-            _detailLogs.value = _detailLogs.value + trimmed
-        }
     }
 
     suspend fun loadTaskDetail(jobId: String) {
@@ -441,36 +431,66 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     loadTorrentFiles(jobId)
                 }
 
+                // Rebuild the full ordered log on every poll. Stable keys mean existing
+                // rows simply change color as steps transition pending -> running -> done.
+                val newLogs = mutableListOf<LogLine>()
+                newLogs.add(
+                    LogLine(
+                        key = "status",
+                        text = "Status: ${status.state} — ${status.message}",
+                        level = when (status.state) {
+                            "error" -> LogLevel.FAILURE
+                            "complete" -> LogLevel.SUCCESS
+                            "cancelled" -> LogLevel.CANCELLED
+                            "queued" -> LogLevel.PENDING
+                            "awaiting_torrent_selection", "awaiting_plan" -> LogLevel.SKIPPED // attention-grabbing waiting state
+                            else -> LogLevel.RUNNING
+                        }
+                    )
+                )
+
                 if (status.runId > 0) {
                     try {
                         val jobs = c.runJobs(status.runId)
                         for (i in 0 until jobs.length()) {
                             val jobObj = jobs.getJSONObject(i)
                             val jobName = jobObj.optString("name")
+                            val jStatus = jobObj.optString("status", "")
+                            val jConclusion = jobObj.optString("conclusion", "")
+                            newLogs.add(
+                                LogLine(
+                                    key = "job-$i",
+                                    text = "Job: $jobName",
+                                    level = logLevelFor(jStatus, jConclusion)
+                                )
+                            )
                             val steps = jobObj.optJSONArray("steps") ?: continue
-                            // Emit each step exactly once when it first appears — the log then
-                            // reads as an auto-scrolling per-action timeline instead of a full dump.
                             for (s in 0 until steps.length()) {
                                 val step = steps.getJSONObject(s)
                                 val sName = step.optString("name")
                                 val sStatus = step.optString("status", "")
                                 val sConclusion = step.optString("conclusion", "")
-                                // Only surface a step once it has actually started (or finished).
-                                if (sStatus == "queued" && sConclusion.isBlank()) continue
-                                val marker = when {
-                                    sConclusion == "success" -> "✓"
-                                    sConclusion == "failure" -> "✗"
-                                    sConclusion == "cancelled" -> "⏹"
-                                    sConclusion == "skipped" -> "↷"
-                                    sStatus == "in_progress" -> "…"
+                                val level = logLevelFor(sStatus, sConclusion)
+                                val marker = when (level) {
+                                    LogLevel.SUCCESS -> "✓"
+                                    LogLevel.FAILURE -> "✗"
+                                    LogLevel.CANCELLED -> "⏹"
+                                    LogLevel.SKIPPED -> "↷"
+                                    LogLevel.RUNNING -> "…"
                                     else -> "•"
                                 }
-                                val line = "$marker  [$jobName] $sName"
-                                appendLogLine(line)
+                                newLogs.add(
+                                    LogLine(
+                                        key = "job-$i-step-$s",
+                                        text = "$marker  $sName",
+                                        level = level
+                                    )
+                                )
                             }
                         }
                     } catch (_: Exception) {}
                 }
+                _detailLogs.value = newLogs
             }
 
             val reqFile = c.readFile("jobs/$jobId/stage-a-request.json")
@@ -483,10 +503,23 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         } catch (_: Exception) {}
     }
 
+    /** Map a GitHub Actions job/step (status, conclusion) pair onto a log level. */
+    private fun logLevelFor(status: String, conclusion: String): LogLevel = when {
+        conclusion == "success" -> LogLevel.SUCCESS
+        conclusion == "failure" || conclusion == "timed_out" || conclusion == "action_required" -> LogLevel.FAILURE
+        conclusion == "cancelled" -> LogLevel.CANCELLED
+        conclusion == "skipped" || conclusion == "neutral" -> LogLevel.SKIPPED
+        status == "in_progress" -> LogLevel.RUNNING
+        status == "completed" -> LogLevel.INFO
+        else -> LogLevel.PENDING // queued / waiting / requested / pending
+    }
+
     /**
      * Load the video candidates discovered inside the torrent for [jobId].
-     * Primary source: jobs/<id>/torrent_files.json ({files: [{index,name,size_bytes}]}).
-     * Fallback: a `torrent_files` array embedded directly in status.json.
+     * Pipeline parity: ingest.py (write_torrent_selection) writes
+     * jobs/<id>/torrent-selection.json with {video_candidates: [{index, path, name?, size}]}.
+     * Candidate display name comes from `path` (fallback `name`), size from `size`
+     * (bytes; tolerates size_bytes / length like the bot's candidateSize()).
      */
     private suspend fun loadTorrentFiles(jobId: String) {
         val c = api ?: return
@@ -495,40 +528,37 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         fun parseArray(arr: JSONArray) {
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
+                val name = o.optString("path").ifBlank { o.optString("name", "file #" + o.optInt("index", i)) }
+                val size = o.optLong("size", o.optLong("size_bytes", o.optLong("length", 0L)))
                 parsed.add(
                     TorrentFileOption(
                         index = o.optInt("index", i),
-                        name = o.optString("name", "file $i"),
-                        sizeBytes = o.optLong("size_bytes", 0L)
+                        name = name,
+                        sizeBytes = size
                     )
                 )
             }
         }
 
         try {
-            val tfFile = c.readFile("jobs/$jobId/torrent_files.json")
+            val tfFile = c.readFile("jobs/$jobId/torrent-selection.json")
             if (tfFile != null) {
                 val tj = JSONObject(tfFile.first)
-                tj.optJSONArray("files")?.let { parseArray(it) }
+                tj.optJSONArray("video_candidates")?.let { parseArray(it) }
             }
         } catch (_: Exception) {}
-
-        if (parsed.isEmpty()) {
-            try {
-                val stFile = c.readFile("jobs/$jobId/status.json")
-                if (stFile != null) {
-                    JSONObject(stFile.first).optJSONArray("torrent_files")?.let { parseArray(it) }
-                }
-            } catch (_: Exception) {}
-        }
 
         _torrentFiles.value = parsed
     }
 
     /**
-     * Submit the user's torrent video selection: write
-     * jobs/<id>/torrent-selection.json ({selected_index}) and re-dispatch
-     * stage-a.yml with torrent_selected=<index> so the pipeline resumes.
+     * Submit the user's torrent video selection — bot parity with
+     * bot/src/index.js pickTorrentFile:
+     *   1. read jobs/<id>/stage-a-request.json, set source.torrent_file_index = "<index>",
+     *      rewrite the request (ingest.py reads ONLY this field; there is no
+     *      torrent_selected workflow input in stage-a.yml)
+     *   2. re-dispatch stage-a.yml with {job_id, code_ref} only
+     *   3. merge the status record (preserve every existing field) to stage_a_running
      */
     fun submitTorrentSelection(jobId: String, index: Int, onDone: () -> Unit = {}) = viewModelScope.launch {
         val c = api ?: return@launch
@@ -536,33 +566,34 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         _torrentSubmitting.value = true
         try {
             _upload.value = UploadProgress("Submitting torrent selection…", 0.3f)
-            val payload = JSONObject()
-                .put("selected_index", index)
-                .put("selected_at_epoch", System.currentTimeMillis() / 1000)
+
+            val reqFile = c.readFile("jobs/$jobId/stage-a-request.json")
+                ?: throw Exception("stage-a-request.json not found for $jobId")
+            val request = JSONObject(reqFile.first)
+            val src = request.optJSONObject("source") ?: JSONObject().also { request.put("source", it) }
+            src.put("torrent_file_index", index.toString())
+            request.put("saved_at_epoch", System.currentTimeMillis() / 1000)
             c.putFile(
-                "jobs/$jobId/torrent-selection.json",
-                payload.toString(2).toByteArray(Charsets.UTF_8),
-                "Torrent selection for $jobId"
+                "jobs/$jobId/stage-a-request.json",
+                request.toString(2).toByteArray(Charsets.UTF_8),
+                "clipforge: torrent file selected for job $jobId"
             )
 
             val sha = c.defaultBranchSha()
             _upload.value = UploadProgress("Resuming pipeline…", 0.7f)
-            c.dispatchWorkflow(
-                "stage-a.yml",
-                mapOf("job_id" to jobId, "code_ref" to sha, "torrent_selected" to index.toString())
-            )
+            c.dispatchWorkflow("stage-a.yml", mapOf("job_id" to jobId, "code_ref" to sha))
 
-            // Reflect the resume locally so the list of candidates disappears immediately.
-            val st = _detailStatus.value
-            if (st != null) {
-                val stObj = JSONObject()
-                    .put("job_id", jobId)
-                    .put("state", "stage_a_running")
-                    .put("message", "Torrent selection submitted, resuming Stage A…")
-                    .put("created_at_epoch", st.createdAt)
-                    .put("updated_at_epoch", System.currentTimeMillis() / 1000)
-                c.putFile("jobs/$jobId/status.json", stObj.toString(2).toByteArray(), "Resume Stage A after torrent selection")
-            }
+            // Merge (not rewrite) the status record so TTL, series and run fields survive.
+            try {
+                val stFile = c.readFile("jobs/$jobId/status.json")
+                if (stFile != null) {
+                    val stObj = JSONObject(stFile.first)
+                    stObj.put("state", "stage_a_running")
+                    stObj.put("message", "Video file #$index selected — resuming ingest.")
+                    stObj.put("updated_at_epoch", System.currentTimeMillis() / 1000)
+                    c.putFile("jobs/$jobId/status.json", stObj.toString(2).toByteArray(), "clipforge: resume Stage A after torrent selection for $jobId")
+                }
+            } catch (_: Exception) {}
 
             toast("Selection submitted — resuming task.")
             _torrentFiles.value = emptyList()

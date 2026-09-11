@@ -549,7 +549,13 @@ fun TaskDetailScreen(
                 }
             }
 
-            // Live Execution Logs — auto-scrolling, appears one action at a time.
+            // Live Execution Logs — color-coded per step:
+            //   pending  = steps not yet run (muted gray)
+            //   running  = step in progress (primary)
+            //   success  = completed steps (green)
+            //   skipped  = skipped / waiting-on-you steps (amber)
+            //   failure  = failed steps (red)
+            //   cancelled = cancelled steps (outline gray)
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Live Execution Logs", style = MaterialTheme.typography.titleMedium)
@@ -561,11 +567,13 @@ fun TaskDetailScreen(
                         )
                     } else {
                         val listState = rememberLazyListState()
-                        // Whenever a new line arrives, scroll to the bottom so the log
-                        // reads like a live terminal instead of a static dump.
-                        LaunchedEffect(logs.size) {
+                        // Follow the action: scroll to the running step (or the latest line
+                        // when nothing is running) whenever the log updates.
+                        LaunchedEffect(logs) {
                             if (logs.isNotEmpty()) {
-                                listState.animateScrollToItem(logs.size - 1)
+                                val runningIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
+                                val target = if (runningIdx >= 0) runningIdx else logs.size - 1
+                                listState.animateScrollToItem(target)
                             }
                         }
                         LazyColumn(
@@ -575,11 +583,8 @@ fun TaskDetailScreen(
                                 .heightIn(min = 140.dp, max = 260.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            items(logs, key = { it }) { line ->
-                                Text(
-                                    text = line,
-                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-                                )
+                            items(logs, key = { it.key }) { line ->
+                                LogRow(line)
                             }
                         }
                     }
@@ -587,4 +592,27 @@ fun TaskDetailScreen(
             }
         }
     }
+}
+
+/** Single color-coded log row for the task detail live log stream. */
+@Composable
+private fun LogRow(line: ClipForgeViewModel.LogLine) {
+    val scheme = MaterialTheme.colorScheme
+    // Green/amber are chosen to keep ~4.5:1 contrast on both light and dark surfaces.
+    val success = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+    val skipped = androidx.compose.ui.graphics.Color(0xFF9A6A00)
+    val color = when (line.level) {
+        ClipForgeViewModel.LogLevel.SUCCESS -> success
+        ClipForgeViewModel.LogLevel.FAILURE -> scheme.error
+        ClipForgeViewModel.LogLevel.SKIPPED -> skipped
+        ClipForgeViewModel.LogLevel.RUNNING -> scheme.primary
+        ClipForgeViewModel.LogLevel.CANCELLED -> scheme.outline
+        ClipForgeViewModel.LogLevel.PENDING -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
+        ClipForgeViewModel.LogLevel.INFO -> scheme.onSurfaceVariant
+    }
+    Text(
+        text = line.text,
+        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+        color = color
+    )
 }
