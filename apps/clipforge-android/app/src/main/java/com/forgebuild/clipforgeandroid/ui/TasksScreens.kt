@@ -12,6 +12,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -486,18 +487,38 @@ fun TaskDetailScreen(
                 }
             }
 
-            // Live Logs
+            // Live Execution Logs — auto-scrolling, appears one action at a time.
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Live Execution Logs", style = MaterialTheme.typography.titleMedium)
                     if (logs.isEmpty()) {
-                        Text("No logs available yet…", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "Waiting for the first action…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     } else {
-                        logs.forEach { line ->
-                            Text(
-                                text = line,
-                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-                            )
+                        val listState = rememberLazyListState()
+                        // Whenever a new line arrives, scroll to the bottom so the log
+                        // reads like a live terminal instead of a static dump.
+                        LaunchedEffect(logs.size) {
+                            if (logs.isNotEmpty()) {
+                                listState.animateScrollToItem(logs.size - 1)
+                            }
+                        }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 140.dp, max = 260.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            items(logs, key = { it }) { line ->
+                                Text(
+                                    text = line,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                )
+                            }
                         }
                     }
                 }

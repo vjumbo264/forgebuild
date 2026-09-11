@@ -313,13 +313,23 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _detailPlan = MutableStateFlow<String?>(null)
     val detailPlan: StateFlow<String?> = _detailPlan
 
+    // Append-only log stream: each unique step line appears exactly once, in first-seen order.
+    // The UI is expected to autoscroll to the bottom whenever this list grows.
     private val _detailLogs = MutableStateFlow<List<String>>(emptyList())
     val detailLogs: StateFlow<List<String>> = _detailLogs
+
+    // Track already-emitted log lines for the CURRENT job so we only append truly-new lines.
+    private val seenLogLines: LinkedHashSet<String> = LinkedHashSet()
+    private var currentPollJobId: String? = null
 
     private var pollJob: Job? = null
 
     fun startPollingTask(jobId: String) {
         pollJob?.cancel()
+        // Fresh log buffer for a fresh task view.
+        currentPollJobId = jobId
+        seenLogLines.clear()
+        _detailLogs.value = emptyList()
         pollJob = viewModelScope.launch {
             while (isActive) {
                 loadTaskDetail(jobId)
@@ -331,8 +341,19 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun stopPollingTask() {
         pollJob?.cancel()
         pollJob = null
+        currentPollJobId = null
+        seenLogLines.clear()
         _detailStatus.value = null
         _detailLogs.value = emptyList()
+    }
+
+    /** Append a fresh action line (de-duplicated) to the streaming log. */
+    private fun appendLogLine(line: String) {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty()) return
+        if (seenLogLines.add(trimmed)) {
+            _detailLogs.value = _detailLogs.value + trimmed
+        }
     }
 
     suspend fun loadTaskDetail(jobId: String) {
@@ -347,24 +368,31 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 if (status.runId > 0) {
                     try {
                         val jobs = c.runJobs(status.runId)
-                        val logLines = mutableListOf<String>()
                         for (i in 0 until jobs.length()) {
                             val jobObj = jobs.getJSONObject(i)
-                            val name = jobObj.optString("name")
-                            val state = jobObj.optString("status")
-                            val conclusion = jobObj.optString("conclusion", "")
-                            logLines.add("[$state${if (conclusion.isNotBlank()) ":$conclusion" else ""}] $name")
-                            val steps = jobObj.optJSONArray("steps")
-                            if (steps != null) {
-                                for (s in 0 until steps.length()) {
-                                    val step = steps.getJSONObject(s)
-                                    val sName = step.optString("name")
-                                    val sCon = step.optString("conclusion", step.optString("status"))
-                                    logLines.add("  - $sName: $sCon")
+                            val jobName = jobObj.optString("name")
+                            val steps = jobObj.optJSONArray("steps") ?: continue
+                            // Emit each step exactly once when it first appears — the log then
+                            // reads as an auto-scrolling per-action timeline instead of a full dump.
+                            for (s in 0 until steps.length()) {
+                                val step = steps.getJSONObject(s)
+                                val sName = step.optString("name")
+                                val sStatus = step.optString("status", "")
+                                val sConclusion = step.optString("conclusion", "")
+                                // Only surface a step once it has actually started (or finished).
+                                if (sStatus == "queued" && sConclusion.isBlank()) continue
+                                val marker = when {
+                                    sConclusion == "success" -> "✓"
+                                    sConclusion == "failure" -> "✗"
+                                    sConclusion == "cancelled" -> "⏹"
+                                    sConclusion == "skipped" -> "↷"
+                                    sStatus == "in_progress" -> "…"
+                                    else -> "•"
                                 }
+                                val line = "$marker  [$jobName] $sName"
+                                appendLogLine(line)
                             }
                         }
-                        _detailLogs.value = logLines
                     } catch (_: Exception) {}
                 }
             }
