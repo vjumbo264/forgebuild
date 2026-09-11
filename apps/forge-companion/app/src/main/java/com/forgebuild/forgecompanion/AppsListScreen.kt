@@ -22,12 +22,20 @@ fun AppsListScreen(
     onShowMessage: (String) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val state by appsStore.state.collectAsState()
+    val appsList by appsStore.state.collectAsState()
+    val isRefreshing by appsStore.refreshing.collectAsState()
+    val lastError by appsStore.lastError.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    val filteredApps = remember(state.data, searchQuery) {
-        if (searchQuery.isBlank()) state.data
-        else state.data.filter { it.slug.contains(searchQuery.trim(), ignoreCase = true) }
+    // Instant load on composition, background refresh
+    LaunchedEffect(Unit) {
+        appsStore.loadFromCache()
+        appsStore.refresh()
+    }
+
+    val filteredApps: List<AppSummary> = remember(appsList, searchQuery) {
+        if (searchQuery.isBlank()) appsList
+        else appsList.filter { it.slug.contains(searchQuery.trim(), ignoreCase = true) }
     }
 
     Scaffold(
@@ -62,18 +70,18 @@ fun AppsListScreen(
                 .padding(padding)
         ) {
             // Background refresh indicator
-            if (state.isRefreshing) {
+            if (isRefreshing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
             // Error banner if any
-            if (state.lastError != null) {
+            if (lastError != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Refresh notice: ${state.lastError?.message}",
+                        text = "Refresh notice: $lastError",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

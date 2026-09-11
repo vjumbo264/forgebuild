@@ -34,7 +34,9 @@ fun AppDetailScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val releasesStore = remember(slug) { ReleasesStore(context, slug, gitHubService) }
-    val releasesState by releasesStore.state.collectAsState()
+    val releases by releasesStore.state.collectAsState()
+    val isRefreshingReleases by releasesStore.refreshing.collectAsState()
+    val releasesLastError by releasesStore.lastError.collectAsState()
 
     var buildState by remember { mutableStateOf<BuildStateData?>(null) }
     var promptHistory by remember { mutableStateOf<String?>(null) }
@@ -56,8 +58,10 @@ fun AppDetailScreen(
     var confirmSlugInput by remember { mutableStateOf("") }
     var isDeletingApp by remember { mutableStateOf(false) }
 
-    // Load initial build state and prompt history
+    // Load initial cached data + background refresh
     LaunchedEffect(slug) {
+        releasesStore.loadFromCache()
+        releasesStore.refresh()
         isLoadingBuildState = true
         buildState = gitHubService.fetchBuildState(slug)
         promptHistory = gitHubService.fetchPromptHistory(slug)
@@ -200,8 +204,22 @@ fun AppDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (releasesState.isRefreshing) {
+            if (isRefreshingReleases) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            if (releasesLastError != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Releases refresh notice: $releasesLastError",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
             }
 
             // In-progress banner if active build
@@ -246,7 +264,7 @@ fun AppDetailScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Releases (${releasesState.data.size})") }
+                    text = { Text("Releases (${releases.size})") }
                 )
                 Tab(
                     selected = selectedTab == 1,
@@ -268,7 +286,7 @@ fun AppDetailScreen(
             ) {
                 when (selectedTab) {
                     0 -> ReleasesTab(
-                        releases = releasesState.data,
+                        releases = releases,
                         slug = slug,
                         onDownload = onDownloadFile,
                         onDeleteVersion = { versionToDelete = it },
@@ -279,7 +297,7 @@ fun AppDetailScreen(
                     )
                     1 -> ExtendTab(
                         slug = slug,
-                        latestRelease = releasesState.data.firstOrNull()?.tagName,
+                        latestRelease = releases.firstOrNull()?.tagName,
                         instruction = extendInstruction,
                         onInstructionChange = { extendInstruction = it },
                         generatedPrompt = generatedExtendPrompt,
@@ -288,7 +306,7 @@ fun AppDetailScreen(
                                 generatedExtendPrompt = PromptGenerator.promptExtend(
                                     slug = slug,
                                     instruction = extendInstruction.trim(),
-                                    latest = releasesState.data.firstOrNull()?.tagName
+                                    latest = releases.firstOrNull()?.tagName
                                 )
                                 onShowMessage("Extend prompt generated!")
                             }
