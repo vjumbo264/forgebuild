@@ -330,23 +330,38 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("music", musicJson)
                 .put("saved_at_epoch", nowSec)
 
-            // Status record must satisfy schemas/job_status.schema.json (pipeline status.py
-            // merges into this record; missing keys have previously zeroed series blocks).
+            // Status record must satisfy schemas/job_status.schema.json. Field-for-field
+            // parity with the bot's newStatus() (bot/src/jobs.js): version 2, status-series
+            // block {enabled, series_id, part, start_seconds, is_final} (NOTE: unlike the
+            // request schema, the STATUS series block has is_final and no source_job_id/
+            // context), assets is a map, run carries code_ref, publishing is fully seeded.
+            val statusSeries = JSONObject()
+                .put("enabled", isSeries)
+                .put("series_id", if (isSeries) sid else "")
+                .put("part", if (isSeries) 1 else 0)
+                .put("start_seconds", 0)
+                .put("is_final", false)
             val statusJson = JSONObject()
-                .put("version", 1)
+                .put("version", 2)
                 .put("job_id", jobId)
                 .put("mode", "manual")
-                .put("series", seriesJson)
+                .put("series", statusSeries)
                 .put("state", "queued")
                 .put("message", "Task queued")
                 .put("created_at_epoch", nowSec)
                 .put("updated_at_epoch", nowSec)
                 .put("expires_at_epoch", nowSec + 172800) // 48h TTL, matches CLIPFORGE_TTL_SECONDS
-                .put("release_tag", "clipforge-$jobId")
+                .put("release_tag", "")
                 .put("release_url", "")
-                .put("assets", JSONArray())
-                .put("run", JSONObject().put("workflow_run_id", 0).put("workflow_run_url", ""))
-                .put("publishing", JSONObject())
+                .put("assets", JSONObject())
+                .put("run", JSONObject()
+                    .put("workflow_run_id", 0)
+                    .put("workflow_run_url", "")
+                    .put("code_ref", ""))
+                .put("publishing", JSONObject()
+                    .put("status", "not_requested")
+                    .put("posts", JSONArray())
+                    .put("idempotency_key", ""))
 
             _upload.value = UploadProgress("Dispatching Stage A…", 0.8f)
             c.putFile("jobs/$jobId/stage-a-request.json", requestJson.toString(2).toByteArray(), "Stage A request")
@@ -557,7 +572,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      *   1. read jobs/<id>/stage-a-request.json, set source.torrent_file_index = "<index>",
      *      rewrite the request (ingest.py reads ONLY this field; there is no
      *      torrent_selected workflow input in stage-a.yml)
-     *   2. re-dispatch stage-a.yml with {job_id, code_ref} only
+     * 2. re-dispatch stage-a.yml with exactly {job_id, code_ref} — no extra inputs exist
      *   3. merge the status record (preserve every existing field) to stage_a_running
      */
     fun submitTorrentSelection(jobId: String, index: Int, onDone: () -> Unit = {}) = viewModelScope.launch {
