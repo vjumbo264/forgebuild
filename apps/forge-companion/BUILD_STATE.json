@@ -3,7 +3,7 @@
   "project": "forgebuild-forge-companion",
   "build_complete": false,
   "updated_by": "session-forge-companion",
-  "current_task": "step-4",
+  "current_task": "step-5",
   "tasks": [
     {
       "id": "step-1",
@@ -26,8 +26,8 @@
     {
       "id": "step-4",
       "title": "Confirm the repo-level signing secrets exist (see SIGNING & RELEASES); do not regenerate them.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets via GitHub API."
     },
     {
       "id": "step-5",
@@ -60,7 +60,11 @@
     {
       "session": "session-forge-companion",
       "event": "step-3 done: adaptive icons generated for ForgeBuild Companion with make_adaptive_icon.py."
+    },
+    {
+      "session": "session-forge-companion",
+      "event": "step-4 done: confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets."
     }
   ],
-  "notes": "Step 3 complete. Next: step-4 confirm repo-level signing secrets exist."
+  "notes": "Step 4 complete. Next: step-5 implement ForgeBuild Companion Android app."
 }
