@@ -32,7 +32,6 @@ fun NewAppScreen(
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
         item {
-            // Header Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -57,7 +56,7 @@ fun NewAppScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            text = "Describe an app → copy prompt → hand to AI → get signed APK",
+                            text = "Describe an app -> copy prompt -> hand to AI -> get signed APK",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
