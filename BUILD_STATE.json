@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-correction-round-2",
-  "current_task": "task-C3",
+  "current_task": "task-C5",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -145,6 +145,10 @@
     {
       "session": "session-correction-round-2",
       "event": "task-C4 done: full 24-entry permission suite (biometric reflection-gated, no new dep), ScreenSecurity + SafeSave helpers + docs + generator standing instructions."
+    },
+    {
+      "session": "session-correction-round-2",
+      "event": "task-C3 done: delete-entire-app action (danger zone + type-slug confirmation + deleteAppTree) verified live against disposable _delete-test fixture."
     }
   ],
   "migration_tasks": [
@@ -264,11 +268,15 @@
     {
       "id": "task-C3",
       "title": "Fix 3 — Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
-      "status": "pending",
-      "notes": "",
-      "commits": [],
-      "files": [],
-      "tests": ""
+      "status": "done",
+      "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) — deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree → null-sha entries → new tree → new commit → PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo — completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents — no separate index needed). Fixture fully cleaned up by the test itself.",
+      "commits": [
+        "pending-this-commit"
+      ],
+      "files": [
+        "site/app.js"
+      ],
+      "tests": "Static: node --check OK; 10/10 mocked-flow assertions PASS (order releases→tags→history→tree→commit→ref-patch; only <slug> entries null-sha’d). Live: disposable _delete-test app + release created then deleted via the shipped code path; all five live assertions PASS."
     },
     {
       "id": "task-C4",

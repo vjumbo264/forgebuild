@@ -159,6 +159,40 @@ TASKS:
 4. Continue the per-step protocol below through to the release the in-progress version was targeting (dispatch release.yml with app_path=apps/${slug}), verify the release live on the GitHub Releases API (tag prefix ${slug}-), then set build_complete: true.
 `+RULES;}
 
+/* ---------- delete entire app (Correction Round 2, Fix 3) ---------- */
+// Removes, in order, via the GitHub API with the operator's stored PAT:
+//   1. every release tagged <slug>-* (and its git tag)
+//   2. PROMPT_HISTORY/<slug>.md
+//   3. the whole apps/<slug>/ folder as ONE commit (Git Trees API)
+// The Apps list derives from apps/ contents, so the app disappears with no
+// separate index to update.
+async function deleteAppTree(slug){
+  const rels=await releasesFor(slug);
+  for(const r of rels){
+    await gh(`/repos/${OWNER}/${REPO}/releases/${r.id}`,{method:'DELETE'});
+    await gh(`/repos/${OWNER}/${REPO}/git/refs/tags/${encodeURIComponent(r.tag_name)}`,{method:'DELETE'}).catch(()=>{});
+  }
+  const phPath=`PROMPT_HISTORY/${slug}.md`;
+  const ph=await gh(`/repos/${OWNER}/${REPO}/contents/${phPath}`).catch(()=>null);
+  if(ph&&ph.sha)await gh(`/repos/${OWNER}/${REPO}/contents/${phPath}`,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Delete app ${slug}: remove prompt history`,sha:ph.sha,branch:'main'})});
+  const ref=await gh(`/repos/${OWNER}/${REPO}/git/ref/heads/main`);
+  const commit=await gh(`/repos/${OWNER}/${REPO}/git/commits/${ref.object.sha}`);
+  const flat=await gh(`/repos/${OWNER}/${REPO}/git/trees/${commit.tree.sha}?recursive=1`);
+  const prefix=`apps/${slug}/`;
+  const dels=(flat.tree||[]).filter(e=>e.path.startsWith(prefix)).map(e=>({path:e.path,mode:e.mode,type:e.type,sha:null}));
+  if(dels.length){
+    const newTree=await gh(`/repos/${OWNER}/${REPO}/git/trees`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_tree:commit.tree.sha,tree:dels})});
+    const newCommit=await gh(`/repos/${OWNER}/${REPO}/git/commits`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:`Delete app ${slug} (apps/${slug}/ removed from Dashboard)`,tree:newTree.sha,parents:[ref.object.sha]})});
+    // The ref PATCH can transiently 422 right after commit creation — retry briefly.
+    let lastErr=null;
+    for(let i=0;i<4;i++){
+      try{await gh(`/repos/${OWNER}/${REPO}/git/refs/heads/main`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({sha:newCommit.sha})});lastErr=null;break;}
+      catch(e){lastErr=e;await new Promise(r=>setTimeout(r,1200*(i+1)));}
+    }
+    if(lastErr)throw lastErr;
+  }
+}
+
 /* ---------- views ---------- */
 function patNote(){return pat()?'':'<div class="banner warn">No PAT saved — you are browsing public data only. Save a PAT from the connect screen (Disconnect first if one was stored) to raise rate limits and enable delete actions.</div>';}
 function setActive(n){document.querySelectorAll('[data-nav]').forEach(a=>a.classList.toggle('active',a.dataset.nav===n));}
@@ -238,6 +272,13 @@ if(!inProg)html+=`<h2>Extend / update this app</h2>
 <div class="row" style="margin:0 0 10px;justify-content:space-between"><b>Type 2 · Extend/update</b><button class="btn tonal small" id="copy2">Copy prompt</button></div>
 <div class="banner">Fill in <code>GITHUB_PAT</code> (scoped to the <b>${REPO}</b> repo, Contents R/W + Actions R/W) before copying to an AI session.</div>
 <textarea id="prompt2" class="code" readonly></textarea></div>`;
+html+=`<h2 style="color:var(--error)">Danger zone</h2>
+<div class="card" style="border:1px solid var(--error)">
+<b>Delete this app</b>
+<p style="font-size:14px;margin:6px 0">Permanently deletes the <code>apps/${esc(slug)}/</code> folder from the repo, every <code>${esc(slug)}-v*</code> release (and its git tag), and <code>PROMPT_HISTORY/${esc(slug)}.md</code>. This cannot be undone from the Dashboard.</p>
+<label for="delAppConfirm">Type <code>${esc(slug)}</code> to confirm</label>
+<input id="delAppConfirm" type="text" autocomplete="off" placeholder="${esc(slug)}">
+<div class="row"><button class="btn danger small" id="delApp" disabled>Delete app permanently</button></div></div>`;
 $('#view').insertAdjacentHTML('beforeend',html);
 document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
   if(!pat()){alert('Connect a PAT first (it needs Contents: R/W on '+REPO+').');return;}
@@ -248,6 +289,18 @@ document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
 const g2=$('#gen2');if(g2)g2.onclick=()=>{const i=$('#instr').value.trim();if(!i)return;
   $('#prompt2').value=promptExtend(slug,i,latest);$('#out2').style.display='block';$('#out2').scrollIntoView({behavior:'smooth'});};
 const c2=$('#copy2');if(c2)c2.onclick=e=>copyFrom('prompt2',e.target);
+const dac=$('#delAppConfirm'),dab=$('#delApp');
+if(dac&&dab){
+  dac.addEventListener('input',()=>{dab.disabled=dac.value.trim()!==slug;});
+  dab.onclick=async()=>{
+    if(!pat()){alert('Connect a PAT first (it needs Contents: R/W on '+REPO+').');return;}
+    if(dac.value.trim()!==slug)return;
+    if(!confirm(`Really delete the entire app "${slug}"? The folder, ALL its releases and tags, and its prompt history will be removed from ${REPO}.`))return;
+    dab.disabled=true;dac.disabled=true;dab.textContent='Deleting…';
+    try{await deleteAppTree(slug);location.hash='#/apps';}
+    catch(e){alert('Delete failed partway: '+e.message+'\nSome parts may already be deleted — re-run to finish.');dab.disabled=false;dac.disabled=false;dab.textContent='Delete app permanently';}
+  };
+}
 }
 
 async function renderVersion(slug){setActive('apps');
