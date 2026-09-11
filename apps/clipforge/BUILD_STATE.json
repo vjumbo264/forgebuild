@@ -3,8 +3,8 @@
   "project": "forgebuild",
   "app": "ClipForge for Android",
   "build_complete": false,
-  "updated_by": "session-02-task-05a",
-  "current_task": "task-05b",
+  "updated_by": "session-02-task-05",
+  "current_task": "task-06",
   "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
   "upstream": {
     "repo": "motionssalt/clipforge",
@@ -73,73 +73,73 @@
     {
       "id": "task-05b",
       "title": "Feature: GitHub API client. Retrofit service + models covering: identity (/user), contents (read/write/delete file with SHA), releases (tags/{tag}, assets), actions/workflows/{file}/dispatches, actions/runs, actions/runs/{id}/logs, repo create/copy for clone bootstrap. All authenticated via Bearer PAT + X-GitHub-Api-Version 2022-11-28.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "GitHubClient.kt: /user identity, contents read/write/delete (sha-aware), dir listing, workflow dispatches, runs/jobs/logs-zip, cancel, release-by-tag + deleteRelease + streaming openAssetStream with octet-stream Accept. Bearer PAT + X-GitHub-Api-Version 2022-11-28 on every call. org.json models (Retrofit/Moshi deliberately omitted \u2014 leaner for dynamic pipeline JSON)."
     },
     {
       "id": "task-05c",
       "title": "Feature: credentials store. EncryptedSharedPreferences-backed CloneCredentials { pat, owner, repo, login }; auto-login = credentials-present check on app open. First-launch onboarding: 'Connect existing clone' (PAT + owner/repo) OR 'Create private Shadow Clone' (PAT + repo name \u2192 create repo \u2192 dispatch clone-copy.yml \u2192 poll .clipforge-clone-status.json \u2192 success == authenticated).",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "CredentialStore (EncryptedSharedPreferences) holds {pat, owner, repo, login}; app open auto-logs in when present (bot parity: starting a clone authenticates it). Onboarding: connect existing owner/repo OR create private clone (create repo -> dispatch clone-copy.yml -> poll .clipforge-clone-status.json until success/error)."
     },
     {
       "id": "task-05d",
       "title": "Feature: task list (non-series). List jobs/ via cache-first store; filter status.series.enabled=false or absent. Show state chip using describeTaskState mirror + progressLine mapping. Multi-select mode with batch-delete (each delete removes jobs/<id>/* + release clipforge-<id> + release clipforge-relay-input-<id>, mirroring deleteClipforgeJob).",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Tasks list via CacheFirstStore (instant cached render + background reconcile). Series parts (status.series.enabled) excluded from the plain list. describeTaskState mirror (Pipeline.describe + progressFraction). Multi-select via tap in selection mode; batch delete removes jobs/<id>/* blobs + clipforge-<id> and clipforge-relay-input-<id> releases (deleteClipforgeJob parity)."
     },
     {
       "id": "task-05e",
       "title": "Feature: Series section. Group tasks with status.series.enabled=true by series_id; sort by part. Tapping opens a dedicated series view (part list, add-next-part affordance when the latest completed part has plan.is_final=false and end_seconds > 0). Manual next-part dispatch mirrors series.js.nextPartRequestBody / nextPartJobId, then dispatch stage-a.yml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Series section on the tasks screen groups by series_id; tapping navigates to dedicated SeriesScreen with ordered part list. Continue affordance dispatches next part (${series_id}-p${part+1}) mirroring series.js nextPartJobId/nextPartRequestBody via stage-a.yml."
     },
     {
       "id": "task-05f",
       "title": "Feature: task detail + live polling log. Show status.json fields; while state \u2209 TERMINAL_STATES, poll status.json every 3s. When workflow_run_id != 0, also poll /actions/runs/{id}/jobs per-step status. When state=complete, fetch and cache full logs zip once for offline review. Cancel button hits /actions/runs/{id}/cancel.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "TaskDetailScreen polls jobs/<id>/status.json every 3s until terminal, appending live message lines; per-step status via /actions/runs/{id}/jobs; on complete, full logs zip fetched once and cached under filesDir for offline review. Cancel posts /actions/runs/{id}/cancel."
     },
     {
       "id": "task-05g",
       "title": "Feature: New-task wizard mirroring bot/src/wizard.js: source \u2192 focus \u2192 length \u2192 music \u2192 confirm (focus step skipped when series toggle on). Source kinds: url, drive, magnet, torrent_file (with real progress-bar upload of the .torrent to jobs/<id>/source.torrent), telegram_relay handled as read-only badge (input types the pipeline supports but the app does not yet originate). On confirm: build request via same rules as buildStageARequest, PUT jobs/<id>/stage-a-request.json, dispatch stage-a.yml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "NewTaskWizard mirrors bot/src/wizard.js stepsFor(): source -> focus -> length -> music -> confirm, focus skipped when series on. Source kinds url/drive/magnet/torrent_file; .torrent picked via SAF and uploaded to jobs/<id>/source.torrent with progress. Confirm writes stage-a-request.json (schema v2) + initial status.json (queued) and dispatches stage-a.yml {job_id, code_ref}."
     },
     {
       "id": "task-05h",
       "title": "Feature: production.json input. When state=awaiting_plan, show either 'Upload file' (SAF pick) OR 'Paste raw text' (unlimited text field). Client-side validate via a Kotlin port of bot/src/plan.js parseAndValidateProductionPlan (same accept/reject rules \u2014 schema shared with pipeline/plan/schema.py). Real progress bar during upload. On success PUT jobs/<id>/production.json and dispatch stage-b.yml with {job_id, code_ref}.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "awaiting_plan state shows paste-raw-text field (no chat length limit) and SAF file upload with progress. PlanValidator.kt ports plan.js parseAndValidateProductionPlan: required durations, hashtags 5-8 unique #-prefixed whitespace-free, youtube_tags 10-20, series window checks (nested + legacy flat), cuts sorted/non-overlapping/within video_duration. On success PUT jobs/<id>/production.json + dispatch stage-b.yml."
     },
     {
       "id": "task-05i",
       "title": "Feature: music library. List audio-library/ via cache-first. Multi-select delete. Upload new track with real progress bar (base64-chunked via contents API, safe path guard). Set/clear default = write/delete branding/music_default.json.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "MusicScreen lists audio-library/ via CacheFirstStore; multi-select batch delete with safe-path guard; upload with real progress; set/clear default via branding/music_default.json write/delete."
     },
     {
       "id": "task-05j",
       "title": "Feature: audio preview player. ExoPlayer with a SimpleCache (disk-backed under context.cacheDir/media, 200 MB LRU cap) so first play streams over network, subsequent plays are cache hits. Applies to audio-library/* and to any final-video audio track fetched from a release asset.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "AudioPreview.kt: ExoPlayer + OkHttpDataSource (Bearer auth, raw accept) behind CacheDataSource + SimpleCache (200MB LRU, cacheDir/media) \u2014 first play streams, replays are cache hits. Play button per library track."
     },
     {
       "id": "task-05k",
       "title": "Feature: video save via SafeSave. For a completed task, download-URL button fetches the release asset over the GitHub API with the PAT and writes it to /Movies/ClipForge/<jobId>.mp4 via MediaStore (Android 10+) with the storage-permission-gated code path for pre-Q. Real progress bar (Content-Length driven). Never DownloadManager.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "saveVideo() streams the release asset (octet-stream via asset API url) into a SafeSave ACTION_CREATE_DOCUMENT Uri (video/mp4, suggested <jobId>.mp4 under Movies/ClipForge) with Content-Length-driven LinearProgressIndicator. Persistable permission taken. DownloadManager never used."
     },
     {
       "id": "task-05l",
       "title": "Feature: settings screen. Show connected clone repo, PAT masked, sign-out (clears EncryptedSharedPreferences); toggle default music; TTS settings mirror (voice picker from VOICES map). Zernio publish is out-of-scope for v1 (deferred).",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "SettingsScreen: clone repo shown, PAT masked, sign-out clears EncryptedSharedPreferences; voice picker mirrors VOICES map from bot/src/constants.js (default en-US-AndrewNeural). Zernio publish deferred."
     },
     {
       "id": "task-06",
       "title": "Validate the build config and dispatch release.yml with app_path=apps/clipforge. Verify tag clipforge-v1 and APK asset exist via GitHub Releases API.",
-      "status": "pending",
+      "status": "in_progress",
       "notes": ""
     },
     {
