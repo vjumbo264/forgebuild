@@ -2,7 +2,7 @@
   "project": "forgebuild-a-android-version-of-forgebuild",
   "build_complete": false,
   "updated_by": "session-a-android-version-of-forgebuild",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -19,8 +19,8 @@
     {
       "id": "step-3",
       "title": "Adaptive icon via apps/a-android-version-of-forgebuild/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Generated custom ForgeBuild artwork (anvil + forging spark/lightning in M3 palette), executed tools/make_adaptive_icon.py producing safe-zoned foreground, background (#1C1B1F), monochrome and anydpi-v26 XMLs across mdpi..xxxhdpi."
     },
     {
       "id": "step-4",
@@ -55,6 +55,10 @@
     {
       "session": "session-a-android-version-of-forgebuild",
       "event": "step-2 done: namespace and applicationId set to com.forgebuild.aandroidversionofforgebuild, app_name set to ForgeBuild in strings.xml, package updated."
+    },
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-3 done: adaptive icons generated for a-android-version-of-forgebuild via make_adaptive_icon.py."
     }
   ]
 }
