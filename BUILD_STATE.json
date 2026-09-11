@@ -2,7 +2,7 @@
   "project": "forgebuild-demo-tapcounter",
   "build_complete": false,
   "updated_by": "e2e-session",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -19,8 +19,8 @@
     {
       "id": "step-3",
       "title": "Signing secrets via API",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD set as Actions secrets on the app repo via sealed-box API. Keystore never committed."
     },
     {
       "id": "step-4",
