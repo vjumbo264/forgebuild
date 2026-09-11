@@ -1,0 +1,76 @@
+name: Build & Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Release tag, e.g. v1"
+        required: true
+      release_notes:
+        description: "Version notes"
+        required: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore (release signing)
+        run: |
+          mkdir -p keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore/release.jks
+
+      - name: Build release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: forgebuild
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Determine tag
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.version_tag }}"
+          if [ -z "$TAG" ]; then TAG="${GITHUB_REF#refs/tags/}"; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Write app manifest (metadata)
+        run: |
+          PKG=$(grep -oP 'applicationId = "\K[^"]+' app/build.gradle.kts)
+          NAME=$(grep -oP '(?<=<string name="app_name">)[^<]+' app/src/main/res/values/strings.xml || echo "App")
+          PERMS=$(grep -oP 'android:name="android.permission.\K[^"]+' app/src/main/AndroidManifest.xml | sort -u | paste -sd, -)
+          cat > forgebuild-manifest.json <<JSON
+          {
+            "app_name": "$NAME",
+            "package": "$PKG",
+            "version_tag": "${{ steps.meta.outputs.tag }}",
+            "permissions": "${PERMS}",
+            "version_notes": "${{ github.event.inputs.release_notes || github.event.head_commit.message }}",
+            "built_by": "forgebuild-engine release workflow"
+          }
+JSON
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk "app-${{ steps.meta.outputs.tag }}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          body: ${{ github.event.inputs.release_notes || github.event.head_commit.message }}
+          files: |
+            app-${{ steps.meta.outputs.tag }}.apk
+            forgebuild-manifest.json
+          generate_release_notes: false
