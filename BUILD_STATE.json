@@ -1,0 +1,38 @@
+{
+  "project": "forgebuild-demo-tapcounter",
+  "build_complete": false,
+  "updated_by": "e2e-session",
+  "current_task": "step-1",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Create repo from Engine template, set topic, seed state+history",
+      "status": "in_progress",
+      "notes": ""
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity (package/app_name) + adaptive icon",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Signing secrets via API",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Implement tap-counter UI (M3 + EngineIcons)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Release v1 via release workflow; verify APK asset live",
+      "status": "pending",
+      "notes": ""
+    }
+  ]
+}
