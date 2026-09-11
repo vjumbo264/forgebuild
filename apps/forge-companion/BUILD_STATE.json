@@ -1,9 +1,9 @@
 {
   "slug": "forge-companion",
   "project": "forgebuild-forge-companion",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-forge-companion",
-  "current_task": "step-6",
+  "current_task": null,
   "tasks": [
     {
       "id": "step-1",
@@ -38,14 +38,14 @@
     {
       "id": "step-6",
       "title": "Validate the build configuration, then release <slug>-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/<slug>) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Dispatched release.yml workflow via GitHub API for apps/forge-companion. Build completed successfully (run ID 34628970871) and published release forge-companion-v1 with signed APK app-forge-companion-v1.apk and forgebuild-manifest.json verified live via Releases API."
     },
     {
       "id": "step-7",
       "title": "Set apps/<slug>/BUILD_STATE.json build_complete: true only after <slug>-v1 is verified live.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "forge-companion-v1 verified live with app-forge-companion-v1.apk (1.2MB). Marked build_complete: true."
     }
   ],
   "history": [
@@ -68,7 +68,15 @@
     {
       "session": "session-forge-companion",
       "event": "step-5 done: implemented ForgeBuild Companion Android app with Home, Apps, AppDetail, Version screens, SafeSave downloads, CacheFirstStore, prompt generators, and PAT management."
+    },
+    {
+      "session": "session-forge-companion",
+      "event": "step-6 done: dispatched release.yml, GitHub Actions built release APK, tag forge-companion-v1 published with signed APK and manifest."
+    },
+    {
+      "session": "session-forge-companion",
+      "event": "step-7 done: verified release assets live on GitHub Releases API, marked build_complete: true."
     }
   ],
-  "notes": "Step 5 complete. Next: step-6 dispatch release.yml for apps/forge-companion and verify forge-companion-v1 release + APK live on GitHub Releases API."
+  "notes": "Build completely finished and verified live. forge-companion-v1 release asset: app-forge-companion-v1.apk"
 }
