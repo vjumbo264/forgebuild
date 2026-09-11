@@ -17,13 +17,28 @@
     <a href="#/" data-nav="home">New app</a>
     <a href="#/apps" data-nav="apps">Apps</a>
   </nav>
-  <div class="patbox">
-    <input id="pat" type="password" placeholder="GitHub PAT (session only)" autocomplete="off">
-    <button id="patSave" class="btn small tonal">Save</button>
+  <div class="patbox" id="patbox">
+    <span id="patStatus" class="patstatus"></span>
+    <button id="patDisconnect" class="btn small tonal" style="display:none">Disconnect</button>
   </div>
 </header>
+<div id="patGate" class="patgate" style="display:none">
+  <div class="card patcard">
+    <h2 style="margin-top:0">Connect your GitHub PAT</h2>
+    <p class="sub">ForgeBuild reads your apps and releases straight from the
+    <b>forgebuild</b> repository. Paste a fine-grained GitHub PAT once — it is stored in this
+    browser's <code>localStorage</code> only, never sent anywhere except the GitHub API, and you are
+    never asked again unless you click <b>Disconnect</b>.</p>
+    <label for="patGateInput">GitHub PAT (Contents: read on <code>forgebuild</code> is enough to browse)</label>
+    <input id="patGateInput" type="password" placeholder="github_pat_…" autocomplete="off">
+    <div class="row">
+      <button id="patGateSave" class="btn">Save &amp; continue</button>
+      <button id="patGateSkip" class="btn tonal">Browse public data without a PAT</button>
+    </div>
+  </div>
+</div>
 <main id="view"><div class="loading">Loading…</div></main>
-<footer class="foot">ForgeBuild · single-operator tooling · GitHub is the source of truth · <a href="https://github.com/vjumbo264/forgebuild" target="_blank" rel="noopener">repo</a></footer>
+<footer class="foot">ForgeBuild · single-operator tooling · one repo, every app · <a href="https://github.com/vjumbo264/forgebuild" target="_blank" rel="noopener">repo</a></footer>
 <script src="app.js"></script>
 </body>
 </html>

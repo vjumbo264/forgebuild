@@ -56,3 +56,9 @@ pre{background:var(--surface-container-high);border-radius:12px;padding:14px;ove
 .foot{padding:18px;text-align:center;color:var(--outline);font-size:12px;border-top:1px solid var(--outline-variant)}
 .checks{font-size:13px;line-height:1.7;color:var(--on-surface)}
 .checks b{color:var(--primary)}
+
+/* PAT gate + status (M5) */
+.patstatus{font-size:12px;color:var(--outline);margin-left:auto}
+.patgate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px}
+.patcard{max-width:520px;width:100%}
+.patcard input{width:100%;padding:10px 14px;border:1px solid var(--outline);border-radius:12px;background:var(--surface);color:var(--on-surface);font-size:14px;margin:6px 0 14px}
