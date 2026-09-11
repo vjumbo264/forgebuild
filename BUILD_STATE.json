@@ -271,7 +271,7 @@
       "status": "done",
       "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) — deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree → null-sha entries → new tree → new commit → PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo — completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents — no separate index needed). Fixture fully cleaned up by the test itself.",
       "commits": [
-        "pending-this-commit"
+        "f07af98"
       ],
       "files": [
         "site/app.js"
