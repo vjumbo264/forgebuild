@@ -72,14 +72,27 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     }
 
     init {
-        _hasPromptedStorage.value = creds.hasPromptedStorage()
-        creds.load()?.let {
-            _login.value = it
-            api = GitHubClient(it.pat, it.owner, it.repo)
+        // Startup must NEVER throw — a crash here bricks every subsequent launch
+        // (the "app doesn't launch again" bug). Credential storage is already
+        // crash-proof, but we belt-and-suspend the whole init path anyway.
+        try {
+            _hasPromptedStorage.value = creds.hasPromptedStorage()
+            creds.load()?.let {
+                _login.value = it
+                api = GitHubClient(it.pat, it.owner, it.repo)
+            }
+        } catch (_: Exception) {
+            _login.value = null
+            api = null
         }
         _ready.value = true
+        // Kick off background refresh only after the UI is guaranteed to render.
+        // refreshAll() launches coroutines (non-blocking); any network failure is
+        // caught inside the individual refresh calls.
         if (api != null) {
-            refreshAll()
+            try {
+                refreshAll()
+            } catch (_: Exception) {}
         }
     }
 
