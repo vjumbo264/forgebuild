@@ -98,7 +98,7 @@ object ContractGenerator {
         appendLine("APP_FOLDER = apps/" + slug + "/ (inside " + OWNER + "/" + REPO + ")")
         appendLine()
         appendLine("INSTRUCTION:")
-        appendLine("Resume the interrupted build of " + slug + ". Read apps/" + slug + "/BUILD_STATE.json and PROMPT_HISTORY/" + slug + ".md completely. Find the first task with status: "in_progress" or "pending". Complete it, update BUILD_STATE.json, commit + push, verify the push on origin/main, then move to the next task until the release is verified live and build_complete is true.")
+        appendLine("Resume the interrupted build of " + slug + ". Read apps/" + slug + "/BUILD_STATE.json and PROMPT_HISTORY/" + slug + ".md completely. Find the first task with status: in_progress or pending. Complete it, update BUILD_STATE.json, commit + push, verify the push on origin/main, then move to the next task until the release is verified live and build_complete is true.")
         appendRules(this)
     }
 }

@@ -171,20 +171,21 @@ fun NewAppScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "1. Everything lives in the single vjumbo264/forgebuild repo.
-" +
-                                "2. The AI session uses your prompt contract to initialize apps/<slug> from engine/.
-" +
-                                "3. The AI creates the adaptive icon, configures the build, and implements the Kotlin Compose code.
-" +
-                                "4. The GitHub Actions release workflow builds and signs the APK.
-" +
-                                "5. The APK appears live right here in ForgeBuild Android!",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 20.sp
-                    )
+                    listOf(
+                        "1. Everything lives in the single vjumbo264/forgebuild repo.",
+                        "2. The AI session uses your prompt contract to initialize apps/<slug> from engine/.",
+                        "3. The AI creates the adaptive icon, configures the build, and implements the Kotlin Compose code.",
+                        "4. The GitHub Actions release workflow builds and signs the APK.",
+                        "5. The APK appears live right here in ForgeBuild Android!"
+                    ).forEach { stepText ->
+                        Text(
+                            text = stepText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 20.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
                 }
             }
         }
