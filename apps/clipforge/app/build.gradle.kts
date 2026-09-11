@@ -63,8 +63,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
     // GitHub API client (bot-equivalent clone control) requires a lean HTTP stack.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // On-device Stage B render (cut/reframe/captions/watermark) requires FFmpeg.
-    implementation("com.arthenica:ffmpeg-kit-full:6.0-2")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core") // tiny core set; extended icons come from local bundled vectors

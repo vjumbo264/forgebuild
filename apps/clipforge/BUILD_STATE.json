@@ -32,7 +32,7 @@
       "id": "step-5",
       "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
       "status": "done",
-      "notes": "Implemented ClipForge Android app mirroring the motionssalt/clipforge Telegram bot: GitHub API clone connect (bot's 'Connect existing clone'), new-clip wizard (/new: direct-URL -> cloud Stage A dispatch, local video -> on-device Stage B via FFmpegKit: cut/reframe 9:16/captions/watermark), task list (/tasks + /done), settings (/settings: narrator voice, watermark, captions, reframe), releases browser. Material 3 ForgeBuildTheme + EngineIcons only (11 new Material Symbols bundled via engine gen pattern). Added deps justified: okhttp 4.12.0 (GitHub API), ffmpeg-kit-full 6.0-2 (on-device render), lifecycle-viewmodel-compose. app_name fixed to ClipForge. PAT stored locally in SharedPreferences only, never committed."
+      "notes": "Implemented ClipForge Android app mirroring the motionssalt/clipforge Telegram bot: GitHub API clone connect (bot's 'Connect existing clone'), new-clip wizard (/new: direct-URL -> cloud Stage A dispatch, local video -> on-device Stage B via FFmpegKit: cut/reframe 9:16/captions/watermark), task list (/tasks + /done), settings (/settings: narrator voice, watermark, captions, reframe), releases browser. Material 3 ForgeBuildTheme + EngineIcons only (11 new Material Symbols bundled via engine gen pattern). Added deps justified: okhttp 4.12.0 (GitHub API), ffmpeg-kit-full 6.0-2 (on-device render), lifecycle-viewmodel-compose. app_name fixed to ClipForge. PAT stored locally in SharedPreferences only, never committed. FIX: com.arthenica:ffmpeg-kit-full:6.0-2 no longer resolvable on google()/mavenCentral() (FFmpegKit binaries retired) \u2014 release build checkReleaseAarMetadata failed. On-device render reimplemented with built-in MediaExtractor/MediaMuxer (zero-dep keyframe-aligned segment cut + concat); caption/reframe/watermark burn-in remains in the clone's cloud Stage B. ffmpeg-kit dependency removed."
     },
     {
       "id": "step-6",
@@ -67,8 +67,12 @@
     {
       "session": "session-clipforge",
       "event": "step-5 done: full ClipForge Android app implemented (GitHub clone control + on-device FFmpeg Stage B render), M3 theme/icons, lean deps."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-5 fix: dropped unresolvable ffmpeg-kit dep; ClipRenderer rewritten on MediaExtractor/MediaMuxer (lean, no native lib)."
     }
   ],
   "last_updated": "2026-09-11T16:00:00.000000+00:00",
-  "notes": "Step 5 complete. Next: step-6 \u2014 validate build config and dispatch release.yml with app_path=apps/clipforge to release clipforge-v1, then verify via GitHub Releases API."
+  "notes": "Step 5 fixed after failed release run (ffmpeg-kit unavailable). Next: step-6 \u2014 re-dispatch release.yml with app_path=apps/clipforge and verify clipforge-v1 via the Releases API."
 }
