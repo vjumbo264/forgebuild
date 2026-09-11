@@ -185,8 +185,8 @@
     {
       "id": "task-M6",
       "title": "Redeploy Dashboard to Cloudflare Pages and verify live: apps list, tapcounter-v1 APK download, one-time PAT across reload, type-2 prompt references apps/tapcounter/ + forgebuild.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Verified live 2026-09-11: (1) Redeploy \u2014 pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload \u2014 so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
       "commits": [],
       "files": [],
       "tests": ""
