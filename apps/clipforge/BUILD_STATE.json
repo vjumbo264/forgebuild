@@ -2,10 +2,10 @@
   "slug": "clipforge",
   "project": "forgebuild",
   "app": "ClipForge for Android",
-  "build_complete": false,
-  "updated_by": "session-02-task-05",
-  "current_task": "task-06",
-  "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
+  "build_complete": true,
+  "updated_by": "session-02-task-07",
+  "current_task": "done",
+  "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary. | v1 RELEASED AND VERIFIED: clipforge-v1 live with signed APK (app-clipforge-v1.apk, 2.08 MB). All tasks 01-07 done.",
   "upstream": {
     "repo": "motionssalt/clipforge",
     "read_at_utc": "2026-09-11",
@@ -139,14 +139,17 @@
     {
       "id": "task-06",
       "title": "Validate the build config and dispatch release.yml with app_path=apps/clipforge. Verify tag clipforge-v1 and APK asset exist via GitHub Releases API.",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "Build validated via CI. Run 1 (34636653183) failed on a K2 parse error caused by a literal '*/' inside a doc comment (ClipForgeViewModel.kt) + missing ExperimentalMaterial3Api OptIns; both fixed in commit 'fix(clipforge): escape */...' and re-dispatched. Run 2 (34636909150) completed success. Release clipforge-v1 verified live via GET /repos/vjumbo264/forgebuild/releases: assets app-clipforge-v1.apk (2082313 bytes) + forgebuild-manifest.json at https://github.com/vjumbo264/forgebuild/releases/tag/clipforge-v1",
+      "commits": [
+        "34636909150"
+      ]
     },
     {
       "id": "task-07",
       "title": "Set build_complete: true after clipforge-v1 is verified live.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "build_complete set true only after clipforge-v1 verified live on the Releases API (success run 34636909150, APK asset present)."
     }
   ]
 }
