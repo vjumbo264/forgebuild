@@ -15,5 +15,16 @@ object EngineIcons {
     val Add: ImageVector get() = EngineIconsGenerated.Add
     val Home: ImageVector get() = EngineIconsGenerated.Home
     val Search: ImageVector get() = EngineIconsGenerated.Search
+    val PlayArrow: ImageVector get() = EngineIconsGenerated.PlayArrow
+    val Movie: ImageVector get() = EngineIconsGenerated.Movie
+    val Refresh: ImageVector get() = EngineIconsGenerated.Refresh
+    val CheckCircle: ImageVector get() = EngineIconsGenerated.CheckCircle
+    val Error: ImageVector get() = EngineIconsGenerated.Error
+    val Link: ImageVector get() = EngineIconsGenerated.Link
+    val ContentCut: ImageVector get() = EngineIconsGenerated.ContentCut
+    val Logout: ImageVector get() = EngineIconsGenerated.Logout
+    val VideoLibrary: ImageVector get() = EngineIconsGenerated.VideoLibrary
+    val Tasks: ImageVector get() = EngineIconsGenerated.Tasks
+    val Send: ImageVector get() = EngineIconsGenerated.Send
     val ArrowBack: ImageVector get() = EngineIconsGenerated.ArrowBack
 }

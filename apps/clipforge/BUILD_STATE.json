@@ -2,7 +2,7 @@
   "project": "forgebuild-clipforge",
   "build_complete": false,
   "updated_by": "session-clipforge",
-  "current_task": "step-5",
+  "current_task": "step-6",
   "tasks": [
     {
       "id": "step-1",
@@ -31,8 +31,8 @@
     {
       "id": "step-5",
       "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented ClipForge Android app mirroring the motionssalt/clipforge Telegram bot: GitHub API clone connect (bot's 'Connect existing clone'), new-clip wizard (/new: direct-URL -> cloud Stage A dispatch, local video -> on-device Stage B via FFmpegKit: cut/reframe 9:16/captions/watermark), task list (/tasks + /done), settings (/settings: narrator voice, watermark, captions, reframe), releases browser. Material 3 ForgeBuildTheme + EngineIcons only (11 new Material Symbols bundled via engine gen pattern). Added deps justified: okhttp 4.12.0 (GitHub API), ffmpeg-kit-full 6.0-2 (on-device render), lifecycle-viewmodel-compose. app_name fixed to ClipForge. PAT stored locally in SharedPreferences only, never committed."
     },
     {
       "id": "step-6",
@@ -63,8 +63,12 @@
     {
       "session": "session-clipforge",
       "event": "step-4 done: confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-5 done: full ClipForge Android app implemented (GitHub clone control + on-device FFmpeg Stage B render), M3 theme/icons, lean deps."
     }
   ],
-  "last_updated": "2026-09-11T15:02:00.000000+00:00",
-  "notes": "Step 4 complete: signing secrets confirmed. Ready for Step 5 application implementation."
+  "last_updated": "2026-09-11T16:00:00.000000+00:00",
+  "notes": "Step 5 complete. Next: step-6 \u2014 validate build config and dispatch release.yml with app_path=apps/clipforge to release clipforge-v1, then verify via GitHub Releases API."
 }
