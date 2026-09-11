@@ -2,7 +2,7 @@
   "project": "forgebuild-clipforge",
   "build_complete": false,
   "updated_by": "session-clipforge",
-  "current_task": "step-4",
+  "current_task": "step-5",
   "tasks": [
     {
       "id": "step-1",
@@ -25,8 +25,8 @@
     {
       "id": "step-4",
       "title": "Confirm the repo-level signing secrets exist (see SIGNING & RELEASES); do not regenerate them.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets via GitHub API."
     },
     {
       "id": "step-5",
@@ -59,8 +59,12 @@
     {
       "session": "session-clipforge",
       "event": "step-3 done: adaptive icons generated for clipforge via make_adaptive_icon.py."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-4 done: confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets."
     }
   ],
-  "last_updated": "2026-09-11T15:01:00.000000+00:00",
-  "notes": "Step 3 complete: adaptive icons generated. Ready for Step 4 signing secrets confirmation."
+  "last_updated": "2026-09-11T15:02:00.000000+00:00",
+  "notes": "Step 4 complete: signing secrets confirmed. Ready for Step 5 application implementation."
 }
