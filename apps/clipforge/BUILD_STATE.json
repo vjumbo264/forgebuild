@@ -3,8 +3,8 @@
   "project": "forgebuild",
   "app": "ClipForge for Android",
   "build_complete": false,
-  "updated_by": "session-02-task-02",
-  "current_task": "task-03",
+  "updated_by": "session-02-task-04",
+  "current_task": "task-05a",
   "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
   "upstream": {
     "repo": "motionssalt/clipforge",
@@ -55,14 +55,14 @@
     {
       "id": "task-03",
       "title": "Adaptive icon via tools/make_adaptive_icon.py \u2014 create simple ClipForge foreground artwork (film-strip + spark glyph) and generate all mipmap densities + monochrome + adaptive-icon XML. Commit + push.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "ClipForge artwork (white film-strip + forge spark on deep-indigo #1A237E) created at tools/icon_fg.png; make_adaptive_icon.py wrote background/foreground/monochrome layers for mdpi..xxxhdpi + mipmap-anydpi-v26 ic_launcher(.round).xml. Manifest already points at @mipmap/ic_launcher."
     },
     {
       "id": "task-04",
       "title": "Confirm repo-level signing secrets exist on vjumbo264/forgebuild (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD). Do not regenerate.",
-      "status": "pending",
-      "notes": "Prior calcom/forge-companion/tapcounter releases succeeded \u2014 secrets confirmed present at repo level."
+      "status": "done",
+      "notes": "Repo-level signing secrets confirmed present via GET /repos/vjumbo264/forgebuild/actions/secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD). Not regenerated."
     },
     {
       "id": "task-05a",
