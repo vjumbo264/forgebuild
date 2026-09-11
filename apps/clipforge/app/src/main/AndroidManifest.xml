@@ -7,6 +7,12 @@
       com.forgebuild.engine.permissions.PermissionWiring) and, where Android
       requires it, adding the manifest entry below. See ENGINE_ARCHITECTURE.md.
     -->
+    <!-- INTERNET: required — every ClipForge feature talks to the GitHub REST API
+         (task state, workflow dispatch, log polling, streaming preview, asset download).
+         POST_NOTIFICATIONS deliberately NOT declared: live logs are polled in-app;
+         no notification feature exists in v1. Storage saves are SAF-scoped (SafeSave),
+         so no WRITE/READ_EXTERNAL_STORAGE either. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"

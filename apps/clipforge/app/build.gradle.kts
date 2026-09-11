@@ -67,5 +67,19 @@ dependencies {
     // layer (com.forgebuild.engine.data.CacheFirstStore) — justified engine-level
     // dependency, do not remove even though the starter UI itself is coroutine-free.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // --- ClipForge feature dependencies (each justified in BUILD_STATE.json task-05a) ---
+    // OkHttp: GitHub REST client + streaming downloads/uploads with real progress (Content-Length driven).
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Retrofit/Moshi deliberately NOT added: the pipeline contract is dynamic JSON (status.json,
+    // production.json) and org.json (already on classpath, used by CacheFirstStore) covers it leaner.
+    // security-crypto: EncryptedSharedPreferences for the per-clone PAT (bot crypto.js equivalent).
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    // Media3 ExoPlayer + OkHttp data source: streamed audio/narration preview with disk SimpleCache
+    // (first play streams, replay is a cache hit — mirrors the preview requirement, no download-first).
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+    // ViewModel + Navigation for the multi-screen app shell (tasks / series / detail / wizard / settings).
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
+    implementation("androidx.navigation:navigation-compose:2.8.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

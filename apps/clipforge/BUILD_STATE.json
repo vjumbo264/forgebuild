@@ -3,8 +3,8 @@
   "project": "forgebuild",
   "app": "ClipForge for Android",
   "build_complete": false,
-  "updated_by": "session-02-task-04",
-  "current_task": "task-05a",
+  "updated_by": "session-02-task-05a",
+  "current_task": "task-05b",
   "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
   "upstream": {
     "repo": "motionssalt/clipforge",
@@ -67,8 +67,8 @@
     {
       "id": "task-05a",
       "title": "Feature: dependencies + manifest. Add Retrofit/OkHttp/Moshi (GitHub API), androidx.security.crypto (EncryptedSharedPreferences), androidx.media3 (ExoPlayer for streaming audio previews), lifecycle-viewmodel-compose, navigation-compose, activity-compose. Declare INTERNET (+ POST_NOTIFICATIONS 33+) permissions. Justify each dep in BUILD_STATE.json.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Deps added, each justified: OkHttp 4.12.0 (GitHub REST + streaming progress); security-crypto 1.1.0-alpha06 (EncryptedSharedPreferences PAT store, mirrors bot crypto.js); media3-exoplayer+datasource-okhttp 1.4.1 (streamed audio preview w/ SimpleCache); lifecycle-viewmodel-compose + navigation-compose (multi-screen shell). Retrofit/Moshi intentionally omitted \u2014 org.json already on classpath covers dynamic pipeline JSON. Manifest: INTERNET only; POST_NOTIFICATIONS not declared (no notification feature); no storage perms (SAF via SafeSave)."
     },
     {
       "id": "task-05b",
