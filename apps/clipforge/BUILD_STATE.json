@@ -2,7 +2,7 @@
   "project": "forgebuild-clipforge",
   "build_complete": false,
   "updated_by": "session-clipforge",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -19,8 +19,8 @@
     {
       "id": "step-3",
       "title": "Adaptive icon via apps/clipforge/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Generated custom ClipForge artwork (9:16 vertical film card, amber play forge spark, star embers), executed tools/make_adaptive_icon.py producing safe-zoned foreground, background (#0F172A), monochrome and anydpi-v26 XMLs across mdpi..xxxhdpi."
     },
     {
       "id": "step-4",
@@ -55,8 +55,12 @@
     {
       "session": "session-clipforge",
       "event": "step-2 done: namespace and applicationId set to com.forgebuild.clipforge, app_name set to ClipForge in strings.xml, MainActivity moved to com.forgebuild.clipforge package."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-3 done: adaptive icons generated for clipforge via make_adaptive_icon.py."
     }
   ],
-  "last_updated": "2026-09-11T15:00:00.000000+00:00",
-  "notes": "Step 2 complete: identity set to com.forgebuild.clipforge / ClipForge. Ready for Step 3 adaptive icon creation."
+  "last_updated": "2026-09-11T15:01:00.000000+00:00",
+  "notes": "Step 3 complete: adaptive icons generated. Ready for Step 4 signing secrets confirmation."
 }
