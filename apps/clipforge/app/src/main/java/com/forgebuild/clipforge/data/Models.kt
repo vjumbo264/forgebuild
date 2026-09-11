@@ -36,7 +36,7 @@ data class ProductionPlan(
     val vertical: Boolean = true
 )
 
-/** Narrator / branding settings, mirroring branding/*.json from the bot. */
+/** Narrator / branding settings, mirroring the branding directory JSON files from the bot. */
 data class ForgeSettings(
     val narratorVoice: String = "en-US-AriaNeural",
     val watermarkText: String = "",
