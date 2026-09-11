@@ -117,6 +117,7 @@ fun MainNav(nav: NavHostController, vm: ClipForgeViewModel) {
 }
 
 /* ---------------- task list + series + multi-select delete ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
     vm: ClipForgeViewModel, onTask: (String) -> Unit,
@@ -197,6 +198,7 @@ fun TaskCard(t: TaskStatus, checked: Boolean, onClick: () -> Unit, onLong: () ->
 }
 
 /* ---------------- task detail: live polling log + save + production.json ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) {
     val detail by vm.detail.collectAsState()
@@ -285,6 +287,7 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
 }
 
 /* ---------------- series view ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeriesScreen(vm: ClipForgeViewModel, seriesId: String, onBack: () -> Unit, onTask: (String) -> Unit) {
     val tasks by vm.tasks.collectAsState()
@@ -308,6 +311,7 @@ fun SeriesScreen(vm: ClipForgeViewModel, seriesId: String, onBack: () -> Unit, o
 }
 
 /* ---------------- new-task wizard (source → focus → length → music → confirm) ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     var step by remember { mutableStateOf(0) }
@@ -401,6 +405,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
 }
 
 /* ---------------- music library: multi-select, upload w/ progress, default ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MusicScreen(vm: ClipForgeViewModel, onBack: () -> Unit) {
     LaunchedEffect(Unit) { vm.onMusicOpen(); vm.loadDefaultMusic() }
@@ -462,6 +467,7 @@ fun MusicScreen(vm: ClipForgeViewModel, onBack: () -> Unit) {
 }
 
 /* ---------------- settings ---------------- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(vm: ClipForgeViewModel, onBack: () -> Unit) {
     val login by vm.login.collectAsState()

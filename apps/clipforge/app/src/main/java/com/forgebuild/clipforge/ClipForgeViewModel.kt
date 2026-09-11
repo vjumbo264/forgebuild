@@ -119,7 +119,7 @@ class ClipForgeViewModel(app: Application) : AndroidViewModel(app) {
     val seriesMap get() = tasks.value.filter { it.seriesEnabled }
         .groupBy { it.seriesId }.toSortedMap(compareByDescending { it })
 
-    /** Delete tasks: remove every jobs/<id>/* blob + releases (mirrors deleteClipforgeJob). */
+    /** Delete tasks: remove every jobs/id blob + releases (mirrors deleteClipforgeJob). */
     fun deleteTasks(ids: Set<String>) = viewModelScope.launch {
         val c = api ?: return@launch
         for (id in ids) {
