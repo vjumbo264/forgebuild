@@ -1,8 +1,8 @@
 {
   "project": "forgebuild-a-android-version-of-forgebuild",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-a-android-version-of-forgebuild",
-  "current_task": "step-6",
+  "current_task": "none",
   "tasks": [
     {
       "id": "step-1",
@@ -37,14 +37,14 @@
     {
       "id": "step-6",
       "title": "Validate the build configuration, then release a-android-version-of-forgebuild-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/a-android-version-of-forgebuild) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Dispatched release.yml workflow for apps/a-android-version-of-forgebuild. Successfully built, signed, and published a-android-version-of-forgebuild-v1 with app-a-android-version-of-forgebuild-v1.apk (1,236,027 bytes)."
     },
     {
       "id": "step-7",
       "title": "Set apps/a-android-version-of-forgebuild/BUILD_STATE.json build_complete: true only after a-android-version-of-forgebuild-v1 is verified live.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified release and APK live on GitHub Releases API. Marked build_complete: true."
     }
   ],
   "history": [
@@ -67,6 +67,16 @@
     {
       "session": "session-a-android-version-of-forgebuild",
       "event": "step-5 done: implemented native ForgeBuild Android app with inventory, details, prompt generator, APK installer, and workflow trigger."
+    },
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-6 done: release workflow built, signed, and published tag a-android-version-of-forgebuild-v1 with APK asset on GitHub Releases."
+    },
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-7 done: verified release a-android-version-of-forgebuild-v1 live on GitHub Releases API, build_complete set to true."
     }
-  ]
+  ],
+  "last_updated": "2026-09-11T14:45:18.357142+00:00",
+  "notes": "Build and release completed successfully. Version a-android-version-of-forgebuild-v1 is verified live on GitHub Releases with signed release APK asset app-a-android-version-of-forgebuild-v1.apk (1.2 MB) and forgebuild-manifest.json."
 }
