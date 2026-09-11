@@ -40,5 +40,9 @@
       "session": "session-migration",
       "event": "step-5 done: tapcounter-v1 released + verified on vjumbo264/forgebuild via the single-repo workflow."
     }
-  ]
+  ],
+  "notes": "",
+  "correction_round_2": {
+    "fix_2_cache_first": "NOT APPLICABLE — tapcounter is a purely local/offline app (no network fetch/sync anywhere: no uses-permission INTERNET in the manifest, no HTTP/API client code). The Engine cache-first background-refresh pattern imposes no change here. Recorded 2026-09-11 by correction-round-2 session."
+  }
 }

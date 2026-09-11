@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-correction-round-2",
-  "current_task": "task-C2",
+  "current_task": "task-C4",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -137,6 +137,10 @@
     {
       "session": "session-correction-round-2",
       "event": "task-C1 done: slug ownership moved to building AI; Dashboard derivation removed; docs updated."
+    },
+    {
+      "session": "session-correction-round-2",
+      "event": "task-C2 done: CacheFirstStore + docs + generator mandates; tapcounter marked not-applicable (offline app). (ScreenSecurity/SafeSave files landed in same commit; task-C4 continues with the permission-suite expansion.)"
     }
   ],
   "migration_tasks": [
@@ -237,11 +241,21 @@
     {
       "id": "task-C2",
       "title": "Fix 2 — Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
-      "status": "pending",
-      "notes": "",
-      "commits": [],
-      "files": [],
-      "tests": ""
+      "status": "done",
+      "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile — remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract — instant cached render + background reconcile, no re-flash — is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) — Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
+      "commits": [
+        "pending-this-commit"
+      ],
+      "files": [
+        "engine/app/src/main/java/com/forgebuild/engine/data/CacheFirstStore.kt",
+        "engine/app/src/main/java/com/forgebuild/engine/security/ScreenSecurity.kt",
+        "engine/app/src/main/java/com/forgebuild/engine/files/SafeSave.kt",
+        "engine/app/build.gradle.kts",
+        "engine/ARCHITECTURE.md",
+        "site/app.js",
+        "apps/tapcounter/BUILD_STATE.json"
+      ],
+      "tests": "node --check site/app.js OK; 9/9 prompt-content assertions PASS (cache-first mandate in RULES; keyword-tied helper hints incl. live-data desc). Kotlin files code-reviewed (no local Android SDK; compilation is CI-verified via release.yml on next app build). tapcounter: grep shows zero network references; manifest has no INTERNET permission."
     },
     {
       "id": "task-C3",

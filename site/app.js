@@ -94,6 +94,19 @@ SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD,
 
 STOPPING: only stop at a genuine execution boundary after committing/pushing an updated apps/<slug>/BUILD_STATE.json whose notes say exactly what is done, what remains, and the exact next operation — or when the release is fully verified live on the GitHub Releases API.`;
 
+// Tie Engine helpers to the actual description (Fix 4): surface FLAG_SECURE /
+// SafeSave / cache-first as explicit options only when the description implies them.
+function helperHints(desc){
+  const d=desc.toLowerCase();const hints=[];
+  if(/sensitiv|privat|secret|vault|lock|hidden|nsfw|confidential|password|journal|diary|intimate/.test(d))
+    hints.push('- SENSITIVE CONTENT detected in the description: use the Engine ScreenSecurity helper (com.forgebuild.engine.security.ScreenSecurity, FLAG_SECURE) on exactly the screens showing that content — per screen, not app-wide — so those screens cannot be screenshotted, screen-recorded or thumbnailed in recents.');
+  if(/download|save|export|backup|file|pdf|csv|photo|image|video|music|offline copy/.test(d))
+    hints.push('- FILE SAVING detected in the description: use the Engine SafeSave helper (com.forgebuild.engine.files.SafeSave, Storage Access Framework: ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE) with the app\'s own save UI and user-picked destination. NEVER android.app.DownloadManager / the system Downloads folder.');
+  if(/sync|fetch|feed|news|api|server|online|live|remote|refresh|updates from|from a repo/.test(d))
+    hints.push('- LIVE/REMOTE DATA detected in the description: you MUST use the Engine cache-first pattern (com.forgebuild.engine.data.CacheFirstStore) — instant render from local cache on open, background refresh + reconcile, never reload-from-scratch with a blocking spinner.');
+  return hints.length?`\nENGINE HELPERS RELEVANT TO THIS APP (standing Engine capabilities — use them, do not reinvent):\n${hints.join('\n')}\n`:'';
+}
+
 function promptNewApp(desc,slug){
 const pkg='com.forgebuild.'+(slug?slug.replace(/[^a-z0-9]/g,'')||'app':'<slug with dashes removed>');
 const slugBlock=slug
@@ -114,7 +127,7 @@ TASKS (seed apps/<slug>/BUILD_STATE.json with these, all pending, then execute i
 5. Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.
 6. Validate the build configuration, then release <slug>-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/<slug>) and verify the release + APK asset exist via the GitHub Releases API on ${OWNER}/${REPO}.
 7. Set apps/<slug>/BUILD_STATE.json build_complete: true only after <slug>-v1 is verified live.
-`+RULES;}
+`+helperHints(desc)+RULES;}
 
 function promptExtend(slug,instruction,latest){
 return contractHead('EXTEND / UPDATE')+`APP_SLUG = ${slug}
@@ -131,7 +144,7 @@ TASKS:
 3. Seed/refresh apps/${slug}/BUILD_STATE.json tasks for this update (implement change → validate → release).
 4. Implement the instruction following the per-step protocol and quality constraints below, working from the latest released source in apps/${slug}/. If the change is an Engine-level fix, apply it in engine/ AND propagate it into apps/${slug}/ (and note it).
 5. Release the next version via the release.yml workflow (app_path=apps/${slug}); the tag auto-increments to ${slug}-v(N+1). NEVER overwrite or delete any prior release. Verify the new release live via the API, then set build_complete: true.
-`+RULES;}
+`+helperHints(instruction)+RULES;}
 
 function promptResume(slug){
 return contractHead('RESUME UNFINISHED BUILD')+`APP_SLUG = ${slug}

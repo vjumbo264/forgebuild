@@ -15,11 +15,17 @@ app are all expressible.
 - `app/src/main/java/com/forgebuild/engine/ui/icons/` — Material Symbols icons
   bundled as local Compose `ImageVector`s (offline, lean). Extend with
   `tools/gen_icons.py` — never emoji, never mixed icon sets.
-- `app/src/main/java/com/forgebuild/engine/permissions/` — permission wiring:
-  storage, camera, notifications, foreground service, background location,
-  device administrator. **Nothing is declared or requested by default**; the
-  generating AI enables only what the app legitimately needs (manifest entries
-  + `PermissionWiring` calls).
+- `app/src/main/java/com/forgebuild/engine/permissions/` — permission wiring.
+  **Nothing is declared or requested by default**; the generating AI enables
+  only what the app legitimately needs (manifest entries + `PermissionWiring`
+  calls). See the full permission catalog below.
+- `app/src/main/java/com/forgebuild/engine/data/CacheFirstStore.kt` — the
+  standing cache-first data layer (see below).
+- `app/src/main/java/com/forgebuild/engine/security/ScreenSecurity.kt` —
+  per-screen screenshot/recording prevention via `FLAG_SECURE` (see below).
+- `app/src/main/java/com/forgebuild/engine/files/SafeSave.kt` — explicit,
+  permission-scoped save/download flow via the Storage Access Framework
+  (see below).
 - `tools/make_adaptive_icon.py` — foreground artwork in → safe-zoned adaptive
   icon layers out (72dp safe zone inside the 108dp canvas, background layer,
   monochrome layer for themed icons). Never a padded white square.
@@ -28,6 +34,65 @@ app are all expressible.
 - `.github/workflows/release.yml` — builds the signed release APK on tag push
   (`v*`) or manual `workflow_dispatch`, writes `forgebuild-manifest.json`
   (name, package, permissions, notes) and attaches both to a GitHub Release.
+
+## Cache-first, background-refresh data pattern (STANDING REQUIREMENT)
+Any generated app whose functionality involves fetching/syncing from a live
+remote source (a repository, an API, anything network-backed) MUST use
+`com.forgebuild.engine.data.CacheFirstStore` — never a from-scratch
+reload-everything-on-every-open behavior.
+
+The contract:
+1. **On screen/app open, render immediately from the local cache** — call
+   `loadFromCache()` synchronously before first composition; there is zero
+   network wait. First launch renders the empty state.
+2. **Then refresh in the background** — launch `refresh()` in a coroutine. It
+   fetches the live source, reconciles (additions appear, removals disappear,
+   changed items update — remote is authoritative by default; override
+   `reconcile` for id-aware merges via the `keyOf` parameter), persists the
+   cache, and the UI recomposes in place.
+3. **Never re-flash to a loading state.** The already-rendered cached UI must
+   not drop back to a spinner because of a refresh. Use the `refreshing`
+   StateFlow for a subtle non-blocking affordance and `lastError` for a
+   dismissible banner; cached data stays on screen when the network fails.
+
+The reference implementation uses a dependency-free on-disk JSON cache. A
+building AI may substitute Room or DataStore where the data genuinely
+warrants it (relational queries, large datasets) — that substitution and its
+reason must be documented in the app's own ARCHITECTURE.md notes. What must
+be preserved is the contract above, not the exact class. The engine ships
+`kotlinx-coroutines-android` as a justified engine-level dependency for this
+layer.
+
+## Per-screen screenshot / recording prevention (`FLAG_SECURE`)
+`com.forgebuild.engine.security.ScreenSecurity` applies
+`WindowManager.LayoutParams.FLAG_SECURE` to a window, blocking screenshots,
+screen recordings, and the recent-apps thumbnail for exactly that window.
+Apply it **per screen, not app-wide**: the operator's need is "certain parts"
+of an app (a vault screen, a private detail view), so blanket protection is
+wrong — it also breaks the operator's own legitimate screenshots. In a
+single-activity Compose app, call `ScreenSecurity.setSecure(activity, flag)`
+from a `LaunchedEffect` keyed on whether the current route is sensitive; in a
+multi-activity app, call `ScreenSecurity.apply(activity)` in `onCreate()` of
+exactly the sensitive activities. Only protect the whole app if the operator
+explicitly asks.
+
+## Explicit, permission-scoped saves/downloads (`SafeSave`, never DownloadManager)
+`com.forgebuild.engine.files.SafeSave` is the only approved way for a
+generated app to save/download files. The app keeps control: its own save UI
+and confirmation, a destination the user explicitly picks. **Never** use
+`android.app.DownloadManager` or let files silently land in the system
+Downloads app outside the app's control.
+
+Default: the **Storage Access Framework** — `registerCreateDocument`
+(`ACTION_CREATE_DOCUMENT`) for save-as flows and `registerOpenTree`
+(`ACTION_OPEN_DOCUMENT_TREE`) for a reusable user-chosen folder, with
+`takePersistablePermission` for grants that must survive restarts. SAF is
+user-directed and permission-scoped by design: no runtime storage permission
+is needed on modern Android because the user grants exactly the file/tree
+they pick. Fall back to the legacy `WRITE_EXTERNAL_STORAGE` flow (via
+`PermissionWiring`, `EnginePermission.STORAGE`) only where an app's minSdk
+genuinely requires pre-Android-10 direct-path saves. Never request
+`MANAGE_EXTERNAL_STORAGE` just to save files.
 
 ## Extension points for the generating AI
 1. Replace `namespace`/`applicationId` in `app/build.gradle.kts`.
