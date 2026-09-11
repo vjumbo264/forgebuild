@@ -244,7 +244,7 @@
       "status": "done",
       "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile — remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract — instant cached render + background reconcile, no re-flash — is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) — Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
       "commits": [
-        "pending-this-commit"
+        "95e7bac"
       ],
       "files": [
         "engine/app/src/main/java/com/forgebuild/engine/data/CacheFirstStore.kt",
