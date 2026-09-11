@@ -1,0 +1,112 @@
+{
+  "slug": "clipforge-android",
+  "project": "forgebuild-clipforge-android",
+  "app": "ClipForge Android",
+  "build_complete": false,
+  "updated_by": "session-01",
+  "current_task": "task-01",
+  "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.",
+  "inspection_findings": {
+    "settings_sections": [
+      "GitHub clone (connect, disconnect, delete with confirmation, visibility toggle, sync-from-source, push-update-to-clones [main-account only], push-news-to-clones [main-account only])",
+      "Narrator (12 Edge TTS voices from VOICES map, default en-US-AndrewNeural, writes branding/tts_settings.json)",
+      "Music library (browse audio-library/, set default track in branding/music_default.json, upload new track, multi-select delete)",
+      "Watermark (set/clear branding/creator_watermark.json)",
+      "Series Mode default (toggle branding/series_settings.json)",
+      "Zernio publishing (API key, connected accounts view/refresh, enable/disable, clear key with confirmation)"
+    ],
+    "source_kinds": [
+      "url (direct video link)",
+      "drive (Google Drive link)",
+      "magnet (magnet URI)",
+      "torrent_file (.torrent upload <=1MB to jobs/<id>/source.torrent)",
+      "telegram_channel (public t.me post link, gated strictly to isOriginalRepo == true)"
+    ],
+    "job_lifecycle_states": [
+      "queued",
+      "stage_a_running",
+      "awaiting_torrent_selection",
+      "awaiting_plan",
+      "stage_b_queued",
+      "stage_b_running",
+      "complete",
+      "error",
+      "cancelled"
+    ],
+    "copy_agent_prompt_action": "sendAgentPrompt mirror: builds full multi-paragraph prompt with releaseUrl, target duration, focus, series clauses, and copies to Android clipboard"
+  },
+  "tasks": [
+    {
+      "id": "task-01",
+      "title": "Choose slug (clipforge-android), scaffold new app from engine/, add PROMPT_HISTORY, seed BUILD_STATE.json with mandatory inspection findings, commit + push proof.",
+      "status": "done",
+      "notes": "apps/clipforge-android scaffolded from engine/, inspection completed and recorded, push proof verified."
+    },
+    {
+      "id": "task-02",
+      "title": "Set identity: namespace/applicationId com.forgebuild.clipforgeandroid, app_name ClipForge in strings.xml, adaptive icon, verify signing secrets.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-03",
+      "title": "Onboarding: connect clone (PAT + owner/repo) or create clone, persistent login via EncryptedSharedPreferences, first-run storage permission request, Material 3 theme & bottom navigation shell (New Video, Tasks, Series, Settings, Completed).",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-04",
+      "title": "New Video / task creation: all real source kinds (url, drive, magnet, torrent_file with progress bar, telegram_channel gated by isOriginalRepo), production.json paste or SAF upload without truncation, live upload progress bars.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05",
+      "title": "Tasks & Completed lists: pull-to-refresh, correct per-item navigation, multi-select delete, live-polling task detail view streaming status.json & GitHub Actions logs, working copy agent prompt to clipboard.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-06",
+      "title": "Series section: dedicated navigation destination, grouping series tasks, parts view, per-part status and add-next-part continuation dispatch.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-07",
+      "title": "Audio & narration preview: tap-to-play, streaming, pause control, local caching after first play.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-08",
+      "title": "Video save-to-storage: SafeSave to Movies/ClipForge/, auto-folder creation, live save progress/speed display, runtime permission request if needed, no size cap.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-09",
+      "title": "Complete Settings screen: GitHub clone (visibility toggle, sync, disconnect, delete confirmation, push-update, push-news), Narrator voice picker, Music library picker & upload, Watermark, Series Mode default, Zernio publishing.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-10",
+      "title": "Music library multi-select delete.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-11",
+      "title": "End-to-end verification pass, dispatch release.yml for clipforge-android-v1, verify release and APK asset live, set build_complete: true.",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "history": [
+    {
+      "session": "session-01",
+      "event": "task-01 done: chose slug clipforge-android, initialized apps/clipforge-android from engine, completed mandatory inspection checklist, seeded BUILD_STATE.json and PROMPT_HISTORY."
+    }
+  ]
+}
