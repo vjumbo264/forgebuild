@@ -1,0 +1,7 @@
+{
+  "project": "forgebuild",
+  "slug": "_delete-test",
+  "build_complete": false,
+  "updated_by": "session-correction-round-2",
+  "tasks": [{"id":"t1","title":"disposable delete-test fixture","status":"done","notes":"created only to be deleted via the Dashboard delete-app action"}]
+}
