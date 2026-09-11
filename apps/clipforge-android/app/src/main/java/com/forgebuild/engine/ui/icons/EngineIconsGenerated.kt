@@ -52,189 +52,58 @@ internal object EngineIconsGenerated {
     }
 
     val Play: ImageVector by lazy {
-        materialIcon(name = "Play") {
-            materialPath {
-                moveTo(8.0f, 5.0f)
-                lineTo(19.0f, 12.0f)
-                lineTo(8.0f, 19.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Play", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M8 5v14l11-7z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Pause: ImageVector by lazy {
-        materialIcon(name = "Pause") {
-            materialPath {
-                moveTo(6.0f, 19.0f)
-                horizontalLineToRelative(4.0f)
-                verticalLineTo(5.0f)
-                horizontalLineTo(6.0f)
-                verticalLineToRelative(14.0f)
-                close()
-                moveTo(14.0f, 5.0f)
-                verticalLineToRelative(14.0f)
-                horizontalLineToRelative(4.0f)
-                verticalLineTo(5.0f)
-                horizontalLineToRelative(-4.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Pause", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M6 19h4V5H6v14zm8-14v14h4V5h-4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Music: ImageVector by lazy {
-        materialIcon(name = "Music") {
-            materialPath {
-                moveTo(12.0f, 3.0f)
-                verticalLineToRelative(10.55f)
-                curveToRelative(-0.59f, -0.34f, -1.27f, -0.55f, -2.0f, -0.55f)
-                curveToRelative(-2.21f, 0.0f, -4.0f, 1.79f, -4.0f, 4.0f)
-                reflectiveCurveToRelative(1.79f, 4.0f, 4.0f, 4.0f)
-                reflectiveCurveToRelative(4.0f, -1.79f, 4.0f, -4.0f)
-                verticalLineTo(7.0f)
-                horizontalLineToRelative(4.0f)
-                verticalLineTo(3.0f)
-                horizontalLineToRelative(-6.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Music", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Movie: ImageVector by lazy {
-        materialIcon(name = "Movie") {
-            materialPath {
-                moveTo(18.0f, 4.0f)
-                lineToRelative(2.0f, 4.0f)
-                horizontalLineToRelative(-3.0f)
-                lineToRelative(-2.0f, -4.0f)
-                horizontalLineToRelative(-2.0f)
-                lineToRelative(2.0f, 4.0f)
-                horizontalLineToRelative(-3.0f)
-                lineToRelative(-2.0f, -4.0f)
-                horizontalLineTo(8.0f)
-                lineToRelative(2.0f, 4.0f)
-                horizontalLineTo(7.0f)
-                lineTo(5.0f, 4.0f)
-                horizontalLineTo(4.0f)
-                curveToRelative(-1.1f, 0.0f, -1.99f, 0.9f, -1.99f, 2.0f)
-                lineTo(2.0f, 18.0f)
-                curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
-                horizontalLineToRelative(16.0f)
-                curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
-                verticalLineTo(4.0f)
-                horizontalLineToRelative(-4.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Movie", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Copy: ImageVector by lazy {
-        materialIcon(name = "Copy") {
-            materialPath {
-                moveTo(16.0f, 1.0f)
-                horizontalLineTo(4.0f)
-                curveToRelative(-1.1f, 0.0f, -2.0f, 0.9f, -2.0f, 2.0f)
-                verticalLineToRelative(14.0f)
-                horizontalLineToRelative(2.0f)
-                verticalLineTo(3.0f)
-                horizontalLineToRelative(12.0f)
-                verticalLineTo(1.0f)
-                close()
-                moveTo(19.0f, 5.0f)
-                horizontalLineTo(8.0f)
-                curveToRelative(-1.1f, 0.0f, -2.0f, 0.9f, -2.0f, 2.0f)
-                verticalLineToRelative(14.0f)
-                curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
-                horizontalLineToRelative(11.0f)
-                curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
-                verticalLineTo(7.0f)
-                curveToRelative(0.0f, -1.1f, -0.9f, -2.0f, -2.0f, -2.0f)
-                close()
-                moveTo(19.0f, 21.0f)
-                horizontalLineTo(8.0f)
-                verticalLineTo(7.0f)
-                horizontalLineToRelative(11.0f)
-                verticalLineToRelative(14.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Copy", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Download: ImageVector by lazy {
-        materialIcon(name = "Download") {
-            materialPath {
-                moveTo(19.0f, 9.0f)
-                horizontalLineToRelative(-4.0f)
-                verticalLineTo(3.0f)
-                horizontalLineTo(9.0f)
-                verticalLineToRelative(6.0f)
-                horizontalLineTo(5.0f)
-                lineToRelative(7.0f, 7.0f)
-                lineToRelative(7.0f, -7.0f)
-                close()
-                moveTo(5.0f, 18.0f)
-                verticalLineToRelative(2.0f)
-                horizontalLineToRelative(14.0f)
-                verticalLineToRelative(-2.0f)
-                horizontalLineTo(5.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Download", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val CheckCircle: ImageVector by lazy {
-        materialIcon(name = "CheckCircle") {
-            materialPath {
-                moveTo(12.0f, 2.0f)
-                curveTo(6.48f, 2.0f, 2.0f, 6.48f, 2.0f, 12.0f)
-                reflectiveCurveToRelative(4.48f, 10.0f, 10.0f, 10.0f)
-                reflectiveCurveToRelative(10.0f, -4.48f, 10.0f, -10.0f)
-                reflectiveCurveTo(17.52f, 2.0f, 12.0f, 2.0f)
-                close()
-                moveTo(10.0f, 17.0f)
-                lineToRelative(-5.0f, -5.0f)
-                lineToRelative(1.41f, -1.41f)
-                lineTo(10.0f, 14.17f)
-                lineToRelative(7.59f, -7.59f)
-                lineTo(19.0f, 8.0f)
-                lineToRelative(-9.0f, 9.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "CheckCircle", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
 
     val Playlist: ImageVector by lazy {
-        materialIcon(name = "Playlist") {
-            materialPath {
-                moveTo(19.0f, 3.0f)
-                horizontalLineTo(5.0f)
-                curveToRelative(-1.1f, 0.0f, -2.0f, 0.9f, -2.0f, 2.0f)
-                verticalLineToRelative(14.0f)
-                curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
-                horizontalLineToRelative(14.0f)
-                curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
-                verticalLineTo(5.0f)
-                curveToRelative(0.0f, -1.1f, -0.9f, -2.0f, -2.0f, -2.0f)
-                close()
-                moveTo(17.0f, 17.0f)
-                horizontalLineTo(7.0f)
-                verticalLineToRelative(-2.0f)
-                horizontalLineToRelative(10.0f)
-                verticalLineToRelative(2.0f)
-                close()
-                moveTo(17.0f, 13.0f)
-                horizontalLineTo(7.0f)
-                verticalLineToRelative(-2.0f)
-                horizontalLineToRelative(10.0f)
-                verticalLineToRelative(2.0f)
-                close()
-                moveTo(17.0f, 9.0f)
-                horizontalLineTo(7.0f)
-                verticalLineTo(7.0f)
-                horizontalLineToRelative(10.0f)
-                verticalLineToRelative(2.0f)
-                close()
-            }
-        }
+        ImageVector.Builder(name = "Playlist", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 14H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
     }
-
 }
