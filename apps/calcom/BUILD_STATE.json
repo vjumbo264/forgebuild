@@ -2,7 +2,7 @@
   "project": "forgebuild-calcom",
   "build_complete": false,
   "updated_by": "session-calcom",
-  "current_task": "step-5",
+  "current_task": "step-6",
   "tasks": [
     {
       "id": "step-1",
@@ -31,8 +31,8 @@
     {
       "id": "step-5",
       "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented Calcom compass & calculator architecture in Jetpack Compose + M3: CompassSensor with hardware rotation vector and accelerometer/magnetometer fallback; CompassDial with custom Canvas rose, shortest-arc animation, and bearing locking; CalculatorEngine with Shunting-Yard evaluator, degree-based trigonometry (sin/cos/tan), reciprocal bearings (+180°), and calculation history; CalculatorView with integrated heading insertion; CalcomScreen with Dual, Compass-focus, and Calculator-focus modes; bundled Explore, Calculate, Backspace, Lock icons into EngineIcons."
     },
     {
       "id": "step-6",
@@ -63,6 +63,10 @@
     {
       "session": "session-calcom",
       "event": "step-4 done: confirmed KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in repo actions/secrets."
+    },
+    {
+      "session": "session-calcom",
+      "event": "step-5 done: implemented Calcom compass & calculator UI, sensor integration, calculation engine with degree trigonometry and bearing math."
     }
   ]
 }

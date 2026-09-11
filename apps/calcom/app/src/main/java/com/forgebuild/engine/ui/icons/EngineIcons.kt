@@ -16,4 +16,8 @@ object EngineIcons {
     val Home: ImageVector get() = EngineIconsGenerated.Home
     val Search: ImageVector get() = EngineIconsGenerated.Search
     val ArrowBack: ImageVector get() = EngineIconsGenerated.ArrowBack
+    val Explore: ImageVector get() = EngineIconsGenerated.Explore
+    val Calculate: ImageVector get() = EngineIconsGenerated.Calculate
+    val Backspace: ImageVector get() = EngineIconsGenerated.Backspace
+    val Lock: ImageVector get() = EngineIconsGenerated.Lock
 }
