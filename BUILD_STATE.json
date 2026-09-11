@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-migration",
-  "current_task": "task-M4",
+  "current_task": "task-M6",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -125,6 +125,10 @@
     {
       "session": "session-migration",
       "event": "M2+M3 done: tapcounter-v1 built by unified workflow, signed, released, verified live."
+    },
+    {
+      "session": "session-migration",
+      "event": "M4+M5 done: dashboard single-repo model + one-time localStorage PAT, validated against live API."
     }
   ],
   "migration_tasks": [
@@ -163,20 +167,20 @@
     {
       "id": "task-M4",
       "title": "Update Dashboard (site/) for single-repo model: apps from apps/ Contents API listing; releases filtered by <slug>- tag prefix on forgebuild; in-progress via apps/<slug>/BUILD_STATE.json; prompt generators reference engine/ folder copy + single repo.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "site/app.js rewritten for the single-repo model. Apps enumerated from GET /repos/OWNER/forgebuild/contents/apps (dir names). Releases = GET forgebuild/releases filtered by '<slug>-v' prefix. In-progress detection reads apps/<slug>/BUILD_STATE.json. Prompt history read from PROMPT_HISTORY/<slug>.md. All three prompt generators (type 1/2/3) rewritten: reference engine/ as a folder to copy, target apps/<slug>/ inside the single forgebuild repo, no per-app repo creation, no topic search.",
       "commits": [],
       "files": [],
-      "tests": ""
+      "tests": "Node simulation vs live API: apps=['tapcounter'], tapcounter-v1 found by prefix, per-app BUILD_STATE.json parsed, all 8 source assertions PASS."
     },
     {
       "id": "task-M5",
       "title": "Corrected Dashboard auth: one-time PAT prompt stored in localStorage, no re-prompt on reload, explicit Disconnect action, no password/login/session.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Auth model corrected: one-time PAT entered in a first-visit gate (or after Disconnect), stored in localStorage ('fb_pat'); never re-prompts on reload. Explicit 'Disconnect' button in the header clears the PAT and the skip flag. Optional 'browse public data without a PAT' skip (remembered via 'fb_pat_skipped'). No password/login/server session anywhere. Old sessionStorage-based per-tab header input removed.",
       "commits": [],
       "files": [],
-      "tests": ""
+      "tests": "Source assertions PASS: localStorage-backed, Disconnect present, no sessionStorage usage."
     },
     {
       "id": "task-M6",
