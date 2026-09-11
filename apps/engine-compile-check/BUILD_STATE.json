@@ -1,0 +1,10 @@
+{
+  "slug": "engine-compile-check",
+  "project": "forgebuild",
+  "build_complete": false,
+  "updated_by": "session-correction-round-2",
+  "current_task": "v1",
+  "tasks": [
+    {"id":"t1","title":"Throwaway compile-verification build for Correction Round 2 (task-C5): proves engine/'s new modules (full Permissions.kt suite, CacheFirstStore, ScreenSecurity, SafeSave) compile in CI; then deleted via the Dashboard delete-app action.","status":"done","notes":"engine/ copied verbatim + identity set. This app carries no features on purpose."}
+  ]
+}
