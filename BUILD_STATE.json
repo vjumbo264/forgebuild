@@ -1,8 +1,8 @@
 {
   "project": "forgebuild",
-  "build_complete": true,
-  "updated_by": "session-migration",
-  "current_task": "task-M6",
+  "build_complete": false,
+  "updated_by": "session-correction-round-2",
+  "current_task": "task-C1",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -41,7 +41,7 @@
       "id": "task-04",
       "title": "Scaffold Dashboard frontend (Pages-deployable) + any Workers/Pages Functions; create Cloudflare Pages project via API; connect GitHub repo auto-deploy on push.",
       "status": "done",
-      "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) \u2014 Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token \u2014 Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
+      "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) — Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token — Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -50,7 +50,7 @@
       "id": "task-05",
       "title": "Home page: type-1 'Build new app' prompt generator (free-text description, persistent-session contract style, generate-from-template Engine reference, GITHUB_PAT placeholder field).",
       "status": "done",
-      "notes": "Home page (#/) implemented: free-text description + optional repo name \u2192 full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
+      "notes": "Home page (#/) implemented: free-text description + optional repo name → full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -112,7 +112,7 @@
     },
     {
       "session": "session-1",
-      "event": "tasks 02\u201309 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
+      "event": "tasks 02–09 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
     },
     {
       "session": "session-1",
@@ -129,6 +129,10 @@
     {
       "session": "session-migration",
       "event": "M4+M5 done: dashboard single-repo model + one-time localStorage PAT, validated against live API."
+    },
+    {
+      "session": "session-correction-round-2",
+      "event": "Correction Round 2 started (slug ownership / cache-first pattern / delete-entire-app / full permission suite). Seeded correction_round_2_tasks C1-C5, all pending. build_complete set false until round done."
     }
   ],
   "migration_tasks": [
@@ -136,7 +140,7 @@
       "id": "task-M1",
       "title": "Import forgebuild-engine into forgebuild as engine/ (history preserved), apply pathData->addPath icon fix.",
       "status": "done",
-      "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings \u2014 output equals the hand-fixed file exactly.",
+      "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings — output equals the hand-fixed file exactly.",
       "commits": [],
       "files": [
         "engine/"
@@ -186,14 +190,14 @@
       "id": "task-M6",
       "title": "Redeploy Dashboard to Cloudflare Pages and verify live: apps list, tapcounter-v1 APK download, one-time PAT across reload, type-2 prompt references apps/tapcounter/ + forgebuild.",
       "status": "done",
-      "notes": "Verified live 2026-09-11: (1) Redeploy \u2014 pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload \u2014 so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
+      "notes": "Verified live 2026-09-11: (1) Redeploy — pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload — so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
       "commits": [],
       "files": [],
       "tests": ""
     },
     {
       "id": "task-M7",
-      "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API \u2014 LAST, only after M1-M6 verified live.",
+      "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API — LAST, only after M1-M6 verified live.",
       "status": "done",
       "notes": "2026-09-11: Deleted vjumbo264/forgebuild-engine and vjumbo264/forgebuild-demo-tapcounter via GitHub API (HTTP 204 each), ONLY after full pre-deletion verification: M1 engine/ import (12-entry apps/tapcounter, engine/tools/gen_icons.py + apps/tapcounter/tools/gen_icons.py both carrying the addPath fix), apps/tapcounter/BUILD_STATE.json, PROMPT_HISTORY/tapcounter.md, unified release.yml, tapcounter-v1 release with downloadable APK, and live dashboard (M6) all confirmed intact on forgebuild. Post-deletion: both source repos return 404; vjumbo264/forgebuild returns 200. forgebuild is now the sole repository.",
       "commits": [],
@@ -205,6 +209,53 @@
       "title": "Update README.md + ARCHITECTURE.md to single-repo model; set build_complete: true when M1-M8 verified.",
       "status": "done",
       "notes": "Verified 2026-09-11: README.md and ARCHITECTURE.md fully describe the single-repo model as the permanent architecture (engine/ as live folder copied into apps/<slug>/, releases tagged <slug>-vN on this one repo, nested apps/<slug>/BUILD_STATE.json, PROMPT_HISTORY/<slug>.md, corrected one-time localStorage PAT model, unified release.yml with app_path input). No stale per-app-repo or template-repo-generation instructions remain; the only references are explicit 'never reintroduce' statements. M1-M8 all done and verified live; setting build_complete: true.",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    }
+  ],
+  "correction_round_2_tasks": [
+    {
+      "id": "task-C1",
+      "title": "Fix 1 — Slug ownership: remove Dashboard client-side slug derivation; type-1 blank-slug prompt delegates slug choice to building AI (writes slug field first in apps/<slug>/BUILD_STATE.json); Apps/App pages read slug from repo only; PROMPT_HISTORY naming assumptions updated.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-C2",
+      "title": "Fix 2 — Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-C3",
+      "title": "Fix 3 — Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-C4",
+      "title": "Fix 4 — Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-C5",
+      "title": "End-to-end re-verification of all four fixes against live Dashboard + live repo; fix anything broken; only then set build_complete true.",
+      "status": "pending",
+      "notes": "",
       "commits": [],
       "files": [],
       "tests": ""
