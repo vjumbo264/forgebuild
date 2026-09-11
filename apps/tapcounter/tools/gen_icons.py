@@ -26,7 +26,7 @@ package com.forgebuild.engine.ui.icons
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.dp
 
 internal object EngineIconsGenerated {
@@ -53,24 +53,13 @@ def main():
         else: sym, prop = arg, prop_name(arg)
         entries.append((prop, load_path(sym, inline)))
     body = HEADER
-    for prop, d in entries:
-        body += f'''
-    val {prop}: ImageVector by lazy {{
-        ImageVector.Builder(name = "{prop}", defaultWidth = 24.dp, defaultHeight = 24.dp,
-            viewportWidth = 24f, viewportHeight = 24f)
-            .path(fill = SolidColor(Color.Black)) {{ pathData = parsePathData() }}
-            .build()
-    }}
-    private val {prop}_data = "{d}"
-'''
-    # simpler: emit path with addPathNodes
     body = HEADER
     for prop, d in entries:
         body += f'''
     val {prop}: ImageVector by lazy {{
         ImageVector.Builder(name = "{prop}", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f)
-            .path(fill = SolidColor(Color.Black), pathData = androidx.compose.ui.graphics.vector.PathParser().parsePathString("{d}").toNodes())
+            .addPath(PathParser().parsePathString("{d}").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }}
 '''
