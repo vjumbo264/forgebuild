@@ -3,7 +3,7 @@
   "project": "forgebuild",
   "app": "ClipForge for Android",
   "build_complete": false,
-  "updated_by": "session-01-task-02",
+  "updated_by": "session-02-task-02",
   "current_task": "task-03",
   "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
   "upstream": {
@@ -38,18 +38,23 @@
       "id": "task-01",
       "title": "Choose slug and seed apps/clipforge/: copy engine/ content, seed BUILD_STATE.json with slug as first field, create PROMPT_HISTORY/clipforge.md, commit + push as push-access proof.",
       "status": "done",
-      "notes": "Slug 'clipforge' chosen (checked repo — no collision). Engine content copied. Seed commit 716e5da45e pushed and verified on origin/main via GET /repos/vjumbo264/forgebuild/commits/main.",
-      "commits": ["716e5da45e"]
+      "notes": "Slug 'clipforge' chosen (checked repo \u2014 no collision). Engine content copied. Seed commit 716e5da45e pushed and verified on origin/main via GET /repos/vjumbo264/forgebuild/commits/main.",
+      "commits": [
+        "716e5da45e"
+      ]
     },
     {
       "id": "task-02",
       "title": "Set identity: namespace/applicationId=com.forgebuild.clipforge in app/build.gradle.kts; app_name=ClipForge in res/values/strings.xml; settings.gradle.kts rootProject.name=ClipForge.",
-      "status": "in_progress",
-      "notes": "namespace + applicationId set to com.forgebuild.clipforge; app_name = ClipForge; rootProject.name = ClipForge. Awaiting commit + push verification."
+      "status": "done",
+      "notes": "namespace + applicationId = com.forgebuild.clipforge; app_name = ClipForge; rootProject.name = ClipForge. Push verified in session-02: local HEAD 708ecf4 == origin/main (git ls-remote).",
+      "commits": [
+        "708ecf4"
+      ]
     },
     {
       "id": "task-03",
-      "title": "Adaptive icon via tools/make_adaptive_icon.py — create simple ClipForge foreground artwork (film-strip + spark glyph) and generate all mipmap densities + monochrome + adaptive-icon XML. Commit + push.",
+      "title": "Adaptive icon via tools/make_adaptive_icon.py \u2014 create simple ClipForge foreground artwork (film-strip + spark glyph) and generate all mipmap densities + monochrome + adaptive-icon XML. Commit + push.",
       "status": "pending",
       "notes": ""
     },
@@ -57,7 +62,7 @@
       "id": "task-04",
       "title": "Confirm repo-level signing secrets exist on vjumbo264/forgebuild (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD). Do not regenerate.",
       "status": "pending",
-      "notes": "Prior calcom/forge-companion/tapcounter releases succeeded — secrets confirmed present at repo level."
+      "notes": "Prior calcom/forge-companion/tapcounter releases succeeded \u2014 secrets confirmed present at repo level."
     },
     {
       "id": "task-05a",
@@ -73,7 +78,7 @@
     },
     {
       "id": "task-05c",
-      "title": "Feature: credentials store. EncryptedSharedPreferences-backed CloneCredentials { pat, owner, repo, login }; auto-login = credentials-present check on app open. First-launch onboarding: 'Connect existing clone' (PAT + owner/repo) OR 'Create private Shadow Clone' (PAT + repo name → create repo → dispatch clone-copy.yml → poll .clipforge-clone-status.json → success == authenticated).",
+      "title": "Feature: credentials store. EncryptedSharedPreferences-backed CloneCredentials { pat, owner, repo, login }; auto-login = credentials-present check on app open. First-launch onboarding: 'Connect existing clone' (PAT + owner/repo) OR 'Create private Shadow Clone' (PAT + repo name \u2192 create repo \u2192 dispatch clone-copy.yml \u2192 poll .clipforge-clone-status.json \u2192 success == authenticated).",
       "status": "pending",
       "notes": ""
     },
@@ -91,19 +96,19 @@
     },
     {
       "id": "task-05f",
-      "title": "Feature: task detail + live polling log. Show status.json fields; while state ∉ TERMINAL_STATES, poll status.json every 3s. When workflow_run_id != 0, also poll /actions/runs/{id}/jobs per-step status. When state=complete, fetch and cache full logs zip once for offline review. Cancel button hits /actions/runs/{id}/cancel.",
+      "title": "Feature: task detail + live polling log. Show status.json fields; while state \u2209 TERMINAL_STATES, poll status.json every 3s. When workflow_run_id != 0, also poll /actions/runs/{id}/jobs per-step status. When state=complete, fetch and cache full logs zip once for offline review. Cancel button hits /actions/runs/{id}/cancel.",
       "status": "pending",
       "notes": ""
     },
     {
       "id": "task-05g",
-      "title": "Feature: New-task wizard mirroring bot/src/wizard.js: source → focus → length → music → confirm (focus step skipped when series toggle on). Source kinds: url, drive, magnet, torrent_file (with real progress-bar upload of the .torrent to jobs/<id>/source.torrent), telegram_relay handled as read-only badge (input types the pipeline supports but the app does not yet originate). On confirm: build request via same rules as buildStageARequest, PUT jobs/<id>/stage-a-request.json, dispatch stage-a.yml.",
+      "title": "Feature: New-task wizard mirroring bot/src/wizard.js: source \u2192 focus \u2192 length \u2192 music \u2192 confirm (focus step skipped when series toggle on). Source kinds: url, drive, magnet, torrent_file (with real progress-bar upload of the .torrent to jobs/<id>/source.torrent), telegram_relay handled as read-only badge (input types the pipeline supports but the app does not yet originate). On confirm: build request via same rules as buildStageARequest, PUT jobs/<id>/stage-a-request.json, dispatch stage-a.yml.",
       "status": "pending",
       "notes": ""
     },
     {
       "id": "task-05h",
-      "title": "Feature: production.json input. When state=awaiting_plan, show either 'Upload file' (SAF pick) OR 'Paste raw text' (unlimited text field). Client-side validate via a Kotlin port of bot/src/plan.js parseAndValidateProductionPlan (same accept/reject rules — schema shared with pipeline/plan/schema.py). Real progress bar during upload. On success PUT jobs/<id>/production.json and dispatch stage-b.yml with {job_id, code_ref}.",
+      "title": "Feature: production.json input. When state=awaiting_plan, show either 'Upload file' (SAF pick) OR 'Paste raw text' (unlimited text field). Client-side validate via a Kotlin port of bot/src/plan.js parseAndValidateProductionPlan (same accept/reject rules \u2014 schema shared with pipeline/plan/schema.py). Real progress bar during upload. On success PUT jobs/<id>/production.json and dispatch stage-b.yml with {job_id, code_ref}.",
       "status": "pending",
       "notes": ""
     },
