@@ -2,7 +2,7 @@
   "project": "forgebuild-clipforge",
   "build_complete": false,
   "updated_by": "session-clipforge",
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -13,8 +13,8 @@
     {
       "id": "step-2",
       "title": "Set identity inside apps/clipforge/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.clipforge), app_name in res/values/strings.xml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "namespace and applicationId set to com.forgebuild.clipforge, app_name set to ClipForge in strings.xml, MainActivity moved to com.forgebuild.clipforge package, Internet and notification permissions declared in AndroidManifest.xml."
     },
     {
       "id": "step-3",
@@ -51,8 +51,12 @@
     {
       "session": "session-clipforge",
       "event": "step-1 done: apps/clipforge initialized from engine, seeded BUILD_STATE.json and PROMPT_HISTORY/clipforge.md, push-access proof."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-2 done: namespace and applicationId set to com.forgebuild.clipforge, app_name set to ClipForge in strings.xml, MainActivity moved to com.forgebuild.clipforge package."
     }
   ],
-  "last_updated": "2026-09-11T14:58:00.000000+00:00",
-  "notes": "Step 1 complete. apps/clipforge seeded from engine, prompt history created. Ready for Step 2 identity configuration."
+  "last_updated": "2026-09-11T15:00:00.000000+00:00",
+  "notes": "Step 2 complete: identity set to com.forgebuild.clipforge / ClipForge. Ready for Step 3 adaptive icon creation."
 }
