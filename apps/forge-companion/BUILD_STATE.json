@@ -1,0 +1,58 @@
+{
+  "slug": "forge-companion",
+  "project": "forgebuild-forge-companion",
+  "build_complete": false,
+  "updated_by": "session-forge-companion",
+  "current_task": "step-2",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "CHOOSE THE SLUG — before anything else. Create apps/<slug>/ if absent and copy engine/'s full content into it as the starting point. Add PROMPT_HISTORY/<slug>.md and seed apps/<slug>/BUILD_STATE.json — its first field must be \"slug\": \"<slug>\" (the value you chose). Commit + push immediately as push-access proof.",
+      "status": "done",
+      "notes": "Chose slug 'forge-companion'. Initialized apps/forge-companion from engine/, created PROMPT_HISTORY/forge-companion.md, seeded BUILD_STATE.json with slug 'forge-companion' as first field."
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity inside apps/<slug>/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.<slug with dashes removed>), app_name in res/values/strings.xml.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Adaptive icon via apps/<slug>/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm the repo-level signing secrets exist (see SIGNING & RELEASES); do not regenerate them.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-6",
+      "title": "Validate the build configuration, then release <slug>-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/<slug>) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Set apps/<slug>/BUILD_STATE.json build_complete: true only after <slug>-v1 is verified live.",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "history": [
+    {
+      "session": "session-forge-companion",
+      "event": "step-1 done: chose slug 'forge-companion', copied engine/ into apps/forge-companion/, seeded BUILD_STATE.json and PROMPT_HISTORY/forge-companion.md, verified push-access proof."
+    }
+  ],
+  "notes": "Step 1 complete. Next: step-2 set identity (package com.forgebuild.forgecompanion, app_name ForgeBuild Companion)."
+}
