@@ -1,0 +1,56 @@
+{
+  "project": "forgebuild-a-android-version-of-forgebuild",
+  "build_complete": false,
+  "updated_by": "session-a-android-version-of-forgebuild",
+  "current_task": "step-2",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Create apps/a-android-version-of-forgebuild/ if absent and copy engine/'s full content into it as the starting point (it is a folder in this repo, not a template to \"generate\" from). Add PROMPT_HISTORY/a-android-version-of-forgebuild.md and seed apps/a-android-version-of-forgebuild/BUILD_STATE.json. Commit + push immediately as push-access proof.",
+      "status": "done",
+      "notes": "apps/a-android-version-of-forgebuild initialized from engine/, PROMPT_HISTORY/a-android-version-of-forgebuild.md recorded, BUILD_STATE.json seeded."
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity inside apps/a-android-version-of-forgebuild/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.aandroidversionofforgebuild), app_name in res/values/strings.xml.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Adaptive icon via apps/a-android-version-of-forgebuild/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm the repo-level signing secrets exist (see SIGNING & RELEASES); do not regenerate them.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-6",
+      "title": "Validate the build configuration, then release a-android-version-of-forgebuild-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/a-android-version-of-forgebuild) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Set apps/a-android-version-of-forgebuild/BUILD_STATE.json build_complete: true only after a-android-version-of-forgebuild-v1 is verified live.",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "history": [
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-1 done: apps/a-android-version-of-forgebuild initialized from engine, seeded BUILD_STATE.json and PROMPT_HISTORY/a-android-version-of-forgebuild.md, push-access proof."
+    }
+  ]
+}
