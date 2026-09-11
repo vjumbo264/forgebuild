@@ -1,0 +1,7 @@
+{
+  "project": "forgebuild",
+  "slug": "_delete-test",
+  "build_complete": false,
+  "updated_by": "session-correction-round-2",
+  "tasks": [{"id":"t1","title":"disposable delete-test fixture v2","status":"done","notes":"recreated after hardening deleteAppTree ref-PATCH retry"}]
+}
