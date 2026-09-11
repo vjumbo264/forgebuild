@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.engine.ui.icons.EngineIcons
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     val context = LocalContext.current
@@ -35,6 +35,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
 
     var focus by remember { mutableStateOf("") }
     var durationSeconds by remember { mutableStateOf(120) }
+    var customDurationText by remember { mutableStateOf("") }
     var isSeries by remember { mutableStateOf(settings.seriesDefault) }
     var seriesId by remember { mutableStateOf("") }
     var selectedMusicPath by remember { mutableStateOf(defaultMusic) }
@@ -175,17 +176,43 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                     )
 
                     Text("Target Spoken Narration Duration: ${durationSeconds}s", style = MaterialTheme.typography.bodyMedium)
-                    Row(
+                    // Presets match the Telegram bot (TARGET_DURATIONS = 30/60/120/180/300)
+                    // plus a free-form Custom option the bot never offered.
+                    val presets = listOf(30, 60, 120, 180, 300)
+                    val customSelected = durationSeconds !in presets
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf(60, 90, 120, 180).forEach { dur ->
+                        presets.forEach { dur ->
                             FilterChip(
                                 selected = durationSeconds == dur,
                                 onClick = { durationSeconds = dur },
                                 label = { Text("${dur}s") }
                             )
                         }
+                        FilterChip(
+                            selected = customSelected,
+                            onClick = { customDurationText = durationSeconds.takeIf { it !in presets }?.toString() ?: "" },
+                            label = { Text("Custom") }
+                        )
+                    }
+                    if (customSelected) {
+                        OutlinedTextField(
+                            value = customDurationText,
+                            onValueChange = { input ->
+                                customDurationText = input.filter { it.isDigit() }.take(5)
+                                customDurationText.toIntOrNull()?.let { v ->
+                                    if (v in 1..36000) durationSeconds = v
+                                }
+                            },
+                            label = { Text("Custom duration (seconds)") },
+                            placeholder = { Text("e.g. 45") },
+                            supportingText = { Text("1–36000 seconds") },
+                            isError = customDurationText.toIntOrNull()?.let { it !in 1..36000 } ?: true,
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -257,6 +284,10 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         return@Button
                     }
 
+                    if (durationSeconds !in 1..36000) {
+                        vm.toast("Please enter a valid duration (1–36000 seconds)")
+                        return@Button
+                    }
                     vm.createStageATask(
                         sourceKind = sourceKind,
                         sourceValue = sourceValue,
