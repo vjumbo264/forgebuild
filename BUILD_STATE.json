@@ -1,6 +1,6 @@
 {
   "project": "forgebuild",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-migration",
   "current_task": "task-M6",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
@@ -203,8 +203,8 @@
     {
       "id": "task-M8",
       "title": "Update README.md + ARCHITECTURE.md to single-repo model; set build_complete: true when M1-M8 verified.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Verified 2026-09-11: README.md and ARCHITECTURE.md fully describe the single-repo model as the permanent architecture (engine/ as live folder copied into apps/<slug>/, releases tagged <slug>-vN on this one repo, nested apps/<slug>/BUILD_STATE.json, PROMPT_HISTORY/<slug>.md, corrected one-time localStorage PAT model, unified release.yml with app_path input). No stale per-app-repo or template-repo-generation instructions remain; the only references are explicit 'never reintroduce' statements. M1-M8 all done and verified live; setting build_complete: true.",
       "commits": [],
       "files": [],
       "tests": ""
