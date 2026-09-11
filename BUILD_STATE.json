@@ -2,23 +2,28 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-1",
-  "current_task": "task-01",
+  "current_task": "task-02",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
       "id": "task-01",
       "title": "Create public GitHub repo vjumbo264/forgebuild, seed BUILD_STATE.json, verify push to origin/main.",
-      "status": "in_progress",
-      "notes": "Repo created via GitHub API; seeding BUILD_STATE.json and pushing as push-access proof.",
-      "commits": [],
-      "files": [],
-      "tests": ""
+      "status": "done",
+      "notes": "Repo vjumbo264/forgebuild created (public). Seed commit 48814b1f97 pushed and verified on origin/main via API.",
+      "commits": [
+        "48814b1f97"
+      ],
+      "files": [
+        "BUILD_STATE.json",
+        "README.md"
+      ],
+      "tests": "Push verified: GET /commits/main returned the seed commit."
     },
     {
       "id": "task-02",
       "title": "Create public TEMPLATE repo vjumbo264/forgebuild-engine: Kotlin+Compose Android base, Material 3 dynamic-color theme, bundled Material Symbols icons, adaptive-icon generator script, conditional permissions module (storage/camera/notifications/foreground-service/background-location/device-admin), lean Gradle (R8+resource shrinking), GitHub Actions release-APK workflow, mark repo as template, ARCHITECTURE.md.",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Creating vjumbo264/forgebuild-engine (template) and building Engine.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -100,6 +105,10 @@
     {
       "session": "session-1",
       "event": "Repo did not exist; created vjumbo264/forgebuild (public) and seeded BUILD_STATE.json per TASK LIST."
+    },
+    {
+      "session": "session-1",
+      "event": "task-01 done; starting task-02 (Engine template repo)."
     }
   ]
 }
