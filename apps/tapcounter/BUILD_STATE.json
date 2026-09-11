@@ -1,6 +1,6 @@
 {
   "project": "forgebuild-demo-tapcounter",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "e2e-session",
   "current_task": "step-5",
   "tasks": [
@@ -31,8 +31,14 @@
     {
       "id": "step-5",
       "title": "Release v1 via release workflow; verify APK asset live",
-      "status": "in_progress",
-      "notes": "release.yml had a YAML-breaking unindented heredoc terminator (workflow failed to parse: no jobs, dispatch 422). Fixed in Engine+app; retriggering v1 via tag."
+      "status": "done",
+      "notes": "v1 RELEASED on the single forgebuild repo as tag tapcounter-v1 by the unified single-repo workflow (.github/workflows/release.yml, app_path=apps/tapcounter, run 34606656482 succeeded). Verified live: release has app-tapcounter-v1.apk (849915 bytes) + forgebuild-manifest.json; APK downloads HTTP 200 and is a valid signed package (classes.dex + AndroidManifest.xml + APK Signing Block present). NOTE: the icon pathData->addPath fix was applied during migration (M1/M2) and the signing keystore was regenerated as a true JKS with matching store/key passwords (the original PKCS12-based secrets ignored the distinct key password and failed packageRelease signing)."
+    }
+  ],
+  "history": [
+    {
+      "session": "session-migration",
+      "event": "step-5 done: tapcounter-v1 released + verified on vjumbo264/forgebuild via the single-repo workflow."
     }
   ]
 }
