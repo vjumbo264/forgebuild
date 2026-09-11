@@ -2,7 +2,7 @@
   "project": "forgebuild-calcom",
   "build_complete": false,
   "updated_by": "session-calcom",
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -13,8 +13,8 @@
     {
       "id": "step-2",
       "title": "Set identity inside apps/calcom/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.calcom), app_name in res/values/strings.xml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "namespace and applicationId set to com.forgebuild.calcom, app_name set to Calcom, MainActivity moved to com.forgebuild.calcom package."
     },
     {
       "id": "step-3",
@@ -51,6 +51,10 @@
     {
       "session": "session-calcom",
       "event": "step-1 done: apps/calcom initialized from engine, seeded BUILD_STATE.json and PROMPT_HISTORY/calcom.md, push-access proof."
+    },
+    {
+      "session": "session-calcom",
+      "event": "step-2 done: namespace and applicationId set to com.forgebuild.calcom, app_name set to Calcom in strings.xml, package updated."
     }
   ]
 }
