@@ -32,7 +32,7 @@
       "id": "step-5",
       "title": "Release v1 via release workflow; verify APK asset live",
       "status": "in_progress",
-      "notes": ""
+      "notes": "release.yml had a YAML-breaking unindented heredoc terminator (workflow failed to parse: no jobs, dispatch 422). Fixed in Engine+app; retriggering v1 via tag."
     }
   ]
 }

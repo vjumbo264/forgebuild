@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: "Build & Release APK"
 
 on:
   workflow_dispatch:
@@ -49,17 +49,10 @@ jobs:
         run: |
           PKG=$(grep -oP 'applicationId = "\K[^"]+' app/build.gradle.kts)
           NAME=$(grep -oP '(?<=<string name="app_name">)[^<]+' app/src/main/res/values/strings.xml || echo "App")
-          PERMS=$(grep -oP 'android:name="android.permission.\K[^"]+' app/src/main/AndroidManifest.xml | sort -u | paste -sd, -)
-          cat > forgebuild-manifest.json <<JSON
-          {
-            "app_name": "$NAME",
-            "package": "$PKG",
-            "version_tag": "${{ steps.meta.outputs.tag }}",
-            "permissions": "${PERMS}",
-            "version_notes": "${{ github.event.inputs.release_notes || github.event.head_commit.message }}",
-            "built_by": "forgebuild-engine release workflow"
-          }
-JSON
+          PERMS=$(grep -oP 'android:name="android.permission.\K[^"]+' app/src/main/AndroidManifest.xml | sort -u | paste -sd, - || true)
+          NOTES="${{ github.event.inputs.release_notes || github.event.head_commit.message }}"
+          printf '{\n  "app_name": "%s",\n  "package": "%s",\n  "version_tag": "%s",\n  "permissions": "%s",\n  "version_notes": "%s",\n  "built_by": "forgebuild-engine release workflow"\n}\n' \
+            "$NAME" "$PKG" "${{ steps.meta.outputs.tag }}" "$PERMS" "$NOTES" > forgebuild-manifest.json
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk "app-${{ steps.meta.outputs.tag }}.apk"
