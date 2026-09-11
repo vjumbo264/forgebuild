@@ -1,8 +1,8 @@
 {
   "project": "forgebuild-clipforge",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-clipforge",
-  "current_task": "step-6",
+  "current_task": "done",
   "tasks": [
     {
       "id": "step-1",
@@ -37,14 +37,14 @@
     {
       "id": "step-6",
       "title": "Validate the build configuration, then release clipforge-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/clipforge) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Build config validated (namespace/applicationId, R8+shrink, app_name, adaptive icons). release.yml dispatched (3rd run) with app_path=apps/clipforge; run succeeded. Release clipforge-v1 verified live via the GitHub Releases API with signed APK + forgebuild-manifest.json assets."
     },
     {
       "id": "step-7",
       "title": "Set apps/clipforge/BUILD_STATE.json build_complete: true only after clipforge-v1 is verified live.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "build_complete set to true after clipforge-v1 verified live on the Releases API (tag clipforge-v1, APK asset present)."
     }
   ],
   "history": [
@@ -71,8 +71,16 @@
     {
       "session": "session-clipforge",
       "event": "step-5 fix: dropped unresolvable ffmpeg-kit dep; ClipRenderer rewritten on MediaExtractor/MediaMuxer (lean, no native lib)."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-6 done: release.yml run success; clipforge-v1 live with APK + manifest assets verified via Releases API."
+    },
+    {
+      "session": "session-clipforge",
+      "event": "step-7 done: build_complete=true. ClipForge v1 shipped."
     }
   ],
-  "last_updated": "2026-09-11T16:00:00.000000+00:00",
-  "notes": "Step 5 fixed after failed release run (ffmpeg-kit unavailable). Next: step-6 \u2014 re-dispatch release.yml with app_path=apps/clipforge and verify clipforge-v1 via the Releases API."
+  "last_updated": "2026-09-11T15:30:00.000000+00:00",
+  "notes": "BUILD COMPLETE. clipforge-v1 released and verified live. Next session: only act on new operator instructions appended to PROMPT_HISTORY/clipforge.md."
 }
