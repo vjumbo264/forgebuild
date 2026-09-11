@@ -2,7 +2,7 @@
   "project": "forgebuild-calcom",
   "build_complete": false,
   "updated_by": "session-calcom",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -19,8 +19,8 @@
     {
       "id": "step-3",
       "title": "Adaptive icon via apps/calcom/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Generated custom Calcom artwork (compass rose + math symbols + needle), executed tools/make_adaptive_icon.py producing safe-zoned foreground, background (#0F172A), monochrome and anydpi-v26 XMLs across mdpi..xxxhdpi."
     },
     {
       "id": "step-4",
@@ -55,6 +55,10 @@
     {
       "session": "session-calcom",
       "event": "step-2 done: namespace and applicationId set to com.forgebuild.calcom, app_name set to Calcom in strings.xml, package updated."
+    },
+    {
+      "session": "session-calcom",
+      "event": "step-3 done: adaptive icons generated for Calcom with make_adaptive_icon.py."
     }
   ]
 }
