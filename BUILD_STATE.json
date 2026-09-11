@@ -194,8 +194,8 @@
     {
       "id": "task-M7",
       "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API \u2014 LAST, only after M1-M6 verified live.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "2026-09-11: Deleted vjumbo264/forgebuild-engine and vjumbo264/forgebuild-demo-tapcounter via GitHub API (HTTP 204 each), ONLY after full pre-deletion verification: M1 engine/ import (12-entry apps/tapcounter, engine/tools/gen_icons.py + apps/tapcounter/tools/gen_icons.py both carrying the addPath fix), apps/tapcounter/BUILD_STATE.json, PROMPT_HISTORY/tapcounter.md, unified release.yml, tapcounter-v1 release with downloadable APK, and live dashboard (M6) all confirmed intact on forgebuild. Post-deletion: both source repos return 404; vjumbo264/forgebuild returns 200. forgebuild is now the sole repository.",
       "commits": [],
       "files": [],
       "tests": ""
