@@ -47,6 +47,25 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun toast(msg: String) { _snack.value = msg }
     fun clearSnack() { _snack.value = null }
 
+    // ---------------- per-operation busy indicators ----------------
+    // Buttons that call the network mark themselves busy so the UI can disable
+    // them and render an inline spinner while the coroutine is in flight.
+    private val _busyOps = MutableStateFlow<Set<String>>(emptySet())
+    val busyOps: StateFlow<Set<String>> = _busyOps
+
+    fun isBusy(op: String): Boolean = _busyOps.value.contains(op)
+
+    private fun setBusy(op: String, busy: Boolean) {
+        val cur = _busyOps.value
+        _busyOps.value = if (busy) cur + op else cur - op
+    }
+
+    /** Convenience wrapper: mark [op] busy for the duration of [block]. */
+    private suspend fun <T> withBusy(op: String, block: suspend () -> T): T {
+        setBusy(op, true)
+        return try { block() } finally { setBusy(op, false) }
+    }
+
     fun markStoragePrompted() {
         creds.setPromptedStorage(true)
         _hasPromptedStorage.value = true
@@ -71,21 +90,23 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             toast("Repo must be in format owner/repository")
             return@launch
         }
-        val c = GitHubClient(pat.trim(), parts[0], parts[1])
-        try {
-            if (!c.repoExists()) {
-                toast("Repo not found — check PAT scopes and repo name")
-                return@launch
+        withBusy("connect") {
+            val c = GitHubClient(pat.trim(), parts[0], parts[1])
+            try {
+                if (!c.repoExists()) {
+                    toast("Repo not found — check PAT scopes and repo name")
+                    return@withBusy
+                }
+                val me = c.whoami().optString("login")
+                val credentials = CredentialStore.CloneCredentials(pat.trim(), parts[0], parts[1], me)
+                creds.save(credentials)
+                api = c
+                _login.value = credentials
+                toast("Connected to $repoSlug")
+                refreshAll()
+            } catch (e: Exception) {
+                toast("Login failed: ${e.message}")
             }
-            val me = c.whoami().optString("login")
-            val credentials = CredentialStore.CloneCredentials(pat.trim(), parts[0], parts[1], me)
-            creds.save(credentials)
-            api = c
-            _login.value = credentials
-            toast("Connected to $repoSlug")
-            refreshAll()
-        } catch (e: Exception) {
-            toast("Login failed: ${e.message}")
         }
     }
 
@@ -95,28 +116,30 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun createClone(pat: String, repoName: String) = viewModelScope.launch {
         val name = repoName.trim().ifBlank { "clipforge-clone" }
         _cloneProgress.value = "Creating private repo…"
-        try {
-            val temp = GitHubClient(pat.trim(), "", "")
-            val user = temp.whoami().optString("login")
-            val created = temp.createRepo(name)
-            val owner = created.getJSONObject("owner").getString("login")
-            val c = GitHubClient(pat.trim(), owner, name)
-            _cloneProgress.value = "Seeding branding and settings…"
-            c.putFile("branding/tts_settings.json", JSONObject().put("voice", Voices.DEFAULT).toString(2).toByteArray(), "init tts")
-            c.putFile("branding/series_settings.json", JSONObject().put("enabled", false).toString(2).toByteArray(), "init series")
-            c.putFile("branding/creator_watermark.json", JSONObject().put("watermark", "").toString(2).toByteArray(), "init watermark")
-            c.putFile("branding/zernio_settings.json", JSONObject().put("enabled", false).put("api_key", "").toString(2).toByteArray(), "init zernio")
+        withBusy("create_clone") {
+            try {
+                val temp = GitHubClient(pat.trim(), "", "")
+                val user = temp.whoami().optString("login")
+                val created = temp.createRepo(name)
+                val owner = created.getJSONObject("owner").getString("login")
+                val c = GitHubClient(pat.trim(), owner, name)
+                _cloneProgress.value = "Seeding branding and settings…"
+                c.putFile("branding/tts_settings.json", JSONObject().put("voice", Voices.DEFAULT).toString(2).toByteArray(), "init tts")
+                c.putFile("branding/series_settings.json", JSONObject().put("enabled", false).toString(2).toByteArray(), "init series")
+                c.putFile("branding/creator_watermark.json", JSONObject().put("watermark", "").toString(2).toByteArray(), "init watermark")
+                c.putFile("branding/zernio_settings.json", JSONObject().put("enabled", false).put("api_key", "").toString(2).toByteArray(), "init zernio")
 
-            val credentials = CredentialStore.CloneCredentials(pat.trim(), owner, name, user)
-            creds.save(credentials)
-            api = c
-            _login.value = credentials
-            toast("Created and connected $owner/$name")
-            refreshAll()
-        } catch (e: Exception) {
-            toast("Clone creation failed: ${e.message}")
-        } finally {
-            _cloneProgress.value = null
+                val credentials = CredentialStore.CloneCredentials(pat.trim(), owner, name, user)
+                creds.save(credentials)
+                api = c
+                _login.value = credentials
+                toast("Created and connected $owner/$name")
+                refreshAll()
+            } catch (e: Exception) {
+                toast("Clone creation failed: ${e.message}")
+            } finally {
+                _cloneProgress.value = null
+            }
         }
     }
 
@@ -131,13 +154,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun deleteClone(onSuccess: () -> Unit) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            c.deleteRepo()
-            signOut()
-            toast("Repository deleted")
-            onSuccess()
-        } catch (e: Exception) {
-            toast("Failed to delete repository: ${e.message}")
+        withBusy("delete_clone") {
+            try {
+                c.deleteRepo()
+                signOut()
+                toast("Repository deleted")
+                onSuccess()
+            } catch (e: Exception) {
+                toast("Failed to delete repository: ${e.message}")
+            }
         }
     }
 
@@ -636,39 +661,57 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings
 
+    // True while loadSettings() is in flight — lets the Settings screen show a skeleton
+    // instead of empty defaults that read as "nothing was ever saved".
+    private val _settingsLoading = MutableStateFlow(false)
+    val settingsLoading: StateFlow<Boolean> = _settingsLoading
+
+    // True after loadSettings() has completed at least once for this session.
+    private val _settingsLoaded = MutableStateFlow(false)
+    val settingsLoaded: StateFlow<Boolean> = _settingsLoaded
+
     fun loadSettings() = viewModelScope.launch {
         val c = api ?: return@launch
+        _settingsLoading.value = true
         try {
-            val details = c.repoDetails()
+            val details = try { c.repoDetails() } catch (_: Exception) { JSONObject() }
             val isPriv = details.optBoolean("private", true)
 
             var voice = Voices.DEFAULT
-            c.readFile("branding/tts_settings.json")?.let {
-                voice = JSONObject(it.first).optString("voice", Voices.DEFAULT)
-            }
+            try {
+                c.readFile("branding/tts_settings.json")?.let {
+                    voice = JSONObject(it.first).optString("voice", Voices.DEFAULT)
+                }
+            } catch (_: Exception) {}
 
             var seriesDef = false
-            c.readFile("branding/series_settings.json")?.let {
-                seriesDef = JSONObject(it.first).optBoolean("enabled", false)
-            }
+            try {
+                c.readFile("branding/series_settings.json")?.let {
+                    seriesDef = JSONObject(it.first).optBoolean("enabled", false)
+                }
+            } catch (_: Exception) {}
 
             var wm = ""
-            c.readFile("branding/creator_watermark.json")?.let {
-                wm = JSONObject(it.first).optString("watermark", "")
-            }
+            try {
+                c.readFile("branding/creator_watermark.json")?.let {
+                    wm = JSONObject(it.first).optString("watermark", "")
+                }
+            } catch (_: Exception) {}
 
             var zEnabled = false
             var zKey = ""
             var zAccounts = listOf<String>()
-            c.readFile("branding/zernio_settings.json")?.let {
-                val j = JSONObject(it.first)
-                zEnabled = j.optBoolean("enabled", false)
-                zKey = j.optString("api_key", "")
-                val accs = j.optJSONArray("accounts")
-                if (accs != null) {
-                    zAccounts = (0 until accs.length()).map { i -> accs.getString(i) }
+            try {
+                c.readFile("branding/zernio_settings.json")?.let {
+                    val j = JSONObject(it.first)
+                    zEnabled = j.optBoolean("enabled", false)
+                    zKey = j.optString("api_key", "")
+                    val accs = j.optJSONArray("accounts")
+                    if (accs != null) {
+                        zAccounts = (0 until accs.length()).map { i -> accs.getString(i) }
+                    }
                 }
-            }
+            } catch (_: Exception) {}
 
             _settings.value = AppSettings(
                 isPrivate = isPriv,
@@ -679,84 +722,120 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 zernioApiKey = zKey,
                 zernioAccounts = zAccounts
             )
-        } catch (_: Exception) {}
+            _settingsLoaded.value = true
+        } catch (e: Exception) {
+            toast("Failed to load settings: ${e.message}")
+        } finally {
+            _settingsLoading.value = false
+        }
+    }
+
+    /** Refresh Zernio connected-channels list from the clone repo. */
+    fun refreshZernioAccounts() = viewModelScope.launch {
+        val c = api ?: return@launch
+        withBusy("zernio_refresh") {
+            try {
+                val f = c.readFile("branding/zernio_settings.json") ?: return@withBusy
+                val j = JSONObject(f.first)
+                val accs = j.optJSONArray("accounts")
+                val list = if (accs != null) (0 until accs.length()).map { i -> accs.getString(i) } else emptyList()
+                _settings.value = _settings.value.copy(zernioAccounts = list)
+                toast(if (list.isEmpty()) "No connected channels yet" else "Loaded ${list.size} channel(s)")
+            } catch (e: Exception) {
+                toast("Failed to refresh Zernio channels: ${e.message}")
+            }
+        }
     }
 
     fun toggleRepoVisibility() = viewModelScope.launch {
         val c = api ?: return@launch
         val current = _settings.value.isPrivate
-        try {
-            c.setVisibility(!current)
-            _settings.value = _settings.value.copy(isPrivate = !current)
-            toast("Repository visibility set to ${if (!current) "Private" else "Public"}")
-        } catch (e: Exception) {
-            toast("Failed to change visibility: ${e.message}")
+        withBusy("toggle_visibility") {
+            try {
+                c.setVisibility(!current)
+                _settings.value = _settings.value.copy(isPrivate = !current)
+                toast("Repository visibility set to ${if (!current) "Public" else "Private"}")
+            } catch (e: Exception) {
+                toast("Failed to change visibility: ${e.message}")
+            }
         }
     }
 
     fun syncFromSource() = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            c.syncFromSource()
-            toast("Dispatched sync from motionssalt/clipforge")
-        } catch (e: Exception) {
-            toast("Sync dispatch error: ${e.message}")
+        withBusy("sync_from_source") {
+            try {
+                c.syncFromSource()
+                toast("Dispatched sync from motionssalt/clipforge")
+            } catch (e: Exception) {
+                toast("Sync dispatch error: ${e.message}")
+            }
         }
     }
 
     fun pushUpdateToClones() = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            c.pushUpdateToClones()
-            toast("Broadcasted update to all clones")
-        } catch (e: Exception) {
-            toast("Push update error: ${e.message}")
+        withBusy("push_update") {
+            try {
+                c.pushUpdateToClones()
+                toast("Broadcasted update to all clones")
+            } catch (e: Exception) {
+                toast("Push update error: ${e.message}")
+            }
         }
     }
 
     fun pushNews(newsText: String) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            c.pushNews(newsText)
-            toast("Broadcasted news message")
-        } catch (e: Exception) {
-            toast("Broadcast error: ${e.message}")
+        withBusy("push_news") {
+            try {
+                c.pushNews(newsText)
+                toast("Broadcasted news message")
+            } catch (e: Exception) {
+                toast("Broadcast error: ${e.message}")
+            }
         }
     }
 
     fun setNarratorVoice(voiceId: String) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            val payload = JSONObject().put("voice", voiceId)
-            c.putFile("branding/tts_settings.json", payload.toString(2).toByteArray(), "Update TTS voice")
-            _settings.value = _settings.value.copy(narratorVoice = voiceId)
-            toast("Narrator voice updated")
-        } catch (e: Exception) {
-            toast("Voice update error: ${e.message}")
+        withBusy("save_narrator") {
+            try {
+                val payload = JSONObject().put("voice", voiceId)
+                c.putFile("branding/tts_settings.json", payload.toString(2).toByteArray(), "Update TTS voice")
+                _settings.value = _settings.value.copy(narratorVoice = voiceId)
+                toast("Narrator voice updated")
+            } catch (e: Exception) {
+                toast("Voice update error: ${e.message}")
+            }
         }
     }
 
     fun setSeriesDefault(enabled: Boolean) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            val payload = JSONObject().put("enabled", enabled)
-            c.putFile("branding/series_settings.json", payload.toString(2).toByteArray(), "Update series default")
-            _settings.value = _settings.value.copy(seriesDefault = enabled)
-            toast("Series mode default: ${if (enabled) "ON" else "OFF"}")
-        } catch (e: Exception) {
-            toast("Series default update error: ${e.message}")
+        withBusy("save_series_default") {
+            try {
+                val payload = JSONObject().put("enabled", enabled)
+                c.putFile("branding/series_settings.json", payload.toString(2).toByteArray(), "Update series default")
+                _settings.value = _settings.value.copy(seriesDefault = enabled)
+                toast("Series mode default: ${if (enabled) "ON" else "OFF"}")
+            } catch (e: Exception) {
+                toast("Series default update error: ${e.message}")
+            }
         }
     }
 
     fun setWatermark(text: String) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            val payload = JSONObject().put("watermark", text.trim())
-            c.putFile("branding/creator_watermark.json", payload.toString(2).toByteArray(), "Update watermark")
-            _settings.value = _settings.value.copy(watermarkText = text.trim())
-            toast("Watermark saved")
-        } catch (e: Exception) {
-            toast("Watermark error: ${e.message}")
+        withBusy("save_watermark") {
+            try {
+                val payload = JSONObject().put("watermark", text.trim())
+                c.putFile("branding/creator_watermark.json", payload.toString(2).toByteArray(), "Update watermark")
+                _settings.value = _settings.value.copy(watermarkText = text.trim())
+                toast(if (text.isBlank()) "Watermark cleared" else "Watermark saved")
+            } catch (e: Exception) {
+                toast("Watermark error: ${e.message}")
+            }
         }
     }
 
@@ -764,27 +843,31 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun saveZernioSettings(apiKey: String, enabled: Boolean) = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            val payload = JSONObject()
-                .put("api_key", apiKey.trim())
-                .put("enabled", enabled)
-            c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Update Zernio settings")
-            _settings.value = _settings.value.copy(zernioApiKey = apiKey.trim(), zernioEnabled = enabled)
-            toast("Zernio settings saved")
-        } catch (e: Exception) {
-            toast("Zernio save error: ${e.message}")
+        withBusy("save_zernio") {
+            try {
+                val payload = JSONObject()
+                    .put("api_key", apiKey.trim())
+                    .put("enabled", enabled)
+                c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Update Zernio settings")
+                _settings.value = _settings.value.copy(zernioApiKey = apiKey.trim(), zernioEnabled = enabled)
+                toast("Zernio settings saved")
+            } catch (e: Exception) {
+                toast("Zernio save error: ${e.message}")
+            }
         }
     }
 
     fun clearZernioKey() = viewModelScope.launch {
         val c = api ?: return@launch
-        try {
-            val payload = JSONObject().put("api_key", "").put("enabled", false)
-            c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Clear Zernio key")
-            _settings.value = _settings.value.copy(zernioApiKey = "", zernioEnabled = false, zernioAccounts = emptyList())
-            toast("Zernio credentials cleared")
-        } catch (e: Exception) {
-            toast("Failed to clear Zernio key: ${e.message}")
+        withBusy("clear_zernio") {
+            try {
+                val payload = JSONObject().put("api_key", "").put("enabled", false)
+                c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Clear Zernio key")
+                _settings.value = _settings.value.copy(zernioApiKey = "", zernioEnabled = false, zernioAccounts = emptyList())
+                toast("Zernio credentials cleared")
+            } catch (e: Exception) {
+                toast("Failed to clear Zernio key: ${e.message}")
+            }
         }
     }
 }

@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-02",
-  "current_task": "task-14",
+  "current_task": "task-15",
   "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.\n\nSESSION-02 START (2026-09-11 UTC): reconciled with git history \u2014 tasks 02..11 marked done to reflect committed and previously-released v1 (release run 34642107939). Operator reported real-world bugs in shipped v1: (1) log dump vs auto-scroll one-by-one, (2) Zernio card and other settings not loading persisted values, (3) torrent tasks failing because awaiting_torrent_selection has no UI, (4) app crashes on second launch (suspected EncryptedSharedPreferences failure + blocking network call in VM init), (5) buttons show no loading state. Seeded task-12..task-19 for this update pass. clipforge-android-v1 tag/release was previously deleted outside this session \u2014 the release.yml auto-increment will now issue clipforge-android-v1 for this fix build (next available slot). No prior release will be overwritten.",
   "inspection_findings": {
     "settings_sections": [
@@ -117,8 +117,8 @@
     {
       "id": "task-14",
       "title": "Bug-fix #2 \u2014 Settings: (a) reload settings each time Settings screen becomes active, (b) restore inputs from loaded values, (c) complete Zernio card (accounts list with refresh button + empty-state hint), (d) show explicit loading state.",
-      "status": "pending",
-      "notes": "loadSettings() currently runs only on VM init/refreshAll. Add LaunchedEffect in SettingsScreen calling vm.loadSettings(). Also add a settingsLoading state so UI shows a skeleton/spinner instead of empty defaults on first paint. Zernio: always render the Connected Channels area with a Refresh button and empty hint."
+      "status": "done",
+      "notes": "Settings screen now calls vm.loadSettings() via LaunchedEffect on entry (so persisted watermark/Zernio-key/narrator/series values populate the UI every time you open the tab). Added settingsLoading + settingsLoaded flags; screen shows an explicit 'Loading your saved settings\u2026' banner instead of blank defaults. Watermark card shows the currently-saved value below the input. Zernio card completed: status chip (Active/Paused/No key), full Connected Channels section with a Refresh button, empty-state hint, and per-op inline spinners on Save/Refresh. loadSettings() now catches per-file exceptions so one missing branding file no longer kills the entire load."
     },
     {
       "id": "task-15",
@@ -163,6 +163,10 @@
     {
       "session": "session-02",
       "event": "task-13 done: log stream is now line-by-line, de-duplicated, auto-scrolling."
+    },
+    {
+      "session": "session-02",
+      "event": "task-14 done: Settings reload on entry, saved values populate inputs, full Zernio card with connected-channels area and refresh, loading banner."
     }
   ]
 }

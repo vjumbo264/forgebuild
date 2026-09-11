@@ -99,6 +99,9 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
     var newRepoName by remember { mutableStateOf("") }
 
     val cloneProgress by vm.cloneProgress.collectAsState()
+    val busyOps by vm.busyOps.collectAsState()
+    val connectBusy = busyOps.contains("connect")
+    val createBusy = busyOps.contains("create_clone")
 
     Scaffold(
         topBar = {
@@ -144,10 +147,20 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
 
                 Button(
                     onClick = { vm.connectExisting(pat, repoSlug) },
-                    enabled = pat.isNotBlank() && repoSlug.isNotBlank(),
+                    enabled = pat.isNotBlank() && repoSlug.isNotBlank() && !connectBusy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Connect Repository")
+                    if (connectBusy) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp),
+                            color = LocalContentColor.current
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Connecting…")
+                    } else {
+                        Text("Connect Repository")
+                    }
                 }
             } else {
                 OutlinedTextField(
@@ -160,10 +173,20 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
 
                 Button(
                     onClick = { vm.createClone(pat, newRepoName) },
-                    enabled = pat.isNotBlank() && cloneProgress == null,
+                    enabled = pat.isNotBlank() && cloneProgress == null && !createBusy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Create & Initialize Private Clone")
+                    if (createBusy) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp),
+                            color = LocalContentColor.current
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Working…")
+                    } else {
+                        Text("Create & Initialize Private Clone")
+                    }
                 }
 
                 cloneProgress?.let {
