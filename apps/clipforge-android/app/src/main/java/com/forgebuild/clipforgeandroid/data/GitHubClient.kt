@@ -95,8 +95,7 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
             val body = resp.body?.string().orEmpty()
             if (resp.code != 200) throw GhException(resp.code, body.take(400))
             val j = JSONObject(body)
-            val content = j.getString("content").replace("
-", "")
+            val content = j.getString("content").replace("\n", "").replace("\r", "")
             String(Base64.decode(content, Base64.DEFAULT)) to j.getString("sha")
         }
     }
@@ -107,8 +106,8 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
             val body = resp.body?.string().orEmpty()
             if (resp.code != 200) throw GhException(resp.code, body.take(400))
             val j = JSONObject(body)
-            Base64.decode(j.getString("content").replace("
-", ""), Base64.DEFAULT) to j.getString("sha")
+            val content = j.getString("content").replace("\n", "").replace("\r", "")
+            Base64.decode(content, Base64.DEFAULT) to j.getString("sha")
         }
     }
 

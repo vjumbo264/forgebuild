@@ -409,7 +409,7 @@ fun TaskDetailScreen(
                                 planErrors = if (it.isNotBlank()) PlanValidator.validate(it) else emptyList()
                             },
                             label = { Text("Paste raw production.json") },
-                            placeholder = { Text("{"video_duration_seconds": 120, ...}") },
+                            placeholder = { Text("""{"video_duration_seconds": 120, ...}""") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 160.dp, max = 320.dp),
