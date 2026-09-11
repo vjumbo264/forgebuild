@@ -1,0 +1,105 @@
+{
+  "project": "forgebuild",
+  "build_complete": false,
+  "updated_by": "session-1",
+  "current_task": "task-01",
+  "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
+  "tasks": [
+    {
+      "id": "task-01",
+      "title": "Create public GitHub repo vjumbo264/forgebuild, seed BUILD_STATE.json, verify push to origin/main.",
+      "status": "in_progress",
+      "notes": "Repo created via GitHub API; seeding BUILD_STATE.json and pushing as push-access proof.",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-02",
+      "title": "Create public TEMPLATE repo vjumbo264/forgebuild-engine: Kotlin+Compose Android base, Material 3 dynamic-color theme, bundled Material Symbols icons, adaptive-icon generator script, conditional permissions module (storage/camera/notifications/foreground-service/background-location/device-admin), lean Gradle (R8+resource shrinking), GitHub Actions release-APK workflow, mark repo as template, ARCHITECTURE.md.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-03",
+      "title": "Design+commit Dashboard metadata model in ARCHITECTURE.md (GitHub repos+releases = sole source of truth; define what D1 caches vs never touches). Create D1 DB only if design concludes it is genuinely needed.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-04",
+      "title": "Scaffold Dashboard frontend (Pages-deployable) + any Workers/Pages Functions; create Cloudflare Pages project via API; connect GitHub repo auto-deploy on push.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-05",
+      "title": "Home page: type-1 'Build new app' prompt generator (free-text description, persistent-session contract style, generate-from-template Engine reference, GITHUB_PAT placeholder field).",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-06",
+      "title": "Apps list page: repos tagged topic 'forgebuild-app' via GitHub API, operator PAT client-side session-only.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-07",
+      "title": "App page: GitHub Releases (tag/date/notes/APK+manifest+source downloads), delete-version action, PROMPT_HISTORY.md display, type-2 extend/update prompt generator, in-progress detection via repo BUILD_STATE.json redirecting to Version page.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-08",
+      "title": "Version page (in_progress versions only): type-3 resume prompt generator (no free text) + read-only render of live BUILD_STATE.json.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-09",
+      "title": "README: three prompt types and where they live, per-app GITHUB_PAT scope guide, Engine template relationship, full first-priority-flow usage guide for Android/Termux operator, no local CLI assumptions.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-10",
+      "title": "End-to-end verification: generate a real throwaway app via type-1 prompt (own repo from Engine template, checkpointed, real v1 APK release), verify Apps list/App page/download, run type-2 extend -> v2 without touching v1, verify delete-version. Fix anything broken. Then set build_complete: true.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    }
+  ],
+  "history": [
+    {
+      "session": "session-1",
+      "event": "Repo did not exist; created vjumbo264/forgebuild (public) and seeded BUILD_STATE.json per TASK LIST."
+    }
+  ]
+}
