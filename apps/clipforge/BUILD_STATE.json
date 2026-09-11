@@ -3,8 +3,8 @@
   "project": "forgebuild",
   "app": "ClipForge for Android",
   "build_complete": false,
-  "updated_by": "session-01-seed",
-  "current_task": "task-01",
+  "updated_by": "session-01-task-02",
+  "current_task": "task-03",
   "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
   "upstream": {
     "repo": "motionssalt/clipforge",
@@ -37,14 +37,15 @@
     {
       "id": "task-01",
       "title": "Choose slug and seed apps/clipforge/: copy engine/ content, seed BUILD_STATE.json with slug as first field, create PROMPT_HISTORY/clipforge.md, commit + push as push-access proof.",
-      "status": "in_progress",
-      "notes": "Slug 'clipforge' chosen (checked repo — no collision). Engine content copied. This checkpoint is the seed commit."
+      "status": "done",
+      "notes": "Slug 'clipforge' chosen (checked repo — no collision). Engine content copied. Seed commit 716e5da45e pushed and verified on origin/main via GET /repos/vjumbo264/forgebuild/commits/main.",
+      "commits": ["716e5da45e"]
     },
     {
       "id": "task-02",
       "title": "Set identity: namespace/applicationId=com.forgebuild.clipforge in app/build.gradle.kts; app_name=ClipForge in res/values/strings.xml; settings.gradle.kts rootProject.name=ClipForge.",
-      "status": "pending",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "namespace + applicationId set to com.forgebuild.clipforge; app_name = ClipForge; rootProject.name = ClipForge. Awaiting commit + push verification."
     },
     {
       "id": "task-03",

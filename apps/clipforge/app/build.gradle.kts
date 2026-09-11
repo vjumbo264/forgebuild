@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    // FORGEBUILD: the generating AI replaces the namespace/applicationId per app.
-    namespace = "com.forgebuild.app"
+    // ClipForge (Android) — companion app for the motionssalt/clipforge pipeline.
+    namespace = "com.forgebuild.clipforge"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.forgebuild.app"
+        applicationId = "com.forgebuild.clipforge"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
