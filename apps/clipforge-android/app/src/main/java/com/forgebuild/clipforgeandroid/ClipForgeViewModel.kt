@@ -343,6 +343,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _detailLogs = MutableStateFlow<List<String>>(emptyList())
     val detailLogs: StateFlow<List<String>> = _detailLogs
 
+    /** A single video candidate discovered inside a torrent by Stage A. */
+    data class TorrentFileOption(val index: Int, val name: String, val sizeBytes: Long)
+
+    private val _torrentFiles = MutableStateFlow<List<TorrentFileOption>>(emptyList())
+    val torrentFiles: StateFlow<List<TorrentFileOption>> = _torrentFiles
+
+    private val _torrentSubmitting = MutableStateFlow(false)
+    val torrentSubmitting: StateFlow<Boolean> = _torrentSubmitting
+
     // Track already-emitted log lines for the CURRENT job so we only append truly-new lines.
     private val seenLogLines: LinkedHashSet<String> = LinkedHashSet()
     private var currentPollJobId: String? = null
@@ -390,6 +399,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 val status = TaskStatus.fromJson(j)
                 _detailStatus.value = status
 
+                if (status.state == "awaiting_torrent_selection") {
+                    loadTorrentFiles(jobId)
+                }
+
                 if (status.runId > 0) {
                     try {
                         val jobs = c.runJobs(status.runId)
@@ -430,6 +443,99 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             val planFile = c.readFile("jobs/$jobId/production.json")
             _detailPlan.value = planFile?.first
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Load the video candidates discovered inside the torrent for [jobId].
+     * Primary source: jobs/<id>/torrent_files.json ({files: [{index,name,size_bytes}]}).
+     * Fallback: a `torrent_files` array embedded directly in status.json.
+     */
+    private suspend fun loadTorrentFiles(jobId: String) {
+        val c = api ?: return
+        val parsed = mutableListOf<TorrentFileOption>()
+
+        fun parseArray(arr: JSONArray) {
+            for (i in 0 until arr.length()) {
+                val o = arr.optJSONObject(i) ?: continue
+                parsed.add(
+                    TorrentFileOption(
+                        index = o.optInt("index", i),
+                        name = o.optString("name", "file $i"),
+                        sizeBytes = o.optLong("size_bytes", 0L)
+                    )
+                )
+            }
+        }
+
+        try {
+            val tfFile = c.readFile("jobs/$jobId/torrent_files.json")
+            if (tfFile != null) {
+                val tj = JSONObject(tfFile.first)
+                tj.optJSONArray("files")?.let { parseArray(it) }
+            }
+        } catch (_: Exception) {}
+
+        if (parsed.isEmpty()) {
+            try {
+                val stFile = c.readFile("jobs/$jobId/status.json")
+                if (stFile != null) {
+                    JSONObject(stFile.first).optJSONArray("torrent_files")?.let { parseArray(it) }
+                }
+            } catch (_: Exception) {}
+        }
+
+        _torrentFiles.value = parsed
+    }
+
+    /**
+     * Submit the user's torrent video selection: write
+     * jobs/<id>/torrent-selection.json ({selected_index}) and re-dispatch
+     * stage-a.yml with torrent_selected=<index> so the pipeline resumes.
+     */
+    fun submitTorrentSelection(jobId: String, index: Int, onDone: () -> Unit = {}) = viewModelScope.launch {
+        val c = api ?: return@launch
+        if (_torrentSubmitting.value) return@launch
+        _torrentSubmitting.value = true
+        try {
+            _upload.value = UploadProgress("Submitting torrent selection…", 0.3f)
+            val payload = JSONObject()
+                .put("selected_index", index)
+                .put("selected_at_epoch", System.currentTimeMillis() / 1000)
+            c.putFile(
+                "jobs/$jobId/torrent-selection.json",
+                payload.toString(2).toByteArray(Charsets.UTF_8),
+                "Torrent selection for $jobId"
+            )
+
+            val sha = c.defaultBranchSha()
+            _upload.value = UploadProgress("Resuming pipeline…", 0.7f)
+            c.dispatchWorkflow(
+                "stage-a.yml",
+                mapOf("job_id" to jobId, "code_ref" to sha, "torrent_selected" to index.toString())
+            )
+
+            // Reflect the resume locally so the list of candidates disappears immediately.
+            val st = _detailStatus.value
+            if (st != null) {
+                val stObj = JSONObject()
+                    .put("job_id", jobId)
+                    .put("state", "stage_a_running")
+                    .put("message", "Torrent selection submitted, resuming Stage A…")
+                    .put("created_at_epoch", st.createdAt)
+                    .put("updated_at_epoch", System.currentTimeMillis() / 1000)
+                c.putFile("jobs/$jobId/status.json", stObj.toString(2).toByteArray(), "Resume Stage A after torrent selection")
+            }
+
+            toast("Selection submitted — resuming task.")
+            _torrentFiles.value = emptyList()
+            loadTaskDetail(jobId)
+            onDone()
+        } catch (e: Exception) {
+            toast("Selection failed: ${e.message}")
+        } finally {
+            _torrentSubmitting.value = false
+            _upload.value = null
+        }
     }
 
     fun submitProductionPlan(jobId: String, planText: String, onDone: () -> Unit) = viewModelScope.launch {

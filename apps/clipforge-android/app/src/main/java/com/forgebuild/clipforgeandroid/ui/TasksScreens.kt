@@ -277,6 +277,8 @@ fun TaskDetailScreen(
     val logs by vm.detailLogs.collectAsState()
     val upload by vm.upload.collectAsState()
     val downloadState by vm.downloadState.collectAsState()
+    val torrentFiles by vm.torrentFiles.collectAsState()
+    val torrentSubmitting by vm.torrentSubmitting.collectAsState()
 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -363,6 +365,66 @@ fun TaskDetailScreen(
                     }
                     if (currentStatus.releaseTag.isNotBlank()) {
                         Text("Release Tag: ${currentStatus.releaseTag}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+
+            // Awaiting Torrent Selection — user must pick which video inside
+            // the torrent to render (same step the Telegram bot used to ask for).
+            if (currentStatus.state == "awaiting_torrent_selection") {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Select Video From Torrent", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "The torrent contains more than one file (or the pipeline needs your confirmation). Pick the video to process.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        if (torrentSubmitting || upload != null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                Text("Submitting selection…", style = MaterialTheme.typography.bodySmall)
+                            }
+                        } else if (torrentFiles.isEmpty()) {
+                            Text(
+                                "Waiting for the pipeline to list the torrent contents… this page refreshes automatically.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        } else {
+                            torrentFiles.forEach { opt ->
+                                OutlinedButton(
+                                    onClick = { vm.submitTorrentSelection(jobId, opt.index) },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            opt.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 2
+                                        )
+                                        if (opt.sizeBytes > 0) {
+                                            val mb = opt.sizeBytes / (1024.0 * 1024.0)
+                                            Text(
+                                                if (mb >= 1024) "%.2f GB".format(mb / 1024.0) else "%.1f MB".format(mb),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
