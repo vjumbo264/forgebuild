@@ -35,6 +35,44 @@ app are all expressible.
   (`v*`) or manual `workflow_dispatch`, writes `forgebuild-manifest.json`
   (name, package, permissions, notes) and attaches both to a GitHub Release.
 
+## Full permission catalog (`PermissionWiring`)
+The permissions module covers the full practical Android permission surface.
+**Every capability is opt-in per app**: declare the manifest entries + call the
+matching `PermissionWiring` request ONLY when the app's description genuinely
+needs it; nothing is declared by default. Adding a new permission later = one
+`EnginePermission` enum entry (version-split via `Build.VERSION` where needed)
+plus one small settings-intent helper for special-tier ones — not a redesign.
+
+| Capability (`EnginePermission`) | Manifest entries (version-gated) | Grant flow |
+|---|---|---|
+| `STORAGE` | scoped media (13+): READ_MEDIA_IMAGES/VIDEO/AUDIO; legacy READ_EXTERNAL_STORAGE below | runtime |
+| `CAMERA` | CAMERA | runtime |
+| `NOTIFICATIONS` | POST_NOTIFICATIONS (33+) | runtime |
+| `FOREGROUND_SERVICE` | FOREGROUND_SERVICE (+ SPECIAL_USE 34+) | manifest + runtime-free |
+| `LOCATION` | ACCESS_FINE/COARSE_LOCATION | runtime (foreground) |
+| `BACKGROUND_LOCATION` | fine+coarse first, then ACCESS_BACKGROUND_LOCATION | runtime + Settings flow (11+) |
+| `MICROPHONE` | RECORD_AUDIO | runtime |
+| `CONTACTS` | READ/WRITE_CONTACTS | runtime |
+| `CALENDAR` | READ/WRITE_CALENDAR | runtime |
+| `PHONE` | READ_PHONE_STATE, READ_CALL_LOG | runtime |
+| `SMS` | READ/RECEIVE/SEND_SMS | runtime |
+| `BODY_SENSORS` | BODY_SENSORS | runtime |
+| `ACTIVITY_RECOGNITION` | ACTIVITY_RECOGNITION (29+) | runtime |
+| `BLUETOOTH` | 31+: BLUETOOTH_SCAN/CONNECT/ADVERTISE; legacy BLUETOOTH/ADMIN below | runtime |
+| `NFC` | NFC | manifest only |
+| `BIOMETRIC` | none — gate on `BiometricManager.canAuthenticate` (`canUseBiometric`, reflection-based so no engine dependency), then `BiometricPrompt`; an app using it adds `androidx.biometric:biometric` itself | in-place prompt |
+| `EXACT_ALARM` | USE_EXACT_ALARM (33+) / SCHEDULE_EXACT_ALARM (31–32) | Settings flow (`requestExactAlarm`) |
+| `ALL_FILES_ACCESS` | MANAGE_EXTERNAL_STORAGE — **sparingly, file-manager-class needs only, never by default** | Settings flow (`requestAllFilesAccess`) |
+| `INSTALL_UNKNOWN_APPS` | REQUEST_INSTALL_PACKAGES | Settings flow (`requestInstallUnknownApps`) |
+| `OVERLAY` | SYSTEM_ALERT_WINDOW | Settings flow (`requestOverlay`) |
+| `ACCESSIBILITY_SERVICE` | service + res/xml accessibility config | user enables in Settings (`requestAccessibility`) |
+| `NOTIFICATION_LISTENER` | NotificationListenerService declaration | user enables in Settings (`requestNotificationListener`) |
+| `VPN_SERVICE` | none | user consent via `VpnService.prepare()` (`requestVpn`) |
+| `DEVICE_ADMIN` | receiver + res/xml/device_admin.xml | policy flow (`requestDeviceAdmin`) |
+
+The building AI may add any further standard/signature-tier permission a
+specific requested app genuinely needs, following the same enum-entry pattern.
+
 ## Cache-first, background-refresh data pattern (STANDING REQUIREMENT)
 Any generated app whose functionality involves fetching/syncing from a live
 remote source (a repository, an API, anything network-backed) MUST use

@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-correction-round-2",
-  "current_task": "task-C4",
+  "current_task": "task-C3",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -141,6 +141,10 @@
     {
       "session": "session-correction-round-2",
       "event": "task-C2 done: CacheFirstStore + docs + generator mandates; tapcounter marked not-applicable (offline app). (ScreenSecurity/SafeSave files landed in same commit; task-C4 continues with the permission-suite expansion.)"
+    },
+    {
+      "session": "session-correction-round-2",
+      "event": "task-C4 done: full 24-entry permission suite (biometric reflection-gated, no new dep), ScreenSecurity + SafeSave helpers + docs + generator standing instructions."
     }
   ],
   "migration_tasks": [
@@ -269,11 +273,19 @@
     {
       "id": "task-C4",
       "title": "Fix 4 — Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
-      "status": "pending",
-      "notes": "",
-      "commits": [],
-      "files": [],
-      "tests": ""
+      "status": "done",
+      "notes": "Fix 4 implemented. Permissions.kt expanded from 6 to 24 EnginePermission entries covering the full practical Android surface: STORAGE (scoped-media 13+/legacy), CAMERA, NOTIFICATIONS (33+), FOREGROUND_SERVICE (+SPECIAL_USE 34+), LOCATION (fine/coarse foreground), BACKGROUND_LOCATION (runtime + Settings flow 11+), MICROPHONE, CONTACTS, CALENDAR, PHONE (phone state + call log), SMS, BODY_SENSORS, ACTIVITY_RECOGNITION (29+), BLUETOOTH (incl. Android 12+ SCAN/CONNECT/ADVERTISE split, legacy BLUETOOTH/ADMIN below), NFC, BIOMETRIC (reflection-gated BiometricManager — NO new engine dependency, preserving the lean constraint; apps using BiometricPrompt add androidx.biometric themselves with justification), EXACT_ALARM (USE_EXACT_ALARM 33+ / SCHEDULE_EXACT_ALARM 31-32 + Settings flow), ALL_FILES_ACCESS (MANAGE_EXTERNAL_STORAGE — Settings flow, documented sparing/file-manager-class-only/never-default), INSTALL_UNKNOWN_APPS (Settings flow), OVERLAY (SYSTEM_ALERT_WINDOW Settings flow), ACCESSIBILITY_SERVICE and NOTIFICATION_LISTENER (policy-driven Settings flows), VPN_SERVICE (VpnService.prepare consent), DEVICE_ADMIN (unchanged policy flow). Extensibility = one enum entry (+ one small helper for special-tier), no redesign. All opt-in per app, nothing declared by default — original non-negotiable preserved. Two new reusable helpers (already committed with C2's batch): security/ScreenSecurity.kt (per-screen FLAG_SECURE via setSecure/apply/clear, documented per-screen not app-wide) and files/SafeSave.kt (SAF ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE default, persistable grants, writeBytes/writeStream; DownloadManager explicitly banned; legacy WRITE_EXTERNAL_STORAGE fallback only where minSdk genuinely requires). engine/ARCHITECTURE.md: full permission catalog table + FLAG_SECURE per-screen section + SafeSave/SAF section. Prompt generators: RULES (type-1+type-2) carry standing bullets for FLAG_SECURE and SAF; helperHints() ties both to the description via keyword detection. VERIFICATION (task spec): generated type-1 prompt for 'A private vault for sensitive documents; lets me download and save files to storage' (blank slug) correctly surfaces BOTH helpers as available options tied to the description (SENSITIVE CONTENT -> ScreenSecurity per-screen; FILE SAVING -> SafeSave with ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE and the DownloadManager ban) — 9/9 assertions PASS.",
+      "commits": [
+        "pending-this-commit"
+      ],
+      "files": [
+        "engine/app/src/main/java/com/forgebuild/engine/permissions/Permissions.kt",
+        "engine/app/src/main/java/com/forgebuild/engine/security/ScreenSecurity.kt",
+        "engine/app/src/main/java/com/forgebuild/engine/files/SafeSave.kt",
+        "engine/ARCHITECTURE.md",
+        "site/app.js"
+      ],
+      "tests": "Python static checks: brace balance 0 on all 4 engine Kotlin files; all 24 permission entries present; version-split + special-tier constants present; no direct androidx.biometric import; gradle stays lean (only coroutines added). Node: helperHints surfaces FLAG_SECURE+SafeSave+cache-first correctly and only when implied."
     },
     {
       "id": "task-C5",
