@@ -2,7 +2,7 @@
   "project": "forgebuild-a-android-version-of-forgebuild",
   "build_complete": false,
   "updated_by": "session-a-android-version-of-forgebuild",
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -13,8 +13,8 @@
     {
       "id": "step-2",
       "title": "Set identity inside apps/a-android-version-of-forgebuild/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.aandroidversionofforgebuild), app_name in res/values/strings.xml.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "namespace and applicationId set to com.forgebuild.aandroidversionofforgebuild, app_name set to ForgeBuild, MainActivity moved to com.forgebuild.aandroidversionofforgebuild package."
     },
     {
       "id": "step-3",
@@ -51,6 +51,10 @@
     {
       "session": "session-a-android-version-of-forgebuild",
       "event": "step-1 done: apps/a-android-version-of-forgebuild initialized from engine, seeded BUILD_STATE.json and PROMPT_HISTORY/a-android-version-of-forgebuild.md, push-access proof."
+    },
+    {
+      "session": "session-a-android-version-of-forgebuild",
+      "event": "step-2 done: namespace and applicationId set to com.forgebuild.aandroidversionofforgebuild, app_name set to ForgeBuild in strings.xml, package updated."
     }
   ]
 }
