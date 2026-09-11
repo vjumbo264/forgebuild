@@ -83,7 +83,11 @@ BUILD QUALITY CONSTRAINTS (non-negotiable):
 - The engine/ folder is a component/theme library AND the starting point: copy its content into your app folder, then write real Kotlin + Jetpack Compose code on top of the copy. Never modify engine/ itself UNLESS the operator's prompt explicitly says the change is an Engine-level fix — in that case apply it in engine/ AND propagate it into every apps/<slug>/ folder that carries a copy.
 - Lightweight by default: keep R8 + resource shrinking on; add a dependency only when a feature truly needs it, and record the justification in BUILD_STATE.json notes.
 - Proper adaptive icon: run tools/make_adaptive_icon.py (inside your app folder) with foreground artwork (operator-supplied if given, otherwise create simple artwork first). Never a square icon with white padding.
-- Permissions: enable only what the app legitimately needs — manifest entries + com.forgebuild.engine.permissions.PermissionWiring (STORAGE, CAMERA, NOTIFICATIONS, FOREGROUND_SERVICE, BACKGROUND_LOCATION, DEVICE_ADMIN available).
+- Permissions: enable only what the app legitimately needs — manifest entries + com.forgebuild.engine.permissions.PermissionWiring (the full Android permission surface is available; see engine/ARCHITECTURE.md, and never declare a permission the app does not use).
+- Live-data apps: any app that fetches or syncs data from a network source MUST use the Engine cache-first background-refresh pattern (com.forgebuild.engine.data.CacheFirstStore, documented in engine/ARCHITECTURE.md) — render instantly from local cache on open, then refresh in the background and reconcile. NEVER reload everything from scratch on every open.
+- Sensitive screens: if the app description involves private/sensitive content on certain screens, use the Engine ScreenSecurity helper (FLAG_SECURE per-screen) on exactly those screens.
+- Saving files: if the app saves or downloads files, use the Engine SafeSave helper (Storage Access Framework — user-directed, permission-scoped saves), NEVER Android's native DownloadManager/system-Downloads behavior.
+- Slugs: if the operator's prompt gives a fixed APP_SLUG, use it exactly; if it says the slug is not predetermined, choose it yourself before creating anything, record it as the first field of apps/<slug>/BUILD_STATE.json, and treat it as permanent.
 - Free tier only. No paid services. The operator works from an Android phone (Termux/browser) — no local-CLI assumptions in any docs you write.
 
 SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) already exist as GitHub Actions secrets on ${OWNER}/${REPO} — reuse them; only regenerate if explicitly told. To release: dispatch the "Build & Release App APK" workflow (Actions > workflow_dispatch, or POST /repos/${OWNER}/${REPO}/actions/workflows/release.yml/dispatches with ref=main and inputs app_path="apps/<slug>", release_notes). The workflow builds the folder, auto-increments the tag as <slug>-vN, and creates a GitHub Release on this repo with the APK + forgebuild-manifest.json. Never overwrite an existing release/tag — versions are <slug>-v1, <slug>-v2, ... monotonically.
@@ -91,21 +95,25 @@ SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD,
 STOPPING: only stop at a genuine execution boundary after committing/pushing an updated apps/<slug>/BUILD_STATE.json whose notes say exactly what is done, what remains, and the exact next operation — or when the release is fully verified live on the GitHub Releases API.`;
 
 function promptNewApp(desc,slug){
-return contractHead('NEW APP')+`APP_SLUG = ${slug}
-APP_FOLDER = apps/${slug}/ (inside ${OWNER}/${REPO} — do NOT create a new repository)
+const pkg='com.forgebuild.'+(slug?slug.replace(/[^a-z0-9]/g,'')||'app':'<slug with dashes removed>');
+const slugBlock=slug
+?`APP_SLUG = ${slug} (FIXED — the operator chose this slug. Use it EXACTLY, character for character: the folder apps/${slug}/, every release tag ${slug}-v1, ${slug}-v2, ..., PROMPT_HISTORY/${slug}.md, and a top-level "slug": "${slug}" field in apps/${slug}/BUILD_STATE.json. Do NOT alter, shorten, translate or re-derive it.)`
+:`APP_SLUG = NOT PREDETERMINED — YOU (the building AI) CHOOSE IT. The operator left the slug blank on purpose: the Dashboard does NOT derive one from the description, and neither may any Dashboard-side code. Before creating anything, read APP_DESCRIPTION below, understand what the app is, and choose a short, clear, kebab-case slug (lowercase letters/digits/dashes, e.g. "pomodoro-streaks") that names the app. Check the repo first (GET /repos/${OWNER}/${REPO}/contents/apps) and pick a different slug if your choice collides with an existing folder. That slug is then PERMANENT for this app: the folder apps/<slug>/, every release tag (<slug>-v1, <slug>-v2, ...), PROMPT_HISTORY/<slug>.md, and every future session on this app all use exactly it. The very FIRST field of the very first apps/<slug>/BUILD_STATE.json you write must be "slug": "<slug>" so the Dashboard reads it back from the repository — it never computes or guesses a slug itself. Wherever this contract says <slug>, substitute your chosen value.`;
+return contractHead('NEW APP')+slugBlock+`
+APP_FOLDER = apps/<slug>/ (inside ${OWNER}/${REPO} — do NOT create a new repository)
 APP_DESCRIPTION (the operator's full intent — build exactly this):
 """
 ${desc}
 """
 
-TASKS (seed apps/${slug}/BUILD_STATE.json with these, all pending, then execute in order):
-1. Create apps/${slug}/ if absent and copy engine/'s full content into it as the starting point (it is a folder in this repo, not a template to "generate" from). Add PROMPT_HISTORY/${slug}.md and seed apps/${slug}/BUILD_STATE.json. Commit + push immediately as push-access proof.
-2. Set identity inside apps/${slug}/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. com.forgebuild.${slug.replace(/[^a-z0-9]/g,'')||'app'}), app_name in res/values/strings.xml.
-3. Adaptive icon via apps/${slug}/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.
+TASKS (seed apps/<slug>/BUILD_STATE.json with these, all pending, then execute in order):
+1.${slug?'':' CHOOSE THE SLUG (see APP_SLUG above) — before anything else.'} Create apps/<slug>/ if absent and copy engine/'s full content into it as the starting point (it is a folder in this repo, not a template to "generate" from). Add PROMPT_HISTORY/<slug>.md and seed apps/<slug>/BUILD_STATE.json — its first field must be "slug": "<slug>"${slug?' (exactly the operator-given value)':' (the value you chose)'}. Commit + push immediately as push-access proof.
+2. Set identity inside apps/<slug>/: namespace/applicationId in app/build.gradle.kts (derive a safe package, e.g. ${pkg}), app_name in res/values/strings.xml.
+3. Adaptive icon via apps/<slug>/tools/make_adaptive_icon.py (create artwork if none supplied). Commit + push.
 4. Confirm the repo-level signing secrets exist (see SIGNING & RELEASES); do not regenerate them.
 5. Implement the app described in APP_DESCRIPTION, ONE FEATURE PER COMMIT/PUSH STEP, following the per-step protocol and quality constraints above.
-6. Validate the build configuration, then release ${slug}-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/${slug}) and verify the release + APK asset exist via the GitHub Releases API on ${OWNER}/${REPO}.
-7. Set apps/${slug}/BUILD_STATE.json build_complete: true only after ${slug}-v1 is verified live.
+6. Validate the build configuration, then release <slug>-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/<slug>) and verify the release + APK asset exist via the GitHub Releases API on ${OWNER}/${REPO}.
+7. Set apps/<slug>/BUILD_STATE.json build_complete: true only after <slug>-v1 is verified live.
 `+RULES;}
 
 function promptExtend(slug,instruction,latest){
@@ -149,7 +157,7 @@ $('#view').innerHTML=`
 <div class="card">
   <label for="desc">App description</label>
   <textarea id="desc" rows="5" placeholder="e.g. A Pomodoro timer with session stats, a home-screen widget and daily streaks"></textarea>
-  <label for="slug">App slug (optional — derived from the description if blank; becomes the apps/&lt;slug&gt;/ folder and the &lt;slug&gt;-vN release prefix)</label>
+  <label for="slug">App slug (optional — if left blank, the building AI chooses it from your description and records it in the repo; the Dashboard reads it back, it never invents one)</label>
   <input id="slug" type="text" placeholder="e.g. pomodoro-streaks">
   <div class="row"><button class="btn" id="gen">Generate build prompt</button></div>
 </div>
@@ -159,7 +167,10 @@ $('#view').innerHTML=`
   <textarea id="prompt" class="code" readonly></textarea>
 </div>`;
 $('#gen').onclick=()=>{const d=$('#desc').value.trim();if(!d){$('#desc').focus();return}
-  const r=($('#slug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,''))||(d.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40));
+  // Slug ownership: sanitize ONLY what the operator explicitly typed. When the
+  // field is blank we pass '' — the Dashboard never derives a slug from the
+  // description; the generated prompt delegates the choice to the building AI.
+  const r=$('#slug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'');
   $('#prompt').value=promptNewApp(d,r);$('#out').style.display='block';$('#out').scrollIntoView({behavior:'smooth'});};
 $('#copy').onclick=e=>copyFrom('prompt',e.target);
 }

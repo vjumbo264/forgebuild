@@ -30,6 +30,35 @@ forgebuild/
   state). Read from raw.githubusercontent.com.
 - Instruction history = `PROMPT_HISTORY/<slug>.md`, append-only.
 
+## Slug ownership (Correction Round 2)
+The slug (`apps/<slug>/` folder name, `<slug>-vN` release prefix,
+`PROMPT_HISTORY/<slug>.md` filename) is **owned by the building AI session,
+not by the Dashboard**:
+- If the operator types a slug on the Home page, the generated type-1 prompt
+  fixes it verbatim ("use exactly this slug, do not alter it") and the
+  Dashboard may use it directly.
+- If the slug field is left blank, the Dashboard does **not** derive one from
+  the description — no client-side derivation, not even as a fallback. The
+  generated type-1 prompt instead instructs the building AI to choose a short
+  kebab-case slug itself, after reading the app description, and to record it
+  as the **first field** (`"slug": "..."`) of the very first
+  `apps/<slug>/BUILD_STATE.json` it writes. That slug is then permanent: the
+  folder, every release tag and the prompt-history file all use it.
+- The Dashboard discovers slugs only from the repository (listing `apps/`
+  via the Contents API, or release-tag prefixes) — it never computes or
+  guesses one client-side. A blank-slug app therefore appears in the Apps
+  list under its real, AI-chosen slug only after its first build session has
+  run; that is expected, and `PROMPT_HISTORY/` naming follows the same rule.
+
+## Deleting an entire app (Correction Round 2)
+The Dashboard's App page has a destructive **Delete this app** action
+(separate from per-version release deletion), guarded by a type-the-slug
+confirmation. On confirm it uses the operator's PAT to: delete every release
+tagged `<slug>-*` (and its git tag), delete `PROMPT_HISTORY/<slug>.md`, and
+commit the removal of the whole `apps/<slug>/` folder via the Git Trees API.
+The Apps list derives from `apps/` contents, so the app disappears
+automatically — no separate index to update.
+
 ## Engine relationship
 `engine/` is a live folder, not a template repository. A new app build copies
 `engine/` into `apps/<slug>/` and builds on the copy. Engine-level fixes (e.g.

@@ -28,7 +28,7 @@ repositories and no separate template repository:
 ## The three prompt types
 | Type | Where | What it does |
 |---|---|---|
-| **1 · Build new app** | Home page (`#/`) | Free-text description → contract prompt that creates `apps/<slug>/` from a copy of `engine/`, builds checkpointed, releases **`<slug>-v1`**. |
+| **1 · Build new app** | Home page (`#/`) | Free-text description (+ optional slug) → contract prompt that creates `apps/<slug>/` from a copy of `engine/`, builds checkpointed, releases **`<slug>-v1`**. If the slug field is left blank the **building AI chooses the slug** after reading the description and records it as the first field of `apps/<slug>/BUILD_STATE.json` — the Dashboard never derives one itself and reads the slug back from the repo once the first build session has run. |
 | **2 · Extend/update** | An app's page (`#/app/<slug>`), when no build is in progress | Free-text instruction → contract prompt that appends the instruction to `PROMPT_HISTORY/<slug>.md`, applies the change in `apps/<slug>/`, cuts **`<slug>-v(n+1)`** without touching prior releases. |
 | **3 · Resume** | In-progress version page (`#/app/<slug>/version`), shown automatically when `apps/<slug>/BUILD_STATE.json` has an `in_progress` task | No input needed — hands a fresh AI session the resume contract for that app folder. |
 
