@@ -225,7 +225,7 @@
       "status": "done",
       "notes": "Fix 1 implemented. site/app.js: promptNewApp() rewritten — blank slug now produces an explicit APP_SLUG = NOT PREDETERMINED block instructing the building AI to choose a short kebab-case slug after reading the description, check apps/ for collisions, treat it as permanent (folder apps/<slug>/, tags <slug>-vN, PROMPT_HISTORY/<slug>.md), and write it as the FIRST field (\"slug\") of the first apps/<slug>/BUILD_STATE.json; operator-given slug passes verbatim with a do-not-alter instruction and concrete paths. Client-side description-based slug derivation REMOVED from renderHome (only operator-typed input is sanitized); slug label rewritten. Apps list / App page already discover slugs solely from the repo (Contents API on apps/ + release-tag prefix filter) — verified, no guessing remains. RULES gained standing Slugs/cache-first/FLAG_SECURE/SAF bullets. ARCHITECTURE.md + README.md document slug ownership (and the C3 delete-app model). Node simulation: 13/13 assertions PASS for both blank-slug and fixed-slug prompt branches. Live blank-slug E2E generation deferred to C5 (prompt wording already validated; a full AI-run build is out of scope for this session).",
       "commits": [
-        "pending-this-commit"
+        "2b1ae8f"
       ],
       "files": [
         "site/app.js",
