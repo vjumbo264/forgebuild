@@ -185,7 +185,16 @@ fun SettingsScreen(
             // --- Section 2: Narrator Voice (TTS) ---
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Narrator Voice (Edge TTS)", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Narrator Voice (Edge TTS)", style = MaterialTheme.typography.titleMedium)
+                        if (busyOps.contains("save_narrator")) {
+                            ButtonSpinner()
+                        }
+                    }
                     Text("Select the voice used for spoken voiceovers across generated clips.", style = MaterialTheme.typography.bodySmall)
 
                     Voices.ALL.forEach { voice ->
@@ -296,10 +305,17 @@ fun SettingsScreen(
                             Text("Default Series Mode", style = MaterialTheme.typography.titleMedium)
                             Text("Automatically enable Series Mode on new video tasks", style = MaterialTheme.typography.bodySmall)
                         }
-                        Switch(
-                            checked = settings.seriesDefault,
-                            onCheckedChange = { vm.setSeriesDefault(it) }
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (busyOps.contains("save_series_default")) {
+                                ButtonSpinner()
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Switch(
+                                checked = settings.seriesDefault,
+                                enabled = !busyOps.contains("save_series_default"),
+                                onCheckedChange = { vm.setSeriesDefault(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -426,13 +442,18 @@ fun SettingsScreen(
             title = { Text("Delete Clone Repository") },
             text = { Text("Permanently delete ${login?.slug} from GitHub? This action cannot be undone.") },
             confirmButton = {
+                val delBusy = busyOps.contains("delete_clone")
                 TextButton(
                     onClick = {
                         showDeleteRepoDialog = false
                         vm.deleteClone {}
                     },
+                    enabled = !delBusy,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete Permanently") }
+                ) {
+                    if (delBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
+                    Text("Delete Permanently")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteRepoDialog = false }) { Text("Cancel") }
@@ -446,11 +467,18 @@ fun SettingsScreen(
             title = { Text("Clear Zernio Key") },
             text = { Text("Clear stored Zernio API key and disable publishing?") },
             confirmButton = {
-                TextButton(onClick = {
-                    showClearZernioDialog = false
-                    zernioKeyInput = ""
-                    vm.clearZernioKey()
-                }) { Text("Clear") }
+                val clearBusy = busyOps.contains("clear_zernio")
+                TextButton(
+                    onClick = {
+                        showClearZernioDialog = false
+                        zernioKeyInput = ""
+                        vm.clearZernioKey()
+                    },
+                    enabled = !clearBusy
+                ) {
+                    if (clearBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
+                    Text("Clear")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showClearZernioDialog = false }) { Text("Cancel") }

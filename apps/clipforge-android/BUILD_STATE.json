@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-02",
-  "current_task": "task-17",
+  "current_task": "task-18",
   "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.\n\nSESSION-02 START (2026-09-11 UTC): reconciled with git history \u2014 tasks 02..11 marked done to reflect committed and previously-released v1 (release run 34642107939). Operator reported real-world bugs in shipped v1: (1) log dump vs auto-scroll one-by-one, (2) Zernio card and other settings not loading persisted values, (3) torrent tasks failing because awaiting_torrent_selection has no UI, (4) app crashes on second launch (suspected EncryptedSharedPreferences failure + blocking network call in VM init), (5) buttons show no loading state. Seeded task-12..task-19 for this update pass. clipforge-android-v1 tag/release was previously deleted outside this session \u2014 the release.yml auto-increment will now issue clipforge-android-v1 for this fix build (next available slot). No prior release will be overwritten.",
   "inspection_findings": {
     "settings_sections": [
@@ -135,8 +135,8 @@
     {
       "id": "task-17",
       "title": "Bug-fix #5 \u2014 Loading indicators on API buttons (Connect, Sync, Save Watermark, Save Zernio, Toggle Visibility, Push Update, Push News, Delete Clone, Disconnect where async).",
-      "status": "pending",
-      "notes": "Add per-action busy flags in VM (busyConnect, busySettings, busyBroadcast, etc.) or one busyOps map. Buttons disable + inline CircularProgressIndicator (size 16.dp) inside the button label while their coroutine runs."
+      "status": "done",
+      "notes": "Loading indicators audited and completed across all API buttons. Already present from task-14: connect, create_clone, toggle_visibility, sync_from_source, push_update, push_news, save_watermark, save_zernio, zernio_refresh. Added in this pass: delete_clone (dialog confirm button spinner + disable), clear_zernio (dialog confirm spinner + disable), save_narrator (spinner next to section header), save_series_default (spinner beside switch + switch disabled while saving). Every API-triggering button now gives immediate visual feedback."
     },
     {
       "id": "task-18",
