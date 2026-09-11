@@ -1,8 +1,8 @@
 {
   "project": "forgebuild",
   "build_complete": false,
-  "updated_by": "session-1",
-  "current_task": "task-10",
+  "updated_by": "session-migration",
+  "current_task": "task-M1",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -117,6 +117,86 @@
     {
       "session": "session-1",
       "event": "task-10 in_progress: e2e verified through compile stage; single icons named-arg bug remains; exact resume recorded here and in the demo app repo."
+    },
+    {
+      "session": "session-migration",
+      "event": "Appended migration_tasks (M1-M8) per single-repo correction; task-M1 (engine import + icon fix) done."
+    }
+  ],
+  "migration_tasks": [
+    {
+      "id": "task-M1",
+      "title": "Import forgebuild-engine into forgebuild as engine/ (history preserved), apply pathData->addPath icon fix.",
+      "status": "done",
+      "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings \u2014 output equals the hand-fixed file exactly.",
+      "commits": [],
+      "files": [
+        "engine/"
+      ],
+      "tests": "grep: no remaining '.path(... pathData = ...)' refs under engine/; 6 .addPath lines; generator round-trip diff clean."
+    },
+    {
+      "id": "task-M2",
+      "title": "Import forgebuild-demo-tapcounter into apps/tapcounter/; apply icon fix; recreate release as tapcounter-v1; move PROMPT_HISTORY.md to PROMPT_HISTORY/tapcounter.md and BUILD_STATE.json to apps/tapcounter/BUILD_STATE.json.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M3",
+      "title": "Adapt .github/workflows/release.yml to workflow_dispatch input for apps/<slug> folder; tag releases <app-slug>-vN auto-incremented; verify by rebuilding tapcounter end to end.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M4",
+      "title": "Update Dashboard (site/) for single-repo model: apps from apps/ Contents API listing; releases filtered by <slug>- tag prefix on forgebuild; in-progress via apps/<slug>/BUILD_STATE.json; prompt generators reference engine/ folder copy + single repo.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M5",
+      "title": "Corrected Dashboard auth: one-time PAT prompt stored in localStorage, no re-prompt on reload, explicit Disconnect action, no password/login/session.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M6",
+      "title": "Redeploy Dashboard to Cloudflare Pages and verify live: apps list, tapcounter-v1 APK download, one-time PAT across reload, type-2 prompt references apps/tapcounter/ + forgebuild.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M7",
+      "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API \u2014 LAST, only after M1-M6 verified live.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
+    },
+    {
+      "id": "task-M8",
+      "title": "Update README.md + ARCHITECTURE.md to single-repo model; set build_complete: true when M1-M8 verified.",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [],
+      "tests": ""
     }
   ]
 }
