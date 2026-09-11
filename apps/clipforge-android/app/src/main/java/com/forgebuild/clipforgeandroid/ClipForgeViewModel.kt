@@ -261,10 +261,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         onCreated: (String) -> Unit
     ) = viewModelScope.launch {
         val c = api ?: run { toast("Not connected"); return@launch }
-        val jobId = "cf-" + System.currentTimeMillis()
+        // Bot parity (motionssalt/clipforge bot/src/github.js makeJobId): job ids are
+        // manual-<epochMillis>. The stage-a-request MUST match schemas/stage_a_request.schema.json
+        // exactly — ingest.py's load_request() hard-fails when source.value is absent, which is
+        // why every app-created task used to die at ingestion (app wrote source.url/source.path).
+        val jobId = "manual-" + System.currentTimeMillis()
+        val nowSec = System.currentTimeMillis() / 1000
         _upload.value = UploadProgress("Setting up task…", 0.1f)
         try {
-            var sourceObject = JSONObject().put("kind", sourceKind)
+            val sourceObject = JSONObject().put("kind", sourceKind)
 
             if (sourceKind == "torrent_file") {
                 if (torrentBytes == null || torrentBytes.isEmpty()) {
@@ -283,45 +288,65 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     val fraction = if (total > 0) 0.2f + (sent.toFloat() / total * 0.5f) else 0.4f
                     _upload.value = UploadProgress("Uploading torrent file…", fraction)
                 })
-                sourceObject.put("path", torrentPath)
+                // ingest.py expects the job-local manifest path in source.value ("path:" prefix tolerated)
+                sourceObject.put("value", "path:$torrentPath")
             } else {
-                sourceObject.put("url", sourceValue.trim())
+                sourceObject.put("value", sourceValue.trim())
             }
 
             val options = JSONObject()
+                .put("whisper_model", "base")
+                .put("language", "auto")
+                .put("task", "translate_to_english")
                 .put("target_duration_seconds", targetDurationSeconds)
-                .put("focus", focus.trim())
+                .put("focus", if (isSeries) "" else focus.trim())
+                .put("enable_vision_assist", true)
 
-            if (!selectedMusicPath.isNullOrBlank()) {
-                options.put("music_track", selectedMusicPath)
+            // Series block is REQUIRED by the schema even when disabled. For a new series,
+            // Part 1's own Stage A release is its evidence source: source_job_id = this job id
+            // (bug-64 in the reference repo — never seed series_id here).
+            val sid = if (seriesId.isNullOrBlank()) "series-" + System.currentTimeMillis() else seriesId.trim()
+            val seriesJson = JSONObject()
+                .put("enabled", isSeries)
+                .put("series_id", if (isSeries) sid else "")
+                .put("source_job_id", if (isSeries) jobId else "")
+                .put("part", if (isSeries) 1 else 0)
+                .put("start_seconds", 0)
+                .put("context", "")
+
+            val musicJson = if (!selectedMusicPath.isNullOrBlank()) {
+                JSONObject().put("ref", selectedMusicPath).put("source", "explicit_library")
+            } else {
+                JSONObject().put("ref", "").put("source", "none")
             }
 
             val requestJson = JSONObject()
+                .put("version", 2)
                 .put("job_id", jobId)
                 .put("source", sourceObject)
                 .put("options", options)
-                .put("created_at_epoch", System.currentTimeMillis())
+                .put("mode", "manual")
+                .put("series", seriesJson)
+                .put("music", musicJson)
+                .put("saved_at_epoch", nowSec)
 
-            if (isSeries) {
-                val sid = if (seriesId.isNullOrBlank()) "series-" + (System.currentTimeMillis() / 1000) else seriesId.trim()
-                requestJson.put("series", JSONObject()
-                    .put("enabled", true)
-                    .put("series_id", sid)
-                    .put("part", 1)
-                    .put("start_seconds", 0)
-                )
-            }
-
+            // Status record must satisfy schemas/job_status.schema.json (pipeline status.py
+            // merges into this record; missing keys have previously zeroed series blocks).
             val statusJson = JSONObject()
+                .put("version", 1)
                 .put("job_id", jobId)
+                .put("mode", "manual")
+                .put("series", seriesJson)
                 .put("state", "queued")
                 .put("message", "Task queued")
-                .put("created_at_epoch", System.currentTimeMillis())
-                .put("updated_at_epoch", System.currentTimeMillis())
-
-            if (isSeries) {
-                statusJson.put("series", requestJson.getJSONObject("series"))
-            }
+                .put("created_at_epoch", nowSec)
+                .put("updated_at_epoch", nowSec)
+                .put("expires_at_epoch", nowSec + 172800) // 48h TTL, matches CLIPFORGE_TTL_SECONDS
+                .put("release_tag", "clipforge-$jobId")
+                .put("release_url", "")
+                .put("assets", JSONArray())
+                .put("run", JSONObject().put("workflow_run_id", 0).put("workflow_run_url", ""))
+                .put("publishing", JSONObject())
 
             _upload.value = UploadProgress("Dispatching Stage A…", 0.8f)
             c.putFile("jobs/$jobId/stage-a-request.json", requestJson.toString(2).toByteArray(), "Stage A request")
