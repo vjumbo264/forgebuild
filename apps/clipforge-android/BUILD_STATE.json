@@ -3,9 +3,9 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "session-01",
-  "current_task": "task-01",
-  "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.",
+  "updated_by": "session-02",
+  "current_task": "task-12",
+  "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.\n\nSESSION-02 START (2026-09-11 UTC): reconciled with git history \u2014 tasks 02..11 marked done to reflect committed and previously-released v1 (release run 34642107939). Operator reported real-world bugs in shipped v1: (1) log dump vs auto-scroll one-by-one, (2) Zernio card and other settings not loading persisted values, (3) torrent tasks failing because awaiting_torrent_selection has no UI, (4) app crashes on second launch (suspected EncryptedSharedPreferences failure + blocking network call in VM init), (5) buttons show no loading state. Seeded task-12..task-19 for this update pass. clipforge-android-v1 tag/release was previously deleted outside this session \u2014 the release.yml auto-increment will now issue clipforge-android-v1 for this fix build (next available slot). No prior release will be overwritten.",
   "inspection_findings": {
     "settings_sections": [
       "GitHub clone (connect, disconnect, delete with confirmation, visibility toggle, sync-from-source, push-update-to-clones [main-account only], push-news-to-clones [main-account only])",
@@ -45,68 +45,120 @@
     {
       "id": "task-02",
       "title": "Set identity: namespace/applicationId com.forgebuild.clipforgeandroid, app_name ClipForge in strings.xml, adaptive icon, verify signing secrets.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Identity set: namespace/applicationId com.forgebuild.clipforgeandroid, app_name ClipForge, adaptive icon in all densities, signing secrets confirmed present. (commit 2083234)"
     },
     {
       "id": "task-03",
       "title": "Onboarding: connect clone (PAT + owner/repo) or create clone, persistent login via EncryptedSharedPreferences, first-run storage permission request, Material 3 theme & bottom navigation shell (New Video, Tasks, Series, Settings, Completed).",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Onboarding, encrypted persistent login, first-run storage prompt, Material 3 bottom nav shell all implemented. (commits 9da9ed4, 7280157)"
     },
     {
       "id": "task-04",
       "title": "New Video / task creation: all real source kinds (url, drive, magnet, torrent_file with progress bar, telegram_channel gated by isOriginalRepo), production.json paste or SAF upload without truncation, live upload progress bars.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "New Video wizard covers url/drive/magnet/torrent_file/telegram_channel gated by isOriginalRepo, upload with live progress. (commit 7280157)"
     },
     {
       "id": "task-05",
       "title": "Tasks & Completed lists: pull-to-refresh, correct per-item navigation, multi-select delete, live-polling task detail view streaming status.json & GitHub Actions logs, working copy agent prompt to clipboard.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Tasks/Completed lists with pull-to-refresh, multi-select delete, per-item navigation, live-polling task detail with logs, working copy-agent-prompt clipboard action. (commit 7280157)"
     },
     {
       "id": "task-06",
       "title": "Series section: dedicated navigation destination, grouping series tasks, parts view, per-part status and add-next-part continuation dispatch.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Series screen dedicated route, grouping, per-part status, add-next-part continuation dispatch. (commit 7280157)"
     },
     {
       "id": "task-07",
       "title": "Audio & narration preview: tap-to-play, streaming, pause control, local caching after first play.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Audio preview via media3 exoplayer with tap-to-play, streaming, pause, local caching. (commit 7280157)"
     },
     {
       "id": "task-08",
       "title": "Video save-to-storage: SafeSave to Movies/ClipForge/, auto-folder creation, live save progress/speed display, runtime permission request if needed, no size cap.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "SafeSave to Movies/ClipForge/ with live progress/speed, auto-folder creation, runtime perms, no cap. (commits 7280157, 65891f6)"
     },
     {
       "id": "task-09",
       "title": "Complete Settings screen: GitHub clone (visibility toggle, sync, disconnect, delete confirmation, push-update, push-news), Narrator voice picker, Music library picker & upload, Watermark, Series Mode default, Zernio publishing.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Full Settings implemented: clone controls (visibility, sync, disconnect, delete, push-update/news gated), Narrator voice picker (12 voices), Music library access, Watermark, Series default, Zernio publishing card. (commit 7280157)"
     },
     {
       "id": "task-10",
       "title": "Music library multi-select delete.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Music library multi-select delete implemented in MusicScreen. (commit 7280157)"
     },
     {
       "id": "task-11",
       "title": "End-to-end verification pass, dispatch release.yml for clipforge-android-v1, verify release and APK asset live, set build_complete: true.",
+      "status": "done",
+      "notes": "End-to-end pass done, clipforge-android-v1 release built and published by release.yml (run 34642107939 on 2026-09-11T20:05:53Z); the tag/release was subsequently removed outside this session (workflow will auto-increment to next available slot). Marked complete based on session-2 observed release; operator is now reporting real-world bugs in that shipped v1 which this session must fix."
+    },
+    {
+      "id": "task-12",
+      "title": "Session-2 bug audit + prompt history append (this update).",
       "status": "pending",
-      "notes": ""
+      "notes": "Read source, prompt-history append landed, seed session-2 tasks."
+    },
+    {
+      "id": "task-13",
+      "title": "Bug-fix #1 \u2014 Logs: replace static log dump with terminal-style auto-scrolling line-by-line log stream (append new lines only, auto-scroll to bottom, monospace, capped ring buffer).",
+      "status": "pending",
+      "notes": "Current TasksScreens.kt TaskDetailScreen renders logs as a static Text-per-line list rebuilt every poll. Convert to LazyColumn that appends new lines each poll, keeps only NEW lines vs previous snapshot, autoscrolls to last item. VM must diff and emit only new lines."
+    },
+    {
+      "id": "task-14",
+      "title": "Bug-fix #2 \u2014 Settings: (a) reload settings each time Settings screen becomes active, (b) restore inputs from loaded values, (c) complete Zernio card (accounts list with refresh button + empty-state hint), (d) show explicit loading state.",
+      "status": "pending",
+      "notes": "loadSettings() currently runs only on VM init/refreshAll. Add LaunchedEffect in SettingsScreen calling vm.loadSettings(). Also add a settingsLoading state so UI shows a skeleton/spinner instead of empty defaults on first paint. Zernio: always render the Connected Channels area with a Refresh button and empty hint."
+    },
+    {
+      "id": "task-15",
+      "title": "Bug-fix #3 \u2014 Torrent tasks: implement awaiting_torrent_selection UI branch in TaskDetailScreen so the user can list files inside jobs/<id>/torrent_files.json (or status.torrent_files) and select the video to render.",
+      "status": "pending",
+      "notes": "Pipeline already knows awaiting_torrent_selection state but TaskDetailScreen has no branch for it. Add UI card that reads torrent file candidates from status.json (files: [{index,name,size_bytes}]) and posts jobs/<id>/torrent-selection.json with {selected_index} then dispatches stage-a.yml with input torrent_selected=<index>. Fall back gracefully when list is not yet populated."
+    },
+    {
+      "id": "task-16",
+      "title": "Bug-fix #4 \u2014 Startup crash on second launch: harden ClipForgeViewModel.init and CredentialStore against EncryptedSharedPreferences AEAD/KeyStore failures + move blocking network out of init.",
+      "status": "pending",
+      "notes": "Wrap EncryptedSharedPreferences.create in try/catch; on failure clear the store file and rebuild. Remove refreshAll() out of init \u2014 schedule it in a viewModelScope coroutine so init never blocks and any exception cannot kill the Application launch. Also add global try/catch in AndroidViewModel init so any thrown error surfaces as a snack instead of a crash."
+    },
+    {
+      "id": "task-17",
+      "title": "Bug-fix #5 \u2014 Loading indicators on API buttons (Connect, Sync, Save Watermark, Save Zernio, Toggle Visibility, Push Update, Push News, Delete Clone, Disconnect where async).",
+      "status": "pending",
+      "notes": "Add per-action busy flags in VM (busyConnect, busySettings, busyBroadcast, etc.) or one busyOps map. Buttons disable + inline CircularProgressIndicator (size 16.dp) inside the button label while their coroutine runs."
+    },
+    {
+      "id": "task-18",
+      "title": "Compile-check locally (best-effort \u2014 sandbox lacks Android SDK; validate syntactic soundness via ktlint-free static read + rely on Actions build).",
+      "status": "pending",
+      "notes": "Sandbox cannot run gradle assembleRelease (no Android SDK/ANDROID_HOME). Best-effort: grep for obvious Kotlin syntax issues in edited files and rely on the release.yml workflow to fail fast if there is a compile error."
+    },
+    {
+      "id": "task-19",
+      "title": "Release next version via release.yml workflow_dispatch (app_path=apps/clipforge-android). Verify tag/release live via API. Set build_complete: true.",
+      "status": "pending",
+      "notes": "Workflow auto-increments: since no clipforge-android-v* release currently exists on the repo (v1 was removed), the workflow will produce clipforge-android-v1 again. That is the auto-incremented next slot \u2014 do NOT override. Never delete or overwrite tapcounter-v1 / calcom-v1 or any other prior release."
     }
   ],
   "history": [
     {
       "session": "session-01",
       "event": "task-01 done: chose slug clipforge-android, initialized apps/clipforge-android from engine, completed mandatory inspection checklist, seeded BUILD_STATE.json and PROMPT_HISTORY."
+    },
+    {
+      "session": "session-02",
+      "event": "Started update pass. Reconciled BUILD_STATE against git history and release workflow logs. Prompt appended. Seeded task-12..task-19."
     }
   ]
 }
