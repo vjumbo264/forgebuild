@@ -95,7 +95,7 @@
       "id": "task-10",
       "title": "End-to-end verification: generate a real throwaway app via type-1 prompt (own repo from Engine template, checkpointed, real v1 APK release), verify Apps list/App page/download, run type-2 extend -> v2 without touching v1, verify delete-version. Fix anything broken. Then set build_complete: true.",
       "status": "in_progress",
-      "notes": "Starting end-to-end verification: create throwaway app from Engine template via the same steps the type-1 prompt prescribes, release v1+v2 via workflow_dispatch, verify dashboard listing/downloads/delete.",
+      "notes": "E2E ~90% done and verified live up to the compile step: throwaway app vjumbo264/forgebuild-demo-tapcounter was generated from the Engine template (topic forgebuild-app set), identity/adaptive-icon/signing-secrets/tap-counter-UI all committed and pushed; release.yml YAML bug found+fixed in Engine (workflow now parses and runs); dashboard deploy workflow is green. v1 release is blocked by ONE Kotlin error in the Engine-generated EngineIconsGenerated.kt: path() got a nonexistent named arg `pathData` -> change to .addPath(PathParser().parsePathString(d).toNodes(), fill=SolidColor(Color.Black)) in BOTH the app repo and the ENGINE repo (and tools/gen_icons.py), push both, re-push tag v1, wait for the release run to succeed, then complete the remaining verifications exactly as recorded in the app repo's BUILD_STATE.json step-5 notes, then set this build_complete: true. Full detail lives in vjumbo264/forgebuild-demo-tapcounter BUILD_STATE.json.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -113,6 +113,10 @@
     {
       "session": "session-1",
       "event": "tasks 02\u201309 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
+    },
+    {
+      "session": "session-1",
+      "event": "task-10 in_progress: e2e verified through compile stage; single icons named-arg bug remains; exact resume recorded here and in the demo app repo."
     }
   ]
 }
