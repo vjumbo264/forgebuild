@@ -191,15 +191,18 @@ fun SettingsScreen(
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "• KEYSTORE_BASE64 (Active)
-• KEYSTORE_PASSWORD (Active)
-• KEY_ALIAS (Active)
-• KEY_PASSWORD (Active)",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 20.sp
-                    )
+                    listOf(
+                        "• KEYSTORE_BASE64 (Active)",
+                        "• KEYSTORE_PASSWORD (Active)",
+                        "• KEY_ALIAS (Active)",
+                        "• KEY_PASSWORD (Active)"
+                    ).forEach { sec ->
+                        Text(
+                            text = sec,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
         }

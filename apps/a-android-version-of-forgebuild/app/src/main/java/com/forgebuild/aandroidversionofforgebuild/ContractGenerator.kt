@@ -5,7 +5,7 @@ import java.util.Locale
 object ContractGenerator {
     const val OWNER = "vjumbo264"
     const val REPO = "forgebuild"
-    private val TQ = """""
+    private val TQ = String(charArrayOf('"', '"', '"'))
 
     private fun contractHead(kind: String): String = buildString {
         appendLine("# ForgeBuild App Build Contract — " + kind)
