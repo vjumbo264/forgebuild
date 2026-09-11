@@ -54,9 +54,14 @@ class CredentialStore(private val context: Context) {
         }
     }
 
-    /** The backing store: encrypted when available, plain fallback otherwise. Never throws. */
+    /**
+     * The backing store: encrypted when available, plain fallback otherwise. Never throws.
+     * A Kotlin `by lazy` whose initializer threw RETRIES on next access and rethrows — so
+     * the throw must be absorbed HERE, or any prefs access after a failed encrypted init
+     * would crash the app (the recurring second-launch crash).
+     */
     private val prefs: SharedPreferences
-        get() = encryptedPrefs ?: plainPrefs
+        get() = (try { encryptedPrefs } catch (_: Exception) { null }) ?: plainPrefs
 
     fun save(creds: CloneCredentials) {
         try {
