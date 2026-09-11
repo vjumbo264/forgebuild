@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-02",
-  "current_task": "task-18",
+  "current_task": "task-19",
   "notes": "Mandatory inspection checklist completed against motionssalt/clipforge (bot/src/*, schemas/*, ARCHITECTURE.md). Key findings: Settings covers GitHub clone (visibility toggle, sync, disconnect, delete confirmation, and main-account only push-update & push-news), Narrator (12 Edge TTS voices from constants.js VOICES), Music library (default track in branding/music_default.json, browse audio-library/, upload with progress, multi-select delete), Watermark (branding/creator_watermark.json set/clear), Series Mode default (branding/series_settings.json), Zernio publishing (branding/zernio_settings.json, API key, connected accounts, enable/disable, clear-key confirmation). Source kinds: url, drive, magnet, torrent_file (<=1MB, uploaded to jobs/<id>/source.torrent with progress bar), telegram_channel (gated to main account via isOriginalRepo: repo === motionssalt/clipforge); telegram_relay excluded. Jobs state machine: queued -> stage_a_running -> awaiting_torrent_selection | awaiting_plan -> stage_b_queued -> stage_b_running -> complete | error | cancelled. Copy agent prompt extracts canonical hand-off prompt (target duration, focus, series metadata, JSON-only delivery) and copies to clipboard. Video save uses SAF to Movies/ClipForge/ without size limits.\n\nSESSION-02 START (2026-09-11 UTC): reconciled with git history \u2014 tasks 02..11 marked done to reflect committed and previously-released v1 (release run 34642107939). Operator reported real-world bugs in shipped v1: (1) log dump vs auto-scroll one-by-one, (2) Zernio card and other settings not loading persisted values, (3) torrent tasks failing because awaiting_torrent_selection has no UI, (4) app crashes on second launch (suspected EncryptedSharedPreferences failure + blocking network call in VM init), (5) buttons show no loading state. Seeded task-12..task-19 for this update pass. clipforge-android-v1 tag/release was previously deleted outside this session \u2014 the release.yml auto-increment will now issue clipforge-android-v1 for this fix build (next available slot). No prior release will be overwritten.",
   "inspection_findings": {
     "settings_sections": [
@@ -141,8 +141,8 @@
     {
       "id": "task-18",
       "title": "Compile-check locally (best-effort \u2014 sandbox lacks Android SDK; validate syntactic soundness via ktlint-free static read + rely on Actions build).",
-      "status": "pending",
-      "notes": "Sandbox cannot run gradle assembleRelease (no Android SDK/ANDROID_HOME). Best-effort: grep for obvious Kotlin syntax issues in edited files and rely on the release.yml workflow to fail fast if there is a compile error."
+      "status": "done",
+      "notes": "Best-effort compile validation (sandbox has no Android SDK/kotlinc): (1) bracket/paren/string/comment balance verified across all 19 Kotlin files in apps/clipforge-android; (2) every vm.<member> call site in ui/*.kt cross-checked against ClipForgeViewModel declarations \u2014 all resolve (the two 'vm.api' flagged by the regex are a false positive: api is a public var, not val); (3) new symbols from this update pass confirmed present (submitTorrentSelection, torrentFiles, torrentSubmitting, loadTorrentFiles, TorrentFileOption, CredentialStore lazy plain/encrypted prefs); (4) ButtonSpinner helper and all screen composables defined. Real compile happens in release.yml on GitHub Actions."
     },
     {
       "id": "task-19",
