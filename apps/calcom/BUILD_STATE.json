@@ -1,8 +1,8 @@
 {
   "project": "forgebuild-calcom",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-calcom",
-  "current_task": "step-6",
+  "current_task": "none",
   "tasks": [
     {
       "id": "step-1",
@@ -37,14 +37,14 @@
     {
       "id": "step-6",
       "title": "Validate the build configuration, then release calcom-v1 (see SIGNING & RELEASES: dispatch release.yml with app_path=apps/calcom) and verify the release + APK asset exist via the GitHub Releases API on vjumbo264/forgebuild.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Release workflow dispatched and succeeded (run 34608827256). Release calcom-v1 verified live with app-calcom-v1.apk (1.0 MB) and forgebuild-manifest.json."
     },
     {
       "id": "step-7",
       "title": "Set apps/calcom/BUILD_STATE.json build_complete: true only after calcom-v1 is verified live.",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified calcom-v1 release asset live via GitHub API. build_complete set to true."
     }
   ],
   "history": [
@@ -67,6 +67,14 @@
     {
       "session": "session-calcom",
       "event": "step-5 done: implemented Calcom compass & calculator UI, sensor integration, calculation engine with degree trigonometry and bearing math."
+    },
+    {
+      "session": "session-calcom",
+      "event": "step-6 done: dispatched release workflow, build release APK succeeded, calcom-v1 release published."
+    },
+    {
+      "session": "session-calcom",
+      "event": "step-7 done: verified calcom-v1 APK and manifest live on GitHub Releases. build_complete: true."
     }
   ]
 }
