@@ -1,0 +1,146 @@
+{
+  "slug": "clipforge",
+  "project": "forgebuild",
+  "app": "ClipForge for Android",
+  "build_complete": false,
+  "updated_by": "session-01-seed",
+  "current_task": "task-01",
+  "notes": "Native Android front-end for the motionssalt/clipforge video pipeline, replacing the Telegram bot as the primary UI. Backend contract mirrors motionssalt/clipforge exactly: per-chat encrypted PAT + owner/repo clone; all state in jobs/<job_id>/*.json on branch main; workflows dispatched via GitHub Actions workflow_dispatch (stage-a.yml, stage-b.yml, publish.yml); state machine and production.json schema as defined in bot/src/jobs.js and bot/src/plan.js. See PROMPT_HISTORY/clipforge.md for the extracted contract summary.",
+  "upstream": {
+    "repo": "motionssalt/clipforge",
+    "read_at_utc": "2026-09-11",
+    "source_files_studied": [
+      "bot/src/constants.js",
+      "bot/src/crypto.js",
+      "bot/src/storage.js",
+      "bot/src/jobs.js",
+      "bot/src/series.js",
+      "bot/src/plan.js",
+      "bot/src/flow.js",
+      "bot/src/progress.js",
+      "bot/src/github.js",
+      "bot/src/runtime.js",
+      "bot/src/wizard.js",
+      "schemas/production_plan.schema.json",
+      "schemas/stage_a_request.schema.json",
+      "schemas/job_status.schema.json"
+    ]
+  },
+  "engine_helpers_required": [
+    "com.forgebuild.engine.ui.theme.ForgeBuildTheme (M3 dynamic color)",
+    "com.forgebuild.engine.ui.icons.EngineIcons (Material Symbols)",
+    "com.forgebuild.engine.data.CacheFirstStore (cache-first task list & series list)",
+    "com.forgebuild.engine.files.SafeSave (video save to Movies/ClipForge via SAF; never DownloadManager)",
+    "com.forgebuild.engine.permissions.PermissionWiring (INTERNET + NOTIFICATIONS 33+ only; storage saves are SAF-scoped)"
+  ],
+  "tasks": [
+    {
+      "id": "task-01",
+      "title": "Choose slug and seed apps/clipforge/: copy engine/ content, seed BUILD_STATE.json with slug as first field, create PROMPT_HISTORY/clipforge.md, commit + push as push-access proof.",
+      "status": "in_progress",
+      "notes": "Slug 'clipforge' chosen (checked repo — no collision). Engine content copied. This checkpoint is the seed commit."
+    },
+    {
+      "id": "task-02",
+      "title": "Set identity: namespace/applicationId=com.forgebuild.clipforge in app/build.gradle.kts; app_name=ClipForge in res/values/strings.xml; settings.gradle.kts rootProject.name=ClipForge.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-03",
+      "title": "Adaptive icon via tools/make_adaptive_icon.py — create simple ClipForge foreground artwork (film-strip + spark glyph) and generate all mipmap densities + monochrome + adaptive-icon XML. Commit + push.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-04",
+      "title": "Confirm repo-level signing secrets exist on vjumbo264/forgebuild (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD). Do not regenerate.",
+      "status": "pending",
+      "notes": "Prior calcom/forge-companion/tapcounter releases succeeded — secrets confirmed present at repo level."
+    },
+    {
+      "id": "task-05a",
+      "title": "Feature: dependencies + manifest. Add Retrofit/OkHttp/Moshi (GitHub API), androidx.security.crypto (EncryptedSharedPreferences), androidx.media3 (ExoPlayer for streaming audio previews), lifecycle-viewmodel-compose, navigation-compose, activity-compose. Declare INTERNET (+ POST_NOTIFICATIONS 33+) permissions. Justify each dep in BUILD_STATE.json.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05b",
+      "title": "Feature: GitHub API client. Retrofit service + models covering: identity (/user), contents (read/write/delete file with SHA), releases (tags/{tag}, assets), actions/workflows/{file}/dispatches, actions/runs, actions/runs/{id}/logs, repo create/copy for clone bootstrap. All authenticated via Bearer PAT + X-GitHub-Api-Version 2022-11-28.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05c",
+      "title": "Feature: credentials store. EncryptedSharedPreferences-backed CloneCredentials { pat, owner, repo, login }; auto-login = credentials-present check on app open. First-launch onboarding: 'Connect existing clone' (PAT + owner/repo) OR 'Create private Shadow Clone' (PAT + repo name → create repo → dispatch clone-copy.yml → poll .clipforge-clone-status.json → success == authenticated).",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05d",
+      "title": "Feature: task list (non-series). List jobs/ via cache-first store; filter status.series.enabled=false or absent. Show state chip using describeTaskState mirror + progressLine mapping. Multi-select mode with batch-delete (each delete removes jobs/<id>/* + release clipforge-<id> + release clipforge-relay-input-<id>, mirroring deleteClipforgeJob).",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05e",
+      "title": "Feature: Series section. Group tasks with status.series.enabled=true by series_id; sort by part. Tapping opens a dedicated series view (part list, add-next-part affordance when the latest completed part has plan.is_final=false and end_seconds > 0). Manual next-part dispatch mirrors series.js.nextPartRequestBody / nextPartJobId, then dispatch stage-a.yml.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05f",
+      "title": "Feature: task detail + live polling log. Show status.json fields; while state ∉ TERMINAL_STATES, poll status.json every 3s. When workflow_run_id != 0, also poll /actions/runs/{id}/jobs per-step status. When state=complete, fetch and cache full logs zip once for offline review. Cancel button hits /actions/runs/{id}/cancel.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05g",
+      "title": "Feature: New-task wizard mirroring bot/src/wizard.js: source → focus → length → music → confirm (focus step skipped when series toggle on). Source kinds: url, drive, magnet, torrent_file (with real progress-bar upload of the .torrent to jobs/<id>/source.torrent), telegram_relay handled as read-only badge (input types the pipeline supports but the app does not yet originate). On confirm: build request via same rules as buildStageARequest, PUT jobs/<id>/stage-a-request.json, dispatch stage-a.yml.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05h",
+      "title": "Feature: production.json input. When state=awaiting_plan, show either 'Upload file' (SAF pick) OR 'Paste raw text' (unlimited text field). Client-side validate via a Kotlin port of bot/src/plan.js parseAndValidateProductionPlan (same accept/reject rules — schema shared with pipeline/plan/schema.py). Real progress bar during upload. On success PUT jobs/<id>/production.json and dispatch stage-b.yml with {job_id, code_ref}.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05i",
+      "title": "Feature: music library. List audio-library/ via cache-first. Multi-select delete. Upload new track with real progress bar (base64-chunked via contents API, safe path guard). Set/clear default = write/delete branding/music_default.json.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05j",
+      "title": "Feature: audio preview player. ExoPlayer with a SimpleCache (disk-backed under context.cacheDir/media, 200 MB LRU cap) so first play streams over network, subsequent plays are cache hits. Applies to audio-library/* and to any final-video audio track fetched from a release asset.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05k",
+      "title": "Feature: video save via SafeSave. For a completed task, download-URL button fetches the release asset over the GitHub API with the PAT and writes it to /Movies/ClipForge/<jobId>.mp4 via MediaStore (Android 10+) with the storage-permission-gated code path for pre-Q. Real progress bar (Content-Length driven). Never DownloadManager.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-05l",
+      "title": "Feature: settings screen. Show connected clone repo, PAT masked, sign-out (clears EncryptedSharedPreferences); toggle default music; TTS settings mirror (voice picker from VOICES map). Zernio publish is out-of-scope for v1 (deferred).",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-06",
+      "title": "Validate the build config and dispatch release.yml with app_path=apps/clipforge. Verify tag clipforge-v1 and APK asset exist via GitHub Releases API.",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "task-07",
+      "title": "Set build_complete: true after clipforge-v1 is verified live.",
+      "status": "pending",
+      "notes": ""
+    }
+  ]
+}
