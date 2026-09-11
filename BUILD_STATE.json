@@ -2,7 +2,7 @@
   "project": "forgebuild",
   "build_complete": false,
   "updated_by": "session-1",
-  "current_task": "task-02",
+  "current_task": "task-10",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -22,8 +22,8 @@
     {
       "id": "task-02",
       "title": "Create public TEMPLATE repo vjumbo264/forgebuild-engine: Kotlin+Compose Android base, Material 3 dynamic-color theme, bundled Material Symbols icons, adaptive-icon generator script, conditional permissions module (storage/camera/notifications/foreground-service/background-location/device-admin), lean Gradle (R8+resource shrinking), GitHub Actions release-APK workflow, mark repo as template, ARCHITECTURE.md.",
-      "status": "in_progress",
-      "notes": "Creating vjumbo264/forgebuild-engine (template) and building Engine.",
+      "status": "done",
+      "notes": "Engine template repo vjumbo264/forgebuild-engine created and marked template=True via API. Contains: Kotlin+Compose app module, ForgeBuildTheme (M3 dynamic color light/dark), local Material Symbols icon generator + 6 bundled icons, PermissionWiring module (storage/camera/notifications/foreground-service/background-location/device-admin, all opt-in), tools/make_adaptive_icon.py (72dp safe zone + monochrome), tools/make_keystore.sh, lean Gradle (R8+shrinkResources), release.yml building signed APK+manifest into GitHub Releases, Gradle wrapper 8.9, ARCHITECTURE.md.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -31,8 +31,8 @@
     {
       "id": "task-03",
       "title": "Design+commit Dashboard metadata model in ARCHITECTURE.md (GitHub repos+releases = sole source of truth; define what D1 caches vs never touches). Create D1 DB only if design concludes it is genuinely needed.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "ARCHITECTURE.md committed: GitHub repos+releases = sole source of truth; D1 explicitly NOT used (decision documented: would only cache regenerable display data, never PATs/source/APKs); no Worker proxy needed (GitHub API is CORS-open).",
       "commits": [],
       "files": [],
       "tests": ""
@@ -40,8 +40,8 @@
     {
       "id": "task-04",
       "title": "Scaffold Dashboard frontend (Pages-deployable) + any Workers/Pages Functions; create Cloudflare Pages project via API; connect GitHub repo auto-deploy on push.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) \u2014 Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token \u2014 Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -49,8 +49,8 @@
     {
       "id": "task-05",
       "title": "Home page: type-1 'Build new app' prompt generator (free-text description, persistent-session contract style, generate-from-template Engine reference, GITHUB_PAT placeholder field).",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Home page (#/) implemented: free-text description + optional repo name \u2192 full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -58,8 +58,8 @@
     {
       "id": "task-06",
       "title": "Apps list page: repos tagged topic 'forgebuild-app' via GitHub API, operator PAT client-side session-only.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Apps list (#/apps) implemented: GitHub search API topic:forgebuild-app user:vjumbo264, operator PAT client-side sessionStorage-only (browsing public data works without PAT).",
       "commits": [],
       "files": [],
       "tests": ""
@@ -67,8 +67,8 @@
     {
       "id": "task-07",
       "title": "App page: GitHub Releases (tag/date/notes/APK+manifest+source downloads), delete-version action, PROMPT_HISTORY.md display, type-2 extend/update prompt generator, in-progress detection via repo BUILD_STATE.json redirecting to Version page.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "App page (#/app/{repo}) implemented: Releases API rendering (tag/date/notes/APK+manifest+source-zip downloads), delete-version via DELETE release (session PAT, confirm dialog), PROMPT_HISTORY.md display, type-2 extend prompt generator targeting repo+latest release, in_progress detection via raw BUILD_STATE.json with link to version page (type-2 hidden while in progress).",
       "commits": [],
       "files": [],
       "tests": ""
@@ -76,8 +76,8 @@
     {
       "id": "task-08",
       "title": "Version page (in_progress versions only): type-3 resume prompt generator (no free text) + read-only render of live BUILD_STATE.json.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Version page (#/app/{repo}/version) implemented: type-3 resume prompt (no free-text) + read-only pretty render of live BUILD_STATE.json with active/next task summary.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -85,8 +85,8 @@
     {
       "id": "task-09",
       "title": "README: three prompt types and where they live, per-app GITHUB_PAT scope guide, Engine template relationship, full first-priority-flow usage guide for Android/Termux operator, no local CLI assumptions.",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "README.md written: three prompt types + where they live, per-app GITHUB_PAT scoping guide (fine-grained, Contents+Actions R/W, single repo), Engine template relationship, full first-priority-flow usage guide, Termux/browser-only assumptions, free-tier deploy notes.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -94,8 +94,8 @@
     {
       "id": "task-10",
       "title": "End-to-end verification: generate a real throwaway app via type-1 prompt (own repo from Engine template, checkpointed, real v1 APK release), verify Apps list/App page/download, run type-2 extend -> v2 without touching v1, verify delete-version. Fix anything broken. Then set build_complete: true.",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Starting end-to-end verification: create throwaway app from Engine template via the same steps the type-1 prompt prescribes, release v1+v2 via workflow_dispatch, verify dashboard listing/downloads/delete.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -109,6 +109,10 @@
     {
       "session": "session-1",
       "event": "task-01 done; starting task-02 (Engine template repo)."
+    },
+    {
+      "session": "session-1",
+      "event": "tasks 02\u201309 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
     }
   ]
 }

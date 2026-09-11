@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ForgeBuild — Android APK Factory</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%236750A4' d='M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66l.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C16.96 15.55 14.35 18.48 11 21z'/></svg>">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/">
+    <svg viewBox="0 0 24 24" width="26" height="26"><path fill="currentColor" d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66l.07-.12C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .56.33.47.51l-.07.15C16.96 15.55 14.35 18.48 11 21z"/></svg>
+    <span>ForgeBuild</span>
+  </a>
+  <nav>
+    <a href="#/" data-nav="home">New app</a>
+    <a href="#/apps" data-nav="apps">Apps</a>
+  </nav>
+  <div class="patbox">
+    <input id="pat" type="password" placeholder="GitHub PAT (session only)" autocomplete="off">
+    <button id="patSave" class="btn small tonal">Save</button>
+  </div>
+</header>
+<main id="view"><div class="loading">Loading…</div></main>
+<footer class="foot">ForgeBuild · single-operator tooling · GitHub is the source of truth · <a href="https://github.com/vjumbo264/forgebuild" target="_blank" rel="noopener">repo</a></footer>
+<script src="app.js"></script>
+</body>
+</html>
