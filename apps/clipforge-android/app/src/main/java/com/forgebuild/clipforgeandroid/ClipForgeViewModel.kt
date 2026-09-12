@@ -297,6 +297,166 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         list.filter { it.isComplete }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    /** Fix #1 — the New Video screen loads the music library AND the current default
+     *  track directly when it opens. It never relies on the Music settings screen having
+     *  been visited first (the cache files persist across opens, so a previously-cached
+     *  library still renders instantly, then both refresh in the background). */
+    fun onNewTaskOpen() {
+        musicStore.loadFromCache()
+        refreshMusic()
+        loadSettings()
+    }
+
+    /** Fix #4 — computed next-part state for the currently-open completed series part. */
+    data class NextPartInfo(
+        val continuation: SeriesLogic.Continuation,
+        val nextId: String,
+        val exists: Boolean
+    )
+    private val _nextPart = MutableStateFlow<NextPartInfo?>(null)
+    val nextPart: StateFlow<NextPartInfo?> = _nextPart
+
+    /** GitHub Actions-style log expansion (fix #3): null = follow the running step. */
+    private var expandedStepKey: String? = null
+    private var autoCollapseDone = false
+
+    fun isStepExpanded(step: LogStep): Boolean =
+        expandedStepKey?.let { it == step.key }
+            ?: (!autoCollapseDone && step.level == LogLevel.RUNNING)
+
+    fun toggleStepExpanded(key: String) {
+        if (expandedStepKey == key) {
+            expandedStepKey = null // collapse: return to auto-follow of the running step
+        } else {
+            expandedStepKey = key
+            autoCollapseDone = true // manual pick wins; the running step no longer auto-expands
+        }
+    }
+
+    /** Fix #2 — stream the bot's pre-rendered sample assets/tts-previews/<voiceId>.mp3
+     *  (same file the bot's set:voice:prev handler serves via getRepositoryFileBytes).
+     *  Uses the shared AudioPreview cache/pipeline — never re-synthesizes a sample. */
+    fun previewVoice(voiceId: String) {
+        val ctx = app.applicationContext
+        val c = api ?: run { toast("Not connected"); return@launch }
+        ui.AudioPreview.toggle(ctx, audioPreviewUrl("assets/tts-previews/$voiceId.mp3"), c.pat)
+    }
+
+    /** Fix #4 — compute the next-part state for a completed series part exactly like the
+     *  bot's startNextSeriesPart prologue: manualSeriesContinuation + nextPartJobId +
+     *  the duplicate-dispatch guard (a stage-a-request.json OR status.json existing for
+     *  the next id means "Part N already exists", which is exactly why deleting that
+     *  next part makes the button reappear in the bot). */
+    fun refreshNextPart(jobId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        _nextPart.value = null
+        try {
+            val status = c.readFile("jobs/$jobId/status.json")?.let { runCatching { JSONObject(it.first) }.getOrNull() }
+            val request = c.readFile("jobs/$jobId/stage-a-request.json")?.let { runCatching { JSONObject(it.first) }.getOrNull() }
+            val plan = c.readFile("jobs/$jobId/production.json")?.let { runCatching { JSONObject(it.first) }.getOrNull() }
+            val cont = SeriesLogic.manualSeriesContinuation(status, request, plan) ?: return@launch
+            val nextId = runCatching { SeriesLogic.nextPartJobId(cont.seriesId, cont.part) }.getOrNull() ?: return@launch
+            val exists = (c.readFile("jobs/$nextId/stage-a-request.json") != null) ||
+                (c.readFile("jobs/$nextId/status.json") != null)
+            _nextPart.value = NextPartInfo(cont, nextId, exists)
+        } catch (_: Exception) {}
+    }
+
+    /** Fix #4 — full port of bot startNextSeriesPart: duplicate guard again at tap
+     *  time, buildSeriesContext over prior parts' summaries, nextPartRequestBody
+     *  (mode manual, bug-64 source_job_id fallback), schema-complete queued status,
+     *  then dispatch stage-a.yml with a fresh code_ref. */
+    fun startNextSeriesPart(jobId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        withBusy("start_next") {
+            try {
+                val status = c.readFile("jobs/$jobId/status.json")?.let { JSONObject(it.first) }
+                val request = c.readFile("jobs/$jobId/stage-a-request.json")?.let { JSONObject(it.first) }
+                val plan = c.readFile("jobs/$jobId/production.json")?.let { JSONObject(it.first) }
+                val cont = SeriesLogic.manualSeriesContinuation(status, request, plan)
+                if (cont == null) {
+                    toast("That completed task has no next Series Mode part to start (not a manual series part, or it was the final part).")
+                    return@withBusy
+                }
+                val nextId = SeriesLogic.nextPartJobId(cont.seriesId, cont.part)
+                val exists = (c.readFile("jobs/$nextId/stage-a-request.json") != null) ||
+                    (c.readFile("jobs/$nextId/status.json") != null)
+                if (exists) {
+                    _nextPart.value = NextPartInfo(cont, nextId, true)
+                    toast("Part ${cont.part} of this series already exists as task $nextId.")
+                    return@withBusy
+                }
+
+                // §11 continuity context: "Prior events (Part N): <summary>" over this series.
+                val summaries = mutableListOf<Pair<Int, String>>()
+                val jobs = c.listDir("jobs")
+                for (i in 0 until jobs.length()) {
+                    val item = jobs.getJSONObject(i)
+                    if (item.optString("type") != "dir") continue
+                    val otherId = item.getString("name")
+                    val req = c.readFile("jobs/$otherId/stage-a-request.json")?.let {
+                        runCatching { JSONObject(it.first) }.getOrNull()
+                    } ?: continue
+                    val rs = req.optJSONObject("series") ?: continue
+                    if (!rs.optBoolean("enabled", false) || rs.optString("series_id") != cont.seriesId) continue
+                    val otherPlan = c.readFile("jobs/$otherId/production.json")?.let {
+                        runCatching { JSONObject(it.first) }.getOrNull()
+                    } ?: continue
+                    val values = SeriesLogic.extractPlanSeries(otherPlan)
+                    val part = values.optInt("part", -1)
+                    val summary = values.optString("summary").trim()
+                    if (part >= 1 && summary.isNotEmpty()) summaries.add(part to summary)
+                }
+                val context = SeriesLogic.buildSeriesContext(summaries)
+
+                val nowSec = System.currentTimeMillis() / 1000
+                val body = SeriesLogic.nextPartRequestBody(request!!, cont, context, jobId)
+                val requestJson = JSONObject(body.toString())
+                    .put("version", 2)
+                    .put("job_id", nextId)
+                    .put("saved_at_epoch", nowSec)
+
+                val statusJson = JSONObject()
+                    .put("version", 2)
+                    .put("job_id", nextId)
+                    .put("mode", "manual")
+                    .put("series", JSONObject()
+                        .put("enabled", true)
+                        .put("series_id", cont.seriesId)
+                        .put("part", cont.part)
+                        .put("start_seconds", cont.startSeconds)
+                        .put("is_final", false))
+                    .put("state", "queued")
+                    .put("message", "Series part ${cont.part} queued — Stage A dispatched.")
+                    .put("created_at_epoch", nowSec)
+                    .put("updated_at_epoch", nowSec)
+                    .put("expires_at_epoch", nowSec + 172800)
+                    .put("release_tag", "clipforge-$nextId")
+                    .put("release_url", "https://github.com/${c.owner}/${c.repo}/releases/tag/clipforge-$nextId")
+                    .put("assets", JSONObject())
+                    .put("run", JSONObject()
+                        .put("workflow_run_id", 0)
+                        .put("workflow_run_url", "")
+                        .put("code_ref", ""))
+                    .put("publishing", JSONObject()
+                        .put("status", "not_requested")
+                        .put("posts", JSONArray())
+                        .put("idempotency_key", ""))
+
+                c.putFile("jobs/$nextId/stage-a-request.json", requestJson.toString(2).toByteArray(Charsets.UTF_8), "clipforge: stage-a request for series part ${cont.part} ($nextId)")
+                c.putFile("jobs/$nextId/status.json", statusJson.toString(2).toByteArray(Charsets.UTF_8), "clipforge: queue series part ${cont.part} ($nextId)")
+                val codeRef = c.defaultBranchSha()
+                c.dispatchWorkflow("stage-a.yml", mapOf("job_id" to nextId, "code_ref" to codeRef))
+
+                toast("Series Part ${cont.part} dispatched as $nextId")
+                refreshTasks()
+                refreshNextPart(jobId)
+            } catch (e: Exception) {
+                toast("Could not start next part: ${e.message}")
+            }
+        }
+    }
+
     /** Called when the Tasks screen opens: instant cached render, then background refresh. */
     fun onTasksOpen() {
         taskStore.loadFromCache()
@@ -343,6 +503,17 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         onCreated: (String) -> Unit
     ) = viewModelScope.launch {
         val c = api ?: run { toast("Not connected"); return@launch }
+        // Fix #1 — bot wizard guard (index.js wz:series handler): a series id may only
+        // start at Part 1; continuing an EXISTING series is exclusively the
+        // "Start Next Part" flow (startNextSeriesPart), which derives the part number
+        // and start_seconds from the previous part's production.json.
+        if (isSeries && !seriesId.isNullOrBlank()) {
+            val existing = _tasks.value.firstOrNull { it.seriesId == seriesId.trim() }
+            if (existing != null) {
+                toast("Series '${seriesId.trim()}' already exists (Part ${existing.part}) — open its latest completed part and tap 'Start Next Part' to continue it.")
+                return@launch
+            }
+        }
         // Bot parity (motionssalt/clipforge bot/src/github.js makeJobId): job ids are
         // manual-<epochMillis>. The stage-a-request MUST match schemas/stage_a_request.schema.json
         // exactly — ingest.py's load_request() hard-fails when source.value is absent, which is
@@ -396,10 +567,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("start_seconds", 0)
                 .put("context", "")
 
-            val musicJson = if (!selectedMusicPath.isNullOrBlank()) {
-                JSONObject().put("ref", selectedMusicPath).put("source", "explicit_library")
-            } else {
-                JSONObject().put("ref", "").put("source", "none")
+            // Fix #1 — bot wizard parity (wizard.js musicKeyboard / describeMusic):
+            // three real choices: an explicit library track, "no music", and "saved
+            // default". "Default / None" selected WITH a default configured in Settings
+            // means music.source = "default": Stage B / startNextSeriesPart resolve it
+            // to branding/music_default.json's library_track_path at render time
+            // (resolveMusicRef / pipeline music.py). No default configured means the
+            // operator genuinely picked silence -> "none".
+            val musicJson = when {
+                !selectedMusicPath.isNullOrBlank() ->
+                    JSONObject().put("ref", selectedMusicPath).put("source", "explicit_library")
+                defaultMusicPath != null ->
+                    JSONObject().put("ref", "").put("source", "default")
+                else ->
+                    JSONObject().put("ref", "").put("source", "none")
             }
 
             val requestJson = JSONObject()
@@ -473,17 +654,30 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _detailPlan = MutableStateFlow<String?>(null)
     val detailPlan: StateFlow<String?> = _detailPlan
 
-    /** Color-coding level for a single log line (maps to theme colors in the UI). */
+    /** Color-coding level for a pipeline step (maps to status colors in the UI). */
     enum class LogLevel { PENDING, RUNNING, SUCCESS, FAILURE, SKIPPED, CANCELLED, INFO }
 
     /** One rendered log row. [key] is stable across polls so Compose can animate updates. */
     data class LogLine(val key: String, val text: String, val level: LogLevel)
 
-    // Per-step log stream, rebuilt in canonical order on every poll: queued steps render
-    // as gray pending rows, the running step pulses in primary, and finished steps keep
-    // their conclusion color (success/failure/skipped/cancelled).
-    private val _detailLogs = MutableStateFlow<List<LogLine>>(emptyList())
-    val detailLogs: StateFlow<List<LogLine>> = _detailLogs
+    /** One pipeline step's status lines (its "detail lines") for the expanded view. */
+    data class LogDetail(val text: String, val level: LogLevel)
+
+    /**
+     * GitHub Actions-style collapsible step (operator fix #3): header (name + status
+     * + duration) with its detail lines collapsed by default. [key] is stable across
+     * polls so expansion state survives the 2.5 s refresh cycle.
+     */
+    data class LogStep(
+        val key: String,
+        val name: String,
+        val level: LogLevel,
+        val durationText: String,
+        val details: List<LogDetail>
+    )
+
+    private val _detailLogs = MutableStateFlow<List<LogStep>>(emptyList())
+    val detailLogs: StateFlow<List<LogStep>> = _detailLogs
 
     /** A single video candidate discovered inside a torrent by Stage A. */
     data class TorrentFileOption(val index: Int, val name: String, val sizeBytes: Long)
@@ -498,8 +692,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun startPollingTask(jobId: String) {
         pollJob?.cancel()
-        // Fresh log buffer for a fresh task view.
+        // Fresh log buffer + expansion state for a fresh task view.
         _detailLogs.value = emptyList()
+        expandedStepKey = null
+        autoCollapseDone = false
         pollJob = viewModelScope.launch {
             while (isActive) {
                 loadTaskDetail(jobId)
@@ -513,6 +709,23 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         pollJob = null
         _detailStatus.value = null
         _detailLogs.value = emptyList()
+        expandedStepKey = null
+        autoCollapseDone = false
+        _nextPart.value = null
+        _downloadedVideoFor.value = null
+        _playVideoUri.value = null
+    }
+
+    /** Human-readable step duration, GitHub Actions style ("34s", "1m 12s"). */
+    private fun fmtStepDuration(startedAt: String, completedAt: String): String {
+        if (startedAt.isBlank()) return ""
+        val startMs = runCatching { java.time.Instant.parse(startedAt).toEpochMilli() }.getOrNull() ?: return ""
+        val endMs = if (completedAt.isNotBlank())
+            runCatching { java.time.Instant.parse(completedAt).toEpochMilli() }.getOrNull()
+        else System.currentTimeMillis()
+        endMs ?: return ""
+        val secs = ((endMs - startMs) / 1000).coerceAtLeast(0)
+        return if (secs >= 60) "${secs / 60}m ${secs % 60}s" else "${secs}s"
     }
 
     suspend fun loadTaskDetail(jobId: String) {
@@ -528,21 +741,29 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     loadTorrentFiles(jobId)
                 }
 
-                // Rebuild the full ordered log on every poll. Stable keys mean existing
-                // rows simply change color as steps transition pending -> running -> done.
-                val newLogs = mutableListOf<LogLine>()
-                newLogs.add(
-                    LogLine(
-                        key = "status",
-                        text = "Status: ${status.state} — ${status.message}",
-                        level = when (status.state) {
-                            "error" -> LogLevel.FAILURE
-                            "complete" -> LogLevel.SUCCESS
-                            "cancelled" -> LogLevel.CANCELLED
-                            "queued" -> LogLevel.PENDING
-                            "awaiting_torrent_selection", "awaiting_plan" -> LogLevel.SKIPPED // attention-grabbing waiting state
-                            else -> LogLevel.RUNNING
-                        }
+                // Rebuild the GitHub Actions-style collapsible step list on every poll
+                // (fix #3): one LogStep per workflow step — header (name + status +
+                // duration), detail lines collapsed by default; the currently-running
+                // step is auto-expanded by the UI.
+                val newSteps = mutableListOf<LogStep>()
+                val statusLevel = when (status.state) {
+                    "error" -> LogLevel.FAILURE
+                    "complete" -> LogLevel.SUCCESS
+                    "cancelled" -> LogLevel.CANCELLED
+                    "queued" -> LogLevel.PENDING
+                    "awaiting_torrent_selection", "awaiting_plan" -> LogLevel.SKIPPED
+                    else -> LogLevel.RUNNING
+                }
+                newSteps.add(
+                    LogStep(
+                        key = "pipeline-status",
+                        name = "Pipeline status",
+                        level = statusLevel,
+                        durationText = "",
+                        details = listOf(
+                            LogDetail("state: ${status.state}", statusLevel),
+                            LogDetail("message: ${status.message}", LogLevel.INFO)
+                        )
                     )
                 )
 
@@ -554,11 +775,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                             val jobName = jobObj.optString("name")
                             val jStatus = jobObj.optString("status", "")
                             val jConclusion = jobObj.optString("conclusion", "")
-                            newLogs.add(
-                                LogLine(
+                            val jobLevel = logLevelFor(jStatus, jConclusion)
+                            newSteps.add(
+                                LogStep(
                                     key = "job-$i",
-                                    text = "Job: $jobName",
-                                    level = logLevelFor(jStatus, jConclusion)
+                                    name = "Job: $jobName",
+                                    level = jobLevel,
+                                    durationText = fmtStepDuration(
+                                        jobObj.optString("started_at", ""),
+                                        jobObj.optString("completed_at", "")
+                                    ),
+                                    details = listOf(
+                                        LogDetail("status: $jStatus", LogLevel.INFO),
+                                        LogDetail("conclusion: ${jConclusion.ifBlank { "—" }}", LogLevel.INFO)
+                                    )
                                 )
                             )
                             val steps = jobObj.optJSONArray("steps") ?: continue
@@ -568,26 +798,26 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                 val sStatus = step.optString("status", "")
                                 val sConclusion = step.optString("conclusion", "")
                                 val level = logLevelFor(sStatus, sConclusion)
-                                val marker = when (level) {
-                                    LogLevel.SUCCESS -> "✓"
-                                    LogLevel.FAILURE -> "✗"
-                                    LogLevel.CANCELLED -> "⏹"
-                                    LogLevel.SKIPPED -> "↷"
-                                    LogLevel.RUNNING -> "…"
-                                    else -> "•"
-                                }
-                                newLogs.add(
-                                    LogLine(
+                                newSteps.add(
+                                    LogStep(
                                         key = "job-$i-step-$s",
-                                        text = "$marker  $sName",
-                                        level = level
+                                        name = sName,
+                                        level = level,
+                                        durationText = fmtStepDuration(
+                                            step.optString("started_at", ""),
+                                            step.optString("completed_at", "")
+                                        ),
+                                        details = listOf(
+                                            LogDetail("status: $sStatus", LogLevel.INFO),
+                                            LogDetail("conclusion: ${sConclusion.ifBlank { "—" }}", LogLevel.INFO)
+                                        )
                                     )
                                 )
                             }
                         }
                     } catch (_: Exception) {}
                 }
-                _detailLogs.value = newLogs
+                _detailLogs.value = newSteps
             }
 
             val reqFile = c.readFile("jobs/$jobId/stage-a-request.json")
@@ -860,12 +1090,51 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---------------- video download with progress & speed ----------------
-    data class DownloadState(val isDownloading: Boolean = false, val progress: Float = 0f, val speedText: String = "", val error: String? = null)
+    // ---------------- video download with progress, total size & speed ----------------
+    data class DownloadState(
+        val isDownloading: Boolean = false,
+        val progress: Float = 0f,
+        val speedText: String = "",
+        val downloadedText: String = "",
+        val totalText: String = "",
+        val error: String? = null
+    )
     private val _downloadState = MutableStateFlow(DownloadState())
     val downloadState: StateFlow<DownloadState> = _downloadState
 
-    fun saveVideoToMovies(tag: String, fileName: String = "clipforge-video.mp4") = viewModelScope.launch {
+    /** Fix #5 — the video downloaded for [jobId] earlier in this session/app install. */
+    private val _downloadedVideoFor = MutableStateFlow<org.json.JSONObject?>(null)
+    val downloadedVideoFor: StateFlow<org.json.JSONObject?> = _downloadedVideoFor
+
+    /** Fix #5 — non-null while the in-app player dialog is open. */
+    private val _playVideoUri = MutableStateFlow<Pair<String, String>?>(null)
+    val playVideoUri: StateFlow<Pair<String, String>?> = _playVideoUri
+
+    fun downloadedVideoFor(jobId: String): org.json.JSONObject? =
+        DownloadsRegistry.forJob(app.applicationContext, jobId)
+
+    fun playDownloaded(jobId: String, title: String) {
+        val rec = DownloadsRegistry.forJob(app.applicationContext, jobId) ?: return
+        _playVideoUri.value = rec.optString("uri") to title
+    }
+
+    fun playVideoFromRegistry(rec: org.json.JSONObject) {
+        _playVideoUri.value = rec.optString("uri") to rec.optString("name")
+    }
+
+    fun dismissVideoPlayer() { _playVideoUri.value = null }
+
+    fun seriesDownloads(seriesId: String): List<org.json.JSONObject> =
+        DownloadsRegistry.forSeries(app.applicationContext, seriesId)
+
+    fun formatBytes(bytes: Long): String = when {
+        bytes >= 1L shl 30 -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        bytes >= 1L shl 20 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+        bytes >= 1024 -> String.format("%.0f KB", bytes / 1024.0)
+        else -> "$bytes B"
+    }
+
+    fun saveVideoToMovies(tag: String, fileName: String = "clipforge-video.mp4", jobId: String = "", seriesId: String = "") = viewModelScope.launch {
         val c = api ?: run { toast("Not connected"); return@launch }
         _downloadState.value = DownloadState(isDownloading = true, progress = 0.05f, speedText = "Locating asset…")
         withContext(Dispatchers.IO) {
@@ -874,12 +1143,14 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 val assets = rel.getJSONArray("assets")
                 var assetApiUrl: String? = null
                 var assetName = fileName
+                var assetSizeBytes = 0L
                 for (i in 0 until assets.length()) {
                     val a = assets.getJSONObject(i)
                     val name = a.getString("name")
                     if (name.endsWith(".mp4", ignoreCase = true)) {
                         assetApiUrl = a.getString("url")
                         assetName = name
+                        assetSizeBytes = a.optLong("size", 0L)
                         break
                     }
                 }
@@ -887,9 +1158,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
                 val resp = c.openAssetStream(assetApiUrl)
                 val body = resp.body ?: throw Exception("Empty response body from asset stream")
-                val totalBytes = body.contentLength()
+                // Fix #6 — total size is known up front: prefer the release asset's
+                // recorded size (GitHub Release assets always carry it), fall back to
+                // the response's Content-Length.
+                val totalBytes = if (assetSizeBytes > 0) assetSizeBytes else body.contentLength()
 
                 val context = app.applicationContext
+                var savedUriString = ""
                 val outputStream = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val resolver = context.contentResolver
                     val contentValues = ContentValues().apply {
@@ -899,11 +1174,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     }
                     val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
                         ?: throw Exception("Could not create MediaStore entry")
+                    savedUriString = uri.toString()
                     resolver.openOutputStream(uri) ?: throw Exception("Could not open MediaStore output stream")
                 } else {
                     val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "ClipForge")
                     if (!dir.exists()) dir.mkdirs()
                     val targetFile = File(dir, assetName)
+                    savedUriString = targetFile.absolutePath
                     FileOutputStream(targetFile)
                 }
 
@@ -924,7 +1201,14 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                 val speed = ((totalRead - lastBytes) / elapsedSec) / (1024.0 * 1024.0)
                                 val speedStr = String.format("%.2f MB/s", speed)
                                 val frac = if (totalBytes > 0) totalRead.toFloat() / totalBytes else 0.5f
-                                _downloadState.value = DownloadState(isDownloading = true, progress = frac, speedText = speedStr)
+                                // Fix #6 — always show downloaded + total alongside speed.
+                                _downloadState.value = DownloadState(
+                                    isDownloading = true,
+                                    progress = frac,
+                                    speedText = speedStr,
+                                    downloadedText = formatBytes(totalRead),
+                                    totalText = if (totalBytes > 0) formatBytes(totalBytes) else "unknown size"
+                                )
                                 lastTime = now
                                 lastBytes = totalRead
                             }
@@ -932,7 +1216,24 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     }
                 }
 
-                _downloadState.value = DownloadState(isDownloading = false, progress = 1f, speedText = "Saved to Movies/ClipForge/$assetName")
+                _downloadState.value = DownloadState(
+                    isDownloading = false,
+                    progress = 1f,
+                    speedText = "Saved to Movies/ClipForge/$assetName",
+                    downloadedText = formatBytes(totalBytes),
+                    totalText = if (totalBytes > 0) formatBytes(totalBytes) else "unknown size"
+                )
+                // Fix #5 — register the download against the job AND its series id so
+                // revisiting the task (or the series view) offers Play instead of
+                // Download, and the file is findable later.
+                if (jobId.isNotBlank()) {
+                    DownloadsRegistry.register(
+                        context, jobId, seriesId,
+                        savedUriString, assetName,
+                        if (totalBytes > 0) totalBytes else 0L
+                    )
+                    _downloadedVideoFor.value = DownloadsRegistry.forJob(context, jobId)
+                }
                 withContext(Dispatchers.Main) {
                     toast("Video saved to Movies/ClipForge/$assetName")
                 }

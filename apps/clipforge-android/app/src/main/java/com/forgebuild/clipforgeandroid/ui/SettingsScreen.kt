@@ -9,6 +9,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.Voices
 import com.forgebuild.engine.ui.icons.EngineIcons
@@ -35,6 +37,7 @@ fun SettingsScreen(
     val settingsLoading by vm.settingsLoading.collectAsState()
     val settingsLoaded by vm.settingsLoaded.collectAsState()
     val busyOps by vm.busyOps.collectAsState()
+    val audioState by AudioPreview.state.collectAsState()
 
     val isOriginal = vm.api?.isOriginalRepo() == true
 
@@ -42,6 +45,9 @@ fun SettingsScreen(
     // so watermark / Zernio / narrator / series values from a prior session are visible
     // instead of the default "as if I should set it newly" state.
     LaunchedEffect(Unit) { vm.loadSettings() }
+
+    // Stop any voice preview when leaving the screen (fix #2).
+    DisposableEffect(Unit) { onDispose { AudioPreview.stop() } }
 
     var showDeleteRepoDialog by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
@@ -199,8 +205,15 @@ fun SettingsScreen(
                     }
                     Text("Select the voice used for spoken voiceovers across generated clips.", style = MaterialTheme.typography.bodySmall)
 
+                    // Fix #2 — every voice carries the bot's own preview affordance
+                    // (assets/tts-previews/<voiceId>.mp3, same file the bot sends via
+                    // getRepositoryFileBytes) so the operator can hear a voice before
+                    // choosing it. Streaming + caching go through the shared
+                    // AudioPreview pipeline — the sample is never re-synthesized.
                     Voices.ALL.forEach { voice ->
                         val isSelected = settings.narratorVoice == voice.id
+                        val previewUrl = vm.audioPreviewUrl("assets/tts-previews/${voice.id}.mp3")
+                        val thisActive = audioState.url == previewUrl
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -212,7 +225,7 @@ fun SettingsScreen(
                                 selected = isSelected,
                                 onClick = { vm.setNarratorVoice(voice.id) }
                             )
-                            Column(Modifier.padding(start = 8.dp)) {
+                            Column(Modifier.padding(start = 8.dp).weight(1f)) {
                                 Text(
                                     text = "${voice.label} (${voice.gender})",
                                     style = MaterialTheme.typography.bodyMedium
@@ -222,6 +235,16 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                            IconButton(onClick = { vm.previewVoice(voice.id) }) {
+                                when {
+                                    thisActive && audioState.isBuffering -> CircularProgressIndicator(
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    thisActive && audioState.isPlaying -> Icon(EngineIcons.Pause, "Pause preview")
+                                    else -> Icon(Icons.Default.PlayArrow, "Voice preview for ${voice.label}")
+                                }
                             }
                         }
                     }
@@ -444,6 +467,21 @@ fun SettingsScreen(
                             }
                         }
                     }
+                }
+            }
+            // --- Section 7: About (fix #7) ---
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
+                    Text("Version v6", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    HorizontalDivider()
+                    Text("Pipeline: stage-a.yml → stage-b.yml via GitHub Actions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Source: github.com/motionssalt/clipforge", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Built with the ForgeBuild Engine (Material 3, dynamic color)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

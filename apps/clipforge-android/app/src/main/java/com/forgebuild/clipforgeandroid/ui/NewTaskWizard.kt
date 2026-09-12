@@ -29,10 +29,18 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
 
     val isOriginal = vm.api?.isOriginalRepo() == true
 
-    var sourceKind by remember { mutableStateOf("url") }
+    // Fix #8 — bot parity (wizard.js): the operator never picks a source type; the
+    // pasted text is classified directly (magnet checked BEFORE the generic URL
+    // fallback — the session-08 ordering fix must not regress). Only a .torrent
+    // upload is still an explicit action (there is nothing to classify in text).
+    var detectedSourceKind by remember { mutableStateOf<String?>(null) }
     var sourceValue by remember { mutableStateOf("") }
     var torrentBytes by remember { mutableStateOf<ByteArray?>(null) }
     var torrentFileName by remember { mutableStateOf("") }
+
+    // Fix #1 — load the music library AND the current default track the moment this
+    // screen opens; never rely on the Music settings screen having been visited.
+    LaunchedEffect(Unit) { vm.onNewTaskOpen() }
 
     var focus by remember { mutableStateOf("") }
     var durationSeconds by remember { mutableStateOf(120) }
@@ -97,90 +105,51 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Video Source", style = MaterialTheme.typography.titleMedium)
 
-                    // Source kind selection
-                    Column {
-                        listOf(
-                            "url" to "Direct URL (HTTP/HTTPS)",
-                            "drive" to "Google Drive Link",
-                            "magnet" to "Magnet Link",
-                            "torrent_file" to "Torrent File (.torrent, ≤1MB)"
-                        ).plus(
-                            if (isOriginal) listOf("telegram_channel" to "Telegram Channel Post (Official Repo only)")
-                            else emptyList()
-                        ).forEach { (kind, label) ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                RadioButton(
-                                    selected = sourceKind == kind,
-                                    onClick = { sourceKind = kind }
-                                )
+                    OutlinedTextField(
+                        value = sourceValue,
+                        onValueChange = { raw ->
+                            sourceValue = raw
+                            // Live classification exactly like the bot's wizard step 1
+                            // (classifySourceText). MAGNET is checked BEFORE the generic
+                            // URL fallback — SourceClassifier preserves the bot's exact
+                            // ordering, so a magnet URI can never degrade into kind:url.
+                            detectedSourceKind = when (val verdict = SourceClassifier.classify(raw)) {
+                                is SourceClassifier.Result.Kind -> verdict.kind
+                                is SourceClassifier.Result.Invalid -> null
+                            }
+                        },
+                        label = { Text("Paste a link — the app detects the type automatically") },
+                        placeholder = { Text("https://… | Google Drive | magnet:?xt=… | t.me/channel/123") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    val detected = detectedSourceKind
+                    if (detected != null) {
+                        val gated = detected == "telegram_channel" && !isOriginal
+                        AssistChip(
+                            onClick = {},
+                            label = {
                                 Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(start = 8.dp)
+                                    when (detected) {
+                                        "magnet" -> "Detected: Magnet link"
+                                        "drive" -> "Detected: Google Drive link"
+                                        "url" -> "Detected: Direct URL"
+                                        "telegram_channel" -> if (gated) "Telegram channel (official repo only)" else "Detected: Telegram channel post"
+                                        else -> "Detected: $detected"
+                                    }
                                 )
                             }
-                        }
+                        )
                     }
 
-                    if (sourceKind == "torrent_file") {
-                        Button(
-                            onClick = { torrentPicker.launch("application/x-bittorrent") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (torrentFileName.isNotBlank()) "Change .torrent file" else "Pick .torrent file")
-                        }
-                        if (torrentFileName.isNotBlank()) {
-                            Text("Selected: $torrentFileName (${(torrentBytes?.size ?: 0) / 1024} KB)", style = MaterialTheme.typography.bodySmall)
-                        }
-                    } else {
-                        OutlinedTextField(
-                            value = sourceValue,
-                            onValueChange = { raw ->
-                                sourceValue = raw
-                                // Fix #1 (bot wizard.js parity): classify as the user
-                                // types. The classifier's verdict wins over the manually
-                                // picked chip — pasting a magnet URI while "Direct URL" is
-                                // selected flips the pick to Magnet instantly, so a magnet
-                                // can never be saved with kind:"url" and die at Stage A
-                                // ingest. MAGNET is checked BEFORE the generic URL case
-                                // (SourceClassifier preserves the bot's exact ordering).
-                                when (val verdict = SourceClassifier.classify(raw)) {
-                                    is SourceClassifier.Result.Kind -> {
-                                        // telegram_channel stays gated to the official
-                                        // repo (existing app rule); every other classified
-                                        // kind auto-syncs the selection chip.
-                                        if (!(verdict.kind == "telegram_channel" && !isOriginal) &&
-                                            verdict.kind != sourceKind
-                                        ) {
-                                            sourceKind = verdict.kind
-                                        }
-                                    }
-                                    is SourceClassifier.Result.Invalid -> Unit
-                                }
-                            },
-                            label = {
-                                Text(when (sourceKind) {
-                                    "url" -> "Direct Video URL"
-                                    "drive" -> "Google Drive Share URL"
-                                    "magnet" -> "Magnet URI"
-                                    "telegram_channel" -> "t.me/channel/post_id"
-                                    else -> "Source"
-                                })
-                            },
-                            placeholder = {
-                                Text(when (sourceKind) {
-                                    "url" -> "https://example.com/video.mp4"
-                                    "drive" -> "https://drive.google.com/file/d/..."
-                                    "magnet" -> "magnet:?xt=urn:btih:..."
-                                    "telegram_channel" -> "https://t.me/mychannel/123"
-                                    else -> ""
-                                })
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    Text("— or upload a torrent file instead —", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(
+                        onClick = { torrentPicker.launch("application/x-bittorrent") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (torrentFileName.isNotBlank()) "Change .torrent file" else "Pick .torrent file")
+                    }
+                    if (torrentFileName.isNotBlank()) {
+                        Text("Selected: $torrentFileName (${(torrentBytes?.size ?: 0) / 1024} KB)", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -268,14 +237,26 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Background Music", style = MaterialTheme.typography.titleMedium)
 
+                    // Bot wizard parity: default/none resolves to the Settings default
+                    // track at render time when one is configured, silence otherwise.
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(
                             selected = selectedMusicPath == null,
                             onClick = { selectedMusicPath = null }
                         )
-                        Text("Default / None", modifier = Modifier.padding(start = 8.dp))
+                        Text(
+                            if (defaultMusic != null) "Use saved default ($defaultMusic)" else "No music",
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
 
+                    if (musicTracks.isEmpty()) {
+                        Text(
+                            "Library is empty — add tracks in Settings → Music library",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     musicTracks.forEach { track ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
@@ -321,18 +302,14 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
             // --- Submit Button ---
             Button(
                 onClick = {
-                    if (sourceKind == "torrent_file" && (torrentBytes == null || torrentBytes!!.isEmpty())) {
-                        vm.toast("Please select a .torrent file")
-                        return@Button
-                    }
-                    // Fix #1: final source classification at submit — the ported bot
-                    // classifier (magnet BEFORE generic URL) always wins over the manual
-                    // chip, exactly like the bot's wizard step 1. Invalid sources are
-                    // rejected with the bot's own error text instead of creating a task
-                    // that would fail at Stage A ingest.
-                    var submitKind = sourceKind
-                    var submitValue = sourceValue.trim()
-                    if (sourceKind != "torrent_file") {
+                    // Fix #8 — bot wizard parity: a picked .torrent file IS the source
+                    // (torrent_file); otherwise classify the pasted text directly with
+                    // the ported classifier. No source-type selector exists any more.
+                    var submitKind = ""
+                    var submitValue = ""
+                    if (torrentBytes != null && torrentBytes!!.isNotEmpty()) {
+                        submitKind = "torrent_file"
+                    } else {
                         when (val verdict = SourceClassifier.classify(sourceValue)) {
                             is SourceClassifier.Result.Invalid -> {
                                 vm.toast(verdict.error)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -285,6 +286,8 @@ fun TaskDetailScreen(
     val torrentSubmitting by vm.torrentSubmitting.collectAsState()
     val plan by vm.detailPlan.collectAsState()
     val busyOps by vm.busyOps.collectAsState()
+    val nextPart by vm.nextPart.collectAsState()
+    val downloadedVideo by vm.downloadedVideoFor.collectAsState()
 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -313,7 +316,14 @@ fun TaskDetailScreen(
 
     DisposableEffect(jobId) {
         vm.startPollingTask(jobId)
+        vm.refreshNextPart(jobId)
         onDispose { vm.stopPollingTask() }
+    }
+
+    // Fix #5 — in-app player for a previously-downloaded final MP4.
+    val playVideo by vm.playVideoUri.collectAsState()
+    playVideo?.let { (uri, title) ->
+        VideoPlayerDialog(uriString = uri, title = title, onDismiss = { vm.dismissVideoPlayer() })
     }
 
     Scaffold(
@@ -532,7 +542,7 @@ fun TaskDetailScreen(
                 }
             }
 
-            // Completed Section: Save Video
+            // Completed Section: Save / Play Video (fixes 5 + 6)
             if (currentStatus.isComplete) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -542,25 +552,95 @@ fun TaskDetailScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
 
+                        val alreadyDownloaded = downloadedVideo
                         if (downloadState.isDownloading) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 LinearProgressIndicator(
                                     progress = { downloadState.progress },
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                Text(downloadState.speedText, style = MaterialTheme.typography.bodySmall)
+                                // Fix #6 — downloaded + TOTAL size alongside the speed.
+                                Text(
+                                    "${downloadState.downloadedText} / ${downloadState.totalText} · ${downloadState.speedText}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
-                        } else {
+                        } else if (alreadyDownloaded != null) {
+                            // Fix #5 — downloaded before: Play instead of Download.
                             Button(
+                                onClick = { vm.playDownloaded(jobId, alreadyDownloaded.optString("name").ifBlank { "$jobId.mp4" }) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Play, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Play Final Video (${alreadyDownloaded.optString("name")})")
+                            }
+                            OutlinedButton(
                                 onClick = {
                                     val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
-                                    vm.saveVideoToMovies(tag, "$jobId.mp4")
+                                    vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Icon(EngineIcons.Download, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Save Video to Movies/ClipForge/")
+                                Text("Download Again")
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
+                                    vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Download, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Download Final MP4")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fix #4 — Start Next Part for a completed manual series part. The button's
+            // presence/absence mirrors the bot's startNextSeriesPart exactly: it only
+            // appears when manualSeriesContinuation yields a next part AND no
+            // stage-a-request.json/status.json exists yet for the next job id
+            // (deleting that next part makes the button reappear, just like the bot).
+            nextPart?.let { np ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Series Continuation", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Series ${np.continuation.seriesId} — Part ${np.continuation.part - 1} finished at ${np.continuation.startSeconds}s.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        if (np.exists) {
+                            Text(
+                                "Part ${np.continuation.part} already exists as task ${np.nextId}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(context, Class.forName("com.forgebuild.clipforgeandroid.MainActivity"))
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Open task ${np.nextId}")
+                            }
+                        } else {
+                            val startBusy = busyOps.contains("start_next")
+                            Button(
+                                onClick = { vm.startNextSeriesPart(jobId) },
+                                enabled = !startBusy,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Play, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Start Next Part (Part ${np.continuation.part})")
                             }
                         }
                     }
@@ -660,13 +740,10 @@ fun TaskDetailScreen(
                 )
             }
 
-            // Live Execution Logs — color-coded per step:
-            //   pending  = steps not yet run (muted gray)
-            //   running  = step in progress (primary)
-            //   success  = completed steps (green)
-            //   skipped  = skipped / waiting-on-you steps (amber)
-            //   failure  = failed steps (red)
-            //   cancelled = cancelled steps (outline gray)
+            // Live Execution Logs — GitHub Actions style (fix #3): one collapsible
+            // section per pipeline step with a header (name + status icon + duration),
+            // detail lines collapsed by default; the CURRENTLY-RUNNING step is
+            // auto-expanded and auto-collapses when it finishes and the next starts.
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Live Execution Logs", style = MaterialTheme.typography.titleMedium)
@@ -678,24 +755,24 @@ fun TaskDetailScreen(
                         )
                     } else {
                         val listState = rememberLazyListState()
-                        // Follow the action: scroll to the running step (or the latest line
-                        // when nothing is running) whenever the log updates.
+                        // Follow the action: scroll to the running step (or the latest
+                        // section when nothing is running) whenever the log updates.
                         LaunchedEffect(logs) {
                             if (logs.isNotEmpty()) {
                                 val runningIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
                                 val target = if (runningIdx >= 0) runningIdx else logs.size - 1
-                                listState.animateScrollToItem(target)
+                                listState.animateScrollToItem(target.coerceAtMost(logs.size - 1))
                             }
                         }
                         LazyColumn(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 140.dp, max = 260.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                .heightIn(min = 140.dp, max = 380.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            items(logs, key = { it.key }) { line ->
-                                LogRow(line)
+                            items(logs, key = { it.key }) { step ->
+                                LogStepRow(step, vm.isStepExpanded(step)) { vm.toggleStepExpanded(step.key) }
                             }
                         }
                     }
@@ -705,14 +782,12 @@ fun TaskDetailScreen(
     }
 }
 
-/** Single color-coded log row for the task detail live log stream. */
-@Composable
-private fun LogRow(line: ClipForgeViewModel.LogLine) {
+/** Status color for a pipeline step — success/running/failed/pending (fix #3). */
+private fun logLevelColor(level: ClipForgeViewModel.LogLevel): androidx.compose.ui.graphics.Color {
     val scheme = MaterialTheme.colorScheme
-    // Green/amber are chosen to keep ~4.5:1 contrast on both light and dark surfaces.
     val success = androidx.compose.ui.graphics.Color(0xFF2E7D32)
     val skipped = androidx.compose.ui.graphics.Color(0xFF9A6A00)
-    val color = when (line.level) {
+    return when (level) {
         ClipForgeViewModel.LogLevel.SUCCESS -> success
         ClipForgeViewModel.LogLevel.FAILURE -> scheme.error
         ClipForgeViewModel.LogLevel.SKIPPED -> skipped
@@ -721,9 +796,77 @@ private fun LogRow(line: ClipForgeViewModel.LogLine) {
         ClipForgeViewModel.LogLevel.PENDING -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
         ClipForgeViewModel.LogLevel.INFO -> scheme.onSurfaceVariant
     }
-    Text(
-        text = line.text,
-        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-        color = color
-    )
+}
+
+@Composable
+private fun logLevelIcon(level: ClipForgeViewModel.LogLevel): androidx.compose.ui.graphics.vector.ImageVector = when (level) {
+    ClipForgeViewModel.LogLevel.SUCCESS -> EngineIcons.CheckCircle
+    ClipForgeViewModel.LogLevel.FAILURE -> EngineIcons.Cancel
+    ClipForgeViewModel.LogLevel.RUNNING -> EngineIcons.Bolt
+    ClipForgeViewModel.LogLevel.CANCELLED -> EngineIcons.Cancel
+    ClipForgeViewModel.LogLevel.SKIPPED -> EngineIcons.ArrowBack // visually "skipped over"
+    ClipForgeViewModel.LogLevel.PENDING -> EngineIcons.CheckCircle
+    ClipForgeViewModel.LogLevel.INFO -> EngineIcons.CheckCircle
+}
+
+/**
+ * One GitHub Actions-style collapsible pipeline step (fix #3): status-colored left
+ * border + status icon, step name, live/elapsed duration, and detail lines in
+ * readable monospace shown only while expanded.
+ */
+@Composable
+private fun LogStepRow(step: ClipForgeViewModel.LogStep, expanded: Boolean, onToggle: () -> Unit) {
+    val accent = logLevelColor(step.level)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+            .clickable { onToggle() }
+    ) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .height(IntrinsicSize.Min.let { 56.dp })
+                .background(accent)
+        )
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    logLevelIcon(step.level),
+                    contentDescription = step.level.name,
+                    tint = accent,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    step.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                if (step.durationText.isNotBlank()) {
+                    Text(
+                        step.durationText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    if (expanded) "▾" else "▸",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (expanded) {
+                Spacer(Modifier.height(6.dp))
+                step.details.forEach { d ->
+                    Text(
+                        text = d.text,
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                        color = logLevelColor(d.level)
+                    )
+                }
+            }
+        }
+    }
 }

@@ -101,6 +101,12 @@ fun SeriesDetailScreen(
 ) {
     LaunchedEffect(Unit) { vm.onTasksOpen() }
     val tasks by vm.tasks.collectAsState()
+    // Fix #5 — videos downloaded for ANY part of this series are findable from here.
+    val downloads = remember(seriesId) { vm.seriesDownloads(seriesId) }
+    val playVideo by vm.playVideoUri.collectAsState()
+    playVideo?.let { (uri, title) ->
+        VideoPlayerDialog(uriString = uri, title = title, onDismiss = { vm.dismissVideoPlayer() })
+    }
     val seriesParts = remember(tasks, seriesId) {
         tasks.filter { it.seriesEnabled && it.seriesId == seriesId }
             .sortedBy { it.part }
@@ -129,6 +135,19 @@ fun SeriesDetailScreen(
                 "Sequential Series Parts",
                 style = MaterialTheme.typography.titleSmall
             )
+
+            if (downloads.isNotEmpty()) {
+                Text("Downloaded videos", style = MaterialTheme.typography.titleSmall)
+                downloads.forEach { rec ->
+                    OutlinedButton(
+                        onClick = { vm.playVideoFromRegistry(rec) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Play ${rec.optString("name")} (${rec.optString("jobId")})")
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

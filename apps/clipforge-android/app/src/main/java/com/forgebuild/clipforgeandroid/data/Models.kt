@@ -192,20 +192,136 @@ object PlanValidator {
     }
 }
 
-/** Series continuation — Kotlin port of bot/src/series.js (manualSeriesContinuation / nextPartJobId). */
+/**
+ * Series continuation — faithful Kotlin port of bot/src/series.js (operator fix #4):
+ * extractPlanSeries / manualSeriesContinuation / buildSeriesContext /
+ * nextPartRequestBody / nextPartJobId.
+ */
 object SeriesLogic {
-    fun nextPartJobId(seriesId: String, part: Int): String = seriesId + "-p" + (part + 1)
+    const val MAX_CONTEXT_CHARS = 8000
+    const val MAX_JOB_ID_LENGTH = 120
 
-    fun continuationFrom(status: TaskStatus, planText: String?): Pair<Int, Int>? {
-        if (status.state != "complete" || !status.seriesEnabled) return null
-        planText ?: return null
-        val plan = runCatching { JSONObject(planText) }.getOrNull() ?: return null
+    /** bot/src/jobs.js isValidJobId — safe-charset port (letters, digits, dot, dash, underscore). */
+    private val JOB_ID_RE = Regex("^[A-Za-z0-9._-]+$")
+    fun isValidJobId(id: String): Boolean = id.isNotBlank() && JOB_ID_RE.matches(id)
+
+    /** §6.3 identity rule for the derived next-part job id (bot nextPartJobId). */
+    fun nextPartJobId(seriesId: String, nextPart: Int): String {
+        val nextId = seriesId + "-p" + nextPart
+        require(isValidJobId(nextId) && nextId.length <= MAX_JOB_ID_LENGTH) {
+            "The next series part job id would be unsafe."
+        }
+        return nextId
+    }
+
+    /** Next-part coordinates for a continuable manual series part. */
+    data class Continuation(val seriesId: String, val part: Int, val startSeconds: Int)
+
+    /**
+     * Normalize series metadata from a production.json document, accepting the nested
+     * §7.3 object and the legacy flat series_* siblings. Nested wins per-field — the
+     * shared closest-analog rule, same as bot extractPlanSeries / plan.js / schema.py.
+     */
+    fun extractPlanSeries(plan: JSONObject?): JSONObject {
+        val out = JSONObject()
+        if (plan == null) return out
         val nested = plan.optJSONObject("series")
-        val isFinal = nested?.optBoolean("is_final") ?: plan.optBoolean("series_final", true)
-        if (isFinal) return null
-        val end = nested?.optLong("end_seconds", 0) ?: plan.optLong("series_end_seconds", 0)
-        if (end <= 0) return null
-        return (status.part + 1) to end.toInt()
+        val mapping = mapOf(
+            "series_id" to "series_id",
+            "part" to "series_part",
+            "start_seconds" to "series_start_seconds",
+            "end_seconds" to "series_end_seconds",
+            "is_final" to "series_final",
+            "summary" to "series_summary"
+        )
+        for ((nestedKey, flatKey) in mapping) {
+            if (plan.has(flatKey)) out.put(nestedKey, plan.opt(flatKey))
+            if (nested != null && nested.has(nestedKey)) out.put(nestedKey, nested.opt(nestedKey))
+        }
+        return out
+    }
+
+    /**
+     * Port of bot manualSeriesContinuation(status, request, plan): decide whether a
+     * COMPLETED job is a continuable manual series part and, if so, return the next
+     * part's coordinates (seriesId, part + 1, plan end_seconds).
+     */
+    fun manualSeriesContinuation(status: JSONObject?, request: JSONObject?, plan: JSONObject?): Continuation? {
+        if (status == null || status.optString("state") != "complete") return null
+        if (request == null) return null
+        val reqSeries = request.optJSONObject("series") ?: JSONObject()
+        if (!reqSeries.optBoolean("enabled", false)) return null
+        val seriesId = reqSeries.optString("series_id").trim()
+        val part = reqSeries.optInt("part", 0)
+        if (seriesId.isEmpty() || part < 1) return null
+        if (plan == null) return null
+        val planSeries = extractPlanSeries(plan)
+        if (planSeries.optBoolean("is_final", false)) return null
+        val end = planSeries.optLong("end_seconds", -1)
+        if (end < 0) return null
+        return Continuation(seriesId, part + 1, end.toInt())
+    }
+
+    /**
+     * Port of bot buildSeriesContext: "Prior events (Part N): <summary>" lines sorted
+     * by part, capped at MAX_CONTEXT_CHARS (bug-56 'Prior events' prefix kept verbatim).
+     */
+    fun buildSeriesContext(entries: List<Pair<Int, String>>): String {
+        val text = entries
+            .filter { it.second.isNotBlank() }
+            .sortedBy { it.first }
+            .joinToString("\n") { (part, summary) -> "Prior events (Part $part): ${summary.trim()}" }
+        return text.ifBlank { "(No prior summaries.)" }.take(MAX_CONTEXT_CHARS)
+    }
+
+    /**
+     * Port of bot nextPartRequestBody: the wizardToRequest-shaped body for the next
+     * manual series part (mode forced to manual, focus cleared, source_job_id carried
+     * forward with the bug-64 fallback to the COMPLETING part's job id — never the
+     * series_id, which is not a job id).
+     */
+    fun nextPartRequestBody(request: JSONObject, cont: Continuation, context: String, currentJobId: String): JSONObject {
+        val source = request.optJSONObject("source") ?: JSONObject()
+        val options = request.optJSONObject("options") ?: JSONObject()
+        val music = request.optJSONObject("music") ?: JSONObject()
+        val reqSeries = request.optJSONObject("series") ?: JSONObject()
+
+        val src = JSONObject()
+            .put("kind", source.optString("kind"))
+            .put("value", source.optString("value"))
+        source.optJSONObject("relay")?.let { src.put("relay", it) }
+        val tfi = source.opt("torrent_file_index")
+        if (tfi != null && tfi.toString().isNotEmpty()) src.put("torrent_file_index", tfi.toString())
+
+        val opts = JSONObject()
+            .put("whisper_model", options.optString("whisper_model"))
+            .put("language", options.optString("language"))
+            .put("task", options.optString("task"))
+            .put("target_duration_seconds", options.optInt("target_duration_seconds"))
+            .put("focus", "")
+            .put("enable_vision_assist", options.optBoolean("enable_vision_assist", true))
+
+        val sourceJobId = reqSeries.optString("source_job_id").ifBlank {
+            currentJobId.ifBlank { cont.seriesId }
+        }
+        val series = JSONObject()
+            .put("enabled", true)
+            .put("series_id", cont.seriesId)
+            .put("source_job_id", sourceJobId)
+            .put("part", cont.part)
+            .put("start_seconds", cont.startSeconds)
+            .put("context", context.take(MAX_CONTEXT_CHARS))
+
+        val musicOut = JSONObject()
+            .put("ref", music.optString("ref"))
+            .put("source", music.optString("source", "none"))
+
+        return JSONObject()
+            .put("source", src)
+            .put("options", opts)
+            .put("mode", "manual")
+            .put("series", series)
+            .put("music", musicOut)
     }
 }
 
