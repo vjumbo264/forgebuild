@@ -818,29 +818,34 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val c = api ?: return@launch
         withBusy("cancel_stage") {
             try {
-                val runId = _detailStatus.value?.runId ?: 0L
+                // Fresh read exactly like the bot's cancelStageB (readStatus at action
+                // time): the polled in-memory status can be up to one poll (2.5s) stale —
+                // a run id that just landed must route this to the Actions API branch,
+                // and a just-recorded terminal state must not be re-cancelled.
+                val freshFile = try { c.readFile("jobs/$jobId/status.json") } catch (_: Exception) { null }
+                val freshObj = freshFile?.let { try { JSONObject(it.first) } catch (_: Exception) { null } }
+                val runId = freshObj?.optJSONObject("run")?.optLong("workflow_run_id", 0)
+                    ?: (_detailStatus.value?.runId ?: 0L)
                 if (runId > 0) {
                     // Actively running (or queued-with-run) workflow: Actions API cancel.
                     c.cancelRun(runId)
                     toast("Cancelling the running workflow…")
                 } else {
-                    val stFile = try { c.readFile("jobs/$jobId/status.json") } catch (_: Exception) { null }
-                    if (stFile != null) {
-                        val stObj = JSONObject(stFile.first)
-                        val currentState = stObj.optString("state")
+                    if (freshObj != null) {
+                        val currentState = freshObj.optString("state")
                         if (currentState !in setOf("complete", "error", "cancelled")) {
-                            stObj.put("state", "cancelled")
-                            stObj.put(
+                            freshObj.put("state", "cancelled")
+                            freshObj.put(
                                 "message",
                                 if (currentState == "stage_b_queued")
                                     "Cancelled before the Stage B run started." // bot verbatim
                                 else
                                     "Cancelled before the run started."
                             )
-                            stObj.put("updated_at_epoch", nowEpoch())
+                            freshObj.put("updated_at_epoch", nowEpoch())
                             c.putFile(
                                 "jobs/$jobId/status.json",
-                                stObj.toString(2).toByteArray(Charsets.UTF_8),
+                                freshObj.toString(2).toByteArray(Charsets.UTF_8),
                                 "clipforge: cancel job $jobId"
                             )
                         }

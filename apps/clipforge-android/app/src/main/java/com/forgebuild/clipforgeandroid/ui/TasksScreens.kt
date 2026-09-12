@@ -567,24 +567,28 @@ fun TaskDetailScreen(
                 }
             }
 
-            // ---------------- Stage Controls (fix #4, bot runtime.js taskKeyboard parity) ----------------
-            // Restart Stage A — offered whenever the task is at/has failed Stage A
-            //   (bot: error/cancelled rows always carry Restart Stage A).
-            // Restart Stage B — the operator's rule: available whenever the task has
-            //   already produced a production.json (reached/passed Stage A). The bot's
-            //   own restartStageB still guards server-side with the exact block message,
-            //   reproduced in the ViewModel — the button is hidden when no plan exists.
-            // Cancel running stage — bot taskKeyboard shows it for stage_b_queued /
-            //   stage_b_running; the app extends the same affordance to a running Stage A
-            //   (both cancel branches are implemented in cancelRunningStage).
+            // ---------------- Stage Controls (fix #4) ----------------
+            // Availability per the operator's explicit rules, union'd with the bot's
+            // taskKeyboard display rules (runtime.js):
+            //   Restart Stage A — whenever the task IS at Stage A (queued / running /
+            //   awaiting torrent selection) or has failed (error/cancelled — the bot
+            //   always offers Restart A there, including Stage-B failures: re-run from
+            //   scratch). The bot's restarta action itself has no guard.
+            //   Restart Stage B — whenever a production.json exists (operator rule:
+            //   "has reached or passed Stage A"); the bot's bug-15 fallback (error/
+            //   cancelled + message says Stage B ran) keeps the button reachable when
+            //   the plan read failed — the tap then hits the bot-exact guard message.
+            //   Cancel — whenever a stage is actively running or dispatched; both bot
+            //   branches are implemented (Actions API cancel / local status merge).
             val state = currentStatus.state
-            val stageBStarted = state in setOf("awaiting_plan", "stage_b_queued", "stage_b_running", "complete") ||
-                Regex("stage b", RegexOption.IGNORE_CASE).containsMatchIn(currentStatus.message)
-            val canRestartA = state == "error" || state == "cancelled"
-            val canRestartB = (state == "error" || state == "cancelled") &&
-                (plan != null || stageBStarted)
-            val canCancel = state == "stage_a_running" || state == "stage_a_queued" ||
-                state == "stage_b_queued" || state == "stage_b_running" || state == "queued"
+            val stageBStarted = Regex("stage b", RegexOption.IGNORE_CASE).containsMatchIn(currentStatus.message)
+            val atStageA = state in setOf("queued", "stage_a_running", "awaiting_torrent_selection")
+            val failedTask = state == "error" || state == "cancelled"
+            val canRestartA = atStageA || failedTask
+            val canRestartB = plan != null || (failedTask && stageBStarted)
+            val canCancel = state in setOf(
+                "queued", "stage_a_running", "stage_b_queued", "stage_b_running"
+            )
             if (canRestartA || canCancel) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
