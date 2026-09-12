@@ -779,6 +779,7 @@ fun TaskDetailScreen(
 }
 
 /** Status color for a pipeline step — success/running/failed/pending (fix #3). */
+@Composable
 private fun logLevelColor(level: ClipForgeViewModel.LogLevel): androidx.compose.ui.graphics.Color {
     val scheme = MaterialTheme.colorScheme
     val success = androidx.compose.ui.graphics.Color(0xFF2E7D32)

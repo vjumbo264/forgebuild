@@ -338,7 +338,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      *  Uses the shared AudioPreview cache/pipeline — never re-synthesizes a sample. */
     fun previewVoice(voiceId: String) {
         val ctx = app.applicationContext
-        val c = api ?: run { toast("Not connected"); return@launch }
+        val c = api ?: run { toast("Not connected"); return }
         com.forgebuild.clipforgeandroid.ui.AudioPreview.toggle(ctx, audioPreviewUrl("assets/tts-previews/$voiceId.mp3"), c.pat)
     }
 
