@@ -731,23 +731,127 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun cancelTask(jobId: String) = viewModelScope.launch {
+    // ---------------- restart / cancel stage controls (fix #4, bot index.js parity) ----
+
+    /** Port of bot resolveMusicRef (index.js — mirrors pipeline/plan/music.py for
+     *  manual Stage B dispatches): none -> ""; explicit_library/job_upload ->
+     *  path:<ref>; default -> branding/music_default.json's library_track_path. */
+    private suspend fun resolveMusicRef(c: GitHubClient, jobId: String): String {
+        val request = try {
+            c.readFile("jobs/$jobId/stage-a-request.json")?.let { JSONObject(it.first) }
+        } catch (_: Exception) { null }
+        val music = request?.optJSONObject("music") ?: JSONObject()
+        return when (music.optString("source", "none")) {
+            "explicit_library", "job_upload" ->
+                music.optString("ref").takeIf { it.isNotBlank() }?.let { "path:$it" } ?: ""
+            "default" -> try {
+                c.readFile("branding/music_default.json")?.let {
+                    JSONObject(it.first).optString("library_track_path")
+                        .takeIf { p -> p.isNotBlank() }?.let { p -> "path:$p" } ?: ""
+                } ?: ""
+            } catch (_: Exception) { "" }
+            else -> "" // 'none' and anything unrecognized
+        }
+    }
+
+    /** Bot restartStageA (index.js): dispatch stage-a.yml with a FRESH code_ref —
+     *  §8.5 restart-correctness, a failed job never re-runs stale code. */
+    fun restartStageA(jobId: String) = viewModelScope.launch {
         val c = api ?: return@launch
-        val st = _detailStatus.value ?: return@launch
-        try {
-            if (st.runId > 0) {
-                c.cancelRun(st.runId)
+        withBusy("restart_a") {
+            try {
+                val codeRef = c.defaultBranchSha()
+                c.dispatchWorkflow("stage-a.yml", mapOf("job_id" to jobId, "code_ref" to codeRef))
+                toast("Restarting Stage A for $jobId…")
+                refreshTasks()
+                loadTaskDetail(jobId)
+            } catch (e: Exception) {
+                toast("Failed to restart Stage A: ${e.message}")
             }
-            val stObj = JSONObject()
-                .put("job_id", jobId)
-                .put("state", "cancelled")
-                .put("message", "Cancelled by user")
-                .put("updated_at_epoch", System.currentTimeMillis())
-            c.putFile("jobs/$jobId/status.json", stObj.toString(2).toByteArray(), "Cancel task")
-            toast("Task cancelled")
-            refreshTasks()
-        } catch (e: Exception) {
-            toast("Failed to cancel: ${e.message}")
+        }
+    }
+
+    /** Bot restartStageB (index.js): production.json guard FIRST — the exact bot
+     *  block message when absent — then dispatch stage-b.yml with production_ref
+     *  path:jobs/<id>/production.json, music_ref (resolveMusicRef) and a fresh code_ref. */
+    fun restartStageB(jobId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        withBusy("restart_b") {
+            try {
+                val plan = try { c.readFile("jobs/$jobId/production.json") } catch (_: Exception) { null }
+                if (plan == null) {
+                    toast("Task $jobId has no production.json yet — upload one (or restart Stage A) before Stage B can run.")
+                    return@withBusy
+                }
+                val musicRef = resolveMusicRef(c, jobId)
+                val codeRef = c.defaultBranchSha()
+                c.dispatchWorkflow(
+                    "stage-b.yml",
+                    mapOf(
+                        "job_id" to jobId,
+                        "production_ref" to "path:jobs/$jobId/production.json",
+                        "music_ref" to musicRef,
+                        "code_ref" to codeRef
+                    )
+                )
+                toast("Restarting Stage B for $jobId…")
+                refreshTasks()
+                loadTaskDetail(jobId)
+            } catch (e: Exception) {
+                toast("Failed to restart Stage B: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Bot cancelStageB (index.js), BOTH branches reproduced:
+     *  - a recorded workflow run id -> cancel via the GitHub Actions API only
+     *    (the pipeline records the cancelled state itself);
+     *  - no run id yet (queued) -> cancel LOCALLY by merging state:'cancelled' into
+     *    the EXISTING status.json — never a minimal rewrite: version, series, TTL,
+     *    assets and publishing fields must survive, exactly like the bot's
+     *    mergeStatus. Terminal states are never re-cancelled.
+     * Replaces the old cancelTask, which rewrote status.json as a 4-field object
+     * (destroying every other field) and cancelled + wrote locally in ALL cases.
+     */
+    fun cancelRunningStage(jobId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        withBusy("cancel_stage") {
+            try {
+                val runId = _detailStatus.value?.runId ?: 0L
+                if (runId > 0) {
+                    // Actively running (or queued-with-run) workflow: Actions API cancel.
+                    c.cancelRun(runId)
+                    toast("Cancelling the running workflow…")
+                } else {
+                    val stFile = try { c.readFile("jobs/$jobId/status.json") } catch (_: Exception) { null }
+                    if (stFile != null) {
+                        val stObj = JSONObject(stFile.first)
+                        val currentState = stObj.optString("state")
+                        if (currentState !in setOf("complete", "error", "cancelled")) {
+                            stObj.put("state", "cancelled")
+                            stObj.put(
+                                "message",
+                                if (currentState == "stage_b_queued")
+                                    "Cancelled before the Stage B run started." // bot verbatim
+                                else
+                                    "Cancelled before the run started."
+                            )
+                            stObj.put("updated_at_epoch", nowEpoch())
+                            c.putFile(
+                                "jobs/$jobId/status.json",
+                                stObj.toString(2).toByteArray(Charsets.UTF_8),
+                                "clipforge: cancel job $jobId"
+                            )
+                        }
+                    }
+                    toast("Task cancelled")
+                }
+                refreshTasks()
+                loadTaskDetail(jobId)
+            } catch (e: Exception) {
+                toast("Failed to cancel: ${e.message}")
+            }
         }
     }
 

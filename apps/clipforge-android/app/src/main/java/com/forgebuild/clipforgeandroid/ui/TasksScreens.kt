@@ -3,6 +3,7 @@ package com.forgebuild.clipforgeandroid.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -282,9 +283,14 @@ fun TaskDetailScreen(
     val downloadState by vm.downloadState.collectAsState()
     val torrentFiles by vm.torrentFiles.collectAsState()
     val torrentSubmitting by vm.torrentSubmitting.collectAsState()
+    val plan by vm.detailPlan.collectAsState()
+    val busyOps by vm.busyOps.collectAsState()
 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
+    // Fix #4: the cancel confirmation step — the bot always asks before the real
+    // cancel (confirmCancelStageB); the destructive action runs only after Yes.
+    var showCancelConfirm by remember { mutableStateOf(false) }
 
     // JSON file picker for production.json
     val planFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -368,6 +374,26 @@ fun TaskDetailScreen(
                     }
                     if (currentStatus.releaseTag.isNotBlank()) {
                         Text("Release Tag: ${currentStatus.releaseTag}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    // Fix #3: direct link to the GitHub Actions workflow run associated
+                    // with the current stage. run.workflow_run_url is already parsed into
+                    // TaskStatus (real example: .../actions/runs/34666886936) — purely a
+                    // missing UI affordance. Opens in the system browser.
+                    if (currentStatus.runUrl.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentStatus.runUrl)))
+                                } catch (_: Exception) {
+                                    vm.toast("No browser available to open the run")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(EngineIcons.OpenInNew, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Open Workflow Run" + if (currentStatus.runId > 0) " #${currentStatus.runId}" else "")
+                        }
                     }
                 }
             }
@@ -541,15 +567,93 @@ fun TaskDetailScreen(
                 }
             }
 
-            // Cancel Task Button (if active)
-            if (!currentStatus.isTerminal) {
-                OutlinedButton(
-                    onClick = { vm.cancelTask(jobId) },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Cancel Task")
+            // ---------------- Stage Controls (fix #4, bot runtime.js taskKeyboard parity) ----------------
+            // Restart Stage A — offered whenever the task is at/has failed Stage A
+            //   (bot: error/cancelled rows always carry Restart Stage A).
+            // Restart Stage B — the operator's rule: available whenever the task has
+            //   already produced a production.json (reached/passed Stage A). The bot's
+            //   own restartStageB still guards server-side with the exact block message,
+            //   reproduced in the ViewModel — the button is hidden when no plan exists.
+            // Cancel running stage — bot taskKeyboard shows it for stage_b_queued /
+            //   stage_b_running; the app extends the same affordance to a running Stage A
+            //   (both cancel branches are implemented in cancelRunningStage).
+            val state = currentStatus.state
+            val stageBStarted = state in setOf("awaiting_plan", "stage_b_queued", "stage_b_running", "complete") ||
+                Regex("stage b", RegexOption.IGNORE_CASE).containsMatchIn(currentStatus.message)
+            val canRestartA = state == "error" || state == "cancelled"
+            val canRestartB = (state == "error" || state == "cancelled") &&
+                (plan != null || stageBStarted)
+            val canCancel = state == "stage_a_running" || state == "stage_a_queued" ||
+                state == "stage_b_queued" || state == "stage_b_running" || state == "queued"
+            if (canRestartA || canCancel) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Stage Controls", style = MaterialTheme.typography.titleMedium)
+                        if (canRestartA) {
+                            Button(
+                                onClick = { vm.restartStageA(jobId) },
+                                enabled = !busyOps.contains("restart_a"),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Restart, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Restart Stage A")
+                            }
+                        }
+                        if (canRestartB) {
+                            Button(
+                                onClick = { vm.restartStageB(jobId) },
+                                enabled = !busyOps.contains("restart_b"),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Restart, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Restart Stage B")
+                            }
+                            if (plan == null) {
+                                Text(
+                                    "No production.json found on the clone — restarting Stage B will show the bot's guard message unless a plan is uploaded first.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (canCancel) {
+                            OutlinedButton(
+                                onClick = { showCancelConfirm = true },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(EngineIcons.Cancel, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Cancel Running Stage")
+                            }
+                        }
+                    }
                 }
+            }
+
+            // Bot confirmCancelStageB, verbatim wording — the real cancel happens
+            // only on Yes (both branches: Actions API run cancel / local status write).
+            if (showCancelConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showCancelConfirm = false },
+                    title = { Text("Cancel the running stage for task ${jobId.substringAfter("manual-")}?") },
+                    text = {
+                        Text("The running render is stopped and the job moves to cancelled. You can restart it afterwards.")
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showCancelConfirm = false
+                                vm.cancelRunningStage(jobId)
+                            }
+                        ) { Text("Yes, cancel") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showCancelConfirm = false }) { Text("Back") }
+                    }
+                )
             }
 
             // Live Execution Logs — color-coded per step:

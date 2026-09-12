@@ -20,4 +20,7 @@ object EngineIcons {
     val Download: ImageVector get() = EngineIconsGenerated.Download
     val CheckCircle: ImageVector get() = EngineIconsGenerated.CheckCircle
     val Playlist: ImageVector get() = EngineIconsGenerated.Playlist
+    val Restart: ImageVector get() = EngineIconsGenerated.Restart
+    val Cancel: ImageVector get() = EngineIconsGenerated.Cancel
+    val OpenInNew: ImageVector get() = EngineIconsGenerated.OpenInNew
 }

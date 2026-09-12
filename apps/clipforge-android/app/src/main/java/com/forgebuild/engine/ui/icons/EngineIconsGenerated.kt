@@ -106,4 +106,25 @@ internal object EngineIconsGenerated {
             .addPath(PathParser().parsePathString("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 14H7v-2h10v2zm0-4H7v-2h10v2zm0-4H7V7h10v2z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
+
+    val Restart: ImageVector by lazy {
+        ImageVector.Builder(name = "Restart", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Cancel: ImageVector by lazy {
+        ImageVector.Builder(name = "Cancel", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val OpenInNew: ImageVector by lazy {
+        ImageVector.Builder(name = "OpenInNew", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
 }
