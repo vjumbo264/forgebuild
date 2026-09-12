@@ -46,3 +46,54 @@ Three more real bugs to fix in the same pass:
 
 3. The custom video duration button doesn't show an input field for typing a custom duration — tapping it does nothing usable, there's no way to actually enter a value. Fix so the button opens a real input field (or dialog) that accepts a custom duration and applies it, matching whatever the bot's equivalent duration-setting flow actually does in the wizard step for target duration.
 """
+
+---
+
+## 2026-09-12 — Operator instruction (session-06 update pass)
+
+"""
+Bug, still unresolved after a previous fix attempt: the ClipForge Android
+app crashes every time it's opened for the SECOND time onward — first open
+after install/login works fine, then every subsequent open crashes. This
+has already been "fixed" multiple times without success, so stop
+attempting to trace and patch it forward. Instead:
+
+My other app, ForgeBuild (built from the same ForgeBuild Engine, in the
+`vjumbo264/forgebuild` repo), had this exact same category of persistent-
+login/second-open behavior and did NOT have this crash. I deleted its
+`apps/` app folder from that repo, but nothing is actually lost — it still
+exists in that repo's git history. Do this:
+
+1. In `vjumbo264/forgebuild`'s git history, find the commit(s) right before
+   the app folder was deleted (`git log --diff-filter=D --summary` or
+   equivalent, then `git log -- <path>` on the folder once you find its old
+   path) and recover the last known-working version of whatever handled:
+   app startup / cold start, persisted login/session restore, and any local
+   cache or database initialization that runs on every app open. These are
+   the most likely shared cause between "worked in ForgeBuild" and "breaks
+   in ClipForge on second open" — a first-open-only bug almost always means
+   something about reading back previously-saved state (a cached session, a
+   local database, a settings cache) is different or broken from the
+   from-scratch state the first open uses.
+2. Compare that recovered working code against ClipForge Android's current
+   equivalent code for the same responsibilities (session/credential
+   restore on launch, local cache/database open, any first-run-vs-later-run
+   branching logic).
+3. Where ClipForge's current implementation diverges from the old working
+   ForgeBuild version in a way that's plausibly the cause, replace it with
+   the working approach (adapted to ClipForge's actual data — clone
+   credentials, settings, cached job data — not copied verbatim where the
+   underlying data model differs), rather than continuing to patch the
+   current broken version in place.
+4. You cannot install or run the app yourself, so you cannot personally
+   reproduce the crash on-device. Since it's already known and reliably
+   reproducible (crashes every second open, no exception so far), reason
+   about correctness from the code itself: trace every code path that runs
+   differently on a "cold start, no saved state" open versus a "saved state
+   already exists" open, and confirm — by reading the code, not by running
+   it — that the fixed version handles the second case safely. Also add
+   proper crash/error logging around app-launch state restoration if it
+   isn't already there, so that if this fix turns out to be incomplete, the
+   next report from the operator (who does have the device) comes with a
+   real stack trace instead of another blind guess.
+"""
