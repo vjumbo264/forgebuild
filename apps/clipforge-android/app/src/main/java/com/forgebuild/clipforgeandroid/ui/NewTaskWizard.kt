@@ -47,6 +47,10 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     var customDurationText by remember { mutableStateOf("") }
     var isSeries by remember { mutableStateOf(settings.seriesDefault) }
     var seriesId by remember { mutableStateOf("") }
+    // Session-10 fix #9: Super Series is orthogonal ON TOP of Series Mode — its
+    // stored default only applies when Series Mode is on, and it can never be on
+    // while Series Mode is off (the two toggles cannot desync — bot wizard.js).
+    var isSuperSeries by remember { mutableStateOf(settings.seriesDefault && settings.superSeriesDefault) }
     var selectedMusicPath by remember { mutableStateOf(defaultMusic) }
 
     val torrentPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -67,9 +71,12 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
         }
     }
 
-    LaunchedEffect(settings.seriesDefault) {
+    LaunchedEffect(settings.seriesDefault, settings.superSeriesDefault) {
         if (seriesId.isBlank()) {
             isSeries = settings.seriesDefault
+            isSuperSeries = settings.seriesDefault && settings.superSeriesDefault
+        } else if (!isSeries) {
+            isSuperSeries = false
         }
     }
 
@@ -283,7 +290,11 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         }
                         Switch(
                             checked = isSeries,
-                            onCheckedChange = { isSeries = it }
+                            onCheckedChange = {
+                                isSeries = it
+                                // Bot dependency: switching Series Mode OFF forces Super Series OFF.
+                                if (!it) isSuperSeries = false
+                            }
                         )
                     }
 
@@ -295,6 +306,27 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                             placeholder = { Text("e.g. doc-episodes-01") },
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        // Session-10 fix #9: Super Series toggle — only present while
+                        // Series Mode is ON, exactly like the bot.
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Super Series", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Plan the ENTIRE series in one super-plan document — parts then dispatch automatically, one at a time.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = isSuperSeries,
+                                onCheckedChange = { isSuperSeries = it }
+                            )
+                        }
                     }
                 }
             }
@@ -342,6 +374,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         selectedMusicPath = selectedMusicPath,
                         isSeries = isSeries,
                         seriesId = if (seriesId.isNotBlank()) seriesId else null,
+                        isSuperSeries = isSuperSeries && isSeries,
                         torrentBytes = torrentBytes,
                         onCreated = {
                             onDone()
@@ -351,7 +384,16 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 enabled = upload == null,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Start Video Analysis (Stage A)")
+                // Session-10 fix #5: the button ITSELF enters an obvious loading state
+                // the instant a stage starts — the operator never has to scroll to
+                // find the progress bar to confirm something happened.
+                if (upload != null) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp), color = LocalContentColor.current)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Starting Stage A…")
+                } else {
+                    Text("Start Video Analysis (Stage A)")
+                }
             }
         }
     }

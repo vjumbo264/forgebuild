@@ -338,9 +338,48 @@ fun SettingsScreen(
                             Switch(
                                 checked = settings.seriesDefault,
                                 enabled = !busyOps.contains("save_series_default"),
-                                onCheckedChange = { vm.setSeriesDefault(it) }
+                                // Bot dependency (wizard.js): Series Mode OFF also
+                                // force-writes Super Series OFF — no desync possible.
+                                onCheckedChange = { vm.setSeriesDefaultWithDependency(it) }
                             )
                         }
+                    }
+                }
+            }
+
+            // --- Section 5b: Super Series Default (session-10 fix #9) ---
+            // Its own stored setting at branding/super_series_settings.json (bot
+            // settings_super.js), parallel to the Series Mode default above. Only
+            // meaningful when Series Mode is on — disabled here whenever it isn't.
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Default Super Series", style = MaterialTheme.typography.titleMedium)
+                            Text("Plan whole multi-part series in one super-plan; parts dispatch automatically", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (busyOps.contains("save_super_series_default")) {
+                                ButtonSpinner()
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Switch(
+                                checked = settings.superSeriesDefault,
+                                enabled = settings.seriesDefault && !busyOps.contains("save_super_series_default"),
+                                onCheckedChange = { vm.setSuperSeriesDefault(it) }
+                            )
+                        }
+                    }
+                    if (!settings.seriesDefault) {
+                        Text(
+                            "Requires Series Mode — enable Default Series Mode first (the bot force-disables Super Series whenever Series Mode is off).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -473,7 +512,7 @@ fun SettingsScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
-                    Text("Version v6", style = MaterialTheme.typography.bodyMedium)
+                    Text("Version v7", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
                         style = MaterialTheme.typography.bodySmall
@@ -482,6 +521,26 @@ fun SettingsScreen(
                     Text("Pipeline: stage-a.yml → stage-b.yml via GitHub Actions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Source: github.com/motionssalt/clipforge", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Built with the ForgeBuild Engine (Material 3, dynamic color)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider()
+                    // Session-10 fix #8: the exact-request diagnostic log (method, path,
+                    // HTTP code, response excerpt, Contents-API create/update intent).
+                    Text("Diagnostics", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Every failed GitHub request is recorded on-device with its exact method, path and HTTP code. Export it when reporting an issue.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(onClick = { vm.exportDiagLog() }, modifier = Modifier.weight(1f)) {
+                            Text("Export Diagnostic Log")
+                        }
+                        OutlinedButton(onClick = { vm.clearDiagLog() }, modifier = Modifier.weight(1f)) {
+                            Text("Clear Log")
+                        }
+                    }
                 }
             }
         }

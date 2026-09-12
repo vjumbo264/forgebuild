@@ -31,6 +31,7 @@ import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.AgentPromptBuilder
 import com.forgebuild.clipforgeandroid.data.Pipeline
 import com.forgebuild.clipforgeandroid.data.PlanValidator
+import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.clipforgeandroid.data.TaskStatus
 import com.forgebuild.engine.ui.icons.EngineIcons
 
@@ -286,6 +287,9 @@ fun TaskDetailScreen(
     val torrentSubmitting by vm.torrentSubmitting.collectAsState()
     val plan by vm.detailPlan.collectAsState()
     val busyOps by vm.busyOps.collectAsState()
+    // Session-10 fix #9: this anchor task expects ONE whole-series super-plan
+    // (series.super_series in its stage-a-request) instead of a single-part plan.
+    val isSuperSeriesTask = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
     val nextPart by vm.nextPart.collectAsState()
     val downloadedVideo by vm.downloadedVideoFor.collectAsState()
 
@@ -302,9 +306,11 @@ fun TaskDetailScreen(
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
                 rawPlanText = String(bytes, Charsets.UTF_8)
-                planErrors = PlanValidator.validate(rawPlanText)
+                planErrors = if (isSuperSeriesTask)
+                    SuperSeries.parseAndValidateSuperPlan(rawPlanText).errors
+                else PlanValidator.validate(rawPlanText)
                 if (planErrors.isEmpty()) {
-                    vm.toast("Loaded valid production.json")
+                    vm.toast(if (isSuperSeriesTask) "Loaded valid super-plan" else "Loaded valid production.json")
                 } else {
                     vm.toast("Validation error: ${planErrors.first()}")
                 }
@@ -489,9 +495,15 @@ fun TaskDetailScreen(
             if (currentStatus.state == "awaiting_plan") {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Provide production.json", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Paste the generated JSON plan below or upload it directly from file storage.",
+                            if (isSuperSeriesTask) "Provide the Super Series super-plan" else "Provide production.json",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            if (isSuperSeriesTask)
+                                "This is a Super Series task — paste/upload the ONE super-plan document covering EVERY part. The bot validates it up front, then parts dispatch automatically, one at a time."
+                            else
+                                "Paste the generated JSON plan below or upload it directly from file storage.",
                             style = MaterialTheme.typography.bodySmall
                         )
 
@@ -508,10 +520,12 @@ fun TaskDetailScreen(
                             value = rawPlanText,
                             onValueChange = {
                                 rawPlanText = it
-                                planErrors = if (it.isNotBlank()) PlanValidator.validate(it) else emptyList()
+                                planErrors = if (it.isBlank()) emptyList()
+                                else if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(it).errors
+                                else PlanValidator.validate(it)
                             },
-                            label = { Text("Paste raw production.json") },
-                            placeholder = { Text("""{"video_duration_seconds": 120, ...}""") },
+                            label = { Text(if (isSuperSeriesTask) "Paste the super-plan JSON" else "Paste raw production.json") },
+                            placeholder = { Text(if (isSuperSeriesTask) """{"version": 2, "series_id": "...", "parts": [...]}""" else """{"video_duration_seconds": 120, ...}""") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 160.dp, max = 320.dp),
@@ -528,15 +542,22 @@ fun TaskDetailScreen(
 
                         Button(
                             onClick = {
-                                vm.submitProductionPlan(jobId, rawPlanText) {
-                                    rawPlanText = ""
-                                    planErrors = emptyList()
+                                if (isSuperSeriesTask) {
+                                    vm.submitSuperPlan(jobId, rawPlanText) {
+                                        rawPlanText = ""
+                                        planErrors = emptyList()
+                                    }
+                                } else {
+                                    vm.submitProductionPlan(jobId, rawPlanText) {
+                                        rawPlanText = ""
+                                        planErrors = emptyList()
+                                    }
                                 }
                             },
                             enabled = rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Submit Plan & Start Stage B Rendering")
+                            Text(if (isSuperSeriesTask) "Submit Super-Plan (parts dispatch automatically)" else "Submit Plan & Start Stage B Rendering")
                         }
                     }
                 }
@@ -552,7 +573,10 @@ fun TaskDetailScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
 
-                        val alreadyDownloaded = downloadedVideo
+                        // Session-10 fix #2: verify the recorded download against real
+                        // device storage on every screen open — a stale registry entry
+                        // (deleted / never-finished file) must show Download, not Play.
+                        val alreadyDownloaded = remember(downloadedVideo, jobId) { vm.downloadedVideoFor(jobId) }
                         if (downloadState.isDownloading) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 LinearProgressIndicator(

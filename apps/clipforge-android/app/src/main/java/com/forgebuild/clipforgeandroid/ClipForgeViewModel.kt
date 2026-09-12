@@ -81,7 +81,17 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _hasPromptedStorage = MutableStateFlow(false)
     val hasPromptedStorage: StateFlow<Boolean> = _hasPromptedStorage
 
-    fun toast(msg: String) { _snack.value = msg }
+    /**
+     * Session-10 fix #6: every notification uses the phone's NATIVE Android toast —
+     * no custom in-app toast/snackbar UI. _snack/clearSnack are kept only so any
+     * leftover Compose snackbar collector neutralizes instead of re-rendering in-app.
+     */
+    fun toast(msg: String) {
+        _snack.value = null
+        try {
+            android.widget.Toast.makeText(app.applicationContext, msg, android.widget.Toast.LENGTH_LONG).show()
+        } catch (_: Exception) {}
+    }
     fun clearSnack() { _snack.value = null }
 
     // ---------------- per-operation busy indicators ----------------
@@ -116,7 +126,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             _hasPromptedStorage.value = creds.hasPromptedStorage()
             creds.load()?.let {
                 _login.value = it
-                api = GitHubClient(it.pat, it.owner, it.repo)
+                api = GitHubClient(it.pat, it.owner, it.repo, app.applicationContext)
             }
         } catch (_: Exception) {
             _login.value = null
@@ -139,7 +149,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             return@launch
         }
         withBusy("connect") {
-            val c = GitHubClient(pat.trim(), parts[0], parts[1])
+            val c = GitHubClient(pat.trim(), parts[0], parts[1], app.applicationContext)
             try {
                 if (!c.repoExists()) {
                     toast("Repo not found — check PAT scopes and repo name")
@@ -168,6 +178,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _cloneCopyProgress = MutableStateFlow<CloneCopyProgress?>(null)
     val cloneCopyProgress: StateFlow<CloneCopyProgress?> = _cloneCopyProgress
 
+    // Session-10 fix #3: explicit success/failure confirmation for clone creation.
+    private val _cloneSuccess = MutableStateFlow<String?>(null)
+    val cloneSuccess: StateFlow<String?> = _cloneSuccess
+    private val _cloneFailure = MutableStateFlow<String?>(null)
+    val cloneFailure: StateFlow<String?> = _cloneFailure
+    fun dismissCloneOutcome() { _cloneSuccess.value = null; _cloneFailure.value = null }
+
     /**
      * Fix #2: faithful port of the bot's real clone-creation flow
      * (beginShadowCloneCreation -> pollShadowCloneJob -> finalizeShadowClone in
@@ -179,9 +196,21 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      * immediately (same credentials object the connect flow stores) — there is
      * no separate manual login step afterwards.
      */
+    /**
+     * Create a new shadow clone. Session-10 fix #4: an EMPTY [repoName] is the
+     * bot-sanctioned "auto-generate a name" option (bot bug-45: blank requestedName
+     * -> clipforge-clone-<suffix>) — ShadowClone.begin already implements it.
+     * Fix #3: ShadowClone.begin is the faithful beginShadowCloneCreation ->
+     * pollShadowCloneJob -> finalizeShadowClone port, so this call returns ONLY after
+     * the copy poll reached a finished state and finalize verified the tree —
+     * success is never assumed from the initial create call. On genuine completion a
+     * clear success confirmation is shown and the session logs in automatically.
+     */
     fun createClone(pat: String, repoName: String) = viewModelScope.launch {
         val token = pat.trim()
         if (token.isBlank()) { toast("Enter a GitHub PAT first"); return@launch }
+        _cloneSuccess.value = null
+        _cloneFailure.value = null
         _cloneProgress.value = "Creating private repo…"
         withBusy("create_clone") {
             try {
@@ -210,13 +239,16 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     token, result.login, result.name, result.login
                 )
                 creds.save(credentials)
-                api = GitHubClient(token, result.login, result.name)
+                api = GitHubClient(token, result.login, result.name, app.applicationContext)
                 _login.value = credentials
-                toast("Created and connected ${result.repo} (${result.copiedFiles} files)")
+                _cloneSuccess.value = "Clone ${result.repo} created and verified (${result.copiedFiles} files copied). You are logged in — no further setup needed."
+                toast("✅ Clone ${result.repo} created — logged in automatically.")
                 refreshAll()
             } catch (e: ShadowClone.CloneException) {
+                _cloneFailure.value = e.message ?: "Clone creation failed"
                 toast(e.message ?: "Clone creation failed")
             } catch (e: Exception) {
+                _cloneFailure.value = "Clone creation failed: ${e.message}"
                 toast("Clone creation failed: ${e.message}")
             } finally {
                 _cloneProgress.value = null
@@ -499,6 +531,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         selectedMusicPath: String?,
         isSeries: Boolean,
         seriesId: String?,
+        isSuperSeries: Boolean = false,
         torrentBytes: ByteArray?,
         onCreated: (String) -> Unit
     ) = viewModelScope.launch {
@@ -592,6 +625,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("series", seriesJson)
                 .put("music", musicJson)
                 .put("saved_at_epoch", nowSec)
+            // Session-10 fix #9: super_series rides the series block exactly like the
+            // bot's wizard (series.super_series) — the bot's upload handler branches
+            // on it and its prompt template switches to SUPER_SERIES_DIRECTIVE.
+            if (isSuperSeries && isSeries) seriesJson.put("super_series", true)
 
             // Status record must satisfy schemas/job_status.schema.json. Field-for-field
             // parity with the bot's newStatus() (bot/src/jobs.js): version 2, status-series
@@ -634,7 +671,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             c.dispatchWorkflow("stage-a.yml", mapOf("job_id" to jobId, "code_ref" to sha))
 
             _upload.value = UploadProgress("Task started!", 1f)
-            toast("Task $jobId created")
+            toast(if (isSuperSeries && isSeries) "Super Series task $jobId created — the agent will return ONE super-plan for the whole series." else "Task $jobId created")
             refreshTasks()
             onCreated(jobId)
         } catch (e: Exception) {
@@ -1274,6 +1311,153 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _defaultMusic = MutableStateFlow<String?>(null)
     val defaultMusic: StateFlow<String?> = _defaultMusic
 
+    // ---------------- storage permission (session-10 fix #7) ----------------
+    /** The ACTUAL current storage-permission grant state, read live from the OS via
+     *  ContextCompat.checkSelfPermission at the moment it is needed — never the
+     *  persisted "did we ask before" flag that desyncs from the real grant and caused
+     *  repeat prompts (including just returning to the app). */
+    fun isStorageGrantedNow(): Boolean {
+        val ctx = app.applicationContext
+        val perm = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
+            android.Manifest.permission.READ_MEDIA_VIDEO
+        else
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        return androidx.core.content.ContextCompat.checkSelfPermission(ctx, perm) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    // ---------------- diagnostic log (session-10 fix #8) ----------------
+    fun exportDiagLog() {
+        val p = DiagLog.export(app.applicationContext)
+        toast(if (p != null) "Diagnostic log written to $p" else "Could not write diagnostic log")
+    }
+    fun clearDiagLog() { DiagLog.clear(app.applicationContext); toast("Diagnostic log cleared") }
+
+    // ---------------- Super Series (feature-01, session-10 fix #9) ----------------
+
+    /** Bot settings_super.js readSuperSeriesSettings:
+     *  branding/super_series_settings.json {version,enabled,updated_at_epoch}, or null. */
+    suspend fun readSuperSeriesSettings(): JSONObject? = try {
+        api?.readFile(SuperSeries.SETTINGS_PATH)?.let { JSONObject(it.first) }
+    } catch (_: Exception) { null }
+
+    /** Bot settings_super.js saveSuperSeriesSettings — same document shape. */
+    fun setSuperSeriesDefault(enabled: Boolean) = viewModelScope.launch {
+        val c = api ?: return@launch
+        withBusy("save_super_series_default") {
+            try {
+                val payload = JSONObject()
+                    .put("version", 1)
+                    .put("enabled", enabled == true)
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile(SuperSeries.SETTINGS_PATH, payload.toString(2).toByteArray(), "clipforge: update Super Series setting")
+                _settings.value = _settings.value.copy(superSeriesDefault = enabled)
+                toast("Super Series default: ${if (enabled) "ON" else "OFF"}")
+            } catch (e: Exception) {
+                toast("Super Series default update error: ${e.message}")
+            }
+        }
+    }
+
+    /** Bot toggle dependency (wizard.js: the two toggles cannot desync) — turning
+     *  Series Mode OFF also force-writes Super Series OFF. */
+    fun setSeriesDefaultWithDependency(enabled: Boolean) {
+        setSeriesDefault(enabled)
+        if (!enabled && _settings.value.superSeriesDefault) setSuperSeriesDefault(false)
+    }
+
+    /**
+     * Submit a Super Series super-plan for the anchor job — app-side port of bot
+     * handleSuperPlanUploadMessage: validate the WHOLE document with the bot's
+     * validator (identical accept/reject + error strings), verify the job is still
+     * awaiting_plan, verify the super-plan's series_id matches the anchor task's,
+     * write jobs/<anchor>/super-plan.json FIRST (the durable record the bot's
+     * per-minute queue sweep resumes from), then merge the status to stage_b_queued
+     * with the bot's acceptance message. Parts are then queued and dispatched
+     * SEQUENTIALLY by the bot's queue controller — no manual per-part button exists
+     * or is needed for Super Series parts.
+     */
+    fun submitSuperPlan(jobId: String, text: String, onDone: () -> Unit) = viewModelScope.launch {
+        val c = api ?: return@launch
+        val parsed = SuperSeries.parseAndValidateSuperPlan(text)
+        if (parsed.errors.isNotEmpty()) {
+            toast("That super-plan is not valid (${parsed.errors.size} problem${if (parsed.errors.size == 1) "" else "s"}): ${parsed.errors.first()}")
+            return@launch
+        }
+        val document = parsed.document ?: return@launch
+        withBusy("submit_super_plan") {
+            try {
+                _upload.value = UploadProgress("Validating super-plan…", 0.2f)
+                val st = try { c.readFile("jobs/$jobId/status.json")?.let { JSONObject(it.first) } } catch (_: Exception) { null }
+                if (st != null && st.optString("state") != "awaiting_plan") {
+                    toast("Task $jobId is in state ${st.optString("state")}, not awaiting_plan. Refresh the task screen first.")
+                    return@withBusy
+                }
+                val reqFile = try { c.readFile("jobs/$jobId/stage-a-request.json") } catch (_: Exception) { null }
+                val reqSeries = reqFile?.let { runCatching { JSONObject(it.first).optJSONObject("series") }.getOrNull() } ?: JSONObject()
+                val seriesId = reqSeries.optString("series_id", "")
+                if (seriesId.isBlank() || document.optString("series_id") != seriesId) {
+                    toast("The super-plan's series_id is ${document.optString("series_id").ifBlank { "(missing)" }} but this task expects $seriesId. Copy the exact id from the agent prompt and try again.")
+                    return@withBusy
+                }
+                _upload.value = UploadProgress("Writing super-plan…", 0.5f)
+                c.putFile(
+                    "jobs/$jobId/super-plan.json",
+                    (SuperSeries.buildSuperState(jobId, seriesId, document).toString(2) + "\n").toByteArray(Charsets.UTF_8),
+                    "clipforge: accept super series plan ($jobId)"
+                )
+                val next = (st ?: JSONObject())
+                    .put("state", "stage_b_queued")
+                    .put("message", "Super Series plan accepted — ${document.getJSONArray("parts").length()} parts queued; part 1 dispatched.")
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("jobs/$jobId/status.json", (next.toString(2) + "\n").toByteArray(Charsets.UTF_8), "clipforge: super plan accepted for job $jobId")
+                _upload.value = UploadProgress("Super Series plan accepted", 1f)
+                toast("⚡ Super Series plan accepted — ${document.getJSONArray("parts").length()} parts validated. Parts dispatch automatically, one at a time.")
+                refreshTasks()
+                loadTaskDetail(jobId)
+                onDone()
+            } catch (e: Exception) {
+                toast("Super-plan submission failed: ${e.message}")
+            } finally {
+                _upload.value = null
+            }
+        }
+    }
+
+    // ---- Super Series queue views (bot superQueueAdvance — series overview) ----
+    private val _superQueues = MutableStateFlow<Map<String, SuperSeries.QueueView>>(emptyMap())
+    val superQueues: StateFlow<Map<String, SuperSeries.QueueView>> = _superQueues
+
+    private val _superQueue = MutableStateFlow<SuperSeries.QueueView?>(null)
+    val superQueue: StateFlow<SuperSeries.QueueView?> = _superQueue
+
+    /** Read every anchor's durable super-plan record and evaluate each queue exactly
+     *  like the bot's sweep (first not-complete spawned part decides). */
+    fun refreshSuperQueues() = viewModelScope.launch {
+        val c = api ?: return@launch
+        val out = mutableMapOf<String, SuperSeries.QueueView>()
+        for (task in taskStore.state.value) {
+            if (!task.seriesEnabled || task.seriesId.isBlank()) continue
+            val stateFile = try { c.readFile("jobs/${task.jobId}/super-plan.json") } catch (_: Exception) { null } ?: continue
+            val state = try { JSONObject(stateFile.first) } catch (_: Exception) { continue }
+            out[task.seriesId] = SuperSeries.evaluateQueue(state) { id ->
+                try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
+            }
+        }
+        _superQueues.value = out
+    }
+
+    fun loadSuperQueue(seriesId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        _superQueue.value = null
+        val anchor = taskStore.state.value.firstOrNull { it.seriesEnabled && it.seriesId == seriesId } ?: return@launch
+        val stateFile = try { c.readFile("jobs/${anchor.jobId}/super-plan.json") } catch (_: Exception) { null } ?: return@launch
+        val state = try { JSONObject(stateFile.first) } catch (_: Exception) { return@launch }
+        _superQueue.value = SuperSeries.evaluateQueue(state) { id ->
+            try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
+        }
+    }
+
     /** Called when the Music screen opens: instant cached render, then background refresh. */
     fun onMusicOpen() {
         musicStore.loadFromCache()
@@ -1391,7 +1575,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val zernioAutoPublish: Boolean = false,
         val zernioAutomaticMode: String = "smart_schedule",
         val zernioKeyConfigured: Boolean = false,
-        val zernioAccounts: List<ZernioAccount> = emptyList()
+        val zernioAccounts: List<ZernioAccount> = emptyList(),
+        // Session-10 fix #9: branding/super_series_settings.json {enabled}
+        val superSeriesDefault: Boolean = false
     )
 
     private val _settings = MutableStateFlow(AppSettings())
@@ -1438,6 +1624,16 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             try {
                 c.readFile("branding/series_settings.json")?.let {
                     seriesDef = JSONObject(it.first).optBoolean("enabled", false)
+                }
+            } catch (_: Exception) {}
+
+            // Session-10 fix #9: Super Series default — its own stored setting at
+            // branding/super_series_settings.json (bot settings_super.js), read with
+            // the same pattern as the Series Mode setting right above.
+            var superDef = false
+            try {
+                c.readFile(SuperSeries.SETTINGS_PATH)?.let {
+                    superDef = JSONObject(it.first).optBoolean("enabled", false)
                 }
             } catch (_: Exception) {}
 
@@ -1496,7 +1692,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 zernioAutoPublish = zAutoPublish,
                 zernioAutomaticMode = zMode,
                 zernioKeyConfigured = zKeyConfigured,
-                zernioAccounts = zAccounts
+                zernioAccounts = zAccounts,
+                superSeriesDefault = superDef
             )
             _settingsLoaded.value = true
         } catch (e: Exception) {

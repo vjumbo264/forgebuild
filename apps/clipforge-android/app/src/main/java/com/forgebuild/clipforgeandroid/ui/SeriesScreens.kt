@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.Pipeline
 import com.forgebuild.clipforgeandroid.data.SeriesLogic
+import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.clipforgeandroid.data.TaskStatus
 import com.forgebuild.engine.ui.icons.EngineIcons
 
@@ -24,9 +25,10 @@ fun SeriesScreen(
     vm: ClipForgeViewModel,
     onSelectSeries: (String) -> Unit
 ) {
-    LaunchedEffect(Unit) { vm.onTasksOpen() }
+    LaunchedEffect(Unit) { vm.onTasksOpen(); vm.refreshSuperQueues() }
     val tasks by vm.tasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
+    val superQueues by vm.superQueues.collectAsState()
 
     val seriesGroups = remember(tasks) {
         tasks.filter { it.seriesEnabled && it.seriesId.isNotBlank() }
@@ -74,6 +76,31 @@ fun SeriesScreen(
                                     "${sortedParts.size} part(s) created",
                                     style = MaterialTheme.typography.bodySmall
                                 )
+                                // Session-10 fix #9: Super Series queue status is visible
+                                // from the overview — including a HALTED queue, never
+                                // presented as if nothing is happening.
+                                superQueues[seriesId]?.let { q ->
+                                    val label = when (q.queueStatus) {
+                                        SuperSeries.QueueView.Status.HALTED ->
+                                            "Super Series ${q.spawned.size}/${q.totalParts} — QUEUE PAUSED (part ${q.focusPart} needs a restart)"
+                                        SuperSeries.QueueView.Status.WAITING ->
+                                            "Super Series ${q.spawned.size}/${q.totalParts} — part ${q.focusPart} rendering, next dispatches automatically"
+                                        SuperSeries.QueueView.Status.QUEUING ->
+                                            "Super Series ${q.spawned.size}/${q.totalParts} — queuing part ${q.focusPart}"
+                                        SuperSeries.QueueView.Status.DONE ->
+                                            "Super Series complete (${q.totalParts} parts)"
+                                    }
+                                    AssistChip(
+                                        onClick = {},
+                                        label = {
+                                            Text(
+                                                label,
+                                                color = if (q.queueStatus == SuperSeries.QueueView.Status.HALTED)
+                                                    MaterialTheme.colorScheme.error else LocalContentColor.current
+                                            )
+                                        }
+                                    )
+                                }
                                 latestPart?.let {
                                     Text(
                                         "Latest: Part ${it.part} — ${Pipeline.describe(it.state)}",
@@ -99,8 +126,9 @@ fun SeriesDetailScreen(
     onBack: () -> Unit,
     onSelectTask: (String) -> Unit
 ) {
-    LaunchedEffect(Unit) { vm.onTasksOpen() }
+    LaunchedEffect(Unit) { vm.onTasksOpen(); vm.loadSuperQueue(seriesId) }
     val tasks by vm.tasks.collectAsState()
+    val superQueue by vm.superQueue.collectAsState()
     // Fix #5 — videos downloaded for ANY part of this series are findable from here.
     val downloads = remember(seriesId) { vm.seriesDownloads(seriesId) }
     val playVideo by vm.playVideoUri.collectAsState()
@@ -135,6 +163,45 @@ fun SeriesDetailScreen(
                 "Sequential Series Parts",
                 style = MaterialTheme.typography.titleSmall
             )
+
+            // Session-10 fix #9: Super Series queue banner — queued/upcoming parts and
+            // a clear halted/error state with the bot's exact halt message.
+            superQueue?.let { q ->
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (q.queueStatus == SuperSeries.QueueView.Status.HALTED)
+                            MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            "Super Series — ${q.spawned.size} of ${q.totalParts} parts dispatched",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        when (q.queueStatus) {
+                            SuperSeries.QueueView.Status.HALTED -> Text(
+                                q.message ?: "Queue paused.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            SuperSeries.QueueView.Status.WAITING -> Text(
+                                "Queue running — part ${q.focusPart} (${q.focusJobId}) is rendering. The next part dispatches automatically when it completes; no manual start needed.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SuperSeries.QueueView.Status.QUEUING -> Text(
+                                "Part ${q.focusPart} of ${q.totalParts} is being queued by the controller…",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            SuperSeries.QueueView.Status.DONE -> Text(
+                                "All ${q.totalParts} parts complete.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
 
             if (downloads.isNotEmpty()) {
                 Text("Downloaded videos", style = MaterialTheme.typography.titleSmall)

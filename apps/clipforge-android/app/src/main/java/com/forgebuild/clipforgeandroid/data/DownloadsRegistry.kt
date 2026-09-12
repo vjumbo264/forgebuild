@@ -39,9 +39,27 @@ object DownloadsRegistry {
         saveAll(ctx, all)
     }
 
-    /** The recorded download for a job id, or null when the video was never downloaded. */
-    fun forJob(ctx: Context, jobId: String): JSONObject? =
-        loadAll(ctx).optJSONObject(jobId)
+    /** The recorded download for a job id — or null when the video was never
+     *  downloaded OR the file no longer exists on device storage (session-10 fix #2:
+     *  the registry entry alone used to decide Play-vs-Download, so a deleted /
+     *  never-finished file still showed "Play". Now the record is verified against
+     *  real storage every time it is read). */
+    fun forJob(ctx: Context, jobId: String): JSONObject? {
+        val rec = loadAll(ctx).optJSONObject(jobId) ?: return null
+        return if (isReachable(ctx, rec.optString("uri"))) rec else null
+    }
+
+    /** True when the recorded file still exists and is readable on device storage. */
+    private fun isReachable(ctx: Context, uriString: String): Boolean {
+        if (uriString.isBlank()) return false
+        return try {
+            if (uriString.startsWith("content://")) {
+                ctx.contentResolver.openFileDescriptor(android.net.Uri.parse(uriString), "r")?.use { true } ?: false
+            } else {
+                java.io.File(uriString).exists()
+            }
+        } catch (_: Exception) { false }
+    }
 
     /** Every recorded download belonging to [seriesId], sorted by job id. */
     fun forSeries(ctx: Context, seriesId: String): List<JSONObject> {
@@ -51,7 +69,7 @@ object DownloadsRegistry {
         while (keys.hasNext()) {
             val k = keys.next()
             val o = all.optJSONObject(k) ?: continue
-            if (o.optString("seriesId") == seriesId) out.add(o)
+            if (o.optString("seriesId") == seriesId && isReachable(ctx, o.optString("uri"))) out.add(o)
         }
         return out.sortedBy { it.optString("jobId") }
     }

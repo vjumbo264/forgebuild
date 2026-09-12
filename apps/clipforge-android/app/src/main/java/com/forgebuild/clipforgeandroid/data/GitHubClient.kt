@@ -1,5 +1,6 @@
 package com.forgebuild.clipforgeandroid.data
 
+import android.content.Context
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +19,14 @@ import java.util.concurrent.TimeUnit
  * GitHub REST client for the ClipForge clone repo.
  * Mirrors the exact contract used by the motionssalt/clipforge pipeline & Telegram bot.
  */
-class GitHubClient(val pat: String, val owner: String, val repo: String) {
+class GitHubClient(val pat: String, val owner: String, val repo: String, private val appCtx: Context? = null) {
+
+    /** Session-10 fix #8: exact-request diagnostics — every non-2xx response is
+     *  logged with method, path, HTTP code and a response excerpt, so a failing
+     *  write on one specific device/instance is diagnosable from evidence. */
+    private fun requestLog(method: String, path: String, code: Int, body: String) {
+        DiagLog.log(appCtx, "GitHubAPI", "$method $path -> HTTP $code :: ${body.take(280)}")
+    }
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -36,9 +44,17 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
 
     private suspend fun execute(req: Request.Builder, expected: IntRange = 200..299): Pair<Int, String> =
         withContext(Dispatchers.IO) {
-            client.newCall(req.build()).execute().use { resp ->
+            val built = req.build()
+            client.newCall(built).execute().use { resp ->
                 val body = resp.body?.string().orEmpty()
-                if (resp.code !in expected) throw GhException(resp.code, body.take(400))
+                if (resp.code !in expected) {
+                    // fix #8: record the EXACT failing request (method + path + code) at
+                    // the moment it fails — never guess after the fact.
+                    requestLog(built.method, built.url.encodedPath, resp.code, body)
+                    if (resp.code == 403) throw GhException(403,
+                        "403 FORBIDDEN on ${built.method} ${built.url.encodedPath} — the exact request is in the on-device diagnostic log (Settings → About). If this device runs a build older than v7, install the latest APK first. Body: " + body.take(300))
+                    throw GhException(resp.code, body.take(400))
+                }
                 resp.code to body
             }
         }
@@ -151,7 +167,10 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         client.newCall(base("$api/repos/$owner/$repo/contents/$path?ref=$ref").get().build()).execute().use { resp ->
             if (resp.code == 404) return@withContext null
             val body = resp.body?.string().orEmpty()
-            if (resp.code != 200) throw GhException(resp.code, body.take(400))
+            if (resp.code != 200) {
+                requestLog("GET", "/repos/$owner/$repo/contents/$path?ref=$ref", resp.code, body)
+                throw GhException(resp.code, body.take(400))
+            }
             val j = JSONObject(body)
             val content = j.getString("content").replace("\n", "").replace("\r", "")
             String(Base64.decode(content, Base64.DEFAULT)) to j.getString("sha")
@@ -207,6 +226,10 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
                 if (e.code == 404) null else throw e
             }
         }
+        // fix #8: log create-vs-update intent (sha present = UPDATE, absent = CREATE).
+        // A stale or wrongly-absent sha against the Contents API is the exact failure
+        // class behind the torrent-selection 422 and the suspected second-device 403.
+        DiagLog.log(appCtx, "GitHubAPI", "PUT contents/$path (${if (effectiveSha != null) "update sha=${effectiveSha.take(8)}" else "create (no sha)"})")
         val b64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
         val payload = JSONObject()
             .put("message", message)

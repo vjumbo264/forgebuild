@@ -12,8 +12,8 @@ android {
         applicationId = "com.forgebuild.clipforgeandroid"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "6"
+        versionCode = 7
+        versionName = "7"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -87,6 +87,11 @@ dependencies {
     implementation("com.goterl:lazysodium-android:5.0.2@aar")
     implementation("net.java.dev.jna:jna:5.14.0@aar")
     implementation("androidx.media3:media3-exoplayer:1.4.1")
+    // Session-10 fix #1: proper native player UI (play/pause, scrubbable seek bar,
+    // current/total time, fullscreen) — Media3's PlayerView + default controller
+    // themed to the app's Material 3 scheme. media3-common carries Player/Listener.
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("androidx.media3:media3-common:1.4.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
     implementation("androidx.navigation:navigation-compose:2.8.1")

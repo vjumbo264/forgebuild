@@ -31,11 +31,12 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 fun ClipForgeApp(vm: ClipForgeViewModel) {
     val ready by vm.ready.collectAsState()
     val login by vm.login.collectAsState()
-    val snack by vm.snack.collectAsState()
-    val hasPromptedStorage by vm.hasPromptedStorage.collectAsState()
     val lastCrash by vm.lastCrash.collectAsState()
 
-    val snackState = remember { SnackbarHostState() }
+    // Session-10 fix #7: storage access is driven by the ACTUAL OS-level grant state
+    // (ContextCompat.checkSelfPermission read live at need time), never by the stale
+    // persisted "did we ask before" flag that caused re-prompts after the grant.
+    var needsStoragePermission by remember { mutableStateOf(false) }
 
     // Second-launch crash diagnosis: if the PREVIOUS launch died, the startup
     // crash-catcher saved the real stack trace — surface it once so the actual
@@ -64,23 +65,29 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
         )
     }
 
-    LaunchedEffect(snack) {
-        snack?.let {
-            snackState.showSnackbar(it)
-            vm.clearSnack()
+    // Re-check the REAL grant state on every resume — returning to the app can
+    // never re-prompt when the permission is already granted.
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        needsStoragePermission = !vm.isStorageGrantedNow()
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                needsStoragePermission = !vm.isStorageGrantedNow()
+            }
         }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
-    // First-run storage permission request
     val storageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
-        vm.markStoragePrompted()
+        needsStoragePermission = !vm.isStorageGrantedNow()
     }
 
-    if (!hasPromptedStorage) {
+    if (needsStoragePermission) {
         AlertDialog(
-            onDismissRequest = { vm.markStoragePrompted() },
+            onDismissRequest = { needsStoragePermission = false },
             title = { Text("Storage Permission") },
             text = {
                 Text(
@@ -99,7 +106,7 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
                 }) { Text("Grant Access") }
             },
             dismissButton = {
-                TextButton(onClick = { vm.markStoragePrompted() }) { Text("Later") }
+                TextButton(onClick = { needsStoragePermission = false }) { Text("Later") }
             }
         )
     }
@@ -114,7 +121,7 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
     if (login == null) {
         OnboardingScreen(vm)
     } else {
-        MainScaffold(vm, snackState)
+        MainScaffold(vm)
     }
 }
 
@@ -128,6 +135,10 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
 
     val cloneProgress by vm.cloneProgress.collectAsState()
     val cloneCopyProgress by vm.cloneCopyProgress.collectAsState()
+    val cloneSuccess by vm.cloneSuccess.collectAsState()
+    val cloneFailure by vm.cloneFailure.collectAsState()
+    // Session-10 fix #4: auto-generate the clone name (bot bug-45 blank-name option).
+    var autoName by remember { mutableStateOf(false) }
     val busyOps by vm.busyOps.collectAsState()
     val connectBusy = busyOps.contains("connect")
     val createBusy = busyOps.contains("create_clone")
@@ -192,16 +203,27 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     }
                 }
             } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(checked = autoName, onCheckedChange = { autoName = it })
+                    Column {
+                        Text("Auto-generate a name", style = MaterialTheme.typography.bodyMedium)
+                        Text("The app picks clipforge-clone-<suffix> for you", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 OutlinedTextField(
                     value = newRepoName,
                     onValueChange = { newRepoName = it },
                     label = { Text("New Private Repo Name") },
-                    placeholder = { Text("my-clipforge-clone") },
+                    placeholder = { Text(if (autoName) "(auto-generated)" else "my-clipforge-clone") },
+                    enabled = !autoName,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Button(
-                    onClick = { vm.createClone(pat, newRepoName) },
+                    onClick = { vm.createClone(pat, if (autoName) "" else newRepoName) },
                     enabled = pat.isNotBlank() && cloneProgress == null && !createBusy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -235,6 +257,27 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                         Text(text, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+
+                // Session-10 fix #3: an unmissable confirmation once creation GENUINELY
+                // completes (the copy poll finished and finalize verified the tree).
+                cloneSuccess?.let { msg ->
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Clone created successfully", style = MaterialTheme.typography.titleMedium)
+                            Text(msg, style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { vm.dismissCloneOutcome() }) { Text("Dismiss") }
+                        }
+                    }
+                }
+                cloneFailure?.let { msg ->
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Clone creation failed", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                            Text(msg, style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { vm.dismissCloneOutcome() }) { Text("Dismiss") }
+                        }
+                    }
+                }
             }
         }
     }
@@ -242,13 +285,12 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScaffold(vm: ClipForgeViewModel, snackState: SnackbarHostState) {
+fun MainScaffold(vm: ClipForgeViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackState) },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
