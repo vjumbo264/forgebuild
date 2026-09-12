@@ -143,12 +143,14 @@
     {
       "id": "task-39",
       "title": "Recover last-working ForgeBuild app folder from vjumbo264/forgebuild git history — locate deletion commit, extract startup/session-restore/cache-init code",
-      "status": "in_progress"
+      "status": "done",
+      "notes": "DONE (session-06, 2026-09-12): located the deleted ForgeBuild-engine app at apps/clipforge/ (deletion commit c9cb572 'Delete app clipforge', last-working state = its parent 65891f6, the released clipforge-v1 that the operator confirms did NOT have the second-open crash). Recovered its full source via git show c9cb572^:<path>. Extracted startup/session-restore/cache code: MainActivity, ClipForgeViewModel (init + onTasksOpen), CredentialStore (in data/Models.kt), engine/data/CacheFirstStore.kt, ui/App.kt, ui/AudioPreview.kt, build.gradle.kts, AndroidManifest.xml."
     },
     {
       "id": "task-40",
       "title": "Diff recovered working code vs ClipForge's current launch/session-restore/cache code; identify divergences plausibly causing the second-open crash",
-      "status": "pending"
+      "status": "done",
+      "notes": "DONE (session-06, 2026-09-12): diff complete. The recovered WORKING app and the current app use the IDENTICAL launch state model — EncryptedSharedPreferences CredentialStore + CacheFirstStore JSON cache under filesDir — so the fix is to restore the working app's exact launch architecture into ClipForge. Three launch-relevant divergences found, all in paths that ONLY run when saved state exists (second open):\n  (1) CACHE-FIRST DROPPED: working app's VM holds CacheFirstStore instances for tasks/series/music and renders INSTANTLY from the on-disk cache via onTasksOpen()->loadFromCache(), then background refresh(). Current app imports CacheFirstStore but never instantiates it — refreshAll() in init hits the NETWORK on every open and rebuilds state from scratch, the exact anti-pattern engine/ARCHITECTURE.md forbids.\n  (2) UNGUARDED refreshAll() IN INIT: original v1 (08b9d63, the version the operator says crashed) called refreshAll() from init with NO try/catch. Recovered working app never calls refreshAll() in init at all — cache load is synchronous & safe, refresh is deferred to the UI (LaunchedEffect). Current code patched v1 forward by wrapping refreshAll() in try/catch, but a Kotlin `by lazy`/stateIn initializer or a rethrown exception inside a launch still escapes; the robust fix is the working architecture (no network in init).\n  (3) security-crypto VERSION: working app shipped 1.1.0-alpha06 and ran stable; session-04/05 bumped to 1.1.0 'stable' while patching forward. Returning to the recovered-working launch path (lazy-guarded store, plain-prefs fallback already present) makes the keystore race unreachable.\nROOT-CAUSE MODEL: the crash is a second-open-only state-restoration failure on the launch path (MainActivity.onCreate -> VM init -> refreshAll network + no cache render). Fix = replace the current init/refresh launch behavior with the recovered working cache-first launch architecture, adapted to ClipForge's data (TaskStatus/MusicTrack/AppSettings already have toJson/fromJson). No new dependencies."
     },
     {
       "id": "task-41",
@@ -198,6 +200,10 @@
     {
       "session": "session-06",
       "event": "START (2026-09-12): operator reports second-open crash still unresolved after multiple fix attempts; instructed to stop patching forward and instead recover the deleted ForgeBuild app's last-working startup/session-restore/cache code from git history, diff against ClipForge, and replace divergent code. Seeded task-38..task-43."
+    },
+    {
+      "session": "session-06",
+      "event": "task-39+task-40 done: recovered working apps/clipforge (commit 65891f6, parent of deletion c9cb572) and completed the divergence diff — cache-first dropped, unguarded refreshAll-in-init, security-crypto bump. Root-cause model recorded in task-40 notes."
     }
   ]
 }
