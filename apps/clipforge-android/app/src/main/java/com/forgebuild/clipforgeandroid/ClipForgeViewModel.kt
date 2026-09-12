@@ -339,7 +339,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun previewVoice(voiceId: String) {
         val ctx = app.applicationContext
         val c = api ?: run { toast("Not connected"); return@launch }
-        ui.AudioPreview.toggle(ctx, audioPreviewUrl("assets/tts-previews/$voiceId.mp3"), c.pat)
+        com.forgebuild.clipforgeandroid.ui.AudioPreview.toggle(ctx, audioPreviewUrl("assets/tts-previews/$voiceId.mp3"), c.pat)
     }
 
     /** Fix #4 — compute the next-part state for a completed series part exactly like the
@@ -508,7 +508,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         // "Start Next Part" flow (startNextSeriesPart), which derives the part number
         // and start_seconds from the previous part's production.json.
         if (isSeries && !seriesId.isNullOrBlank()) {
-            val existing = _tasks.value.firstOrNull { it.seriesId == seriesId.trim() }
+            val existing = taskStore.state.value.firstOrNull { it.seriesId == seriesId.trim() }
             if (existing != null) {
                 toast("Series '${seriesId.trim()}' already exists (Part ${existing.part}) — open its latest completed part and tap 'Start Next Part' to continue it.")
                 return@launch
@@ -577,7 +577,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             val musicJson = when {
                 !selectedMusicPath.isNullOrBlank() ->
                     JSONObject().put("ref", selectedMusicPath).put("source", "explicit_library")
-                defaultMusicPath != null ->
+                _defaultMusic.value != null ->
                     JSONObject().put("ref", "").put("source", "default")
                 else ->
                     JSONObject().put("ref", "").put("source", "none")

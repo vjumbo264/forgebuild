@@ -622,14 +622,10 @@ fun TaskDetailScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             OutlinedButton(
-                                onClick = {
-                                    context.startActivity(
-                                        Intent(context, Class.forName("com.forgebuild.clipforgeandroid.MainActivity"))
-                                    )
-                                },
+                                onClick = { vm.refreshNextPart(jobId) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Open task ${np.nextId}")
+                                Text("Re-check ${np.nextId}")
                             }
                         } else {
                             val startBusy = busyOps.contains("start_next")
