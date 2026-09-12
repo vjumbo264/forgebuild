@@ -97,3 +97,94 @@ exists in that repo's git history. Do this:
    next report from the operator (who does have the device) comes with a
    real stack trace instead of another blind guess.
 """
+
+---
+
+## 2026-09-12 — Operator instruction (session-08 update pass)
+
+**Addendum from operator (same session, verbatim):**
+> Note that that first in gesture failure was probably. My mistake. I might have accidentally selected URL instead of magnets during the creation of the task. So if you don't see anything wrong with it, there's no need to over investigate. It's probably from me.
+
+**Instruction (verbatim from operator; PAT redacted — never commit credential values):**
+> Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = [REDACTED — fine-grained PAT with write access, supplied out-of-band] (write access).
+>
+> Four fixes needed, all against the real existing bot behavior in
+> `bot/src/` as ground truth — do not invent new mechanics, the bot already
+> does all of this correctly.
+>
+> **1. Magnet links are being misclassified, causing every magnet-source task
+> to fail immediately at Stage A ingest.**
+>
+> Confirmed from a real failed job's `stage-a-request.json`: a magnet URI
+> (`magnet:?xt=urn:btih:...`) was saved with `"source": {"kind": "url", ...}`
+> instead of `"kind": "magnet"`. The bot's own classifier in
+> `bot/src/wizard.js` checks `MAGNET_RE = /^magnet:\?/i` and returns
+> `{ kind: 'magnet', value }` BEFORE falling through to the generic URL
+> case — this check must run first, or a magnet URI (which is technically
+> also a URI) gets wrongly caught by a generic "is this a URL" check instead.
+> Find the Android app's equivalent source-classification code and fix the
+> ordering/logic so magnet URIs are matched by the magnet check before any
+> generic URL fallback, exactly like `wizard.js` does. Verify by creating a
+> task from a real magnet link and confirming `stage-a-request.json` is
+> written with `"kind": "magnet"`, and that Stage A actually proceeds past
+> ingest instead of failing immediately.
+>
+> **2. Clone creation doesn't work from the login/onboarding screen.**
+>
+> Tapping to create a new clone does nothing / doesn't complete. The bot's
+> real clone-creation flow (`bot/src/github.js`:
+> `beginShadowCloneCreation(pat, requestedName, options)` →
+> `pollShadowCloneJob(...)` → `finalizeShadowClone(...)`, using
+> `CLONE_COPY_DEADLINE_MS` as the timeout) creates the new repo, copies the
+> source content into it, and polls until that copy job finishes before
+> the clone is usable. Read this real flow in `github.js` and `index.js`
+> (search for `beginShadowCloneCreation`) and reproduce it faithfully in the
+> Android app rather than a simplified guess — in particular, don't skip the
+> polling step; a shadow clone isn't immediately ready the instant the repo
+> is created. Once creation succeeds, the app must automatically log into
+> the newly created clone with no separate manual login step — same
+> "create it and you're in" behavior the operator wants overall, applied
+> specifically to this flow, which is apparently currently broken or
+> incomplete.
+>
+> **3. Add a direct link to the GitHub Actions workflow run from an ongoing
+> task's detail view.**
+>
+> Every job's `status.json` already contains
+> `run.workflow_run_url` (a real example:
+> `"https://github.com/motionssalt/clipforge/actions/runs/34666886936"`).
+> Add a button/link in the task detail screen, visible whenever a workflow
+> run is associated with the current stage, that opens this URL directly
+> (system browser or in-app browser, your choice) — this field already
+> exists in the data the app already reads, this is purely a missing UI
+> affordance, not new data plumbing.
+>
+> **4. Add restart-stage and cancel-stage controls to the task detail view,
+> matching the bot's real existing actions exactly:**
+>
+> - **Restart Stage A** — available whenever the task is at or has failed
+>   Stage A. Matches the bot's `restarta` action (`restartStageA` in
+>   `index.js`).
+> - **Restart Stage B** — available whenever the task has already produced a
+>   production.json (i.e., has reached or passed Stage A) — matches the
+>   bot's `restartb` action (`restartStageB` in `index.js`), which itself
+>   blocks with a clear message if no production.json exists yet ("upload
+>   one, or restart Stage A, before Stage B can run") — reproduce that same
+>   guard, don't allow Stage B restart without production.json present.
+> - **Cancel running stage** — available whenever a stage is actively
+>   running. Matches the bot's `cancelb`/`cancelby` actions
+>   (`confirmCancelStageB` / `cancelStageB` in `index.js`): require a
+>   confirmation step before actually cancelling (the bot shows "Cancel
+>   Stage B for task X? The running render is stopped and the job moves to
+>   cancelled. You can restart it afterwards." before the real cancel), and
+>   handle both cases the bot handles — an actively running workflow run
+>   gets cancelled via the GitHub Actions API
+>   (`cancelWorkflowRun(credentials, credentials.repo, runId)`), while a
+>   job that's queued but has no run id yet is cancelled locally by writing
+>   `state: 'cancelled'` directly to `status.json` without needing to touch
+>   GitHub Actions at all. Reproduce both branches, not just the common one.
+>
+> Verify all three task-detail additions (workflow link, restart controls,
+> cancel control) against a real task in each relevant state (Stage A
+> running, Stage A failed, Stage B running, Stage B failed with
+> production.json present) rather than only the happy path.
