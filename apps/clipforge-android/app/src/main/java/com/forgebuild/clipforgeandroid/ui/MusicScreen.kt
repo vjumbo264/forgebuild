@@ -34,6 +34,8 @@ fun MusicScreen(
     val upload by vm.upload.collectAsState()
     val audioState by AudioPreview.state.collectAsState()
     val login by vm.login.collectAsState()
+    // Cache-first open: render cached library instantly, refresh in background.
+    LaunchedEffect(Unit) { vm.onMusicOpen() }
 
     var selectedTracks by remember { mutableStateOf(setOf<MusicTrack>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }

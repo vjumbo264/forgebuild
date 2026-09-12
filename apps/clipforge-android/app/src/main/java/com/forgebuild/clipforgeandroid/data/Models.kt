@@ -25,6 +25,25 @@ data class TaskStatus(
     val isComplete: Boolean
         get() = state == "complete"
 
+    /** Serialize back to the status.json shape — used by the cache-first store
+     *  (filesDir/tasks.json) so the second open renders instantly from disk. */
+    fun toJson(): JSONObject = JSONObject()
+        .put("job_id", jobId)
+        .put("state", state)
+        .put("message", message)
+        .put("created_at_epoch", createdAt)
+        .put("updated_at_epoch", updatedAt)
+        .put("release_tag", releaseTag)
+        .put("release_url", releaseUrl)
+        .put("run", JSONObject()
+            .put("workflow_run_id", runId)
+            .put("workflow_run_url", runUrl))
+        .put("series", JSONObject()
+            .put("enabled", seriesEnabled)
+            .put("series_id", seriesId)
+            .put("part", part)
+            .put("start_seconds", startSeconds))
+
     companion object {
         fun fromJson(j: JSONObject): TaskStatus {
             val series = j.optJSONObject("series")

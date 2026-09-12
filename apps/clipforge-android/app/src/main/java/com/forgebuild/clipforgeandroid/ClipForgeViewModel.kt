@@ -123,14 +123,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             api = null
         }
         _ready.value = true
-        // Kick off background refresh only after the UI is guaranteed to render.
-        // refreshAll() launches coroutines (non-blocking); any network failure is
-        // caught inside the individual refresh calls.
-        if (api != null) {
-            try {
-                refreshAll()
-            } catch (_: Exception) {}
-        }
+        // SECOND-OPEN CRASH FIX (session-06/task-41): NO network or cache work here.
+        // The recovered last-working ForgeBuild app (apps/clipforge @ 65891f6) never
+        // refreshed in init — its launch path is purely: load persisted credentials
+        // (guarded) -> set ready. Every data load is cache-first from the UI layer
+        // (onTasksOpen/onMusicOpen), so a second open with saved state never touches
+        // the network or does any throwing work before the UI is composed.
     }
 
     // ---------------- auth / clones ----------------
@@ -199,8 +197,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         creds.clear()
         api = null
         _login.value = null
-        _tasks.value = emptyList()
-        _music.value = emptyList()
+        // Wipe the on-disk cache-first stores so a different account never sees
+        // stale data, then reload (empty) state from the now-absent cache files.
+        try { java.io.File(app.filesDir, "tasks.json").delete() } catch (_: Exception) {}
+        try { java.io.File(app.filesDir, "music.json").delete() } catch (_: Exception) {}
+        taskStore.loadFromCache()
+        musicStore.loadFromCache()
         toast("Signed out")
     }
 
@@ -224,44 +226,53 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         loadSettings()
     }
 
-    // ---------------- tasks & state ----------------
-    private val _tasks = MutableStateFlow<List<TaskStatus>>(emptyList())
-    val tasks: StateFlow<List<TaskStatus>> = _tasks
+    // ---------------- tasks & state (cache-first, recovered working architecture) ----------------
+    // Recovered from the last-working ForgeBuild app (apps/clipforge @ 65891f6 — the
+    // build the operator confirms did NOT crash on second open): the task list is a
+    // CacheFirstStore<TaskStatus> backed by filesDir/tasks.json. Opening the screen
+    // renders INSTANTLY from the on-disk cache (loadFromCache is synchronous and
+    // network-free), then a background refresh reconciles. The from-scratch
+    // network-only reload on every open (refreshAll-in-init) is gone for good.
+    private val taskStore = CacheFirstStore<TaskStatus>(
+        app, "tasks.json",
+        toJson = { it.toJson() },
+        fromJson = { TaskStatus.fromJson(it) },
+        fetchRemote = { fetchTasksRemote() },
+        keyOf = { it.jobId },
+    )
+    val tasks: StateFlow<List<TaskStatus>> = taskStore.state
+    val tasksRefreshing: StateFlow<Boolean> = taskStore.refreshing
 
-    val activeTasks: StateFlow<List<TaskStatus>> = _tasks.map { list ->
+    private suspend fun fetchTasksRemote(): List<TaskStatus> {
+        val c = api ?: return emptyList()
+        val entries = c.listDir("jobs")
+        val list = mutableListOf<TaskStatus>()
+        for (i in 0 until entries.length()) {
+            val item = entries.getJSONObject(i)
+            if (item.optString("type") != "dir") continue
+            val jobId = item.getString("name")
+            val statusFile = c.readFile("jobs/$jobId/status.json") ?: continue
+            runCatching { list.add(TaskStatus.fromJson(JSONObject(statusFile.first))) }
+        }
+        return list.sortedByDescending { it.createdAt }
+    }
+
+    val activeTasks: StateFlow<List<TaskStatus>> = tasks.map { list ->
         list.filter { !it.isComplete }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val completedTasks: StateFlow<List<TaskStatus>> = _tasks.map { list ->
+    val completedTasks: StateFlow<List<TaskStatus>> = tasks.map { list ->
         list.filter { it.isComplete }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private val _tasksRefreshing = MutableStateFlow(false)
-    val tasksRefreshing: StateFlow<Boolean> = _tasksRefreshing
-
-    fun refreshTasks() = viewModelScope.launch {
-        val c = api ?: return@launch
-        _tasksRefreshing.value = true
-        try {
-            val entries = c.listDir("jobs")
-            val list = mutableListOf<TaskStatus>()
-            for (i in 0 until entries.length()) {
-                val item = entries.getJSONObject(i)
-                if (item.optString("type") != "dir") continue
-                val jobId = item.getString("name")
-                val statusFile = c.readFile("jobs/$jobId/status.json") ?: continue
-                try {
-                    val j = JSONObject(statusFile.first)
-                    list.add(TaskStatus.fromJson(j))
-                } catch (_: Exception) {}
-            }
-            _tasks.value = list.sortedByDescending { it.createdAt }
-        } catch (e: Exception) {
-            // keep existing tasks on transient error
-        } finally {
-            _tasksRefreshing.value = false
-        }
+    /** Called when the Tasks screen opens: instant cached render, then background refresh. */
+    fun onTasksOpen() {
+        taskStore.loadFromCache()
+        viewModelScope.launch { taskStore.refresh() }
     }
+
+    /** Manual refresh (pull-to-refresh / refresh button). Never throws. */
+    fun refreshTasks() = viewModelScope.launch { taskStore.refresh() }
 
     fun deleteTasks(jobIds: Set<String>) = viewModelScope.launch {
         val c = api ?: return@launch
@@ -275,8 +286,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 c.deleteRelease("clipforge-$id")
                 c.deleteRelease("clipforge-relay-input-$id")
             }
-            _tasks.value = _tasks.value.filter { !jobIds.contains(it.jobId) }
             toast("Deleted ${jobIds.size} task(s)")
+            taskStore.refresh()
         } catch (e: Exception) {
             toast("Delete error: ${e.message}")
         }
@@ -793,20 +804,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ---------------- music library ----------------
-    private val _music = MutableStateFlow<List<MusicTrack>>(emptyList())
-    val music: StateFlow<List<MusicTrack>> = _music
-
-    private val _musicRefreshing = MutableStateFlow(false)
-    val musicRefreshing: StateFlow<Boolean> = _musicRefreshing
-
-    private val _defaultMusic = MutableStateFlow<String?>(null)
-    val defaultMusic: StateFlow<String?> = _defaultMusic
-
-    fun refreshMusic() = viewModelScope.launch {
-        val c = api ?: return@launch
-        _musicRefreshing.value = true
-        try {
+    // ---------------- music library (cache-first, recovered working architecture) ----------------
+    private val musicStore = CacheFirstStore<MusicTrack>(
+        app, "music.json",
+        toJson = { it.toJson() },
+        fromJson = { MusicTrack.fromJson(it) },
+        fetchRemote = {
+            val c = api ?: return@CacheFirstStore emptyList()
             val list = c.listDir("audio-library")
             val tracks = mutableListOf<MusicTrack>()
             for (i in 0 until list.length()) {
@@ -818,15 +822,33 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            _music.value = tracks
+            tracks
+        },
+        keyOf = { it.path },
+    )
+    val music: StateFlow<List<MusicTrack>> = musicStore.state
+    val musicRefreshing: StateFlow<Boolean> = musicStore.refreshing
 
+    private val _defaultMusic = MutableStateFlow<String?>(null)
+    val defaultMusic: StateFlow<String?> = _defaultMusic
+
+    /** Called when the Music screen opens: instant cached render, then background refresh. */
+    fun onMusicOpen() {
+        musicStore.loadFromCache()
+        refreshMusic()
+    }
+
+    fun refreshMusic() = viewModelScope.launch {
+        musicStore.refresh()
+        // Default-track marker is a tiny separate document, not part of the cached list.
+        val c = api ?: return@launch
+        try {
             val def = c.readFile("branding/music_default.json")
             if (def != null) {
                 val j = JSONObject(def.first)
                 _defaultMusic.value = j.optString("library_track_path").ifBlank { j.optString("path", "") }.ifBlank { null }
             }
         } catch (_: Exception) {}
-        finally { _musicRefreshing.value = false }
     }
 
     /**
@@ -881,8 +903,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             tracks.forEach { t ->
                 c.deleteFile(t.path, t.sha, "Remove audio track ${t.name}")
             }
-            _music.value = _music.value.filter { !tracks.contains(it) }
             toast("Deleted ${tracks.size} track(s)")
+            musicStore.refresh()
         } catch (e: Exception) {
             toast("Failed to delete music: ${e.message}")
         }

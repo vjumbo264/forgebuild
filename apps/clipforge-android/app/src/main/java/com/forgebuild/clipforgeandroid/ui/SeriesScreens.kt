@@ -24,6 +24,7 @@ fun SeriesScreen(
     vm: ClipForgeViewModel,
     onSelectSeries: (String) -> Unit
 ) {
+    LaunchedEffect(Unit) { vm.onTasksOpen() }
     val tasks by vm.tasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
 
@@ -98,6 +99,7 @@ fun SeriesDetailScreen(
     onBack: () -> Unit,
     onSelectTask: (String) -> Unit
 ) {
+    LaunchedEffect(Unit) { vm.onTasksOpen() }
     val tasks by vm.tasks.collectAsState()
     val seriesParts = remember(tasks, seriesId) {
         tasks.filter { it.seriesEnabled && it.seriesId == seriesId }

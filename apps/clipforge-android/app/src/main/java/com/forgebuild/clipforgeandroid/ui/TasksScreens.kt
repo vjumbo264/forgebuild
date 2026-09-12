@@ -39,6 +39,8 @@ fun TasksScreen(
     vm: ClipForgeViewModel,
     onSelectTask: (String) -> Unit
 ) {
+    // Cache-first open (recovered working architecture): instant cached render, then background refresh.
+    LaunchedEffect(Unit) { vm.onTasksOpen() }
     val activeTasks by vm.activeTasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
@@ -128,6 +130,7 @@ fun CompletedScreen(
     vm: ClipForgeViewModel,
     onSelectTask: (String) -> Unit
 ) {
+    LaunchedEffect(Unit) { vm.onTasksOpen() }
     val completedTasks by vm.completedTasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
