@@ -188,3 +188,117 @@ exists in that repo's git history. Do this:
 > cancel control) against a real task in each relevant state (Stage A
 > running, Stage A failed, Stage B running, Stage B failed with
 > production.json present) rather than only the happy path.
+
+---
+
+## 2026-09-12 — Session 09 operator instruction (eight fixes)
+
+> Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = (operator-held, never committed)
+> (write access).
+>
+> Eight fixes, grounded in the real bot behavior in `bot/src/` — read the
+> relevant real code before implementing each one, don't guess.
+>
+> **1. Music selection is empty until visiting Settings and coming back, and
+> leaving it on default/none plays no music even when a default track IS set
+> in Settings.**
+>
+> The New Video screen's music picker isn't loading the music library (or
+> the current default) at the time that screen opens — it's only populated
+> as a side effect of having visited the Music settings screen earlier in
+> the same session. Find wherever the app loads the music library list and
+> the current default-track setting, and make the New Video screen load both
+> directly when it opens, not rely on another screen having already
+> populated some shared state. Separately: when the operator leaves the
+> music selection on "default/none," the created task must use whatever
+> track is actually set as the default in Settings — not skip music
+> entirely. Check how the bot resolves this (a task's `music.ref` /
+> `music.source` fields, and how "no explicit per-task choice" falls back to
+> the settings default) and reproduce that resolution exactly. Verify by
+> setting a default track in Settings, going straight to New Video without
+> visiting Music settings again, leaving music on default, and confirming
+> the created job's music reference matches the default track.
+>
+> **2. No way to preview a narrator voice before choosing it.**
+>
+> The bot already supports this with pre-rendered sample clips — see
+> `index.js` around the Narrator settings handler, which reads
+> `assets/tts-previews/<voiceId>.mp3` from the repo via
+> `getRepositoryFileBytes` and sends it as a preview. Add a play/preview
+> button next to each voice option in the Narrator settings screen that
+> fetches and plays that same `assets/tts-previews/<voiceId>.mp3` file for
+> the corresponding voice ID (see `constants.js`'s `VOICES` map for the real
+> voice IDs) — stream/cache it the same way other audio previews in the app
+> already work, don't re-synthesize a new sample.
+>
+> **3. Logs need to look and behave better: expandable per-step, only the
+> currently-running step expanded, cleaner visual design overall.**
+>
+> Model this on GitHub Actions' own run-log UI, which the operator is
+> already comparing it to: each pipeline step is its own collapsible section
+> with a header (step name + status icon + duration) and its detail lines
+> collapsed by default. The step that is CURRENTLY RUNNING should be
+> auto-expanded, showing its live output as it streams in; the moment that
+> step finishes and the next one starts, the finished step auto-collapses
+> and the new current step auto-expands — mirroring exactly how the
+> operator described GitHub Actions' own behavior. Completed/failed steps
+> remain available to manually expand afterward by tapping them. Give this a
+> proper visual treatment (clear step boundaries, status-colored icons/left
+> border per step — success/running/failed/pending — readable monospace for
+> the actual log lines) rather than one plain scrolling text block.
+>
+> **4. No "Start Next Part" button anywhere for a finished series part.**
+>
+> The bot's real mechanism is `startNextSeriesPart` in `index.js`: it
+> resolves the continuation for the just-finished part, computes the next
+> part's job id via `nextPartJobId(continuation)`, and — critically — checks
+> whether a Stage A request or status already exists for that next job id
+> as a duplicate-dispatch guard; if one exists, it shows "Part N already
+> exists as task X" instead of a start button, which is exactly why deleting
+> that next part makes the button reappear (the existence check then finds
+> nothing). Add this button to a completed series part's task detail view in
+> the app, wired to the same underlying mechanism (reuse
+> `nextPartRequestBody`/`nextPartJobId`/the existing-job check rather than
+> reimplementing the continuation logic from scratch), so the button's
+> presence/absence in the app matches the bot's real logic exactly, not a
+> simplified approximation.
+>
+> **5. Downloaded final videos can't be previewed/played from the app.**
+>
+> When the operator downloads a series part's final MP4, save it associated
+> with that job's series id (so it can be found again from the series view
+> later), and once downloaded, show a "Play" affordance directly in the app
+> (in-app video player, not just a file-system save) both immediately after
+> download and later when revisiting a completed series part — if the file
+> was already downloaded previously, show "Play" instead of "Download Final
+> MP4" for that part.
+>
+> **6. Download progress doesn't show total file size, only current speed.**
+>
+> Every download progress indicator (final video, and anything else that
+> downloads) must show the total size being downloaded alongside the current
+> speed — the size should be available from the response's Content-Length
+> (or the GitHub release asset's known size, since these are GitHub Release
+> assets) at the point the download starts; use that instead of only
+> reporting speed with no sense of total size or how much remains.
+>
+> **7. Add an "About" section in Settings** (app name/version, and whatever
+> else is standard for an About screen — your judgment on exact contents).
+>
+> **8. Source input in New Video should auto-detect the link type instead of
+> requiring the operator to pick "Magnet" vs "Drive" etc. before pasting.**
+>
+> The bot never makes the user choose a source type — `classifySourceText`
+> in `wizard.js` inspects the pasted text itself and determines whether it's
+> a magnet URI, a Google Drive link, a direct URL, a torrent file upload, or
+> a t.me channel link, entirely from the content. Remove any source-type
+> selector from the New Video screen and instead run the same classification
+> logic directly against whatever the operator pastes, exactly like the bot
+> does — the operator should just paste (or upload a .torrent file) and the
+> app figures out the kind on its own, including correctly ordering the
+> magnet check before any generic URL fallback (this ordering was the
+> subject of a previous fix — make sure this rework doesn't regress it).
+>
+> Note: do not touch anything related to per-tab navigation state (what
+> screen reappears when switching back to a tab) — that is explicitly out of
+> scope for this fix regardless of anything mentioned elsewhere.
