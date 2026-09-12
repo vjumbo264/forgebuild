@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
+import com.forgebuild.clipforgeandroid.data.SourceClassifier
 import com.forgebuild.engine.ui.icons.EngineIcons
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -137,7 +138,29 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                     } else {
                         OutlinedTextField(
                             value = sourceValue,
-                            onValueChange = { sourceValue = it },
+                            onValueChange = { raw ->
+                                sourceValue = raw
+                                // Fix #1 (bot wizard.js parity): classify as the user
+                                // types. The classifier's verdict wins over the manually
+                                // picked chip — pasting a magnet URI while "Direct URL" is
+                                // selected flips the pick to Magnet instantly, so a magnet
+                                // can never be saved with kind:"url" and die at Stage A
+                                // ingest. MAGNET is checked BEFORE the generic URL case
+                                // (SourceClassifier preserves the bot's exact ordering).
+                                when (val verdict = SourceClassifier.classify(raw)) {
+                                    is SourceClassifier.Result.Kind -> {
+                                        // telegram_channel stays gated to the official
+                                        // repo (existing app rule); every other classified
+                                        // kind auto-syncs the selection chip.
+                                        if (!(verdict.kind == "telegram_channel" && !isOriginal) &&
+                                            verdict.kind != sourceKind
+                                        ) {
+                                            sourceKind = verdict.kind
+                                        }
+                                    }
+                                    is SourceClassifier.Result.Invalid -> Unit
+                                }
+                            },
                             label = {
                                 Text(when (sourceKind) {
                                     "url" -> "Direct Video URL"
@@ -302,9 +325,32 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         vm.toast("Please select a .torrent file")
                         return@Button
                     }
-                    if (sourceKind != "torrent_file" && sourceValue.isBlank()) {
-                        vm.toast("Please enter a valid source URL")
-                        return@Button
+                    // Fix #1: final source classification at submit — the ported bot
+                    // classifier (magnet BEFORE generic URL) always wins over the manual
+                    // chip, exactly like the bot's wizard step 1. Invalid sources are
+                    // rejected with the bot's own error text instead of creating a task
+                    // that would fail at Stage A ingest.
+                    var submitKind = sourceKind
+                    var submitValue = sourceValue.trim()
+                    if (sourceKind != "torrent_file") {
+                        when (val verdict = SourceClassifier.classify(sourceValue)) {
+                            is SourceClassifier.Result.Invalid -> {
+                                vm.toast(verdict.error)
+                                return@Button
+                            }
+                            is SourceClassifier.Result.Kind -> {
+                                if (verdict.kind == "telegram_channel" && !isOriginal) {
+                                    vm.toast("Telegram channel sources are only available on the official ClipForge repo")
+                                    return@Button
+                                }
+                                submitKind = verdict.kind
+                                submitValue = verdict.value
+                            }
+                        }
+                        if (submitValue.isBlank()) {
+                            vm.toast("Please enter a valid source URL")
+                            return@Button
+                        }
                     }
 
                     if (durationSeconds !in 1..36000) {
@@ -312,8 +358,8 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         return@Button
                     }
                     vm.createStageATask(
-                        sourceKind = sourceKind,
-                        sourceValue = sourceValue,
+                        sourceKind = submitKind,
+                        sourceValue = submitValue,
                         focus = focus,
                         targetDurationSeconds = durationSeconds,
                         selectedMusicPath = selectedMusicPath,
