@@ -122,6 +122,16 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
 
     /**
      * Upload / put a file into the repo with live progress tracking.
+     *
+     * 422 fix (bot parity with bot/src/github.js putTextFile): the GitHub
+     * Contents create-or-update endpoint REQUIRES the existing file's `sha`
+     * on every UPDATE, and only tolerates its absence on first CREATE. The
+     * old code included `sha` only when the caller happened to pass one —
+     * every overwrite of an already-existing file (e.g. rewriting
+     * jobs/<id>/stage-a-request.json in the torrent-selection path, which
+     * createStageATask already created) failed with HTTP 422
+     * "Invalid request. \"sha\" wasn't supplied". We now ALWAYS GET the file
+     * first (404 tolerated = brand-new file) and include its sha on update.
      */
     suspend fun putFile(
         path: String,
@@ -130,12 +140,20 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         sha: String? = null,
         onProgress: ((bytesSent: Long, totalBytes: Long) -> Unit)? = null
     ) = withContext(Dispatchers.IO) {
+        // Resolve the current sha unless the caller supplied one explicitly.
+        val effectiveSha: String? = sha ?: run {
+            try {
+                readFile(path)?.second
+            } catch (e: GhException) {
+                if (e.code == 404) null else throw e
+            }
+        }
         val b64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
         val payload = JSONObject()
             .put("message", message)
             .put("content", b64Content)
             .put("branch", "main")
-        if (sha != null) payload.put("sha", sha)
+        if (effectiveSha != null) payload.put("sha", effectiveSha)
 
         val rawJson = payload.toString().toByteArray(Charsets.UTF_8)
         val totalLength = rawJson.size.toLong()
@@ -191,10 +209,63 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         dispatchWorkflow("push-update.yml", emptyMap())
     }
 
+    /**
+     * Bot parity (bot/src/index.js pushNews): the announcement lives at
+     * docs/news.json with {version, message, interval_hours, published_at(ISO)}
+     * — the app's previous branding/news.json {message, updated_at} shape was
+     * invented and never matched the bot.
+     */
     suspend fun pushNews(newsText: String) {
         if (!isOriginalRepo()) throw IllegalStateException("Only main account can broadcast news")
-        val payload = JSONObject().put("message", newsText).put("updated_at", System.currentTimeMillis())
-        putFile("branding/news.json", payload.toString(2).toByteArray(), "Broadcast news")
+        val publishedAt = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
+        val payload = JSONObject()
+            .put("version", 1)
+            .put("message", newsText)
+            .put("interval_hours", 0)
+            .put("published_at", publishedAt)
+        putFile("docs/news.json", payload.toString(2).toByteArray(), "clipforge: broadcast news")
+    }
+
+    // ---- GitHub Actions secrets (bot parity: the Zernio API key is stored as
+    // the sealed repo Actions secret ZERNIO_API_KEY, NEVER in a settings json) ----
+
+    /** True when the named Actions secret exists on this repo (404 = absent). */
+    suspend fun actionsSecretExists(secretName: String): Boolean = withContext(Dispatchers.IO) {
+        client.newCall(base("$api/repos/$owner/$repo/actions/secrets/$secretName").get().build()).execute().use { resp ->
+            when (resp.code) {
+                200 -> true
+                404 -> false
+                else -> throw GhException(resp.code, resp.body?.string().orEmpty().take(400))
+            }
+        }
+    }
+
+    /** Delete the named Actions secret (bot: deleteZernioSecret). 404 tolerated. */
+    suspend fun deleteActionsSecret(secretName: String) = withContext(Dispatchers.IO) {
+        client.newCall(base("$api/repos/$owner/$repo/actions/secrets/$secretName").delete().build()).execute().use { resp ->
+            if (resp.code !in 200..299 && resp.code != 404) throw GhException(resp.code, resp.body?.string().orEmpty().take(400))
+        }
+        Unit
+    }
+
+    /**
+     * Create/update the sealed Zernio API key secret (bot: updateZernioSecret ->
+     * updateActionsSecret). Requires a PAT with Actions:write; the sealed value
+     * is a libsodium box over the repo's Actions public key.
+     */
+    suspend fun setZernioSecret(plaintext: String) = withContext(Dispatchers.IO) {
+        val keyResp = execute(base("$api/repos/$owner/$repo/actions/secrets/public-key").get())
+        val keyJson = JSONObject(keyResp.second)
+        val keyId = keyJson.getString("key_id")
+        // SodiumSeal returns base64(sealed_bytes) directly, ready for the PUT body.
+        val sealedB64 = SodiumSeal.sealToBase64(plaintext, keyJson.getString("key"))
+        val payload = JSONObject()
+            .put("encrypted_value", sealedB64)
+            .put("key_id", keyId)
+        execute(
+            base("$api/repos/$owner/$repo/actions/secrets/ZERNIO_API_KEY")
+                .put(payload.toString().toRequestBody("application/json".toMediaType()))
+        )
     }
 
     suspend fun runInfo(runId: Long): JSONObject =

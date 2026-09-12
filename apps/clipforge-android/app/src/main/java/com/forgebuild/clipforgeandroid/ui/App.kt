@@ -33,8 +33,36 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
     val login by vm.login.collectAsState()
     val snack by vm.snack.collectAsState()
     val hasPromptedStorage by vm.hasPromptedStorage.collectAsState()
+    val lastCrash by vm.lastCrash.collectAsState()
 
     val snackState = remember { SnackbarHostState() }
+
+    // Second-launch crash diagnosis: if the PREVIOUS launch died, the startup
+    // crash-catcher saved the real stack trace — surface it once so the actual
+    // cause is visible instead of being guessed at again.
+    lastCrash?.let { trace ->
+        AlertDialog(
+            onDismissRequest = { vm.dismissCrashReport() },
+            title = { Text("Last launch crashed") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        "The app crashed on its previous run. This is the captured stack trace — please share it when reporting the issue:",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        trace.take(3000),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.dismissCrashReport() }) { Text("Dismiss") }
+            }
+        )
+    }
 
     LaunchedEffect(snack) {
         snack?.let {

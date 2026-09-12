@@ -32,6 +32,43 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     var api: GitHubClient? = null
         private set
 
+    // ---------------- startup crash catcher (second-launch bug, round 3) ----------------
+    // Installs a default UncaughtExceptionHandler that writes the REAL stack trace to
+    // filesDir/last_crash.txt before delegating to the previous handler. On the next
+    // successful launch the trace is surfaced to the operator so the actual cause is
+    // reported instead of being guessed at again.
+    private val crashFile = java.io.File(app.filesDir, "last_crash.txt")
+
+    private val _lastCrash = MutableStateFlow<String?>(null)
+    val lastCrash: StateFlow<String?> = _lastCrash
+
+    init {
+        // Read & clear any crash recorded by the PREVIOUS launch (this is the only
+        // reliable way to see why the app died on second open).
+        try {
+            if (crashFile.exists()) {
+                val trace = crashFile.readText()
+                crashFile.delete()
+                if (trace.isNotBlank()) _lastCrash.value = trace
+            }
+        } catch (_: Exception) {}
+
+        try {
+            val previous = Thread.getDefaultUncaughtExceptionHandler()
+            Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+                try {
+                    val sw = java.io.StringWriter()
+                    throwable.printStackTrace(java.io.PrintWriter(sw))
+                    crashFile.writeText("CRASH ${java.time.Instant.now()} on ${thread.name}\n$sw")
+                } catch (_: Exception) {}
+                previous?.uncaughtException(thread, throwable)
+                    ?: kotlin.system.exitProcess(2)
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun dismissCrashReport() { _lastCrash.value = null }
+
     private val _login = MutableStateFlow<CredentialStore.CloneCredentials?>(null)
     val login: StateFlow<CredentialStore.CloneCredentials?> = _login
 
@@ -137,10 +174,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 val owner = created.getJSONObject("owner").getString("login")
                 val c = GitHubClient(pat.trim(), owner, name)
                 _cloneProgress.value = "Seeding branding and settings…"
-                c.putFile("branding/tts_settings.json", JSONObject().put("voice", Voices.DEFAULT).toString(2).toByteArray(), "init tts")
-                c.putFile("branding/series_settings.json", JSONObject().put("enabled", false).toString(2).toByteArray(), "init series")
-                c.putFile("branding/creator_watermark.json", JSONObject().put("watermark", "").toString(2).toByteArray(), "init watermark")
-                c.putFile("branding/zernio_settings.json", JSONObject().put("enabled", false).put("api_key", "").toString(2).toByteArray(), "init zernio")
+                // Seed the canonical bot shapes so a fresh clone is interchangeable
+                // with the Telegram bot from the start (never the legacy invented keys).
+                c.putFile("branding/tts_settings.json", JSONObject().put("version", 1).put("engine", "edge-tts").put("voice", Voices.DEFAULT).put("voice_label", "Andrew").put("rate", "+20%").put("volume", "+0%").put("pitch", "+0Hz").put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: save Edge TTS narrator")
+                c.putFile("branding/series_settings.json", JSONObject().put("version", 1).put("enabled", false).put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: update Series Mode setting")
+                c.putFile("branding/creator_watermark.json", JSONObject().put("version", 1).put("creator_name", "").put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: update creator watermark")
+                c.putFile("branding/zernio_settings.json", defaultZernioSettings().toString(2).toByteArray(), "clipforge: update Zernio publishing settings")
 
                 val credentials = CredentialStore.CloneCredentials(pat.trim(), owner, name, user)
                 creds.save(credentials)
@@ -783,19 +822,36 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
             val def = c.readFile("branding/music_default.json")
             if (def != null) {
-                _defaultMusic.value = JSONObject(def.first).optString("path").ifBlank { null }
+                val j = JSONObject(def.first)
+                _defaultMusic.value = j.optString("library_track_path").ifBlank { j.optString("path", "") }.ifBlank { null }
             }
         } catch (_: Exception) {}
         finally { _musicRefreshing.value = false }
     }
 
+    /**
+     * Set/clear the default music track. Bot parity: bot/src/github.js
+     * saveMusicDefault writes {version, library_track_path, updated_at_epoch, note};
+     * clearing deletes the document entirely (clearMusicDefaultIfTrack).
+     */
     fun setDefaultMusic(path: String?) = viewModelScope.launch {
         val c = api ?: return@launch
         try {
-            val payload = JSONObject().put("path", path ?: "")
-            c.putFile("branding/music_default.json", payload.toString(2).toByteArray(), "Update default music")
-            _defaultMusic.value = path
-            toast(if (path != null) "Default track updated" else "Default track cleared")
+            if (path == null) {
+                val existing = c.readFile("branding/music_default.json")
+                if (existing != null) c.deleteFile("branding/music_default.json", existing.second, "clipforge: clear default background music")
+                _defaultMusic.value = null
+                toast("Default track cleared")
+            } else {
+                val payload = JSONObject()
+                    .put("version", 1)
+                    .put("library_track_path", path)
+                    .put("updated_at_epoch", nowEpoch())
+                    .put("note", "Last explicitly selected audio-library track. One-off job uploads are never stored as the default.")
+                c.putFile("branding/music_default.json", payload.toString(2).toByteArray(), "clipforge: save default background music")
+                _defaultMusic.value = path
+                toast("Default track updated")
+            }
         } catch (e: Exception) {
             toast("Failed to update default music: ${e.message}")
         }
@@ -837,15 +893,41 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         return "https://api.github.com/repos/${c.owner}/${c.repo}/contents/$path?ref=main"
     }
 
-    // ---------------- full settings ----------------
+    // ---------------- full settings (bot-parity shapes) ----------------
+    /**
+     * One connected Zernio social account — mirrors an entry in
+     * branding/zernio_accounts.json {accounts:[{id,platform,username,
+     * displayName,isActive,enabled,needsReconnection}]}. A separate store from
+     * zernio_settings.json; the bot reads it independently.
+     */
+    data class ZernioAccount(
+        val id: String,
+        val platform: String,
+        val username: String,
+        val displayName: String,
+        val isActive: Boolean,
+        val enabled: Boolean,
+        val needsReconnection: Boolean
+    ) {
+        val available: Boolean get() = isActive && enabled && !needsReconnection
+        val label: String get() = displayName.ifBlank { username.ifBlank { id } }
+    }
+
     data class AppSettings(
         val isPrivate: Boolean = true,
         val narratorVoice: String = Voices.DEFAULT,
         val seriesDefault: Boolean = false,
-        val watermarkText: String = "",
+        val watermarkText: String = "",           // bot creator_watermark.json {creator_name}
+        // Zernio — three separate stores (bot: loadZernioConfig):
+        //   branding/zernio_settings.json {version,enabled,auto_publish,automatic_mode,
+        //     target_accounts{platform->[ids]},smart_schedule{...}}
+        //   branding/zernio_accounts.json {accounts:[...]}
+        //   sealed Actions secret ZERNIO_API_KEY (existence only — value never readable)
         val zernioEnabled: Boolean = false,
-        val zernioApiKey: String = "",
-        val zernioAccounts: List<String> = emptyList()
+        val zernioAutoPublish: Boolean = false,
+        val zernioAutomaticMode: String = "smart_schedule",
+        val zernioKeyConfigured: Boolean = false,
+        val zernioAccounts: List<ZernioAccount> = emptyList()
     )
 
     private val _settings = MutableStateFlow(AppSettings())
@@ -860,6 +942,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _settingsLoaded = MutableStateFlow(false)
     val settingsLoaded: StateFlow<Boolean> = _settingsLoaded
 
+    /** Epoch seconds — bot writes updated_at_epoch on every settings document. */
+    private fun nowEpoch(): Long = System.currentTimeMillis() / 1000
+
+    /**
+     * Load every settings section from the clone in the exact shapes the bot
+     * persists (verified against the real stored data in the operator's repo):
+     *   narrator  = branding/tts_settings.json {voice}
+     *   series    = branding/series_settings.json {enabled}
+     *   watermark = branding/creator_watermark.json {creator_name}   (NOT 'watermark')
+     *   music     = branding/music_default.json {library_track_path} (NOT 'path')
+     *   zernio    = zernio_settings.json {enabled,auto_publish,automatic_mode,...}
+     *             + zernio_accounts.json {accounts:[...]}
+     *             + sealed secret ZERNIO_API_KEY existence check
+     */
     fun loadSettings() = viewModelScope.launch {
         val c = api ?: return@launch
         _settingsLoading.value = true
@@ -881,26 +977,50 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 }
             } catch (_: Exception) {}
 
+            // bot reads creator_watermark.json {creator_name}; tolerate the app's
+            // legacy {watermark} so an older clone file still renders.
             var wm = ""
             try {
                 c.readFile("branding/creator_watermark.json")?.let {
-                    wm = JSONObject(it.first).optString("watermark", "")
+                    val j = JSONObject(it.first)
+                    wm = j.optString("creator_name").ifBlank { j.optString("watermark", "") }
                 }
             } catch (_: Exception) {}
 
+            // Music default — bot reads library_track_path; tolerate legacy 'path'.
+            try {
+                c.readFile("branding/music_default.json")?.let {
+                    val j = JSONObject(it.first)
+                    _defaultMusic.value = j.optString("library_track_path")
+                        .ifBlank { j.optString("path", "") }.ifBlank { null }
+                }
+            } catch (_: Exception) {}
+
+            // Zernio — three separate stores, read independently like loadZernioConfig.
             var zEnabled = false
-            var zKey = ""
-            var zAccounts = listOf<String>()
+            var zAutoPublish = false
+            var zMode = "smart_schedule"
             try {
                 c.readFile("branding/zernio_settings.json")?.let {
                     val j = JSONObject(it.first)
                     zEnabled = j.optBoolean("enabled", false)
-                    zKey = j.optString("api_key", "")
-                    val accs = j.optJSONArray("accounts")
-                    if (accs != null) {
-                        zAccounts = (0 until accs.length()).map { i -> accs.getString(i) }
-                    }
+                    zAutoPublish = j.optBoolean("auto_publish", false)
+                    zMode = j.optString("automatic_mode", "smart_schedule")
                 }
+            } catch (_: Exception) {}
+
+            var zAccounts = listOf<ZernioAccount>()
+            try {
+                c.readFile("branding/zernio_accounts.json")?.let {
+                    zAccounts = parseZernioAccounts(JSONObject(it.first))
+                }
+            } catch (_: Exception) {}
+
+            // The API key is a sealed Actions secret — we can only check existence,
+            // never read the value back (GitHub never returns plaintext).
+            var zKeyConfigured = false
+            try {
+                zKeyConfigured = c.actionsSecretExists("ZERNIO_API_KEY")
             } catch (_: Exception) {}
 
             _settings.value = AppSettings(
@@ -909,7 +1029,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 seriesDefault = seriesDef,
                 watermarkText = wm,
                 zernioEnabled = zEnabled,
-                zernioApiKey = zKey,
+                zernioAutoPublish = zAutoPublish,
+                zernioAutomaticMode = zMode,
+                zernioKeyConfigured = zKeyConfigured,
                 zernioAccounts = zAccounts
             )
             _settingsLoaded.value = true
@@ -920,19 +1042,58 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Refresh Zernio connected-channels list from the clone repo. */
+    /** Parse branding/zernio_accounts.json {accounts:[{...}]} into typed accounts. */
+    private fun parseZernioAccounts(j: JSONObject): List<ZernioAccount> {
+        val arr = j.optJSONArray("accounts") ?: return emptyList()
+        val out = mutableListOf<ZernioAccount>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            out.add(
+                ZernioAccount(
+                    id = o.optString("id"),
+                    platform = o.optString("platform"),
+                    username = o.optString("username"),
+                    displayName = o.optString("displayName"),
+                    isActive = o.optBoolean("isActive", true),
+                    enabled = o.optBoolean("enabled", true),
+                    needsReconnection = o.optBoolean("needsReconnection", false)
+                )
+            )
+        }
+        return out
+    }
+
+    /**
+     * Refresh the Zernio connected-accounts list from the clone repo. Bot parity:
+     * accounts live in branding/zernio_accounts.json (a SEPARATE store from
+     * zernio_settings.json — the app previously read a non-existent 'accounts'
+     * array out of zernio_settings.json, which is why nothing ever showed up).
+     */
     fun refreshZernioAccounts() = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("zernio_refresh") {
             try {
-                val f = c.readFile("branding/zernio_settings.json") ?: return@withBusy
-                val j = JSONObject(f.first)
-                val accs = j.optJSONArray("accounts")
-                val list = if (accs != null) (0 until accs.length()).map { i -> accs.getString(i) } else emptyList()
-                _settings.value = _settings.value.copy(zernioAccounts = list)
-                toast(if (list.isEmpty()) "No connected channels yet" else "Loaded ${list.size} channel(s)")
+                var list = listOf<ZernioAccount>()
+                c.readFile("branding/zernio_accounts.json")?.let {
+                    list = parseZernioAccounts(JSONObject(it.first))
+                }
+                // Also re-check the sealed key + settings so the whole section is fresh.
+                var enabled = _settings.value.zernioEnabled
+                var keyConfigured = _settings.value.zernioKeyConfigured
+                try {
+                    c.readFile("branding/zernio_settings.json")?.let {
+                        enabled = JSONObject(it.first).optBoolean("enabled", enabled)
+                    }
+                } catch (_: Exception) {}
+                try { keyConfigured = c.actionsSecretExists("ZERNIO_API_KEY") } catch (_: Exception) {}
+                _settings.value = _settings.value.copy(
+                    zernioAccounts = list,
+                    zernioEnabled = enabled,
+                    zernioKeyConfigured = keyConfigured
+                )
+                toast(if (list.isEmpty()) "No connected accounts found" else "Loaded ${list.size} connected account(s)")
             } catch (e: Exception) {
-                toast("Failed to refresh Zernio channels: ${e.message}")
+                toast("Failed to refresh Zernio accounts: ${e.message}")
             }
         }
     }
@@ -987,12 +1148,22 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Bot parity: bot/src/github.js saveNarrator writes the full Edge-TTS doc.
     fun setNarratorVoice(voiceId: String) = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("save_narrator") {
             try {
-                val payload = JSONObject().put("voice", voiceId)
-                c.putFile("branding/tts_settings.json", payload.toString(2).toByteArray(), "Update TTS voice")
+                val label = Voices.ALL.firstOrNull { it.id == voiceId }?.label ?: voiceId
+                val payload = JSONObject()
+                    .put("version", 1)
+                    .put("engine", "edge-tts")
+                    .put("voice", voiceId)
+                    .put("voice_label", label)
+                    .put("rate", "+20%")
+                    .put("volume", "+0%")
+                    .put("pitch", "+0Hz")
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("branding/tts_settings.json", payload.toString(2).toByteArray(), "clipforge: save Edge TTS narrator")
                 _settings.value = _settings.value.copy(narratorVoice = voiceId)
                 toast("Narrator voice updated")
             } catch (e: Exception) {
@@ -1001,12 +1172,16 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Bot parity: bot/src/github.js saveSeriesSettings {version,enabled,updated_at_epoch}.
     fun setSeriesDefault(enabled: Boolean) = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("save_series_default") {
             try {
-                val payload = JSONObject().put("enabled", enabled)
-                c.putFile("branding/series_settings.json", payload.toString(2).toByteArray(), "Update series default")
+                val payload = JSONObject()
+                    .put("version", 1)
+                    .put("enabled", enabled)
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("branding/series_settings.json", payload.toString(2).toByteArray(), "clipforge: update Series Mode setting")
                 _settings.value = _settings.value.copy(seriesDefault = enabled)
                 toast("Series mode default: ${if (enabled) "ON" else "OFF"}")
             } catch (e: Exception) {
@@ -1015,12 +1190,16 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // Bot parity: bot/src/github.js saveWatermark {version, creator_name, updated_at_epoch}.
     fun setWatermark(text: String) = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("save_watermark") {
             try {
-                val payload = JSONObject().put("watermark", text.trim())
-                c.putFile("branding/creator_watermark.json", payload.toString(2).toByteArray(), "Update watermark")
+                val payload = JSONObject()
+                    .put("version", 1)
+                    .put("creator_name", text.trim())
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("branding/creator_watermark.json", payload.toString(2).toByteArray(), "clipforge: update creator watermark")
                 _settings.value = _settings.value.copy(watermarkText = text.trim())
                 toast(if (text.isBlank()) "Watermark cleared" else "Watermark saved")
             } catch (e: Exception) {
@@ -1031,15 +1210,34 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun clearWatermark() = setWatermark("")
 
+    /**
+     * Save Zernio settings. Bot parity: the enabled/auto_publish/mode flags live in
+     * branding/zernio_settings.json (full canonical doc via zernioSettingsOrDefault),
+     * while the API key — when the caller supplies a new one — is sealed and stored as
+     * the GitHub Actions secret ZERNIO_API_KEY, NEVER as plaintext in the settings file.
+     */
     fun saveZernioSettings(apiKey: String, enabled: Boolean) = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("save_zernio") {
             try {
-                val payload = JSONObject()
-                    .put("api_key", apiKey.trim())
+                // Read-modify-write the existing settings doc so schedule/targets survive.
+                val existing = try {
+                    c.readFile("branding/zernio_settings.json")?.let { JSONObject(it.first) }
+                } catch (_: Exception) { null }
+                val doc = existing ?: defaultZernioSettings()
+                doc.put("version", 1)
                     .put("enabled", enabled)
-                c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Update Zernio settings")
-                _settings.value = _settings.value.copy(zernioApiKey = apiKey.trim(), zernioEnabled = enabled)
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("branding/zernio_settings.json", doc.toString(2).toByteArray(), "clipforge: update Zernio publishing settings")
+
+                // Only seal + store a key when the user typed a new one (non-blank).
+                val newKey = apiKey.trim()
+                var keyConfigured = _settings.value.zernioKeyConfigured
+                if (newKey.isNotEmpty()) {
+                    c.setZernioSecret(newKey)
+                    keyConfigured = true
+                }
+                _settings.value = _settings.value.copy(zernioEnabled = enabled, zernioKeyConfigured = keyConfigured)
                 toast("Zernio settings saved")
             } catch (e: Exception) {
                 toast("Zernio save error: ${e.message}")
@@ -1047,14 +1245,42 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Canonical empty Zernio settings doc — matches bot zernioSettingsOrDefault(). */
+    private fun defaultZernioSettings(): JSONObject = JSONObject()
+        .put("version", 1)
+        .put("enabled", false)
+        .put("auto_publish", false)
+        .put("automatic_mode", "smart_schedule")
+        .put("target_accounts", JSONObject()
+            .put("tiktok", JSONArray())
+            .put("youtube", JSONArray())
+            .put("instagram", JSONArray()))
+        .put("smart_schedule", JSONObject()
+            .put("timezone", "UTC")
+            .put("interval_hours", 24)
+            .put("preferred_time", "19:30")
+            .put("queue_depth", 4)
+            .put("start_mode", "next_available")
+            .put("custom_start", ""))
+
+    // Bot parity: clear = delete the sealed ZERNIO_API_KEY secret + disable settings.
     fun clearZernioKey() = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("clear_zernio") {
             try {
-                val payload = JSONObject().put("api_key", "").put("enabled", false)
-                c.putFile("branding/zernio_settings.json", payload.toString(2).toByteArray(), "Clear Zernio key")
-                _settings.value = _settings.value.copy(zernioApiKey = "", zernioEnabled = false, zernioAccounts = emptyList())
-                toast("Zernio credentials cleared")
+                try { c.deleteActionsSecret("ZERNIO_API_KEY") } catch (_: Exception) {}
+                val existing = try {
+                    c.readFile("branding/zernio_settings.json")?.let { JSONObject(it.first) }
+                } catch (_: Exception) { null }
+                val doc = (existing ?: defaultZernioSettings())
+                    .put("enabled", false)
+                    .put("updated_at_epoch", nowEpoch())
+                c.putFile("branding/zernio_settings.json", doc.toString(2).toByteArray(), "clipforge: disable Zernio publishing")
+                _settings.value = _settings.value.copy(
+                    zernioEnabled = false,
+                    zernioKeyConfigured = false
+                )
+                toast("Zernio API key removed")
             } catch (e: Exception) {
                 toast("Failed to clear Zernio key: ${e.message}")
             }

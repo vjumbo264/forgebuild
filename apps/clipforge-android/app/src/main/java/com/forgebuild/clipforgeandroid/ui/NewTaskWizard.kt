@@ -176,10 +176,12 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                     )
 
                     Text("Target Spoken Narration Duration: ${durationSeconds}s", style = MaterialTheme.typography.bodyMedium)
-                    // Presets match the Telegram bot (TARGET_DURATIONS = 30/60/120/180/300)
-                    // plus a free-form Custom option the bot never offered.
+                    // Presets match the Telegram bot (TARGET_DURATIONS = 30/60/120/180/300).
+                    // Custom opens a real input dialog (the previous chip toggled state but
+                    // never surfaced a usable field, so a custom value could not be entered).
                     val presets = listOf(30, 60, 120, 180, 300)
                     val customSelected = durationSeconds !in presets
+                    var showCustomDialog by remember { mutableStateOf(false) }
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -193,25 +195,46 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         }
                         FilterChip(
                             selected = customSelected,
-                            onClick = { customDurationText = durationSeconds.takeIf { it !in presets }?.toString() ?: "" },
-                            label = { Text("Custom") }
+                            onClick = {
+                                // Prefill the dialog with the current custom value (if any).
+                                customDurationText = durationSeconds.takeIf { it !in presets }?.toString() ?: ""
+                                showCustomDialog = true
+                            },
+                            label = { Text(if (customSelected) "Custom (${durationSeconds}s)" else "Custom") }
                         )
                     }
-                    if (customSelected) {
-                        OutlinedTextField(
-                            value = customDurationText,
-                            onValueChange = { input ->
-                                customDurationText = input.filter { it.isDigit() }.take(5)
-                                customDurationText.toIntOrNull()?.let { v ->
-                                    if (v in 1..36000) durationSeconds = v
-                                }
+
+                    if (showCustomDialog) {
+                        val typed = customDurationText.toIntOrNull()
+                        val valid = typed != null && typed in 1..36000
+                        AlertDialog(
+                            onDismissRequest = { showCustomDialog = false },
+                            title = { Text("Custom duration") },
+                            text = {
+                                OutlinedTextField(
+                                    value = customDurationText,
+                                    onValueChange = { customDurationText = it.filter { c -> c.isDigit() }.take(5) },
+                                    label = { Text("Duration (seconds)") },
+                                    placeholder = { Text("e.g. 45") },
+                                    supportingText = { Text("Target spoken narration length, 1–36000 seconds") },
+                                    isError = customDurationText.isNotEmpty() && !valid,
+                                    singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             },
-                            label = { Text("Custom duration (seconds)") },
-                            placeholder = { Text("e.g. 45") },
-                            supportingText = { Text("1–36000 seconds") },
-                            isError = customDurationText.toIntOrNull()?.let { it !in 1..36000 } ?: true,
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        typed?.let { durationSeconds = it }
+                                        showCustomDialog = false
+                                    },
+                                    enabled = valid
+                                ) { Text("Apply") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showCustomDialog = false }) { Text("Cancel") }
+                            }
                         )
                     }
                 }

@@ -78,6 +78,14 @@ dependencies {
     // the fixed key-generation path; CredentialStore still keeps its lazy-guarded
     // plain-prefs fallback as the last line of defence.
     implementation("androidx.security:security-crypto:1.1.0")
+    // libsodium for Android — genuine sealed-box (crypto_box_seal) so the app can
+    // write the ZERNIO_API_KEY GitHub Actions secret in the exact format the bot
+    // (bot/src/crypto.js sealForGitHub) and the pipeline use. Bundles the native
+    // libsodium .so; required because GitHub decrypts the secret with real NaCl,
+    // so no JDK-only construction can substitute. JNA @aar bundles the Android
+    // native bridge lazysodium needs.
+    implementation("com.goterl:lazysodium-android:5.0.2@aar")
+    implementation("net.java.dev.jna:jna:5.14.0@aar")
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")

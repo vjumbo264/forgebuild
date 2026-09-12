@@ -48,9 +48,11 @@ fun SettingsScreen(
     var showClearZernioDialog by remember { mutableStateOf(false) }
 
     // Bind the local input state to the LOADED settings values so previously-saved
-    // watermark/Zernio-key/etc. actually appear in the field once loadSettings() returns.
+    // watermark/etc. actually appear in the field once loadSettings() returns.
+    // The Zernio API key is a sealed GitHub Actions secret: its value can never be
+    // read back, so the input starts empty and only ever holds a NEW key the user types.
     var watermarkInput by remember(settings.watermarkText) { mutableStateOf(settings.watermarkText) }
-    var zernioKeyInput by remember(settings.zernioApiKey) { mutableStateOf(settings.zernioApiKey) }
+    var zernioKeyInput by remember { mutableStateOf("") }
     var newsInput by remember { mutableStateOf("") }
 
     Scaffold(
@@ -338,23 +340,32 @@ fun SettingsScreen(
                         )
                     }
 
-                    // Status row so the user can immediately see whether the key is saved / active.
+                    // Status row driven by the SEALED-secret existence check, never a
+                    // plaintext value (the key is a GitHub Actions secret and unreadable).
                     val statusText = when {
-                        settings.zernioApiKey.isBlank() -> "No API key saved yet"
+                        !settings.zernioKeyConfigured -> "No API key saved yet"
                         settings.zernioEnabled -> "Active — publishing enabled"
                         else -> "Key saved — publishing paused"
                     }
                     val statusColor = when {
-                        settings.zernioApiKey.isBlank() -> MaterialTheme.colorScheme.onSurfaceVariant
+                        !settings.zernioKeyConfigured -> MaterialTheme.colorScheme.onSurfaceVariant
                         settings.zernioEnabled -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.tertiary
                     }
                     AssistChip(onClick = {}, label = { Text(statusText, color = statusColor) })
 
+                    if (settings.zernioKeyConfigured) {
+                        Text(
+                            "An API key is saved (stored securely as a GitHub Actions secret). Enter a new key below only to replace it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     OutlinedTextField(
                         value = zernioKeyInput,
                         onValueChange = { zernioKeyInput = it },
-                        label = { Text("Zernio API Key") },
+                        label = { Text(if (settings.zernioKeyConfigured) "Replace Zernio API Key" else "Zernio API Key") },
                         placeholder = { Text("zn_api_••••••••") },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -370,15 +381,15 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             if (zSaveBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                            Text("Save Key")
+                            Text("Save")
                         }
-                        if (settings.zernioApiKey.isNotBlank()) {
+                        if (settings.zernioKeyConfigured) {
                             OutlinedButton(
                                 onClick = { showClearZernioDialog = true },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Clear Key")
+                                Text("Remove Key")
                             }
                         }
                     }
@@ -404,13 +415,33 @@ fun SettingsScreen(
 
                     if (settings.zernioAccounts.isEmpty()) {
                         Text(
-                            "No channels linked yet. Once a channel is connected on Zernio, tap \u2018Refresh\u2019 to pull it into this list.",
+                            "No connected accounts found. Connect accounts in the Telegram bot or on Zernio, then tap \u2018Refresh\u2019.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         settings.zernioAccounts.forEach { acc ->
-                            Text("• $acc", style = MaterialTheme.typography.bodySmall)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(acc.label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        acc.platform.replaceFirstChar { it.uppercase() } + if (acc.username.isNotBlank()) " · @${acc.username}" else "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                val (stateLabel, stateColor) = when {
+                                    acc.needsReconnection -> "Reconnect" to MaterialTheme.colorScheme.error
+                                    !acc.isActive -> "Inactive" to MaterialTheme.colorScheme.onSurfaceVariant
+                                    !acc.enabled -> "Disabled" to MaterialTheme.colorScheme.onSurfaceVariant
+                                    else -> "Active" to MaterialTheme.colorScheme.primary
+                                }
+                                Text(stateLabel, style = MaterialTheme.typography.labelSmall, color = stateColor)
+                            }
                         }
                     }
                 }
@@ -464,8 +495,8 @@ fun SettingsScreen(
     if (showClearZernioDialog) {
         AlertDialog(
             onDismissRequest = { showClearZernioDialog = false },
-            title = { Text("Clear Zernio Key") },
-            text = { Text("Clear stored Zernio API key and disable publishing?") },
+            title = { Text("Remove Zernio Key") },
+            text = { Text("Remove the stored Zernio API key (the GitHub Actions secret) and disable publishing? Connected accounts are kept.") },
             confirmButton = {
                 val clearBusy = busyOps.contains("clear_zernio")
                 TextButton(
@@ -477,7 +508,7 @@ fun SettingsScreen(
                     enabled = !clearBusy
                 ) {
                     if (clearBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
-                    Text("Clear")
+                    Text("Remove")
                 }
             },
             dismissButton = {
