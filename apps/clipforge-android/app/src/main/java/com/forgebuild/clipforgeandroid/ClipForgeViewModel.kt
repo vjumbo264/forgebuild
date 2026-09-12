@@ -161,34 +161,66 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _cloneProgress = MutableStateFlow<String?>(null)
     val cloneProgress: StateFlow<String?> = _cloneProgress
 
+    /** Live copy progress for the onboarding "Create New Clone" flow (fix #2):
+     *  stage + done/total straight from the one-time copy workflow's status file. */
+    data class CloneCopyProgress(val stage: String, val done: Int, val total: Int)
+
+    private val _cloneCopyProgress = MutableStateFlow<CloneCopyProgress?>(null)
+    val cloneCopyProgress: StateFlow<CloneCopyProgress?> = _cloneCopyProgress
+
+    /**
+     * Fix #2: faithful port of the bot's real clone-creation flow
+     * (beginShadowCloneCreation -> pollShadowCloneJob -> finalizeShadowClone in
+     * bot/src/github.js — see data/ShadowClone.kt for the bug-45/46/47/51/63 notes).
+     * The old implementation here was a simplified guess (empty auto_init repo +
+     * 4 branding seeds, no source copy, no polling) — replaced wholesale.
+     *
+     * "Create it and you're in": on success the app logs into the new clone
+     * immediately (same credentials object the connect flow stores) — there is
+     * no separate manual login step afterwards.
+     */
     fun createClone(pat: String, repoName: String) = viewModelScope.launch {
-        val name = repoName.trim().ifBlank { "clipforge-clone" }
+        val token = pat.trim()
+        if (token.isBlank()) { toast("Enter a GitHub PAT first"); return@launch }
         _cloneProgress.value = "Creating private repo…"
         withBusy("create_clone") {
             try {
-                val temp = GitHubClient(pat.trim(), "", "")
-                val user = temp.whoami().optString("login")
-                val created = temp.createRepo(name)
-                val owner = created.getJSONObject("owner").getString("login")
-                val c = GitHubClient(pat.trim(), owner, name)
-                _cloneProgress.value = "Seeding branding and settings…"
-                // Seed the canonical bot shapes so a fresh clone is interchangeable
-                // with the Telegram bot from the start (never the legacy invented keys).
-                c.putFile("branding/tts_settings.json", JSONObject().put("version", 1).put("engine", "edge-tts").put("voice", Voices.DEFAULT).put("voice_label", "Andrew").put("rate", "+20%").put("volume", "+0%").put("pitch", "+0Hz").put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: save Edge TTS narrator")
-                c.putFile("branding/series_settings.json", JSONObject().put("version", 1).put("enabled", false).put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: update Series Mode setting")
-                c.putFile("branding/creator_watermark.json", JSONObject().put("version", 1).put("creator_name", "").put("updated_at_epoch", nowEpoch()).toString(2).toByteArray(), "clipforge: update creator watermark")
-                c.putFile("branding/zernio_settings.json", defaultZernioSettings().toString(2).toByteArray(), "clipforge: update Zernio publishing settings")
-
-                val credentials = CredentialStore.CloneCredentials(pat.trim(), owner, name, user)
+                val result = ShadowClone.begin(
+                    pat = token,
+                    requestedName = repoName,
+                    onProgress = { stage, done, total ->
+                        // Same stage names the bot reports: source -> copy -> finalize.
+                        _cloneProgress.value = when (stage) {
+                            ShadowClone.STAGE_SOURCE -> "Reading ClipForge source tree…"
+                            ShadowClone.STAGE_COPY ->
+                                if (total > 0) "Copying source files… $done/$total"
+                                else "Starting the copy workflow…"
+                            ShadowClone.STAGE_FINALIZE ->
+                                if (total > 0) "Finalizing clone… $done/$total"
+                                else "Finalizing clone…"
+                            else -> "Working…"
+                        }
+                        _cloneCopyProgress.value = CloneCopyProgress(stage, done, total)
+                    }
+                )
+                // Auto-login into the freshly created clone ("create it and you're in").
+                // ShadowClone verified the default branch holds the copied tree, so the
+                // client is ready for normal use immediately.
+                val credentials = CredentialStore.CloneCredentials(
+                    token, result.login, result.name, result.login
+                )
                 creds.save(credentials)
-                api = c
+                api = GitHubClient(token, result.login, result.name)
                 _login.value = credentials
-                toast("Created and connected $owner/$name")
+                toast("Created and connected ${result.repo} (${result.copiedFiles} files)")
                 refreshAll()
+            } catch (e: ShadowClone.CloneException) {
+                toast(e.message ?: "Clone creation failed")
             } catch (e: Exception) {
                 toast("Clone creation failed: ${e.message}")
             } finally {
                 _cloneProgress.value = null
+                _cloneCopyProgress.value = null
             }
         }
     }

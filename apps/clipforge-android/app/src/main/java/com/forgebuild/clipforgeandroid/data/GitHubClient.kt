@@ -71,11 +71,14 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         Unit
     }
 
+    /** Bot parity (github.js beginShadowCloneCreation): private, auto_init FALSE —
+     *  the Contents-API bootstrap PUT creates the first commit + ref (bug-46: the
+     *  Git Data API 409s on a repo with zero refs, the Contents API does not). */
     suspend fun createRepo(name: String): JSONObject = JSONObject(
         execute(
             base("$api/user/repos").post(
                 JSONObject().put("name", name).put("private", true)
-                    .put("auto_init", true).put("description", "ClipForge clone")
+                    .put("auto_init", false).put("description", "Private ClipForge Shadow Clone")
                     .toString().toRequestBody("application/json".toMediaType())
             ), 200..299
         ).second
@@ -88,9 +91,64 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         return b.getJSONObject("commit").getString("sha")
     }
 
+    // ---- git data / refs (Shadow Clone port, bot github.js parity) ----
+
+    /** GET /git/ref/heads/<branch> — returns the ref's commit sha, throws on missing ref. */
+    suspend fun branchRefSha(branch: String): String {
+        val j = JSONObject(execute(base("$api/repos/$owner/$repo/git/ref/heads/$branch").get()).second)
+        return j.getJSONObject("object").getString("sha")
+    }
+
+    /** branchRefSha for ref-settling loops: null when the ref does not exist yet. */
+    suspend fun branchRefShaOrNull(branch: String): String? = try {
+        branchRefSha(branch)
+    } catch (e: GhException) {
+        if (e.code == 404) null else throw e
+    }
+
+    /** GET /git/commits/<sha> -> the commit's tree sha. */
+    suspend fun gitCommitTreeSha(commitSha: String): String {
+        val j = JSONObject(execute(base("$api/repos/$owner/$repo/git/commits/$commitSha").get()).second)
+        return j.getJSONObject("tree").getString("sha")
+    }
+
+    /** GET /git/trees/<sha>?recursive=1 — the full (possibly large) tree object. */
+    suspend fun gitTreeRecursive(treeSha: String): JSONObject = JSONObject(
+        execute(base("$api/repos/$owner/$repo/git/trees/$treeSha?recursive=1").get()).second
+    )
+
+    /** GET /git/blobs/<sha> — {content: base64, encoding: base64} (for workflow-file copies). */
+    suspend fun gitBlobBase64(blobSha: String): JSONObject = JSONObject(
+        execute(base("$api/repos/$owner/$repo/git/blobs/$blobSha").get()).second
+    )
+
+    /** POST /git/refs — create refs/heads/<branch> at [sha] (branch normalization). */
+    suspend fun createRef(ref: String, sha: String) {
+        execute(
+            base("$api/repos/$owner/$repo/git/refs").post(
+                JSONObject().put("ref", ref).put("sha", sha)
+                    .toString().toRequestBody("application/json".toMediaType())
+            )
+        )
+    }
+
+    /** PATCH /repos/{repo} — set the default branch (branch normalization). */
+    suspend fun patchDefaultBranch(branch: String): JSONObject = JSONObject(
+        execute(
+            base("$api/repos/$owner/$repo")
+                .patch(JSONObject().put("default_branch", branch)
+                    .toString().toRequestBody("application/json".toMediaType()))
+        ).second
+    )
+
+    /** DELETE /git/refs/heads/<branch> — remove the pre-normalization branch. */
+    suspend fun deleteBranchRef(branch: String) {
+        execute(base("$api/repos/$owner/$repo/git/ref/heads/$branch").delete(), 200..204)
+    }
+
     // ---- contents API ----
-    suspend fun readFile(path: String): Pair<String, String>? = withContext(Dispatchers.IO) {
-        client.newCall(base("$api/repos/$owner/$repo/contents/$path?ref=main").get().build()).execute().use { resp ->
+    suspend fun readFile(path: String, ref: String = "main"): Pair<String, String>? = withContext(Dispatchers.IO) {
+        client.newCall(base("$api/repos/$owner/$repo/contents/$path?ref=$ref").get().build()).execute().use { resp ->
             if (resp.code == 404) return@withContext null
             val body = resp.body?.string().orEmpty()
             if (resp.code != 200) throw GhException(resp.code, body.take(400))
@@ -138,12 +196,13 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         bytes: ByteArray,
         message: String,
         sha: String? = null,
-        onProgress: ((bytesSent: Long, totalBytes: Long) -> Unit)? = null
+        onProgress: ((bytesSent: Long, totalBytes: Long) -> Unit)? = null,
+        branch: String = "main"
     ) = withContext(Dispatchers.IO) {
         // Resolve the current sha unless the caller supplied one explicitly.
         val effectiveSha: String? = sha ?: run {
             try {
-                readFile(path)?.second
+                readFile(path, branch)?.second
             } catch (e: GhException) {
                 if (e.code == 404) null else throw e
             }
@@ -152,7 +211,7 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         val payload = JSONObject()
             .put("message", message)
             .put("content", b64Content)
-            .put("branch", "main")
+            .put("branch", branch)
         if (effectiveSha != null) payload.put("sha", effectiveSha)
 
         val rawJson = payload.toString().toByteArray(Charsets.UTF_8)
@@ -176,12 +235,16 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
         }
 
         val req = base("$api/repos/$owner/$repo/contents/$path").put(countingBody)
-        execute(req)
+        // Return the response BODY (the Contents-API create/update response carries
+        // content + commit — the Shadow Clone bootstrap needs commit.sha). Every
+        // pre-existing caller ignores the return value, so this is additive.
+        val (_, body) = execute(req)
         onProgress?.invoke(totalLength, totalLength)
+        body
     }
 
-    suspend fun deleteFile(path: String, sha: String, message: String) {
-        val payload = JSONObject().put("message", message).put("sha", sha).put("branch", "main")
+    suspend fun deleteFile(path: String, sha: String, message: String, branch: String = "main") {
+        val payload = JSONObject().put("message", message).put("sha", sha).put("branch", branch)
         execute(
             base("$api/repos/$owner/$repo/contents/$path")
                 .method("DELETE", payload.toString().toRequestBody("application/json".toMediaType()))
@@ -189,8 +252,8 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
     }
 
     // ---- actions ----
-    suspend fun dispatchWorkflow(file: String, inputs: Map<String, String>) {
-        val payload = JSONObject().put("ref", "main")
+    suspend fun dispatchWorkflow(file: String, inputs: Map<String, String>, ref: String = "main") {
+        val payload = JSONObject().put("ref", ref)
         val inObj = JSONObject()
         inputs.forEach { (k, v) -> inObj.put(k, v) }
         payload.put("inputs", inObj)
@@ -270,6 +333,16 @@ class GitHubClient(val pat: String, val owner: String, val repo: String) {
 
     suspend fun runInfo(runId: Long): JSONObject =
         JSONObject(execute(base("$api/repos/$owner/$repo/actions/runs/$runId").get()).second)
+
+    /** GET /actions/runs?per_page=N — repo-wide run list (clone-copy run discovery). */
+    suspend fun actionsRuns(perPage: Int = 10): JSONObject = JSONObject(
+        execute(base("$api/repos/$owner/$repo/actions/runs?per_page=$perPage").get()).second
+    )
+
+    /** GET /actions/workflows/<file>/runs?per_page=N — per-workflow run list. */
+    suspend fun workflowRuns(workflowFile: String, perPage: Int = 10): JSONObject = JSONObject(
+        execute(base("$api/repos/$owner/$repo/actions/workflows/$workflowFile/runs?per_page=$perPage").get()).second
+    )
 
     suspend fun runJobs(runId: Long): JSONArray =
         JSONObject(execute(base("$api/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100").get()).second)

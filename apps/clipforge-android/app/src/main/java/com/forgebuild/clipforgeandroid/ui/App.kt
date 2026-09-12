@@ -127,6 +127,7 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
     var newRepoName by remember { mutableStateOf("") }
 
     val cloneProgress by vm.cloneProgress.collectAsState()
+    val cloneCopyProgress by vm.cloneCopyProgress.collectAsState()
     val busyOps by vm.busyOps.collectAsState()
     val connectBusy = busyOps.contains("connect")
     val createBusy = busyOps.contains("create_clone")
@@ -217,10 +218,21 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     }
                 }
 
-                cloneProgress?.let {
+                cloneProgress?.let { text ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                        Text(it, style = MaterialTheme.typography.bodySmall)
+                        // Determinate bar while the one-time copy workflow reports
+                        // done/total (fix #2: the copy takes minutes on a runner — the
+                        // UI must show it advancing instead of an indeterminate hum).
+                        val copy = cloneCopyProgress
+                        if (copy != null && copy.stage == "copy" && copy.total > 0) {
+                            LinearProgressIndicator(
+                                progress = { (copy.done.toFloat() / copy.total).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                        }
+                        Text(text, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
