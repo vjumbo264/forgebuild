@@ -1440,9 +1440,14 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             if (!task.seriesEnabled || task.seriesId.isBlank()) continue
             val stateFile = try { c.readFile("jobs/${task.jobId}/super-plan.json") } catch (_: Exception) { null } ?: continue
             val state = try { JSONObject(stateFile.first) } catch (_: Exception) { continue }
-            out[task.seriesId] = SuperSeries.evaluateQueue(state) { id ->
-                try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
+            val statusMap = mutableMapOf<String, String>()
+            state.optJSONArray("spawned")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val id = arr.optJSONObject(i)?.optString("job_id") ?: continue
+                    statusMap[id] = try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } ?: "" } catch (_: Exception) { "" }
+                }
             }
+            out[task.seriesId] = SuperSeries.evaluateQueue(state) { id -> statusMap[id] }
         }
         _superQueues.value = out
     }
@@ -1453,9 +1458,14 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val anchor = taskStore.state.value.firstOrNull { it.seriesEnabled && it.seriesId == seriesId } ?: return@launch
         val stateFile = try { c.readFile("jobs/${anchor.jobId}/super-plan.json") } catch (_: Exception) { null } ?: return@launch
         val state = try { JSONObject(stateFile.first) } catch (_: Exception) { return@launch }
-        _superQueue.value = SuperSeries.evaluateQueue(state) { id ->
-            try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
+        val statusMap = mutableMapOf<String, String>()
+        state.optJSONArray("spawned")?.let { arr ->
+            for (i in 0 until arr.length()) {
+                val id = arr.optJSONObject(i)?.optString("job_id") ?: continue
+                statusMap[id] = try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } ?: "" } catch (_: Exception) { "" }
+            }
         }
+        _superQueue.value = SuperSeries.evaluateQueue(state) { id -> statusMap[id] }
     }
 
     /** Called when the Music screen opens: instant cached render, then background refresh. */

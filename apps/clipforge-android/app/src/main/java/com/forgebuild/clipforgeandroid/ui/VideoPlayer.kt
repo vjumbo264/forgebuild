@@ -123,9 +123,16 @@ private fun PlayerSurface(player: ExoPlayer, modifier: Modifier = Modifier) {
                 controllerShowTimeoutMs = 4000
                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 setBackgroundColor(android.graphics.Color.BLACK)
-                // M3-themed controller bar instead of the stock unstyled look.
-                setControllerBackgroundColor(controllerBg.toArgbInt())
                 this.player = player
+                // M3-themed controller bar instead of the stock unstyled look —
+                // tint the inflated controller container by id (media3-ui 1.4.1 has
+                // no setControllerBackgroundColor API).
+                post {
+                    try {
+                        findViewById<android.view.View>(androidx.media3.ui.R.id.exo_controller)
+                            ?.setBackgroundColor(controllerBg.toArgbInt())
+                    } catch (_: Exception) {}
+                }
             }
         },
         update = { it.player = player },
