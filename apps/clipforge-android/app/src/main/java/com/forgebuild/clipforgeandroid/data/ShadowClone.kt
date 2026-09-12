@@ -28,7 +28,7 @@ import org.json.JSONObject
  *  7. POLL .clipforge-clone-status.json until state=complete (bug-51 budgets:
  *     START 120s / STALL 6min / absolute DEADLINE 10min) — a shadow clone is NOT
  *     ready the instant the repo is created; the copy takes minutes on a runner
- *  8. finalize: copy the source's own .github/workflows/* via the Contents API with
+ *  8. finalize: copy the source's own .github/workflows tree via the Contents API with
  *     the user's PAT (bug-63: a run's GITHUB_TOKEN may never touch workflow paths),
  *     best-effort delete of the one-time workflow, verify the head advanced past
  *     the bootstrap commit, normalize the default branch to main when the account
@@ -409,7 +409,7 @@ object ShadowClone {
         val files = enumerateSourceFiles(source, sourceCommitSha)
 
         try {
-            // bug-63: the run's GITHUB_TOKEN may not write .github/workflows/* — the
+            // bug-63: the run's GITHUB_TOKEN may not write the .github/workflows tree — the
             // copy workflow excluded them on purpose. Finish that job here with the
             // user's PAT (Contents API PUT, sha of any existing file included).
             val workflowFiles = files.filter {

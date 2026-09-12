@@ -9,7 +9,7 @@ package com.forgebuild.clipforgeandroid.data
  * commit, performs the bulk file copy on a runner (progress lands in
  * .clipforge-clone-status.json, which the app polls), and is deleted by the
  * app's finalize step with the user's PAT afterwards (bug-63: a run's
- * GITHUB_TOKEN may never touch .github/workflows/*, even to delete).
+ * GITHUB_TOKEN may never touch the .github/workflows paths, even to delete).
  *
  * Every literal '$' is written as ${'$'} so it survives Kotlin raw-string
  * templating with zero runtime transformation.
