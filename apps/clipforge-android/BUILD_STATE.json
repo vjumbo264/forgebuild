@@ -2,7 +2,7 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-13",
   "current_task": null,
   "tasks": [
@@ -21,8 +21,8 @@
     {
       "id": "task-82",
       "title": "Verify ordinary-series restart controls + app GitHub-writes-only Super Series (issues 2 + 1a)",
-      "status": "in_progress",
-      "notes": "Issue 2: confirmed NO separate bug \u2014 restart controls live on the per-part Task Detail screen ('canRestartB = plan != null || (failedTask && stageBStarted)' TasksScreens.kt) and appear for any spawned part; they were absent only because Super Series never spawned parts (issue 1). Gated on the part's own plan, not series type. Issue 1a E2E: live GitHub-writes-only anchor test running (orchestrate.py) \u2014 asserts Part 1 spawns + title carries 'Part 1'."
+      "status": "done",
+      "notes": "Issue 2: confirmed NO separate bug \u2014 restart controls live on the per-part Task Detail screen ('canRestartB = plan != null || (failedTask && stageBStarted)' TasksScreens.kt) and appear for any spawned part; they were absent only because Super Series never spawned parts (issue 1). Gated on the part's own plan, not series type. Issue 1a E2E: live GitHub-writes-only anchor test running (orchestrate.py) \u2014 asserts Part 1 spawns + title carries 'Part 1'. E2E CONFIRMED LIVE (session-13): GitHub-writes-only anchor (jobs/manual-e2e-*/stage-a-request.json + super-plan.json, NOTHING else) was picked up by the repo-scanning cron sweep within one tick \u2014 jobs/e2esuper-1789264541-p1/production.json spawned with title 'E2E Alpha \u2014 Part 1' (plain authored title -> 'Part 1' appended at slicing, confirming task-81 end to end) and stage-b.yml run 34731756595 dispatched (in_progress). deploy-bots run 34731475435 completed success BEFORE the test, so the live Worker ran the new code. Test artifacts cleaned up. Bot-side flow unchanged: same commands/messages/halt-resume \u2014 only WHERE anchor state is read from changed."
     },
     {
       "id": "task-83",
@@ -39,9 +39,9 @@
     {
       "id": "task-85",
       "title": "Validate build + bump to v9 + release clipforge-android-v9",
-      "status": "in_progress",
-      "notes": "versionCode/versionName 8->9; Settings About 'Version v9'. Brace/paren balance OK on all touched Kotlin files (SeriesScreens 0/0; ViewModel +1 paren is the known pre-existing string-template false positive present since v7). Markers verified: combinedClickable+OptIn+dialog inside SeriesScreen+vm.deleteSeries wired; strOr x11. Release dispatched via release.yml app_path=apps/clipforge-android -> auto-tag clipforge-android-v9."
+      "status": "done",
+      "notes": "versionCode/versionName 8->9; Settings About 'Version v9'. Brace/paren balance OK on all touched Kotlin files (SeriesScreens 0/0; ViewModel +1 paren is the known pre-existing string-template false positive present since v7). Markers verified: combinedClickable+OptIn+dialog inside SeriesScreen+vm.deleteSeries wired; strOr x11. Release dispatched via release.yml app_path=apps/clipforge-android -> auto-tag clipforge-android-v9. RELEASE VERIFIED LIVE via the GitHub Releases API: clipforge-android-v9 with APK + forgebuild-manifest.json assets. Prior releases v1..v8 untouched."
     }
   ],
-  "notes": "SESSION-13 IN PROGRESS (2026-09-13): operator's 4-item Super Series instruction applied. Bot-side fix (task-80/81) in motionssalt/clipforge @11006dde, deploy-bots dispatched. App-side fixes (task-83, task-84) applied; v9 bump. task-82 (restart verification + GitHub-writes-only E2E) and task-85 (v9 release) in progress. NEXT: confirm release clipforge-android-v9 live on Releases API + E2E Part-1 spawn/'Part 1' title, then set build_complete=true."
+  "notes": "SESSION-13 COMPLETE (2026-09-13): all four operator items done and verified. task-80 repo-based Super Series anchor sweep (motionssalt/clipforge @11006dde, deploy-bots run 34731475435 success); task-81 'Part N' banner titles at slicing (JS+Python, 15/15 tests + live E2E title 'E2E Alpha \u2014 Part 1'); task-82 restart controls confirmed a side effect of issue 1 (appear per spawned part via canRestartB) + GitHub-writes-only E2E spawned Part 1 with Stage B run 34731756595 dispatched; task-83 hold-to-delete series w/ AlertDialog confirmation; task-84 step-log 'null' root-caused to org.json optString-on-null, fixed with strOr x11. clipforge-android-v9 VERIFIED LIVE on the Releases API. NOTHING REMAINS."
 }
