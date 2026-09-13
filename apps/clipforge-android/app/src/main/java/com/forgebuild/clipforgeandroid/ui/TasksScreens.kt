@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,8 +62,18 @@ fun TasksScreen(
                             Icon(Icons.Default.Delete, "Delete selected")
                         }
                     } else {
+                        // Session-11 (task-74): the corner refresh button spins while a
+                        // refresh is running — identical feedback to the swipe gesture,
+                        // both drive the same vm.refreshTasks()/tasksRefreshing state.
                         IconButton(onClick = { vm.refreshTasks() }) {
-                            Icon(Icons.Default.Refresh, "Refresh")
+                            if (refreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Refresh, "Refresh")
+                            }
                         }
                     }
                 }
@@ -74,33 +85,41 @@ fun TasksScreen(
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
 
-            if (activeTasks.isEmpty() && !refreshing) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No active tasks. Tap 'New Video' to begin.", style = MaterialTheme.typography.bodyMedium)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(activeTasks, key = { it.jobId }) { task ->
-                        val isSelected = selectedIds.contains(task.jobId)
-                        TaskListItem(
-                            task = task,
-                            isSelected = isSelected,
-                            isSelectionMode = selectedIds.isNotEmpty(),
-                            onClick = {
-                                if (selectedIds.isNotEmpty()) {
+            // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area;
+            // the pull indicator spins exactly like the corner button does.
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = { vm.refreshTasks() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (activeTasks.isEmpty() && !refreshing) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No active tasks. Tap 'New Video' to begin.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(activeTasks, key = { it.jobId }) { task ->
+                            val isSelected = selectedIds.contains(task.jobId)
+                            TaskListItem(
+                                task = task,
+                                isSelected = isSelected,
+                                isSelectionMode = selectedIds.isNotEmpty(),
+                                onClick = {
+                                    if (selectedIds.isNotEmpty()) {
+                                        selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                    } else {
+                                        onSelectTask(task.jobId)
+                                    }
+                                },
+                                onLongClick = {
                                     selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                                } else {
-                                    onSelectTask(task.jobId)
                                 }
-                            },
-                            onLongClick = {
-                                selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -151,8 +170,16 @@ fun CompletedScreen(
                             Icon(Icons.Default.Delete, "Delete selected")
                         }
                     } else {
+                        // Session-11 (task-74): spinning corner refresh — same state as swipe.
                         IconButton(onClick = { vm.refreshTasks() }) {
-                            Icon(Icons.Default.Refresh, "Refresh")
+                            if (refreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.Refresh, "Refresh")
+                            }
                         }
                     }
                 }
@@ -164,33 +191,40 @@ fun CompletedScreen(
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
 
-            if (completedTasks.isEmpty() && !refreshing) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No completed videos yet.", style = MaterialTheme.typography.bodyMedium)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(completedTasks, key = { it.jobId }) { task ->
-                        val isSelected = selectedIds.contains(task.jobId)
-                        TaskListItem(
-                            task = task,
-                            isSelected = isSelected,
-                            isSelectionMode = selectedIds.isNotEmpty(),
-                            onClick = {
-                                if (selectedIds.isNotEmpty()) {
+            // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area.
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = { vm.refreshTasks() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (completedTasks.isEmpty() && !refreshing) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No completed videos yet.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(completedTasks, key = { it.jobId }) { task ->
+                            val isSelected = selectedIds.contains(task.jobId)
+                            TaskListItem(
+                                task = task,
+                                isSelected = isSelected,
+                                isSelectionMode = selectedIds.isNotEmpty(),
+                                onClick = {
+                                    if (selectedIds.isNotEmpty()) {
+                                        selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                    } else {
+                                        onSelectTask(task.jobId)
+                                    }
+                                },
+                                onLongClick = {
                                     selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                                } else {
-                                    onSelectTask(task.jobId)
                                 }
-                            },
-                            onLongClick = {
-                                selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

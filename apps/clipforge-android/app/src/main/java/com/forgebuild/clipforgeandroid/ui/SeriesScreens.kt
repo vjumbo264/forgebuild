@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +41,16 @@ fun SeriesScreen(
             TopAppBar(
                 title = { Text("Series") },
                 actions = {
+                    // Session-11 (task-74): spinning corner refresh — same state as swipe.
                     IconButton(onClick = { vm.refreshTasks() }) {
-                        Icon(Icons.Default.Refresh, "Refresh")
+                        if (refreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Refresh, "Refresh")
+                        }
                     }
                 }
             )
@@ -52,12 +61,18 @@ fun SeriesScreen(
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             }
 
-            if (seriesGroups.isEmpty() && !refreshing) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No series created yet. Start a Series Video from 'New Video'.", style = MaterialTheme.typography.bodyMedium)
-                }
-            } else {
-                LazyColumn(
+            // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area.
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = { vm.refreshTasks() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (seriesGroups.isEmpty() && !refreshing) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No series created yet. Start a Series Video from 'New Video'.", style = MaterialTheme.typography.bodyMedium)
+                    }
+                } else {
+                    LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -111,6 +126,8 @@ fun SeriesScreen(
                             }
                         }
                     }
+                }
+                // Session-11 (task-74): close PullToRefreshBox wrapper
                 }
             }
         }
