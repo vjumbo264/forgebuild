@@ -441,3 +441,28 @@ Step 2 — rebuild against the exact real flow:
 - Every Super Series part is, from Stage B onward, an ordinary job for every other purpose — logs (real GitHub Actions log view), download, in-app preview all reuse the exact same task-detail code ordinary tasks use, with no special-casing beyond the restart/cancel-scope and no-next-part-button rules above.
 
 Step 3 — verify end to end using the now-fixed backend: enable Series Mode, enable Super Series, submit a real super-plan, confirm Part 1 dispatches and its video banner shows "Part 1", confirm Part 2 dispatches automatically on Part 1's completion with no manual action and no client needing to stay open, confirm no "Start Next Part" button anywhere in this Super Series's parts, confirm only the current part (or Stage A) shows restart/cancel controls, and confirm a deliberately-failed part halts the chain and resumes correctly once restarted.
+
+---
+
+## 2026-09-13 — Operator instruction (slow "Local vision-assist stack" visibility fix in motionssalt/clipforge + ForgeBuild Dashboard stuck-"ongoing" fix)
+
+Target repos: https://github.com/motionssalt/clipforge (GITHUB_REPO_PAT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID provided in the prompt; redacted here per credential policy — never committed) and https://github.com/vjumbo264/forgebuild (same GITHUB_PAT placeholder as the contract header).
+
+Part 1 — Investigate + add visibility to a slow "Local vision-assist stack" step (DO NOT add a timeout, kill switch, or anything that fails this step early):
+
+The step has run reliably (typically 2-3 minutes) and never failed; one recent run took 20+ minutes with zero visibility because `detect_shots` in `pipeline/stage_a/scenes.py` calls `subprocess.run(cmd, capture_output=True, text=True)` on the ffmpeg scene-detection pass with no progress output until the single-pass decode finishes. Git history shows the file was only ever touched once (original implementation commit) — no recent regression; most likely cause is an unusually long/high-resolution/high-scene-activity source video or a slower runner, NOT a broken approach. Required:
+
+1. Check the slow job's actual source video duration/resolution/bitrate (via ffprobe, from the recoverable work directory or the job's own logged ffprobe/duration-detection step earlier in Stage A) and compare against a few typical prior runs in the normal 2-3 minute range; record the finding in BUILD_STATE.json notes regardless of outcome.
+2. Do NOT add a `timeout=` or any other mechanism that aborts/fails/errors this step based on elapsed time — a slow-but-completing run must still complete successfully.
+3. Fix the real issue: give the step live progress visibility. Change this specific call (and any other single-pass `subprocess.run(..., capture_output=True)` calls in the same vision-assist stack sharing the no-visibility-until-done problem — check `scenes.py` fully, not just `detect_shots`) to stream ffmpeg's stderr line-by-line as produced (e.g. `subprocess.Popen` with piped output read incrementally, printing each line as it arrives) instead of capturing silently and dumping at the end.
+4. If step 1 finds the source was a clear outlier, note that as the explanation and do not otherwise alter detection logic — only the visibility fix is warranted. If nothing unusual is found and the slowdown remains unexplained even after live progress, note it in BUILD_STATE.json as still-open rather than inventing a fix.
+5. Verify the visibility fix doesn't change the step's behavior or output at all — same shot-boundary results, same file outputs, same success path — only live progress lines added to the Actions log.
+
+Part 2 — Previously-requested ForgeBuild fix, now in scope (repo: https://github.com/vjumbo264/forgebuild):
+
+The ClipForge Android app's release status on the ForgeBuild Dashboard is stuck showing version 9 as "ongoing" even though nothing is running; the operator must go to the repo's Releases page directly for the real APK. Fix:
+
+1. Find exactly how the Dashboard determines a version is "ongoing" (almost certainly reading `apps/<slug>/BUILD_STATE.json` for `build_complete: false` or an in-progress task status). Check that file for the ClipForge app: genuinely stuck (session ended without final checkpoint) or Dashboard status-detection logic wrong (deriving "ongoing" from a tag's mere existence rather than the actual build workflow run's completion).
+2. If BUILD_STATE.json is stale, correct it to reflect reality based on the repo's actual state and commit history — don't blindly mark complete without confirming.
+3. If the Dashboard's status logic is the bug, fix it to derive version status from the actual corresponding GitHub Actions workflow run's real state via the Actions API, not from BUILD_STATE.json or a tag's existence alone.
+4. Verify specifically against ClipForge version 9: the Dashboard must show its true state afterward, and the real release/APK must be reachable directly from the Dashboard without going to the Releases page manually.
