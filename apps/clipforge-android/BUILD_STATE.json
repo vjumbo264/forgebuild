@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": true,
-  "updated_by": "session-18",
-  "current_task": "task-88",
+  "build_complete": false,
+  "updated_by": "session-19",
+  "current_task": "task-90",
   "tasks": [
     {
       "id": "task-80",
@@ -59,14 +59,31 @@
       "title": "Fix Super Series Stage B never dispatching (root cause: queue sweep lived in removed bot cron)",
       "status": "done",
       "notes": "ROOT CAUSE (session-18): super-plan.json was written but nothing advanced the queue \u2014 the sweep that spawns Part 1 and dispatches stage-b.yml lived only in the deleted Telegram bot's per-minute cron; the new Dashboard's supertick only runs while a browser tab is open; the app wrote the plan then stopped (status lied 'part 1 dispatched' with spawned:[]). FIX (two layers, both idempotent, cursor = super-plan.json so no double-dispatch): (a) app now self-advances the queue in advanceSuperQueue() \u2014 writes part1 request/plan/status, marks spawned, dispatches stage-b.yml directly; (b) headless scheduled super-sweep.yml + scripts/super_sweep/super-sweep.mjs in motionssalt/clipforge (commit a5edd9e) runs every minute + on super-plan push. LIVE-VERIFIED: ran sweep -> stuck anchor manual-1789293925543 spawned series-1789293925544-p1 and Stage B run in_progress in Actions. STILL PENDING: Pages deploy BLOCKED \u2014 provided CLOUDFLARE_API_TOKEN lacks 'Cloudflare Pages' permission (403 code 10000; Workers OK). Bot A/B + D1 deletion remains deferred per ordering rule (bot still the only thing driving non-super features until site is live). | RELEASED clipforge-android-v12 (release.yml run completed success; assets app-clipforge-android-v12.apk + forgebuild-manifest.json). build_complete=true."
+    },
+    {
+      "id": "task-89",
+      "title": "Rewrite Super Series Stage B dispatch = ordinary Stage B chained by completion",
+      "status": "done",
+      "notes": "DONE (session-19) motionssalt/clipforge: cron super-sweep.yml + duplicate-dispatch super-sweep.mjs DELETED; replaced by super-chain.yml (workflow_run on stage-b.yml completion) + scripts/super_chain/{dispatch.mjs,super-chain.mjs} = ONE shared dispatch (exact equivalent of site/js/github.js dispatchWorkflow). Success completion of a spawned part directly dispatches next part; failure/cancel halts until restart whose completion resumes. No cron/poll/client. Site dispatch-on-poll removed (display-only). LIVE-VERIFIED UNATTENDED: synthetic part1-complete -> super-chain run 34761619538 wrote part2 files + dispatched REAL stage-b run 34761630942 with zero clients; failure event -> run 34761659843 dispatched nothing (p3 404, halt correct). App advanceSuperQueue already Part-1-only (returns if spawned>0) \u2014 no app code delta."
+    },
+    {
+      "id": "task-90",
+      "title": "Finish Telegram-bot-removal migration (Pages parity verify, delete Bot A/B + D1 + KV + dead workflows)",
+      "status": "in_progress",
+      "notes": "IN PROGRESS (session-19). Pages clipforge-dashboard DEPLOYED live https://clipforge-dashboard-3sp.pages.dev (deploy aa071fe2), verified serving real ClipForge Dashboard HTML; earlier 403 resolved. PENDING in order: (1) full feature-parity verify vs live Pages (clone/auto-login, task creation all source kinds, task detail real Actions logs, restart/cancel, ordinary Series, Super Series chained dispatch, all Settings, Zernio, multi-select delete, audio caching, video preview/download) \u2014 fix broken now; (2) delete Bot A/B Workers + CLIPFORGE_BOT_D1 + bot KV; (3) archive bot/ under _legacy/, delete deploy-bots.yml + telegram-relay.yml; (4) update ARCHITECTURE.md + README to GitHub-only/no-Worker/no-bot; (5) re-verify; (6) set build_complete=true + release next app version. Bot NOT deleted until parity verified per ordering rule."
     }
   ],
-  "notes": "SESSION-15 COMPLETE (2026-09-13): EXTEND/UPDATE contract reconciled and closed. Contract task 1 gate: at session start task-87 was 'pending', nothing 'in_progress' => this EXTEND/UPDATE contract (not RESUME) applies. Contract task 2: NEW INSTRUCTION (ClipForge bot-removal / GitHub-only Dashboard migration) is the SAME instruction already appended to PROMPT_HISTORY/clipforge-android.md in session-14 (b8caca4, verified on origin/main) - not re-appended to avoid duplicating append-only history. Contract tasks 3-4 (implement + audit): session-14 task-86 found NO app-side code deltas required (telegram_channel main-account gate present in NewTaskWizard/SourceClassifier; backend already GitHub-writes-only via GitHubClient with no Worker/D1/KV dependency; log rework strOr x11 + per-step sections + active-step auto-expand + cached append-only polling landed in v9). Contract task 5 (release + verify live + build_complete): the post-migration checkpoint release is verified LIVE as clipforge-android-v11 (see task-87 notes for the v10-tag-skip root cause). build_complete set true. The Dashboard migration itself (motionssalt/clipforge site/, task-01..task-12) proceeds under that repo's own site/BUILD_STATE.json and contracts - out of scope for this app contract. App is compatible with the GitHub-only backend both before and after bot deletion because it never touches the bot Worker/D1/KV.",
+  "notes": "SESSION-19 (2026-09-13): Super Series Stage B rewritten to completion-chained ordinary Stage B (task-89, live-verified unattended + halt-on-failure). Pages Dashboard live (task-90 in progress). App needed no code delta (drive already Part-1-only; GitHub-native chaining owns parts 2+). Bot deletions deferred until live parity pass per ordering rule. build_complete=false pending task-90.",
   "session_log": [
     {
       "session": "session-17",
       "date": "2026-09-13",
       "summary": "EXTEND/UPDATE contract re-run. Gate: build_complete already true, nothing in_progress, latest live release clipforge-android-v11 (post-migration checkpoint). The migration instruction was already appended to PROMPT_HISTORY/clipforge-android.md in session-14 (b8caca4) and audited app-side in session-14 task-86 (no app code delta required \u2014 telegram_channel gate present, backend GitHub-writes-only, log rework landed in v9). No new app source delta this session -> per never-redo-completed-work, NO redundant rebuild/release dispatched (would rebuild identical source). Operator's current directive executed against motionssalt/clipforge site/: resumed at task-09 (multi-select+delete, cached audio, video preview, FS-Access download) and task-10 (catalog cross-check + Gemini/news gap fixes) \u2014 both done, committed, pushed, verified on origin/main; task-11 Dashboard live on Pages; full live E2E + task-12 bot/D1 deletion remain in motionssalt/clipforge site/BUILD_STATE.json."
+    },
+    {
+      "session": "session-19",
+      "date": "2026-09-13",
+      "summary": "Super Series Stage B = completion-chained ordinary Stage B (super-chain.yml workflow_run; cron sweep + duplicate dispatch deleted). Live-verified unattended (part2 auto-dispatch run 34761630942) + halt-on-failure (no part3). Pages live at clipforge-dashboard-3sp.pages.dev. Bot/D1/KV deletion deferred until parity pass. No app code delta."
     }
   ]
 }
