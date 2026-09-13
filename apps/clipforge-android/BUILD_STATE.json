@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-12",
-  "current_task": "task-79",
+  "current_task": null,
   "tasks": [
     {
       "id": "task-74",
@@ -39,9 +39,9 @@
     {
       "id": "task-79",
       "title": "Release clipforge-android-v8 via release.yml and verify live on the Releases API",
-      "status": "pending",
-      "notes": "Dispatch the Build & Release App APK workflow (POST /repos/vjumbo264/forgebuild/actions/workflows/release.yml/dispatches, ref=main, inputs app_path='apps/clipforge-android', release_notes summarizing task-74..77). NEVER overwrite/delete prior releases v1..v7. Poll the run to success; if the build fails, fix and re-dispatch (tag auto-increments only on success). Verify the release live via the GitHub Releases API (APK + forgebuild-manifest.json assets present), then set build_complete: true."
+      "status": "done",
+      "notes": "DONE (session-12, 2026-09-13): first dispatch (run 34728732548, commit 16b0d8fb) failed at :app:compileReleaseKotlin — a Kotlin syntax error in my task-75 SAF toast (escaped quotes \\\"file\\\" are illegal inside a ${...} template). Fixed at SettingsScreen.kt:60 (plain quotes inside the template), both validation harnesses re-passed, pushed as bb7b313, release re-dispatched (run 34728825819) — completed success. VERIFIED LIVE via the GitHub Releases API: release clipforge-android-v8 with assets app-clipforge-android-v8.apk (5,282,210 bytes) + forgebuild-manifest.json (726 bytes). Prior releases v1..v7 untouched. build_complete=true set."
     }
   ],
-  "notes": "SESSION-12 (2026-09-13): tasks 74-78 DONE (74 PUSHED 82e28a27 swipe-to-refresh+spinning corner refresh; 75 PUSHED 4290cbbc SAF diag-log export; 76 PUSHED cb8c50f4 per-part rows on Series overview; 77 PUSHED eb5ab48c prompt part-number/Super-Series wording; 78 validation harness green + v8 bump, this commit). REMAINING: task-79 — dispatch release.yml (app_path=apps/clipforge-android), poll to success, verify clipforge-android-v8 live on the Releases API (APK + forgebuild-manifest.json), then build_complete=true."
+  "notes": "SESSION-12 COMPLETE (2026-09-13): all operator instructions of the 2026-09-12 prompt implemented, validated, released and verified. v8 (clipforge-android-v8) is LIVE with APK + manifest assets. Commit chain: 82e28a27 (task-74 swipe-to-refresh + spinning corner refresh), 4290cbbc (task-75 SAF diag-log export to Documents/ClipForge via picker), cb8c50f4 (task-76 per-part Part 1/2/3 rows on Series overview incl. upcoming Super Series parts), eb5ab48c (task-77 prompt wording — series part number + Super Series identity/parts), 16b0d8f (task-78 validate_session12.py harness + v8 bump), bb7b313 (task-79 build-fix: string-template syntax error), release run 34728825819 -> clipforge-android-v8 verified live. NOTHING REMAINS for this prompt. NEXT SESSION: read this file; if a new operator instruction has been appended to PROMPT_HISTORY/clipforge-android.md, seed new tasks for it; otherwise nothing to do."
 }
