@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "session-14",
-  "current_task": "task-86",
+  "build_complete": true,
+  "updated_by": "session-15",
+  "current_task": "task-87",
   "tasks": [
     {
       "id": "task-80",
@@ -50,10 +50,10 @@
     },
     {
       "id": "task-87",
-      "title": "Release clipforge-android-v10 (post-migration checkpoint of the app source)",
-      "status": "pending",
-      "notes": "Per EXTEND/UPDATE contract step 5: validate source, bump versionCode/versionName 9->10 + Settings About label, dispatch release.yml (app_path=apps/clipforge-android) -> auto-tag clipforge-android-v10, verify live via the GitHub Releases API. No Kotlin behavior changes this cycle (audit found the app already satisfies every app-side requirement of the instruction — telegram_channel gate, GitHub-only backend, log rework all landed in v9/session-13); the release checkpoints the current source as v10 per the contract's release step."
+      "title": "Release post-migration checkpoint (landed as clipforge-android-v11)",
+      "status": "done",
+      "notes": "DONE (session-15 verification): the post-migration checkpoint release is LIVE and verified via the GitHub Releases API as clipforge-android-v11 (release+tag both 200). Root cause of the tag number: session-14's first release run (34748587283, 08:54) computed v9->v10, but its 'Create GitHub Release' step failed AFTER the v10 tag/draft were created, leaving a dangling v10 tag. The retry run (34749230179, 09:17) therefore computed v10->v11 and softprops published the existing draft in place. The v10 tag/release were then superseded/removed, so no v10 release or tag exists today (404/404). Net: the v10 SOURCE (versionCode/versionName=10, commit b802b2a, 'bump to v10') is exactly what shipped under tag clipforge-android-v11. Manifest confirms: version_notes='clipforge-android v10 - post-migration checkpoint release (session-14)', permissions INTERNET,READ_EXTERNAL_STORAGE,READ_MEDIA_VIDEO,WRITE_EXTERNAL_STORAGE; assets app-clipforge-android-v11.apk (5282210 bytes) + forgebuild-manifest.json present. Prior releases v1..v9 untouched (v9 release+tag still 200). No new source delta this session (task-86 audit found the app already satisfies every app-side requirement), so no redundant rebuild was dispatched - doing so would have rebuilt identical source, violating never-redo-completed-work. Next future release will be v12."
     }
   ],
-  "notes": "SESSION-14 IN PROGRESS (2026-09-13): new operator instruction = ClipForge bot removal / GitHub-only Dashboard migration (motionssalt/clipforge, site/ dashboard, task-01..task-12 seeded in that repo's site/BUILD_STATE.json). Contract tasks 1-2 done: app BUILD_STATE read (no in_progress), prompt appended (b8caca4, verified on origin/main). App-side audit (task-86) found NO code deltas required: telegram_channel main-account gate present, backend already GitHub-only, log rework already done in v9. Remaining: task-87 release v10 per contract step 5. Dashboard migration itself proceeds in motionssalt/clipforge (its site/BUILD_STATE.json drives task-03..task-12)."
+  "notes": "SESSION-15 COMPLETE (2026-09-13): EXTEND/UPDATE contract reconciled and closed. Contract task 1 gate: at session start task-87 was 'pending', nothing 'in_progress' => this EXTEND/UPDATE contract (not RESUME) applies. Contract task 2: NEW INSTRUCTION (ClipForge bot-removal / GitHub-only Dashboard migration) is the SAME instruction already appended to PROMPT_HISTORY/clipforge-android.md in session-14 (b8caca4, verified on origin/main) - not re-appended to avoid duplicating append-only history. Contract tasks 3-4 (implement + audit): session-14 task-86 found NO app-side code deltas required (telegram_channel main-account gate present in NewTaskWizard/SourceClassifier; backend already GitHub-writes-only via GitHubClient with no Worker/D1/KV dependency; log rework strOr x11 + per-step sections + active-step auto-expand + cached append-only polling landed in v9). Contract task 5 (release + verify live + build_complete): the post-migration checkpoint release is verified LIVE as clipforge-android-v11 (see task-87 notes for the v10-tag-skip root cause). build_complete set true. The Dashboard migration itself (motionssalt/clipforge site/, task-01..task-12) proceeds under that repo's own site/BUILD_STATE.json and contracts - out of scope for this app contract. App is compatible with the GitHub-only backend both before and after bot deletion because it never touches the bot Worker/D1/KV."
 }
