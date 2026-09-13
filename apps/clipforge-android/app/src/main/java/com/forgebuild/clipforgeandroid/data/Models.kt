@@ -355,7 +355,7 @@ object AgentPromptBuilder {
         // Super Series anchor task: expects ONE whole-series super-plan, not a
         // single-part production.json — the copied prompt must say so.
         if (request?.optJSONObject("series")?.optBoolean("super_series", false) == true) {
-            return buildSuperSeriesPrompt(status, focusClause)
+            return buildSuperSeriesPrompt(status.seriesId, focusClause)
         }
         val seriesClause = if (status.seriesEnabled) {
             "\n\nSERIES MODE — THIS IS PART " + status.part + " OF THE SERIES \"" + status.seriesId + "\" (not any other part number).\n" +
@@ -375,8 +375,7 @@ object AgentPromptBuilder {
 
 
     /** Prompt for the Super Series anchor task — ONE whole-series super-plan. */
-    private fun buildSuperSeriesPrompt(status: JSONObject, focusClause: String): String {
-        val seriesId = status.optJSONObject("series")?.optString("series_id", "") ?: ""
+    private fun buildSuperSeriesPrompt(seriesId: String, focusClause: String): String {
         return "This task is the ANCHOR of a Super Series — it must be planned as ONE document covering EVERY part, not a single part." + focusClause + "\n" +
             "Produce exactly one super-plan JSON object for the whole series with: a top-level \"series_id\" that is EXACTLY \"" + seriesId + "\", \"video_duration_seconds\", \"target_total_duration_seconds\", and a \"parts\" array listing EVERY part in order.\n" +
             "Each entry in \"parts\" is one part (Part 1 = parts[0], Part 2 = parts[1], ...) and must carry its own nested \"series\" object with series_id EXACTLY \"" + seriesId + "\", its part number, start_seconds and end_seconds, is_final (true ONLY on the last part), and a concise summary of that part.\n" +
