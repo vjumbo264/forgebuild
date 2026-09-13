@@ -1,6 +1,8 @@
 package com.forgebuild.clipforgeandroid.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +22,7 @@ import com.forgebuild.clipforgeandroid.data.TaskStatus
 import com.forgebuild.engine.ui.icons.EngineIcons
 
 /* ---------------- Series Screen (All Series Groups) ---------------- */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SeriesScreen(
     vm: ClipForgeViewModel,
@@ -31,6 +33,28 @@ fun SeriesScreen(
     val tasks by vm.tasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
     val superQueues by vm.superQueues.collectAsState()
+    // Session-13 fix #3: hold-to-delete a whole series (destructive -> confirm first).
+    var seriesPendingDelete by remember { mutableStateOf<String?>(null) }
+
+            // Session-13 fix #3: destructive delete confirmation (native AlertDialog,
+            // matching this app's existing delete-confirmation pattern).
+            seriesPendingDelete?.let { sid ->
+                AlertDialog(
+                    onDismissRequest = { seriesPendingDelete = null },
+                    title = { Text("Delete Series") },
+                    text = { Text("Delete the entire series \"$sid\" and every part/job belonging to it? This cannot be undone.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            seriesPendingDelete = null
+                            vm.deleteSeries(sid)
+                        }) { Text("Delete Permanently", color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { seriesPendingDelete = null }) { Text("Cancel") }
+                    }
+                )
+            }
+
 
     val seriesGroups = remember(tasks) {
         tasks.filter { it.seriesEnabled && it.seriesId.isNotBlank() }
@@ -84,7 +108,10 @@ fun SeriesScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelectSeries(seriesId) }
+                                .combinedClickable(
+                                    onClick = { onSelectSeries(seriesId) },
+                                    onLongClick = { seriesPendingDelete = seriesId }
+                                )
                         ) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(seriesId, style = MaterialTheme.typography.titleMedium)
@@ -184,6 +211,7 @@ fun SeriesScreen(
         }
     }
 }
+
 
 /* ---------------- Series Detail Screen (Ordered Parts) ---------------- */
 @OptIn(ExperimentalMaterial3Api::class)

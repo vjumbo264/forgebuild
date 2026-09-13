@@ -498,6 +498,50 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     /** Manual refresh (pull-to-refresh / refresh button). Never throws. */
     fun refreshTasks() = viewModelScope.launch { taskStore.refresh() }
 
+    /**
+     * Hold-to-delete an entire series (operator fix #3, session-13): removes every
+     * repo job directory identifiable as belonging to [seriesId] (every task the
+     * Series tab grouped under it, plus the Super Series anchor job when present),
+     * then refreshes so the series card disappears. Uses the same repo deleteFile
+     * primitive the app already uses; errors are surfaced via the native toast.
+     */
+    fun deleteSeries(seriesId: String) = viewModelScope.launch {
+        val c = api ?: run { toast("Not connected"); return@launch }
+        val partJobIds = tasks.value
+            .filter { it.seriesEnabled && it.seriesId == seriesId }
+            .map { it.jobId }
+            .toMutableSet()
+        // Super Series anchor job: not a "part" task, so it isn't in partJobIds.
+        // Find it by scanning jobs/*/super-plan.json for this series' queue record.
+        try {
+            val jobsDir = c.listDir("jobs")
+            for (i in 0 until jobsDir.length()) {
+                val d = jobsDir.getJSONObject(i)
+                if (d.optString("type") != "dir") continue
+                val jid = d.optString("name")
+                val sp = c.readFile("jobs/$jid/super-plan.json") ?: continue
+                if (sp.first.contains("\"series_id\": \"$seriesId\"")) partJobIds.add(jid)
+            }
+        } catch (_: Exception) {}
+        var failed = 0
+        for (jobId in partJobIds) {
+            try { deleteJobDir(c, jobId) } catch (e: Exception) { failed++ }
+        }
+        taskStore.refresh()
+        if (failed == 0) toast("Series \"$seriesId\" deleted") else toast("Deleted with $failed error(s)")
+    }
+
+    /** Best-effort removal of every file under jobs/<jobId>/ via the git tree. */
+    private suspend fun deleteJobDir(c: com.forgebuild.clipforgeandroid.data.GitHubClient, jobId: String) {
+        val entries = c.listDir("jobs/$jobId")
+        for (i in 0 until entries.length()) {
+            val e = entries.getJSONObject(i)
+            if (e.optString("type") == "file") {
+                c.deleteFile("jobs/$jobId/" + e.optString("name"), e.optString("sha"), "clipforge: delete series part ($jobId)")
+            }
+        }
+    }
+
     fun deleteTasks(jobIds: Set<String>) = viewModelScope.launch {
         val c = api ?: return@launch
         try {
@@ -713,6 +757,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val details: List<LogDetail>
     )
 
+    /** Null-safe JSON string: returns "" for missing or JSON null (never the literal "null"). */
+    private fun strOr(o: JSONObject, key: String): String =
+        if (o.isNull(key)) "" else o.optString(key, "")
+
     private val _detailLogs = MutableStateFlow<List<LogStep>>(emptyList())
     val detailLogs: StateFlow<List<LogStep>> = _detailLogs
 
@@ -799,7 +847,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                         durationText = "",
                         details = listOf(
                             LogDetail("state: ${status.state}", statusLevel),
-                            LogDetail("message: ${status.message}", LogLevel.INFO)
+                            LogDetail("message: ${status.message.ifBlank { "—" }}", LogLevel.INFO)
                         )
                     )
                 )
@@ -809,9 +857,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                         val jobs = c.runJobs(status.runId)
                         for (i in 0 until jobs.length()) {
                             val jobObj = jobs.getJSONObject(i)
-                            val jobName = jobObj.optString("name")
-                            val jStatus = jobObj.optString("status", "")
-                            val jConclusion = jobObj.optString("conclusion", "")
+                            val jobName = strOr(jobObj, "name").ifBlank { "job" }
+                            val jStatus = strOr(jobObj, "status")
+                            val jConclusion = strOr(jobObj, "conclusion")
                             val jobLevel = logLevelFor(jStatus, jConclusion)
                             newSteps.add(
                                 LogStep(
@@ -819,8 +867,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                     name = "Job: $jobName",
                                     level = jobLevel,
                                     durationText = fmtStepDuration(
-                                        jobObj.optString("started_at", ""),
-                                        jobObj.optString("completed_at", "")
+                                        strOr(jobObj, "started_at"),
+                                        strOr(jobObj, "completed_at")
                                     ),
                                     details = listOf(
                                         LogDetail("status: $jStatus", LogLevel.INFO),
@@ -831,9 +879,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                             val steps = jobObj.optJSONArray("steps") ?: continue
                             for (s in 0 until steps.length()) {
                                 val step = steps.getJSONObject(s)
-                                val sName = step.optString("name")
-                                val sStatus = step.optString("status", "")
-                                val sConclusion = step.optString("conclusion", "")
+                                val sName = strOr(step, "name").ifBlank { "step" }
+                                val sStatus = strOr(step, "status")
+                                val sConclusion = strOr(step, "conclusion")
                                 val level = logLevelFor(sStatus, sConclusion)
                                 newSteps.add(
                                     LogStep(
@@ -841,8 +889,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                         name = sName,
                                         level = level,
                                         durationText = fmtStepDuration(
-                                            step.optString("started_at", ""),
-                                            step.optString("completed_at", "")
+                                            strOr(step, "started_at"),
+                                            strOr(step, "completed_at")
                                         ),
                                         details = listOf(
                                             LogDetail("status: $sStatus", LogLevel.INFO),

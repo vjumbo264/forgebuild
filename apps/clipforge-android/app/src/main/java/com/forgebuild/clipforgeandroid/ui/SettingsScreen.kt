@@ -538,7 +538,7 @@ fun SettingsScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
-                    Text("Version v8", style = MaterialTheme.typography.bodyMedium)
+                    Text("Version v9", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
                         style = MaterialTheme.typography.bodySmall
