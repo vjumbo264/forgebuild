@@ -57,7 +57,7 @@ fun SettingsScreen(
             try {
                 val text = DiagLog.exportText(context.applicationContext)
                 SafeSave.writeBytes(context, uri, text.toByteArray(Charsets.UTF_8))
-                vm.toast("Diagnostic log saved (${uri.lastPathSegment ?: \"file\"})")
+                vm.toast("Diagnostic log saved (${uri.lastPathSegment ?: "file"})")
             } catch (_: Exception) {
                 vm.toast("Could not write diagnostic log")
             }
