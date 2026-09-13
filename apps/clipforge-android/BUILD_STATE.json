@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": true,
-  "updated_by": "session-24",
-  "current_task": "task-101",
+  "build_complete": false,
+  "updated_by": "session-25",
+  "current_task": "task-102",
   "tasks": [
     {
       "id": "task-80",
@@ -137,6 +137,18 @@
       "title": "Release clipforge-android-v16 via release.yml + verify live (contract task 5)",
       "status": "done",
       "notes": "DONE (session-24): release.yml dispatched for apps/clipforge-android (run 34786479775 on ace29bcd, completed SUCCESS 22:20). clipforge-android-v16 VERIFIED LIVE via the Releases API: draft=false, published 2026-09-13T22:20:47Z, assets app-clipforge-android-v16.apk (5,282,210 bytes) + forgebuild-manifest.json present. Prior releases untouched (v15 and v9 both still HTTP 200). Post-release dashboard re-validation with v16 live: latest=v16 (ordering correct), inProg=false backed by success run 34786479775, v9 chip=released, v16 APK link on card. NOTE: v16 APK is byte-identical in size to v15 (5,282,210) — expected: this session's changes were in motionssalt/clipforge (backend) and forgebuild site/ (dashboard), not the Android app source; the release is the contract-mandated checkpoint for the session."
+    },
+    {
+      "id": "task-102",
+      "title": "Agent prompt release-link parity fix: AgentPromptBuilder releaseUrl fallback + super-series prompt + full text parity with site agentPromptCard",
+      "status": "in_progress",
+      "notes": "STARTED (session-25, 2026-09-13). Bug confirmed in data/Models.kt AgentPromptBuilder: (a) ordinary fallback URL malformed ('https://github.com/release/tag/...' — owner/repo missing); (b) buildSuperSeriesPrompt has NO release link as first line at all; (c) super prompt text diverges from site SUPER SERIES MODE clause; (d) series clause reads request options instead of request.series like the site does. Reference impl read in full: site/js/features/tasks.js agentPromptCard (motionssalt/clipforge). Fix: builder takes owner/repo from the live clone credentials, builds releaseUrl once before mode branching (site-identical), rebuilds super prompt to site's exact clause set, fixes series-clause data source."
+    },
+    {
+      "id": "task-103",
+      "title": "Validate prompt fix (3-mode generated prompts w/ real release links) + release clipforge-android-v17",
+      "status": "pending",
+      "notes": "Pending. Steps: compile AgentPromptBuilder in isolation (kotlinc) + generate ordinary/series/super prompts with status.release_url set and empty; bump versionCode/versionName 15->16 + About v16; dispatch release.yml app_path=apps/clipforge-android (auto-tag clipforge-android-v17); verify live via Releases API; build_complete=true. Prior releases v1..v16 untouched."
     }
   ],
   "notes": "SESSION-24 (2026-09-13): EXTEND/UPDATE contract fully executed. (1) PROMPT_HISTORY appended (7db753b4). (2) Task-97: slow scene-detect run EXPLAINED — stage-a run 34783277244's source was a clear outlier (4K 3840x2160 HEVC-10bit 14507kbps 1422s/2.58GB vs typical 1080p 1732kbps 1315s); scene-detect 13m09s is ~7.7x the typical 103s, fully consistent with ~4x pixels x 8.4x bitrate; scenes.py untouched since its original commit -> no code regression, detection logic deliberately NOT altered. (3) Tasks 98/99: live ffmpeg progress visibility landed in motionssalt/clipforge f1515653 (run_ffmpeg_streaming; detect_shots + extract_baseline_composites; NO timeout/kill switch; validated behavior-identical on synthetic video — identical cuts, byte-identical outputs, same failure path). (4) Task-100: ForgeBuild Dashboard stuck-'ongoing' v9 bug FIXED in site/app.js (7386146e) — root cause was releases-API ordering (v9 listed first) + BUILD_STATE-derived status; now sorted newest-first + status from the real release.yml run via Actions API; live-validated; deployed by pages-deploy run 34786413758. (5) Task-101: clipforge-android-v16 RELEASED + verified live (run 34786479775 success; APK + manifest assets; v1..v15 untouched). build_complete=true. STILL OPEN (pre-existing, untouched by this instruction): task-90 Telegram-bot-removal migration remains parked pending the interactive Pages parity pass (per its own ordering rule); stage_b/reframe.py detect_shots copy noted in task-98 for future visibility parity if ever symptomatic.",

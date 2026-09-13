@@ -466,3 +466,71 @@ The ClipForge Android app's release status on the ForgeBuild Dashboard is stuck 
 2. If BUILD_STATE.json is stale, correct it to reflect reality based on the repo's actual state and commit history — don't blindly mark complete without confirming.
 3. If the Dashboard's status logic is the bug, fix it to derive version status from the actual corresponding GitHub Actions workflow run's real state via the Actions API, not from BUILD_STATE.json or a tag's existence alone.
 4. Verify specifically against ClipForge version 9: the Dashboard must show its true state afterward, and the real release/APK must be reachable directly from the Dashboard without going to the Releases page manually.
+
+---
+
+## 2026-09-13 — Copy-agent-prompt release-link parity fix (clipforge-android) + Telegram removal confirmed
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_REPO_PAT = [REDACTED-PER-CONTRACT] / CLOUDFLARE_API_TOKEN = [REDACTED-PER-CONTRACT] / CLOUDFLARE_ACCOUNT_ID = 5dc9710ac37c9ce333dce2434ce4343b
+
+# Bug: the Android app's "copy agent prompt" text has no link to the
+GitHub release at all, in every mode — the site's equivalent has this
+correctly, the app's does not
+
+To be precise about which prompt this is, since it was previously
+misidentified: this is the prompt the operator copies from the task detail
+screen (in the app) and pastes into an external AI agent, so that agent
+can open the release, read `00_READ_THIS_FIRST.txt` and the evidence
+assets, and produce the production.json (or, for Super Series, the
+whole-series super-plan). This is NOT `00_READ_THIS_FIRST.txt` itself
+(which correctly has never contained links — that's by design, unrelated
+to this bug).
+
+The correct reference implementation already exists and works: read
+`agentPromptCard(status, request)` in `site/js/features/tasks.js` in full.
+Its very first constructed prompt line is:
+
+    `Open this GitHub release: ${releaseUrl}`
+
+where `releaseUrl` is `status.release_url` (falling back to a constructed
+`https://github.com/${repo}/releases/tag/clipforge-${jobId}` only if
+`status.release_url` is empty/missing). This line is present for every
+mode this function handles — ordinary task, ordinary Series Mode part, and
+Super Series anchor — since it's built once, before the mode-specific
+`seriesClause` branching happens.
+
+Find the Android app's own implementation of this same "copy agent prompt"
+text (it is very likely a separate, independently-written copy rather than
+shared code, since the site's version is correct and the operator has
+confirmed the app's output is missing the release link entirely). Fix it
+by:
+
+1. Locating the exact function/method in the app that builds this prompt
+   text.
+2. Adding the equivalent of the site's `Open this GitHub release:
+   ${releaseUrl}` line, using the app's own already-available job status
+   data (`status.release_url`, with the same same-shaped fallback
+   construction if that field is ever empty) — as the first line of the
+   constructed prompt, exactly matching where the site places it.
+3. Cross-checking the REST of the app's prompt text against
+   `agentPromptCard` line by line while this is open — confirm the app's
+   version also correctly includes the target-duration/narration-length
+   instructions, the mode-specific series clause (ordinary series vs
+   Super Series, worded to match), and the exact delivery/format
+   instructions at the end. Fix any other divergence found, not just the
+   missing link line — the operator should get functionally identical
+   prompt text from the app and the site, since previous fixes have
+   specifically aimed for that parity and this divergence shows it isn't
+   fully there yet.
+4. Verify by generating a real prompt from the app for an ordinary task, an
+   ordinary series part, and a Super Series anchor, and confirming each one
+   includes a real, correct, clickable-when-pasted-elsewhere release link
+   as its first line, matching what the site produces for the same job.
+
+---
+
+## 2026-09-13 — Trailing operator line (task-90 unblock)
+
+"YOU SHOULD DELETE THE OLD TELEGRAM STUFF. I'VE VALIDATED AND CONFIRM THAT ITS NO LONGER NEEDED."
+
+→ Operator confirms task-90's pending parity verification is complete: Bot A/B Workers, CLIPFORGE_BOT_D1 (720de60e-1a08-492a-9ce6-64cb9534098d), bot KV (b09957b233c247deb40cc703ffadc95d), deploy-bots.yml, telegram-relay.yml, bot/ and relay/ may all be deleted; docs updated to GitHub-only architecture.
