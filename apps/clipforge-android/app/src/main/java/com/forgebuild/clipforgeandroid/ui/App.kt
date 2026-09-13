@@ -376,9 +376,15 @@ fun MainScaffold(vm: ClipForgeViewModel) {
                     })
                 }
                 composable("series") {
-                    SeriesScreen(vm, onSelectSeries = { seriesId ->
-                        navController.navigate("series/$seriesId")
-                    })
+                    SeriesScreen(
+                        vm,
+                        onSelectSeries = { seriesId ->
+                            navController.navigate("series/$seriesId")
+                        },
+                        onSelectTask = { jobId ->
+                            navController.navigate("task/$jobId")
+                        }
+                    )
                 }
                 composable("settings") {
                     SettingsScreen(vm, onOpenMusic = {

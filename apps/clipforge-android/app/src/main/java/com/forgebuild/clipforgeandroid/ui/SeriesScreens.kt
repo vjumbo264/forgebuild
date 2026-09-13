@@ -24,7 +24,8 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 @Composable
 fun SeriesScreen(
     vm: ClipForgeViewModel,
-    onSelectSeries: (String) -> Unit
+    onSelectSeries: (String) -> Unit,
+    onSelectTask: (String) -> Unit
 ) {
     LaunchedEffect(Unit) { vm.onTasksOpen(); vm.refreshSuperQueues() }
     val tasks by vm.tasks.collectAsState()
@@ -122,6 +123,56 @@ fun SeriesScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
+                                }
+                                // Session-11 (task-76): the overview shows EVERY part as its
+                                // own row — “Part 1”, “Part 2”, “Part 3”… — instead of one
+                                // bare topic folder. Tapping a row opens that part's task.
+                                sortedParts.forEach { part ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onSelectTask(part.jobId) },
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            "Part ${part.part}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.width(64.dp)
+                                        )
+                                        Text(
+                                            Pipeline.describe(part.state),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (part.state == "error" || part.state == "cancelled")
+                                                MaterialTheme.colorScheme.error
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                // Super Series: parts the controller will spawn later are
+                                // listed too, so the full Part 1..Part N set is visible.
+                                superQueues[seriesId]?.let { q ->
+                                    val created = sortedParts.map { it.part }.toSet()
+                                    (1..q.totalParts).filter { it !in created }.forEach { n ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onSelectSeries(seriesId) },
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                "Part $n",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.width(64.dp)
+                                            )
+                                            Text(
+                                                "queued (upcoming)",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-12",
-  "current_task": "task-76",
+  "current_task": "task-77",
   "tasks": [
     {
       "id": "task-74",
@@ -21,8 +21,8 @@
     {
       "id": "task-76",
       "title": "Super Series list shows 'Part 1/2/3...' labels instead of bare topic folders",
-      "status": "pending",
-      "notes": "Operator: 'the Super Series... is lacking the necessary parts, like the Part 1, Part 2, Part 3 parts. Like when it does, it just gives them topic folders, add the Part 1, Part 2, Part 3, parts.' INVESTIGATED state: SeriesScreen (ui/SeriesScreens.kt:60-110) lists one row per seriesId with Text(seriesId) as the title (line ~74) and 'Latest: Part N - state' as a subtitle - for a Super Series this reads as one bare topic folder with no per-part rows. IMPLEMENT: make each series row expandable (or navigate into SeriesDetailScreen) showing per-part entries labeled 'Part 1', 'Part 2', ... with per-part state; SeriesDetailScreen already renders parts as 'Part N (jobId)' (line ~234) - the gap is the top-level SeriesScreen. Minimal fix honoring the operator: on SeriesScreen, for every series (super or ordinary), render the sorted parts inline under the series title (or an expand chevron) as 'Part N - <title or state>' rows, reusing the existing sortedParts data already computed there (sortedParts/lastPart at ~line 67). For Super Series queues also surface the queue progress banner already present in SeriesDetailScreen ('Part X of Y is being queued...', line ~194) at the series row when applicable. No new data plumbing expected - parts are already loaded."
+      "status": "done",
+      "notes": "IMPLEMENTED+VALIDATED (session-12, 2026-09-13): SeriesScreen (overview) now renders EVERY part of every series as its own row inside the series card — 'Part 1' / 'Part 2' / 'Part 3' ... with its pipeline state (error/cancelled states in error color), tapping a row opens that part's task detail (new onSelectTask: (String)->Unit parameter on SeriesScreen, wired in App.kt composable('series') to navController.navigate('task/{jobId}')). For Super Series, parts the controller has not spawned yet are also listed as 'Part N — queued (upcoming)' using superQueues[seriesId].totalParts minus created part numbers, so the complete Part 1..Part N set is visible on the overview (fixes the 'just gives them topic folders' complaint). The super-queue status AssistChip and Latest: Part N line are retained. No new dependency; Row/clickable/width all covered by existing imports. Validated: brace/paren balance SeriesScreens.kt 73/73 143/143, App.kt 134/134 223/223; grep confirms onSelectTask wired at signature + both part-row click sites + App.kt call."
     },
     {
       "id": "task-77",
@@ -43,5 +43,5 @@
       "notes": "Dispatch the Build & Release App APK workflow (POST /repos/vjumbo264/forgebuild/actions/workflows/release.yml/dispatches, ref=main, inputs app_path='apps/clipforge-android', release_notes summarizing task-74..77). NEVER overwrite/delete prior releases v1..v7. Poll the run to success; if the build fails, fix and re-dispatch (tag auto-increments only on success). Verify the release live via the GitHub Releases API (APK + forgebuild-manifest.json assets present), then set build_complete: true."
     }
   ],
-  "notes": "SESSION-12 (2026-09-13): task-74 DONE+PUSHED (82e28a27): swipe-to-refresh PullToRefreshBox + spinning corner refresh on Tasks/Series screens, shared refresh state. task-75 DONE: SAF diag-log export via CreateDocument + SafeSave (Documents/ClipForge reachable, no permissions), dead app-private export removed. REMAINING: task-76 (Part 1/2/3 rows on Series overview), task-77 (prompt part-number/Super-Series wording parity), task-78 (validate + bump v8), task-79 (release v8 + verify live)."
+  "notes": "SESSION-12 (2026-09-13): task-74 DONE+PUSHED (82e28a27): swipe-to-refresh PullToRefreshBox + spinning corner refresh. task-75 DONE+PUSHED (4290cbbc): SAF diag-log export via CreateDocument + SafeSave. task-76 DONE: per-part 'Part 1/2/3...' rows on Series overview incl. upcoming Super Series parts, onSelectTask nav added. REMAINING: task-77 (prompt part-number/Super-Series wording parity in the app's copy surface), task-78 (validate + bump v8), task-79 (release v8 + verify live)."
 }
