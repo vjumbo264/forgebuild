@@ -1485,20 +1485,22 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      * dispatch stage-b.yml directly against the GitHub API. No bot, no Worker, no D1.
      */
     private suspend fun advanceSuperQueue(anchorJobId: String) {
-        val c = api ?: return
-        val stateFile = c.readFile("jobs/$anchorJobId/super-plan.json") ?: return
+        // Never fail silently here: a quiet early-return previously left the anchor
+        // status claiming "part 1 dispatched" while nothing was spawned (stuck series).
+        val c = api ?: throw IllegalStateException("GitHub client not connected — cannot dispatch Super Series part 1")
+        val stateFile = c.readFile("jobs/$anchorJobId/super-plan.json") ?: throw IllegalStateException("super-plan.json unreadable for $anchorJobId right after writing it — please retry submitting the plan")
         val state = JSONObject(stateFile.first)
         val spawnedArr = state.optJSONArray("spawned") ?: org.json.JSONArray()
-        val plan = state.optJSONObject("plan") ?: return
-        val parts = plan.optJSONArray("parts") ?: return
-        if (spawnedArr.length() > 0) return  // already advanced — sweep/another client owns it
+        val plan = state.optJSONObject("plan") ?: throw IllegalStateException("super-plan.json has no plan object")
+        val parts = plan.optJSONArray("parts") ?: throw IllegalStateException("super-plan.json plan has no parts array")
+        if (spawnedArr.length() > 0) return  // already advanced — chain/another client owns it
         val seriesId = state.optString("series_id", plan.optString("series_id"))
-        val reqFile = c.readFile("jobs/$anchorJobId/stage-a-request.json") ?: return
+        val reqFile = c.readFile("jobs/$anchorJobId/stage-a-request.json") ?: throw IllegalStateException("stage-a-request.json unreadable for $anchorJobId — Stage A may not be finished yet; retry in a moment")
         val anchorReq = JSONObject(reqFile.first)
 
         val partNumber = 1
         val partJobId = "$seriesId-p$partNumber"
-        if (c.readFile("jobs/$partJobId/status.json") != null || c.readFile("jobs/$partJobId/stage-a-request.json") != null) return
+        if (c.readFile("jobs/$partJobId/status.json") != null || c.readFile("jobs/$partJobId/stage-a-request.json") != null) throw IllegalStateException("part 1 job $partJobId already exists but was never marked spawned — inconsistent repo state, needs operator attention")
         val partDoc = JSONObject(parts.getJSONObject(0).toString())
         partDoc.optJSONObject("series")?.put("part", partNumber)
         // Production plan = the part's own self-contained document (positional part).
