@@ -52,7 +52,39 @@ async function listApps(){
 }
 async function releasesFor(slug){
   const all=await gh(`/repos/${OWNER}/${REPO}/releases?per_page=100`);
-  return (all||[]).filter(r=>r.tag_name&&r.tag_name.startsWith(slug+'-v'));
+  // The releases API order is NOT guaranteed chronological (observed live:
+  // clipforge-android-v9 returned ahead of v15), so callers must never trust
+  // positions — always sort newest-first by created_at.
+  return (all||[]).filter(r=>r.tag_name&&r.tag_name.startsWith(slug+'-v'))
+    .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+}
+
+/* Version status is derived from the REAL "Build & Release App APK"
+   (release.yml) workflow run behind each version — never from a tag's mere
+   existence and never from BUILD_STATE.json. release.yml runs carry
+   head_sha = the commit the build ran against, and the release's tag points
+   at that same commit, so tag -> sha -> run is an exact 1:1 lookup. */
+let _relRuns=null;
+async function releaseRuns(){
+  if(_relRuns)return _relRuns;
+  try{const d=await gh(`/repos/${OWNER}/${REPO}/actions/workflows/release.yml/runs?per_page=30`);_relRuns=(d&&d.workflow_runs)||[];}
+  catch(e){_relRuns=[];} // no PAT / rate-limited -> status chips just hide
+  return _relRuns;
+}
+async function tagSha(tag){
+  try{
+    const d=await gh(`/repos/${OWNER}/${REPO}/git/refs/tags/${encodeURIComponent(tag)}`);
+    let o=d&&d.object;
+    if(o&&o.type==='tag'){const t=await gh(`/repos/${OWNER}/${REPO}/git/tags/${o.sha}`);o=t.object;}
+    return o&&o.sha?o.sha:null;
+  }catch(e){return null;}
+}
+function runChip(run){
+  if(!run)return `<span class="chip ok">released</span>`;
+  if(run.status!=='completed')return `<a class="chip run" href="${run.html_url}" target="_blank" rel="noopener">build ${esc(run.status)} · run ${run.id}</a>`;
+  return run.conclusion==='success'
+    ?`<a class="chip ok" href="${run.html_url}" target="_blank" rel="noopener">released · run ${run.id} ✓</a>`
+    :`<a class="chip err" href="${run.html_url}" target="_blank" rel="noopener">build ${esc(run.conclusion||'failed')} · run ${run.id}</a>`;
 }
 function fmtDate(d){try{return new Date(d).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})}catch(e){return d}}
 function copyFrom(id,btn){const el=$('#'+id);el.select();el.setSelectionRange(0,999999);
@@ -247,16 +279,29 @@ try{hist=await raw(`PROMPT_HISTORY/${slug}.md`);}catch(e){}
 try{const b=await raw(`apps/${slug}/BUILD_STATE.json`);bs=b?JSON.parse(b):null;}catch(e){}
 document.querySelector('.loading')?.remove();
 if(errs.length)$('#view').insertAdjacentHTML('beforeend',`<div class="banner warn">${esc(errs.join(' · '))}</div>`);
-const inProg=bs&&bs.tasks&&bs.tasks.some(t=>t.status==='in_progress')&&!bs.build_complete;
+// "Ongoing" is derived from the actual release.yml workflow runs, not from
+// BUILD_STATE.json or a tag's existence: the app is mid-build only if the
+// run behind its newest release is still executing, or a newer
+// not-yet-released run is running right now.
+const runs=await releaseRuns();
+let latestRun=null;
+if(releases.length){const sha=await tagSha(releases[0].tag_name);latestRun=runs.find(r=>r.head_sha===sha)||null;}
+const newestRun=runs[0]||null;
+const inProg=(!!latestRun&&latestRun.status!=='completed')
+  ||(!!newestRun&&newestRun.status!=='completed'&&(!latestRun||newestRun.id!==latestRun.id));
 const latest=releases.length?releases[0].tag_name:'';
 let html='';
-if(inProg)html+=`<div class="banner">A build is currently <b>in progress</b> on this app. Use the resume prompt, not a new instruction.<div class="row"><a class="btn small" href="#/app/${encodeURIComponent(slug)}/version">Open in-progress version →</a></div></div>`;
+if(inProg)html+=`<div class="banner">A build is currently <b>in progress</b> on this app (live from the Actions API: <a href="${esc(newestRun.html_url)}" target="_blank" rel="noopener">run ${newestRun.id}</a>, ${esc(newestRun.status)}). Use the resume prompt, not a new instruction.<div class="row"><a class="btn small" href="#/app/${encodeURIComponent(slug)}/version">Open in-progress version →</a></div></div>`;
 html+=`<h2>Versions (GitHub Releases on ${REPO})</h2>`;
 if(!releases.length)html+=`<div class="empty">No releases yet.</div>`;
 for(const rel of releases){
   const assets=rel.assets.map(a=>`<div class="asset"><code>${esc(a.name)}</code><span>${(a.size/1024/1024).toFixed(2)} MB · <a href="${a.browser_download_url}">Download</a></span></div>`).join('');
+  // Status chip from the real workflow run behind the newest version (the
+  // only one whose "ongoing?" state matters; older versions with assets are
+  // released by fact).
+  const chip=(rel===releases[0]&&latestRun)?runChip(latestRun):'<span class="chip ok">released</span>';
   html+=`<div class="card"><div class="row" style="margin:0;justify-content:space-between">
-    <span class="chip">${esc(rel.tag_name)}</span>
+    <span class="chip">${esc(rel.tag_name)}</span> ${chip}
     <span class="sub" style="margin:0">${fmtDate(rel.published_at)}</span></div>
     ${rel.body?`<p style="font-size:14px">${esc(rel.body)}</p>`:''}
     ${assets}

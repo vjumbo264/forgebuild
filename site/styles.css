@@ -62,3 +62,12 @@ pre{background:var(--surface-container-high);border-radius:12px;padding:14px;ove
 .patgate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:16px}
 .patcard{max-width:520px;width:100%}
 .patcard input{width:100%;padding:10px 14px;border:1px solid var(--outline);border-radius:12px;background:var(--surface);color:var(--on-surface);font-size:14px;margin:6px 0 14px}
+.chip.ok{background:#d3f9d8;color:#0f5132}
+.chip.err{background:#f9dedc;color:#410e0b}
+.chip.run{background:#fff3cd;color:#664d03}
+.chip[href]{text-decoration:none}
+@media (prefers-color-scheme: dark){
+  .chip.ok{background:#0f5132;color:#d3f9d8}
+  .chip.err{background:#8c1d18;color:#f9dedc}
+  .chip.run{background:#664d03;color:#fff3cd}
+}
