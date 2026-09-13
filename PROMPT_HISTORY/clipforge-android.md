@@ -377,3 +377,13 @@ Verify item 9 against a real Super Series run: enable Series Mode, enable Super 
 > DISCIPLINE: never stop because part is already done; never produce status reports; repo is source of truth; never reset progress / never redo completed work; ordering rule — do NOT delete Bot A/B, D1, or bot code until every parity feature has a working verified replacement; continuous execution with per-step START->PERFORM->VALIDATE->UPDATE BUILD_STATE.json->COMMIT->PUSH->VERIFY protocol.
 >
 > TASKS task-01..task-12: (01) read ARCHITECTURE.md/bot/src fully, catalog features, confirm Super Series anchor status, scaffold site/; (02) GitHub-only auth + clone creation; (03) new video/task creation w/ classifySourceText port; (04) tasks/completed/detail + real Actions-logs rework + restart/cancel; (05) Series; (06) Super Series fully + verified real Stage B dispatch; (07) all Settings sections; (08) Zernio full feature set; (09) multi-select/delete, audio/video preview, browser download w/ progress; (10) cross-check catalog vs built, fix gaps; (11) deploy Dashboard to Cloudflare Pages + verify live end to end; (12) only then delete Workers/D1/bot code/dead workflows, update ARCHITECTURE.md+README, build_complete=true.
+
+## 2026-09-13 — Super Series Stage B not dispatching (operator)
+
+Operator reported: after submitting a super production.json and pressing Start, the app showed
+"Stage B started" but NO Stage B run appeared in GitHub Actions. Also reported the new Dashboard
+site was never actually deployed (Cloudflare showed no new Pages project; what they were seeing was
+someone else's site), and Bot A/B + D1 were still not deleted. Fix: the Super Series queue sweep
+lived only in the removed Telegram bot's per-minute cron, so nothing spawned Part 1 or dispatched
+stage-b.yml. Shipped a headless scheduled super-sweep.yml workflow in motionssalt/clipforge AND an
+app-side self-drive (advanceSuperQueue) so a submitted plan spawns + dispatches Part 1 directly.

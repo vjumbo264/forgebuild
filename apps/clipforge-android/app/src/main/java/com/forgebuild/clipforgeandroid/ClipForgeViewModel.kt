@@ -1453,6 +1453,11 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     (SuperSeries.buildSuperState(jobId, seriesId, document).toString(2) + "\n").toByteArray(Charsets.UTF_8),
                     "clipforge: accept super series plan ($jobId)"
                 )
+                // Root-cause fix (was: wrote super-plan.json then stopped, relying on the removed
+                // Telegram bot's cron to advance the queue — so Part 1 never actually dispatched).
+                // The app now advances the queue itself AND the headless super-sweep.yml workflow
+                // (triggered by this push) independently dispatches it — idempotent either way.
+                advanceSuperQueue(jobId)
                 val next = (st ?: JSONObject())
                     .put("state", "stage_b_queued")
                     .put("message", "Super Series plan accepted — ${document.getJSONArray("parts").length()} parts queued; part 1 dispatched.")
@@ -1469,6 +1474,88 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 _upload.value = null
             }
         }
+    }
+
+    /**
+     * Root-cause fix for Super Series never dispatching Stage B. The old flow wrote
+     * super-plan.json then stopped — queue advancement lived only in the removed bot's
+     * cron. This advances the queue ONE step the same way the headless super-sweep.yml
+     * workflow and the Dashboard do: build Part 1's request/plan/status, mark it spawned
+     * in super-plan.json (cursor advanced BEFORE dispatch => no double-dispatch), then
+     * dispatch stage-b.yml directly against the GitHub API. No bot, no Worker, no D1.
+     */
+    private suspend fun advanceSuperQueue(anchorJobId: String) {
+        val c = api ?: return
+        val stateFile = c.readFile("jobs/$anchorJobId/super-plan.json") ?: return
+        val state = JSONObject(stateFile.first)
+        val spawnedArr = state.optJSONArray("spawned") ?: org.json.JSONArray()
+        val plan = state.optJSONObject("plan") ?: return
+        val parts = plan.optJSONArray("parts") ?: return
+        if (spawnedArr.length() > 0) return  // already advanced — sweep/another client owns it
+        val seriesId = state.optString("series_id", plan.optString("series_id"))
+        val reqFile = c.readFile("jobs/$anchorJobId/stage-a-request.json") ?: return
+        val anchorReq = JSONObject(reqFile.first)
+
+        val partNumber = 1
+        val partJobId = "$seriesId-p$partNumber"
+        if (c.readFile("jobs/$partJobId/status.json") != null || c.readFile("jobs/$partJobId/stage-a-request.json") != null) return
+        val partDoc = JSONObject(parts.getJSONObject(0).toString())
+        partDoc.optJSONObject("series")?.put("part", partNumber)
+        // Production plan = the part's own self-contained document (positional part).
+        val options = anchorReq.optJSONObject("options") ?: org.json.JSONObject()
+        val source = anchorReq.optJSONObject("source") ?: org.json.JSONObject()
+        val music = anchorReq.optJSONObject("music") ?: org.json.JSONObject().put("ref", "").put("source", "none")
+        val startSeconds = partDoc.optJSONObject("series")?.optLong("start_seconds", 0) ?: 0
+        val isFinal = partDoc.optJSONObject("series")?.optBoolean("is_final", false) ?: false
+
+        val requestBody = org.json.JSONObject()
+            .put("job_id", partJobId)
+            .put("mode", "manual")
+            .put("source", source)
+            .put("options", options)
+            .put("music", music)
+            .put("series", org.json.JSONObject()
+                .put("enabled", true)
+                .put("series_id", seriesId)
+                .put("part", partNumber)
+                .put("start_seconds", startSeconds)
+                .put("source_job_id", anchorJobId)
+                .put("context", ""))
+
+        c.putFile("jobs/$partJobId/stage-a-request.json",
+            (requestBody.toString(2) + "\n").toByteArray(Charsets.UTF_8),
+            "clipforge: stage-a request for super part $partNumber ($partJobId)")
+        c.putFile("jobs/$partJobId/production.json",
+            (partDoc.toString(2) + "\n").toByteArray(Charsets.UTF_8),
+            "clipforge: production plan for super part $partNumber ($partJobId)")
+        val totalParts = state.optInt("total_parts", parts.length())
+        val partStatus = org.json.JSONObject()
+            .put("version", 1).put("job_id", partJobId).put("mode", "manual")
+            .put("state", "stage_b_queued")
+            .put("message", "Super Series part $partNumber of $totalParts — Stage B dispatched.")
+            .put("updated_at_epoch", nowEpoch())
+            .put("release_tag", "clipforge-$partJobId")
+            .put("release_url", "https://github.com/motionssalt/clipforge/releases/tag/clipforge-$partJobId")
+            .put("series", org.json.JSONObject()
+                .put("enabled", true).put("series_id", seriesId)
+                .put("part", partNumber).put("start_seconds", startSeconds).put("is_final", isFinal))
+        c.putFile("jobs/$partJobId/status.json",
+            (partStatus.toString(2) + "\n").toByteArray(Charsets.UTF_8),
+            "clipforge: queue super series part $partNumber ($partJobId)")
+
+        // Advance the durable cursor BEFORE dispatching.
+        spawnedArr.put(org.json.JSONObject().put("part", partNumber).put("job_id", partJobId))
+        state.put("spawned", spawnedArr)
+        c.putFile("jobs/$anchorJobId/super-plan.json",
+            (state.toString(2) + "\n").toByteArray(Charsets.UTF_8),
+            "clipforge: super series part $partNumber spawned ($partJobId)")
+
+        c.dispatchWorkflow("stage-b.yml", mapOf(
+            "job_id" to partJobId,
+            "production_ref" to "path:jobs/$partJobId/production.json",
+            "music_ref" to resolveMusicRef(c, partJobId),
+            "code_ref" to c.defaultBranchSha()
+        ))
     }
 
     // ---- Super Series queue views (bot superQueueAdvance — series overview) ----
