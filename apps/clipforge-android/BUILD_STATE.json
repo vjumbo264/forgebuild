@@ -2,7 +2,7 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-24",
   "current_task": "task-101",
   "tasks": [
@@ -135,11 +135,11 @@
     {
       "id": "task-101",
       "title": "Release clipforge-android-v16 via release.yml + verify live (contract task 5)",
-      "status": "pending",
-      "notes": "PENDING. Dispatch release.yml app_path=apps/clipforge-android -> auto-tag clipforge-android-v16. Never overwrite v1..v15. Verify live via Releases API, then build_complete:true. Doubles as live verification that the fixed Dashboard shows the new latest version correctly."
+      "status": "done",
+      "notes": "DONE (session-24): release.yml dispatched for apps/clipforge-android (run 34786479775 on ace29bcd, completed SUCCESS 22:20). clipforge-android-v16 VERIFIED LIVE via the Releases API: draft=false, published 2026-09-13T22:20:47Z, assets app-clipforge-android-v16.apk (5,282,210 bytes) + forgebuild-manifest.json present. Prior releases untouched (v15 and v9 both still HTTP 200). Post-release dashboard re-validation with v16 live: latest=v16 (ordering correct), inProg=false backed by success run 34786479775, v9 chip=released, v16 APK link on card. NOTE: v16 APK is byte-identical in size to v15 (5,282,210) — expected: this session's changes were in motionssalt/clipforge (backend) and forgebuild site/ (dashboard), not the Android app source; the release is the contract-mandated checkpoint for the session."
     }
   ],
-  "notes": "SESSION-20 (2026-09-13): RESUMED task-90 per contract. Appended new operator instruction to PROMPT_HISTORY (commit df694af, push verified). LIVE-VERIFIED the Stage B completion chain via the GitHub Actions API (not app/site state): super-chain.yml run 34761619538 dispatched real stage-b run 34761630942 (chaint-1789308282-p2) with zero clients open; run 34761659843 saw the CANCELLATION and dispatched nothing (halt correct). super-sweep.yml confirmed absent; site poll-dispatch path dead code (no importers of runSuperQueueSweep). App side: advanceSuperQueue is Part-1-only (returns when spawned>0) — no app delta needed, chain is GitHub-native. Pages live: clipforge-dashboard-3sp.pages.dev serves CURRENT modular build (1KB shell + js/ modules, deployment aa071fe2). PENDING in order: (1) site UI polish (new site task-13) + interactive parity pass vs live Pages (browser session with operator PAT — clone create, all source kinds, Zernio, media); (2) ONLY then delete Workers clipforge-bot-a + clipforge-telegram-relay-bot, D1 clipforge-bot-state (uuid 720de60e-1a08-492a-9ce6-64cb9534098d), KV clipforge-telegram-bot-kv (id b09957b233c247deb40cc703ffadc95d) — all CONFIRMED STILL LIVE via Cloudflare API this session; (3) archive bot/ -> _legacy/, delete deploy-bots.yml + telegram-relay.yml (both still present); (4) ARCHITECTURE.md/README rewrite; (5) re-verify; (6) build_complete=true + release clipforge-android-v13. Ordering rule honored: bots NOT deleted yet because parity pass is not complete.",
+  "notes": "SESSION-24 (2026-09-13): EXTEND/UPDATE contract fully executed. (1) PROMPT_HISTORY appended (7db753b4). (2) Task-97: slow scene-detect run EXPLAINED — stage-a run 34783277244's source was a clear outlier (4K 3840x2160 HEVC-10bit 14507kbps 1422s/2.58GB vs typical 1080p 1732kbps 1315s); scene-detect 13m09s is ~7.7x the typical 103s, fully consistent with ~4x pixels x 8.4x bitrate; scenes.py untouched since its original commit -> no code regression, detection logic deliberately NOT altered. (3) Tasks 98/99: live ffmpeg progress visibility landed in motionssalt/clipforge f1515653 (run_ffmpeg_streaming; detect_shots + extract_baseline_composites; NO timeout/kill switch; validated behavior-identical on synthetic video — identical cuts, byte-identical outputs, same failure path). (4) Task-100: ForgeBuild Dashboard stuck-'ongoing' v9 bug FIXED in site/app.js (7386146e) — root cause was releases-API ordering (v9 listed first) + BUILD_STATE-derived status; now sorted newest-first + status from the real release.yml run via Actions API; live-validated; deployed by pages-deploy run 34786413758. (5) Task-101: clipforge-android-v16 RELEASED + verified live (run 34786479775 success; APK + manifest assets; v1..v15 untouched). build_complete=true. STILL OPEN (pre-existing, untouched by this instruction): task-90 Telegram-bot-removal migration remains parked pending the interactive Pages parity pass (per its own ordering rule); stage_b/reframe.py detect_shots copy noted in task-98 for future visibility parity if ever symptomatic.",
   "session_log": [
     {
       "session": "session-17",
@@ -160,6 +160,11 @@
       "session": "session-24",
       "date": "2026-09-13",
       "summary": "EXTEND/UPDATE contract: (Part 1) motionssalt/clipforge scene-detect 20+min run investigation + live ffmpeg progress visibility (no timeout); (Part 2) ForgeBuild Dashboard stuck-'ongoing' v9 status-logic fix. Gate check: build_complete was true, task-90 in_progress is the deliberately-parked migration (sessions 21-23 precedent: new instructions proceed as new tasks alongside it). PROMPT_HISTORY appended (commit 7db753b4, push verified). Seeded tasks 97-101."
+    },
+    {
+      "session": "session-24",
+      "date": "2026-09-13",
+      "summary": "Slow scene-detect run explained (4K HEVC 14.5Mbps source outlier, run 34783277244; no code regression). Live ffmpeg progress visibility in motionssalt/clipforge scenes.py (f1515653, no timeout, validated behavior-identical). ForgeBuild Dashboard ongoing-status bug fixed in site/app.js (7386146e: created_at ordering + status from real release.yml runs; live-validated, deployed). Released clipforge-android-v16, verified live. build_complete=true."
     }
   ]
 }
