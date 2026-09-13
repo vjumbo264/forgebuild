@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-12",
-  "current_task": "task-75",
+  "current_task": "task-76",
   "tasks": [
     {
       "id": "task-74",
@@ -15,8 +15,8 @@
     {
       "id": "task-75",
       "title": "Export diagnostic log to Documents/ClipForge via Storage Access Framework",
-      "status": "pending",
-      "notes": "Operator: 'the debug log, I want it to be exported to my Documents folder under ClipForge, not to a folder I can't even get to.' INVESTIGATED state: DiagLog.export (data/DiagLog.kt:48) currently writes somewhere not user-visible; vm.exportDiagLog (ClipForgeViewModel.kt:1330) calls it; Settings About section button 'Export Diagnostic Log' (ui/SettingsScreen.kt:537). IMPLEMENT per the standing Engine constraint: use com.forgebuild.engine.files.SafeSave (Storage Access Framework ACTION_CREATE_DOCUMENT) - the engine copy already exists at app/src/main/java/com/forgebuild/engine/files/SafeSave.kt, USE IT, never DownloadManager. Wire an ActivityResultLauncher (rememberLauncherForActivityResult(CreateDocument('text/plain'))) in SettingsScreen, default file name like clipforge-diagnostic-log-<epoch>.txt, write DiagLog.export(app) text to the returned uri via contentResolver.openOutputStream. SAF lets the operator pick Documents/ClipForge (creating the folder from the picker) on any Android version without permissions - this satisfies 'Documents folder under ClipForge' in a permission-free, user-directed way (a hardcoded Documents/ClipForge write needs MANAGE_EXTERNAL_STORAGE on API 30+; SAF is the correct Engine-mandated route). Toast the saved location on success. Files: ui/SettingsScreen.kt, possibly ClipForgeViewModel.kt (export returns text only, no file write)."
+      "status": "done",
+      "notes": "IMPLEMENTED+VALIDATED (session-12, 2026-09-13): SettingsScreen 'Export Diagnostic Log' now launches ActivityResultContracts.CreateDocument('text/plain') (registered via rememberLauncherForActivityResult) with suggested name clipforge-diagnostic-log-<epoch-seconds>.txt; the returned SAF Uri is written via the Engine SafeSave.writeBytes helper — the operator picks the destination in the system picker (e.g. Documents/ClipForge, creating the folder from the picker), NO storage permission needed, NEVER DownloadManager. DiagLog gained exportText(ctx) building the full export body (header with ISO timestamp + line count + ring buffer); DiagLog.export (app-private filesDir write, the 'folder I can't even get to') and vm.exportDiagLog were REMOVED — no remaining callers (grep-verified). Success/cancel/failure handled: native toast on success/failure, silent on picker cancel (nothing saved). About-section help text updated to mention Documents/ClipForge. Validated: brace/paren balance OK on SettingsScreen.kt and DiagLog.kt; ClipForgeViewModel.kt diff is comment-only + removal of a self-contained balanced block (the naive checker's 228/226 mismatch exists identically in the pre-change v7 file — false positive from string templates, v7 built and released fine)."
     },
     {
       "id": "task-76",
@@ -43,5 +43,5 @@
       "notes": "Dispatch the Build & Release App APK workflow (POST /repos/vjumbo264/forgebuild/actions/workflows/release.yml/dispatches, ref=main, inputs app_path='apps/clipforge-android', release_notes summarizing task-74..77). NEVER overwrite/delete prior releases v1..v7. Poll the run to success; if the build fails, fix and re-dispatch (tag auto-increments only on success). Verify the release live via the GitHub Releases API (APK + forgebuild-manifest.json assets present), then set build_complete: true."
     }
   ],
-  "notes": "SESSION-12 (2026-09-13): resuming from session-11 checkpoint. task-74 DONE (swipe-to-refresh via PullToRefreshBox + spinning corner refresh on TasksScreens active/completed and SeriesScreens overview; both paths share vm.refreshTasks()/tasksRefreshing; validated by brace-balance + nesting trace; committed+pushed). REMAINING: task-75 (SAF diag-log export to Documents/ClipForge), task-76 (Part 1/2/3 rows on Series overview), task-77 (prompt part-number/Super-Series wording parity), task-78 (validate + bump v8), task-79 (release v8 + verify live)."
+  "notes": "SESSION-12 (2026-09-13): task-74 DONE+PUSHED (82e28a27): swipe-to-refresh PullToRefreshBox + spinning corner refresh on Tasks/Series screens, shared refresh state. task-75 DONE: SAF diag-log export via CreateDocument + SafeSave (Documents/ClipForge reachable, no permissions), dead app-private export removed. REMAINING: task-76 (Part 1/2/3 rows on Series overview), task-77 (prompt part-number/Super-Series wording parity), task-78 (validate + bump v8), task-79 (release v8 + verify live)."
 }

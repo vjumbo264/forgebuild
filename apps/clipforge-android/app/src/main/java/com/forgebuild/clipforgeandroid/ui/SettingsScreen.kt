@@ -1,5 +1,7 @@
 package com.forgebuild.clipforgeandroid.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,8 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.platform.LocalContext
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
+import com.forgebuild.clipforgeandroid.data.DiagLog
 import com.forgebuild.clipforgeandroid.data.Voices
+import com.forgebuild.engine.files.SafeSave
 import com.forgebuild.engine.ui.icons.EngineIcons
 
 /** Small inline spinner used inside buttons while an async op runs. */
@@ -38,6 +43,27 @@ fun SettingsScreen(
     val settingsLoaded by vm.settingsLoaded.collectAsState()
     val busyOps by vm.busyOps.collectAsState()
     val audioState by AudioPreview.state.collectAsState()
+
+    // Session-11 (task-75): SAF export of the diagnostic log. The system picker
+    // (ACTION_CREATE_DOCUMENT) lets the operator save it wherever they choose —
+    // e.g. Documents/ClipForge — with NO storage permission, instead of an
+    // app-private folder they cannot reach. Write goes through the Engine
+    // SafeSave helper (never DownloadManager).
+    val context = LocalContext.current
+    val diagExportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val text = DiagLog.exportText(context.applicationContext)
+                SafeSave.writeBytes(context, uri, text.toByteArray(Charsets.UTF_8))
+                vm.toast("Diagnostic log saved (${uri.lastPathSegment ?: \"file\"})")
+            } catch (_: Exception) {
+                vm.toast("Could not write diagnostic log")
+            }
+        }
+        // uri == null -> user cancelled the picker; nothing was saved.
+    }
 
     val isOriginal = vm.api?.isOriginalRepo() == true
 
@@ -526,7 +552,7 @@ fun SettingsScreen(
                     // HTTP code, response excerpt, Contents-API create/update intent).
                     Text("Diagnostics", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Every failed GitHub request is recorded on-device with its exact method, path and HTTP code. Export it when reporting an issue.",
+                        "Every failed GitHub request is recorded on-device with its exact method, path and HTTP code. Export it when reporting an issue — the save picker lets you put it in Documents/ClipForge.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -534,7 +560,13 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedButton(onClick = { vm.exportDiagLog() }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = {
+                                val name = "clipforge-diagnostic-log-${System.currentTimeMillis() / 1000}.txt"
+                                diagExportLauncher.launch(name)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text("Export Diagnostic Log")
                         }
                         OutlinedButton(onClick = { vm.clearDiagLog() }, modifier = Modifier.weight(1f)) {

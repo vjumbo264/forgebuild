@@ -1326,11 +1326,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             android.content.pm.PackageManager.PERMISSION_GRANTED
     }
 
-    // ---------------- diagnostic log (session-10 fix #8) ----------------
-    fun exportDiagLog() {
-        val p = DiagLog.export(app.applicationContext)
-        toast(if (p != null) "Diagnostic log written to $p" else "Could not write diagnostic log")
-    }
+    // ---------------- diagnostic log (session-10 fix #8, session-11 task-75) ----------------
+    // Export now goes through the Storage Access Framework picker in SettingsScreen
+    // (SafeSave / ACTION_CREATE_DOCUMENT) — the operator picks a reachable destination
+    // such as Documents/ClipForge. The old app-private filesDir export was removed.
     fun clearDiagLog() { DiagLog.clear(app.applicationContext); toast("Diagnostic log cleared") }
 
     // ---------------- Super Series (feature-01, session-10 fix #9) ----------------

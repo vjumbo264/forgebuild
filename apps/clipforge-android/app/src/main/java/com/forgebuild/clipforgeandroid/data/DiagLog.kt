@@ -1,6 +1,8 @@
 package com.forgebuild.clipforgeandroid.data
 
 import android.content.Context
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * On-device diagnostic log (session-10 fix #8): records the exact failing GitHub
@@ -9,8 +11,9 @@ import android.content.Context
  * operator's friend's phone while the same PAT works on the operator's own phone —
  * is diagnosable from EVIDENCE instead of guesses. Nothing leaves the device.
  *
- * Ring buffer of the last 200 lines in SharedPreferences; exportable to
- * filesDir/clipforge-diagnostic-log.txt from Settings -> About.
+ * Ring buffer of the last 200 lines in SharedPreferences; exported via the
+ * Storage Access Framework picker (Settings -> About) so the operator chooses
+ * a reachable destination such as Documents/ClipForge.
  */
 object DiagLog {
     private const val PREFS = "clipforge_diag"
@@ -44,14 +47,15 @@ object DiagLog {
         } catch (_: Exception) {}
     }
 
-    /** Write the log to a shareable text file; returns the absolute path or null. */
-    fun export(ctx: Context?): String? = try {
-        if (ctx == null) null else {
-            val f = java.io.File(ctx.filesDir, "clipforge-diagnostic-log.txt")
-            f.writeText(lines(ctx).joinToString("\n"))
-            f.absolutePath
-        }
-    } catch (_: Exception) {
-        null
+    /**
+     * Session-11 (task-75): build the export text for a Storage Access Framework
+     * save (SafeSave / ACTION_CREATE_DOCUMENT). The operator picks the destination
+     * (e.g. Documents/ClipForge) in the system picker — no storage permission, no
+     * app-private folder they cannot reach.
+     */
+    fun exportText(ctx: Context?): String {
+        val stamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        val body = lines(ctx).joinToString("\n")
+        return "ClipForge Android diagnostic log\nExported: $stamp\nLines: ${lines(ctx).size}\n\n$body\n"
     }
 }
