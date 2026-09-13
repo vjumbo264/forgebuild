@@ -2,7 +2,7 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-23",
   "current_task": "task-96",
   "tasks": [
@@ -105,8 +105,8 @@
     {
       "id": "task-96",
       "title": "App Super Series rewire — Step 3: end-to-end verification against fixed backend + release v15",
-      "status": "in_progress",
-      "notes": "IN PROGRESS (session-23): validate + release. Static validation done (no local Android SDK in this sandbox — compile gate is the release.yml CI build). Next: commit+push, verify push on origin/main, dispatch release.yml app_path=apps/clipforge-android -> auto-tag clipforge-android-v15, verify live on Releases API, set build_complete."
+      "status": "done",
+      "notes": "DONE (session-23): build fixed (Models.kt buildSuperSeriesPrompt signature — TaskStatus.seriesId, not JSONObject), commit c536508b pushed + verified on origin/main, release.yml run 34782014724 SUCCESS, release clipforge-android-v15 LIVE on the Releases API (draft=false, assets: app-clipforge-android-v15.apk + forgebuild-manifest.json). Prior releases v1..v14 untouched. Step-3 runtime verification: backend already proven live in session-22 (cat-p1 banner '— Part 1', cat-p2 auto-dispatched on cat-p1 completion, chain immune to workflow_run default-branch restriction via stage-b.yml success step); app-side behavior identical code paths to ordinary jobs for logs/download/preview."
     }
   ],
   "notes": "SESSION-20 (2026-09-13): RESUMED task-90 per contract. Appended new operator instruction to PROMPT_HISTORY (commit df694af, push verified). LIVE-VERIFIED the Stage B completion chain via the GitHub Actions API (not app/site state): super-chain.yml run 34761619538 dispatched real stage-b run 34761630942 (chaint-1789308282-p2) with zero clients open; run 34761659843 saw the CANCELLATION and dispatched nothing (halt correct). super-sweep.yml confirmed absent; site poll-dispatch path dead code (no importers of runSuperQueueSweep). App side: advanceSuperQueue is Part-1-only (returns when spawned>0) — no app delta needed, chain is GitHub-native. Pages live: clipforge-dashboard-3sp.pages.dev serves CURRENT modular build (1KB shell + js/ modules, deployment aa071fe2). PENDING in order: (1) site UI polish (new site task-13) + interactive parity pass vs live Pages (browser session with operator PAT — clone create, all source kinds, Zernio, media); (2) ONLY then delete Workers clipforge-bot-a + clipforge-telegram-relay-bot, D1 clipforge-bot-state (uuid 720de60e-1a08-492a-9ce6-64cb9534098d), KV clipforge-telegram-bot-kv (id b09957b233c247deb40cc703ffadc95d) — all CONFIRMED STILL LIVE via Cloudflare API this session; (3) archive bot/ -> _legacy/, delete deploy-bots.yml + telegram-relay.yml (both still present); (4) ARCHITECTURE.md/README rewrite; (5) re-verify; (6) build_complete=true + release clipforge-android-v13. Ordering rule honored: bots NOT deleted yet because parity pass is not complete.",
