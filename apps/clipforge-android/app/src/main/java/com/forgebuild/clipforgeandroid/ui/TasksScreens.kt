@@ -513,7 +513,8 @@ fun TaskDetailScreen(
             if (currentStatus.state == "awaiting_plan" || currentStatus.isComplete) {
                 Button(
                     onClick = {
-                        val promptText = AgentPromptBuilder.build(currentStatus, request)
+                        val loginCreds by vm.login.collectAsState()
+                        val promptText = AgentPromptBuilder.build(currentStatus, request, loginCreds?.owner ?: "motionssalt", loginCreds?.repo ?: "clipforge")
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("ClipForge Agent Prompt", promptText))
                         vm.toast("Agent prompt copied to clipboard!")

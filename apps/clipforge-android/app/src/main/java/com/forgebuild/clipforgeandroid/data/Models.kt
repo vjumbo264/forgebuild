@@ -341,45 +341,58 @@ object Pipeline {
     }
 }
 
-/** Generates canonical agent prompt matching bot/src/index.js sendAgentPrompt */
+/**
+ * Generates the canonical "copy agent prompt" text — 1:1 with the site's
+ * agentPromptCard(status, request) in site/js/features/tasks.js. The release
+ * link is ALWAYS the first line, built once before any mode branching
+ * (ordinary task, ordinary series part, and Super Series anchor alike), from
+ * status.release_url with a constructed https://github.com/<owner>/<repo>/
+ * releases/tag/clipforge-<jobId> fallback when that field is empty/missing.
+ */
 object AgentPromptBuilder {
-    fun build(status: TaskStatus, request: JSONObject?): String {
+    fun build(status: TaskStatus, request: JSONObject?, owner: String, repo: String): String {
         val releaseUrl = if (status.releaseUrl.isNotBlank()) status.releaseUrl
-        else "https://github.com/release/tag/" + (if (status.releaseTag.isNotBlank()) status.releaseTag else ("clipforge-" + status.jobId))
+        else "https://github.com/" + owner + "/" + repo + "/releases/tag/clipforge-" + status.jobId
 
         val options = request?.optJSONObject("options")
         val target = options?.optInt("target_duration_seconds", 120) ?: 120
         val focus = options?.optString("focus", "").orEmpty().trim()
         val focusClause = if (focus.isNotBlank()) ", focused on: " + focus else ""
 
-        // Super Series anchor task: expects ONE whole-series super-plan, not a
-        // single-part production.json — the copied prompt must say so.
-        if (request?.optJSONObject("series")?.optBoolean("super_series", false) == true) {
-            return buildSuperSeriesPrompt(status.seriesId, focusClause)
-        }
-        val seriesClause = if (status.seriesEnabled) {
-            "\n\nSERIES MODE — THIS IS PART " + status.part + " OF THE SERIES \"" + status.seriesId + "\" (not any other part number).\n" +
-            "The production.json MUST include a nested \"series\" object whose series_id is EXACTLY \"" + status.seriesId + "\", part is " + status.part + ", start_seconds is " + status.startSeconds + ", plus end_seconds, is_final (boolean) and a concise summary of this part.\n" +
-            "Copy those values verbatim — do not invent a new series id."
+        // Series data comes from request.series (the job's own request), exactly
+        // like the site — NOT from the status cache.
+        val reqSeries = request?.optJSONObject("series")
+        val seriesEnabled = reqSeries?.optBoolean("enabled", false) == true
+        val seriesId = reqSeries?.optString("series_id", "").orEmpty()
+        val part = reqSeries?.optInt("part", 1) ?: 1
+        val startSeconds = reqSeries?.optInt("start_seconds", 0) ?: 0
+        val isSuperSeries = reqSeries?.optBoolean("super_series", false) == true
+
+        val seriesClause = if (seriesEnabled) {
+            if (isSuperSeries) {
+                "\n" +
+                "SUPER SERIES MODE — plan the WHOLE series \"" + seriesId + "\" in ONE document.\n" +
+                "Do NOT produce a single-part production.json. 00_READ_THIS_FIRST.txt (SUPER SERIES MODE section at the top) defines the whole-series super-plan contract: one JSON document with version 2, your series_id, and a \"parts\" array where every part is a complete single-part production.json whose nested series.series_id matches EXACTLY.\n" +
+                "Reply with ONLY that one super-plan document."
+            } else {
+                "\n" +
+                "SERIES MODE — this is Part " + part + " of series \"" + seriesId + "\".\n" +
+                "The production.json MUST include a nested \"series\" object whose series_id is EXACTLY \"" + seriesId + "\", part is " + part + ", start_seconds is " + startSeconds + ", plus end_seconds, is_final (boolean) and a concise summary of this part.\n" +
+                "Copy those three values verbatim — do not invent a new series id."
+            }
         } else ""
 
         val words = (target * 3.133).roundToInt()
 
         return "Open this GitHub release: " + releaseUrl + "\n" +
             "Download and read 00_READ_THIS_FIRST.txt FIRST, then inspect the evidence assets (transcript.json, scene_index.json, key_moments.json, and the screenshot composites as needed).\n" +
-            "Produce exactly one production.json for a vertical clip" + focusClause + "." + seriesClause + "\n" +
+            (if (isSuperSeries)
+                "Produce exactly one WHOLE-SERIES super-plan document for this series" + focusClause + "." + seriesClause
+            else
+                "Produce exactly one production.json for a vertical clip" + focusClause + "." + seriesClause) + "\n" +
             "The ~" + target + "s figure targets total SPOKEN NARRATION length only — it is NOT the video's length and must not influence how long any cut is, how many cuts you make, or where any end_seconds falls. The final video is exactly as long as the total narration, so keep TOTAL spoken words near " + target + " x 3.1 (about " + words + " words). Choose every cut's end_seconds at the full on-screen completion of its visual payoff (per the PICKING end_seconds rules in 00_READ_THIS_FIRST.txt), even when the footage then runs longer than the narration.\n" +
             "The file must match the production.json contract in 00_READ_THIS_FIRST.txt exactly.\n" +
             "Delivery: your ENTIRE reply must be ONLY the production.json. PREFER a .json file attachment; if you cannot attach files, reply with ONE ```json code block and nothing else. The JSON must be complete and valid: double quotes, no comments, no trailing commas, no truncation. No commentary, headings, or explanation outside the file or code block."
     }
-
-
-    /** Prompt for the Super Series anchor task — ONE whole-series super-plan. */
-    private fun buildSuperSeriesPrompt(seriesId: String, focusClause: String): String {
-        return "This task is the ANCHOR of a Super Series — it must be planned as ONE document covering EVERY part, not a single part." + focusClause + "\n" +
-            "Produce exactly one super-plan JSON object for the whole series with: a top-level \"series_id\" that is EXACTLY \"" + seriesId + "\", \"video_duration_seconds\", \"target_total_duration_seconds\", and a \"parts\" array listing EVERY part in order.\n" +
-            "Each entry in \"parts\" is one part (Part 1 = parts[0], Part 2 = parts[1], ...) and must carry its own nested \"series\" object with series_id EXACTLY \"" + seriesId + "\", its part number, start_seconds and end_seconds, is_final (true ONLY on the last part), and a concise summary of that part.\n" +
-            "The parts must tile the source video with NO gaps and NO overlaps: Part 1 starts where the series starts, each next part starts exactly where the previous one ended, and the part marked is_final ends the series.\n" +
-            "Delivery: your ENTIRE reply must be ONLY the super-plan JSON. PREFER a .json file attachment; if you cannot attach files, reply with ONE ```json code block and nothing else. The JSON must be complete and valid: double quotes, no comments, no trailing commas, no truncation. No commentary, headings, or explanation outside the file or code block."
-    }
+}
 }
