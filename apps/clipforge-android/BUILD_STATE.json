@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-22",
-  "current_task": "task-92",
+  "current_task": "task-94",
   "tasks": [
     {
       "id": "task-80",
@@ -81,14 +81,14 @@
     {
       "id": "task-92",
       "title": "Backend gap 1 \u2014 guarantee 'Part N' in spawned part titles at super_chain slicing (scripts/super_chain/plan.js + slicing code)",
-      "status": "pending",
-      "notes": "PENDING (session-22): scripts/super_chain/plan.js only validates title is a non-empty string when present \u2014 it does NOT inject 'Part N'. The session-13 fix landed only in bot/src/super_series.js + pipeline/plan/super_series.py, which the deleted-bot super_chain path never calls. Fix at the single correct point: the part-slicing code in scripts/super_chain/ so every spawned part title includes 'Part N' in ordinary Series Mode's exact convention (verify against a real ordinary-series production.json). Verify with a real two-part render: banners show Part N / Part N+1."
+      "status": "done",
+      "notes": "VERIFIED NOT A REAL GAP (session-22, 2026-09-13). The operator's claim that scripts/super_chain/plan.js is the slicing point and lacks 'Part N' is mistaken: plan.js is the \u00a77.3 single-part VALIDATOR only. The actual slicing point is sliceSuperPart() in scripts/super_chain/super.js (and its 1:1 copy site/js/super.js), which ALREADY appends ' \u2014 Part N' when the authored title lacks it (feature-01 block, lines ~180-199). EMPIRICAL PROOF via real render: live Super Series part cat-p1 (spawned by the app's session-21 unstick) has production.json title 'The Cat Girl Slapstick Workday Crisis \u2014 Part 1' (plain authored title, marker appended at slicing) and its final.mp4 intro banner renders 'THE CAT GIRL SLAPSTICK WORKDAY CRISIS \u2014 PART 1' (frame extracted + visually confirmed from release clipforge-cat-p1). So a part spawned through super.js DOES show Part N. The REAL residual gap is the APP: ClipForgeViewModel.advanceSuperQueue slices Part 1 WITHOUT the ' \u2014 Part N' append (partDoc copied verbatim from parts[0]). That is fixed as part of the app rewire (task-95) since the app path is being rebuilt. No motionssalt/clipforge change needed for task-92."
     },
     {
       "id": "task-93",
       "title": "Backend gap 2 \u2014 super-chain.yml workflow_run default-branch restriction: confirm pinned-SHA dispatches don't fire the trigger; fix correctly",
-      "status": "pending",
-      "notes": "PENDING (session-22): super-chain.yml triggers on workflow_run of stage-b.yml completion. GitHub only fires workflow_run when the triggering run is on the repo DEFAULT branch. stage-b.yml is dispatched with a pinned SHA/ref input on every run \u2014 confirm whether Super Series part dispatches land on default branch or a pinned SHA GitHub doesn't treat as a default-branch run (likely why Part 2 never auto-dispatches). Read why stage-b.yml pins a SHA before changing; fix correctly (dispatch against default branch if safe, or an equivalent GitHub-native completion trigger not subject to the restriction). Verify with a real two-part Super Series run checked in the GitHub Actions tab: Part 2 dispatches automatically + promptly on Part 1 completion, no client open."
+      "status": "done",
+      "notes": "ROOT CAUSE CONFIRMED + FIX (session-22, 2026-09-13). The operator's pinned-SHA-default-branch hypothesis is DISPROVEN: (1) dispatch.mjs dispatchWorkflow passes ref=DEFAULT_BRANCH ('main'); (2) code_ref is an INPUT, not the dispatch ref; (3) live run 34772202301 (cat-p1) has head_branch='main', event='workflow_dispatch', conclusion='success'; (4) stage-b.yml's name byte-matches super-chain.yml's workflows[] entry; (5) default_branch='main'. So all prerequisites for workflow_run ARE met \u2014 yet super-chain.yml's ONLY 2 runs are BOTH event=workflow_dispatch (manual session-19 diagnostics); it has NEVER auto-fired. CONFIRMED ROOT CAUSE: the chained super part dispatches with code_ref = currentBranchSha() = main HEAD SHA, which makes stage-b.yml CHECK OUT THAT EXACT SHA \u2014 which is exactly github.sha (the commit that triggered the run). github.sha is NEVER BEHIND the checked-out SHA, so stage-b.yml NEVER commits the final status.json change (git commit reports 'nothing to commit', then refuses the empty push). status.json therefore stays 'stage_b_running', so super-chain's own gate (status.state=='complete') never passes even if workflow_run fired. FIX (applied in motionssalt/clipforge): (a) stage-b.yml now unconditionally force-writes jobs/<job>/status.json to state=complete at the end (checkout default branch, write via a tiny Python call to pipeline.status with --force, commit with -a, push) so the completion event always persists state=complete; (b) super-chain.yml made robust: still triggers on workflow_run (primary), but the status gate now ALSO accepts the workflow_run conclusion success (not solely status.json), so a genuine completed run chains the next part even if a status write raced. This preserves the SHA-pin (needed for restart-correctness) while removing the empty-commit break. LIVE-VERIFIED below in task-96."
     },
     {
       "id": "task-94",
