@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-12",
-  "current_task": "task-78",
+  "current_task": "task-79",
   "tasks": [
     {
       "id": "task-74",
@@ -33,8 +33,8 @@
     {
       "id": "task-78",
       "title": "Validate build (Kotlin structural balance + marker checks) and bump version to 8",
-      "status": "pending",
-      "notes": "Run the session validation harness (apps/clipforge-android/tools/validate_session09.py reusable; extend markers for: PullToRefreshBox presence in TasksScreens/SeriesScreens, spinning refresh indicator, CreateDocument SAF export in SettingsScreen, 'Part ' rows on SeriesScreen, prompt header parity) plus comment/string/template-aware brace balance on all modified Kotlin files. Bump versionCode/versionName 7 -> 8 in app/build.gradle.kts. R8 + resource shrinking remain ON. No new dependency beyond possibly nothing (PullToRefreshBox is in the existing BOM)."
+      "status": "done",
+      "notes": "DONE (session-12, 2026-09-13): versionCode/versionName 7->8 in app/build.gradle.kts; SettingsScreen About 'Version v8'. NEW tools/validate_session12.py (string/template/comment-aware, NO git-dirty skip since this cycle touched many files): brace/paren/bracket balance on all 27 .kt files OK; markers verified — PullToRefreshBox import+2 uses in TasksScreens (active+completed) +1 in SeriesScreens, onRefresh={vm.refreshTasks()} x3, spinning CircularProgressIndicator corner affordances, CreateDocument('text/plain') + SafeSave.writeBytes + DiagLog.exportText in the SAF export, 'Part ${part.part}' + 'Part $n' + 'queued (upcoming)' rows on Series overview, onSelectTask wired x2 + App.kt, 'SERIES MODE — THIS IS PART ' + '(not any other part number)' + 'SUPER SERIES MODE — THIS IS A SUPER SERIES TASK' + 'Part 1, Part 2, Part 3, and so on through the final part' + buildSuperSeriesPrompt routing in Models.kt, AgentPromptBuilder.build(currentStatus, request) copy surface; FORBIDDEN checks (against comment-stripped code) — old DiagLog.export/exportDiagLog gone everywhere, no DownloadManager usage; versionCode=8/versionName='8'/R8 minify/resource shrinking all confirmed. validate_session09.py marker table refreshed to Version v8; both harnesses: ALL CHECKS PASSED."
     },
     {
       "id": "task-79",
@@ -43,5 +43,5 @@
       "notes": "Dispatch the Build & Release App APK workflow (POST /repos/vjumbo264/forgebuild/actions/workflows/release.yml/dispatches, ref=main, inputs app_path='apps/clipforge-android', release_notes summarizing task-74..77). NEVER overwrite/delete prior releases v1..v7. Poll the run to success; if the build fails, fix and re-dispatch (tag auto-increments only on success). Verify the release live via the GitHub Releases API (APK + forgebuild-manifest.json assets present), then set build_complete: true."
     }
   ],
-  "notes": "SESSION-12 (2026-09-13): tasks 74-77 DONE. task-74 PUSHED (82e28a27): swipe-to-refresh PullToRefreshBox + spinning corner refresh. task-75 PUSHED (4290cbbc): SAF diag-log export via CreateDocument + SafeSave. task-76 PUSHED (cb8c50f4): per-part Part 1/2/3 rows on Series overview + upcoming Super Series parts + onSelectTask nav. task-77 DONE (this commit): series prompt states part number explicitly; new Super Series prompt states Super Series identity + Part 1..N plan semantics. REMAINING: task-78 (validation harness + version bump 7->8), task-79 (release v8 via release.yml + verify live)."
+  "notes": "SESSION-12 (2026-09-13): tasks 74-78 DONE (74 PUSHED 82e28a27 swipe-to-refresh+spinning corner refresh; 75 PUSHED 4290cbbc SAF diag-log export; 76 PUSHED cb8c50f4 per-part rows on Series overview; 77 PUSHED eb5ab48c prompt part-number/Super-Series wording; 78 validation harness green + v8 bump, this commit). REMAINING: task-79 — dispatch release.yml (app_path=apps/clipforge-android), poll to success, verify clipforge-android-v8 live on the Releases API (APK + forgebuild-manifest.json), then build_complete=true."
 }

@@ -101,7 +101,7 @@ markers = {
  "fix4 start next part": ["startNextSeriesPart", "manualSeriesContinuation", "nextPartRequestBody", "refreshNextPart"],
  "fix5 play downloaded": ["DownloadsRegistry", "downloadedVideoFor", "VideoPlayerDialog", "Play Final Video"],
  "fix6 total size": ["totalText", "formatBytes", "assetSizeBytes > 0"],
- "fix7 about": ["About ClipForge Android", "Version v6"],
+ "fix7 about": ["About ClipForge Android", "Version v8"],
  "fix8 auto-detect": ["detectedSourceKind", "Paste a link — the app detects"],
  "no per-tab nav state change (out of scope)": ["restoreState = true"],
 }
