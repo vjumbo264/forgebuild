@@ -395,4 +395,3 @@ object AgentPromptBuilder {
             "Delivery: your ENTIRE reply must be ONLY the production.json. PREFER a .json file attachment; if you cannot attach files, reply with ONE ```json code block and nothing else. The JSON must be complete and valid: double quotes, no comments, no trailing commas, no truncation. No commentary, headings, or explanation outside the file or code block."
     }
 }
-}
