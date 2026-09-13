@@ -3,8 +3,8 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "session-21",
-  "current_task": "task-91",
+  "updated_by": "session-22",
+  "current_task": "task-92",
   "tasks": [
     {
       "id": "task-80",
@@ -77,6 +77,36 @@
       "title": "App Super Series Part-1 spawn silent-failure fix + live unstick of stuck 'cat' anchor",
       "status": "done",
       "notes": "IN PROGRESS (session-21). ROOT CAUSE of 'app Super Series not working': ClipForgeViewModel.advanceSuperQueue had SILENT early-return guards (api null / super-plan unreadable / spawned>0 / part files exist) that produced NO error and NO toast, while the caller then wrote an anchor status.json claiming 'part 1 dispatched'. Real-world instance: live anchor manual-1789317419261 (series 'cat', 3 parts) stuck with spawned=[] and status claiming dispatch. FIX: all silent guards replaced with explicit IllegalStateException with actionable messages (caught by the caller's try/catch -> toast). LIVE UNSTICK: performed the missing Part-1 spawn via the repo's own shared dispatch code (scripts/super_chain/dispatch.mjs + super.js, the same code path super-chain.yml uses) \u2014 wrote jobs/cat-p1/{stage-a-request,production,status}.json, advanced the spawned cursor in the anchor, dispatched stage-b.yml => REAL RUN 34772202301 'Stage B \u2014 cat-p1' confirmed in_progress via the Actions API. On its success, super-chain.yml should auto-dispatch cat-p2 unattended; on failure the chain halts by design. Chain mechanism itself unchanged (super-chain.yml workflow_run on stage-b completion, verified live in sessions 18-20). Site is already modular multi-file (index.html 1.1KB shell + styles.css + app.js + js/*, served at https://clipforge-dashboard-3sp.pages.dev \u2014 verified HTTP 200 this session); remaining UI polish is tracked separately. PENDING: bump to v13, release via release.yml, verify live, then build_complete. | RELEASED (session-22 verification): release.yml runs 34772240295+34772259463 completed success; clipforge-android-v13 AND clipforge-android-v14 both live + verified via the GitHub Releases API (both target main HEAD 8e8d669, both APK 5282210 bytes + forgebuild-manifest.json) \u2014 two back-to-back runs on 2026-09-13 17:39 created both tags from the same corrected v13 source, so v14 is a no-op duplicate of v13 and task-91's release step is satisfied. Prior releases v1..v12 untouched (v9/v12 spot-checked 200). Task-91 fully done."
+    },
+    {
+      "id": "task-92",
+      "title": "Backend gap 1 \u2014 guarantee 'Part N' in spawned part titles at super_chain slicing (scripts/super_chain/plan.js + slicing code)",
+      "status": "pending",
+      "notes": "PENDING (session-22): scripts/super_chain/plan.js only validates title is a non-empty string when present \u2014 it does NOT inject 'Part N'. The session-13 fix landed only in bot/src/super_series.js + pipeline/plan/super_series.py, which the deleted-bot super_chain path never calls. Fix at the single correct point: the part-slicing code in scripts/super_chain/ so every spawned part title includes 'Part N' in ordinary Series Mode's exact convention (verify against a real ordinary-series production.json). Verify with a real two-part render: banners show Part N / Part N+1."
+    },
+    {
+      "id": "task-93",
+      "title": "Backend gap 2 \u2014 super-chain.yml workflow_run default-branch restriction: confirm pinned-SHA dispatches don't fire the trigger; fix correctly",
+      "status": "pending",
+      "notes": "PENDING (session-22): super-chain.yml triggers on workflow_run of stage-b.yml completion. GitHub only fires workflow_run when the triggering run is on the repo DEFAULT branch. stage-b.yml is dispatched with a pinned SHA/ref input on every run \u2014 confirm whether Super Series part dispatches land on default branch or a pinned SHA GitHub doesn't treat as a default-branch run (likely why Part 2 never auto-dispatches). Read why stage-b.yml pins a SHA before changing; fix correctly (dispatch against default branch if safe, or an equivalent GitHub-native completion trigger not subject to the restriction). Verify with a real two-part Super Series run checked in the GitHub Actions tab: Part 2 dispatches automatically + promptly on Part 1 completion, no client open."
+    },
+    {
+      "id": "task-94",
+      "title": "App Super Series rewire \u2014 Step 1: DELETE all existing Super Series-specific app code/screens/settings (ordinary Series Mode untouched)",
+      "status": "pending",
+      "notes": "PENDING (session-22): remove every Super Series-specific addition from apps/clipforge-android (screens, settings section, state handling, view-model logic incl. advanceSuperQueue etc.). Ordinary Series Mode code left untouched. Then rebuild fresh per Step 2."
+    },
+    {
+      "id": "task-95",
+      "title": "App Super Series rewire \u2014 Step 2: rebuild fresh against real backend (toggle gated on Series Mode; dedicated super_series_settings.json section; super-plan submit w/ backend-identical validation; Part 1 immediate dispatch; chained parts app-free; NO 'Start Next Part' on super parts; restart/cancel only Stage A or CURRENT part; series overview badge + halted state; parts reuse ordinary task detail)",
+      "status": "pending",
+      "notes": "PENDING (session-22): (a) Super Series toggle enabled only when Series Mode on (Series off forces Super off; reproduce wizard.js/current-equivalent enforcement exactly; toggle disabled/hidden when Series off). (b) Dedicated Super Series settings section parallel to ordinary Series settings, read/write branding/super_series_settings.json exactly as the CURRENT backend expects (find current equivalent under site/ or scripts/super_chain/, not bot-era bot/src/settings_super.js). (c) Create Super Series by submitting ONE super-plan document (paste/upload, no size truncation), validated with the SAME accept/reject + error strings as the current parseAndValidateSuperPlan/validate_super_plan equivalent \u2014 no app-invented validation. (d) Part 1 dispatches immediately on submit; Part 2+ dispatch automatically via completion chain \u2014 app does NOT dispatch them and has no Super 'start next part' action. (e) SPECIFIC BUG: a Super Series part must NEVER show 'Start Next Part' (that's ordinary Series only) regardless of state; task detail must EXPLICITLY distinguish super vs ordinary part and render correct controls. (f) Restart/cancel on a super part: only Stage A (whole pipeline) or the CURRENTLY active/most-recent part's Stage B; earlier completed parts show NO restart/cancel at all (absent, not disabled). (g) Series overview: clear Super vs ordinary badge; halted chain visually obvious naming the failed part; restarting that part is the ONLY resume shown. (h) Super parts are ordinary jobs from Stage B onward \u2014 same task-detail code (logs/download/preview), no special-casing beyond restart/cancel + no-next-part rules."
+    },
+    {
+      "id": "task-96",
+      "title": "App Super Series rewire \u2014 Step 3: end-to-end verification against fixed backend + release v15",
+      "status": "pending",
+      "notes": "PENDING (session-22): E2E verify \u2014 enable Series Mode, enable Super Series, submit real super-plan; Part 1 dispatches + banner shows 'Part 1'; Part 2 auto-dispatches on Part 1 completion with no manual action and no client open; no 'Start Next Part' anywhere on super parts; only current part (or Stage A) shows restart/cancel; deliberately-failed part halts chain and resumes on restart. Then bump + release next version via release.yml (app_path=apps/clipforge-android -> clipforge-android-v15), verify live via Releases API, set build_complete=true."
     }
   ],
   "notes": "SESSION-20 (2026-09-13): RESUMED task-90 per contract. Appended new operator instruction to PROMPT_HISTORY (commit df694af, push verified). LIVE-VERIFIED the Stage B completion chain via the GitHub Actions API (not app/site state): super-chain.yml run 34761619538 dispatched real stage-b run 34761630942 (chaint-1789308282-p2) with zero clients open; run 34761659843 saw the CANCELLATION and dispatched nothing (halt correct). super-sweep.yml confirmed absent; site poll-dispatch path dead code (no importers of runSuperQueueSweep). App side: advanceSuperQueue is Part-1-only (returns when spawned>0) \u2014 no app delta needed, chain is GitHub-native. Pages live: clipforge-dashboard-3sp.pages.dev serves CURRENT modular build (1KB shell + js/ modules, deployment aa071fe2). PENDING in order: (1) site UI polish (new site task-13) + interactive parity pass vs live Pages (browser session with operator PAT \u2014 clone create, all source kinds, Zernio, media); (2) ONLY then delete Workers clipforge-bot-a + clipforge-telegram-relay-bot, D1 clipforge-bot-state (uuid 720de60e-1a08-492a-9ce6-64cb9534098d), KV clipforge-telegram-bot-kv (id b09957b233c247deb40cc703ffadc95d) \u2014 all CONFIRMED STILL LIVE via Cloudflare API this session; (3) archive bot/ -> _legacy/, delete deploy-bots.yml + telegram-relay.yml (both still present); (4) ARCHITECTURE.md/README rewrite; (5) re-verify; (6) build_complete=true + release clipforge-android-v13. Ordering rule honored: bots NOT deleted yet because parity pass is not complete.",
