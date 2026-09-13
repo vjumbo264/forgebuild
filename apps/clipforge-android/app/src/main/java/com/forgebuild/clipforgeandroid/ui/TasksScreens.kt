@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.AgentPromptBuilder
 import com.forgebuild.clipforgeandroid.data.Pipeline
-import com.forgebuild.clipforgeandroid.data.PlanValidator
 import com.forgebuild.clipforgeandroid.data.SuperSeries
+import com.forgebuild.clipforgeandroid.data.PlanValidator
 import com.forgebuild.clipforgeandroid.data.TaskStatus
 import com.forgebuild.engine.ui.icons.EngineIcons
 
@@ -320,10 +320,11 @@ fun TaskDetailScreen(
     val torrentFiles by vm.torrentFiles.collectAsState()
     val torrentSubmitting by vm.torrentSubmitting.collectAsState()
     val plan by vm.detailPlan.collectAsState()
-    val busyOps by vm.busyOps.collectAsState()
-    // Session-10 fix #9: this anchor task expects ONE whole-series super-plan
-    // (series.super_series in its stage-a-request) instead of a single-part plan.
+    val superState by vm.detailSuperState.collectAsState()
+    // This detail view is a Super Series part iff its stage-a-request carries
+    // series.super_series — checked EXPLICITLY, never assumed from context.
     val isSuperSeriesTask = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
+    val busyOps by vm.busyOps.collectAsState()
     val nextPart by vm.nextPart.collectAsState()
     val downloadedVideo by vm.downloadedVideoFor.collectAsState()
 
@@ -535,7 +536,7 @@ fun TaskDetailScreen(
                         )
                         Text(
                             if (isSuperSeriesTask)
-                                "This is a Super Series task — paste/upload the ONE super-plan document covering EVERY part. The bot validates it up front, then parts dispatch automatically, one at a time."
+                                "This is a Super Series task — paste/upload the ONE super-plan document covering EVERY part (no size truncation). It is validated exactly as the backend validates it; Part 1 dispatches immediately, the rest chain automatically."
                             else
                                 "Paste the generated JSON plan below or upload it directly from file storage.",
                             style = MaterialTheme.typography.bodySmall
@@ -559,7 +560,7 @@ fun TaskDetailScreen(
                                 else PlanValidator.validate(it)
                             },
                             label = { Text(if (isSuperSeriesTask) "Paste the super-plan JSON" else "Paste raw production.json") },
-                            placeholder = { Text(if (isSuperSeriesTask) """{"version": 2, "series_id": "...", "parts": [...]}""" else """{"video_duration_seconds": 120, ...}""") },
+                            placeholder = { Text(if (isSuperSeriesTask) """{"series_id": "...", "parts": [...]}""" else """{"video_duration_seconds": 120, ...}""") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 160.dp, max = 320.dp),
@@ -591,7 +592,7 @@ fun TaskDetailScreen(
                             enabled = rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (isSuperSeriesTask) "Submit Super-Plan (parts dispatch automatically)" else "Submit Plan & Start Stage B Rendering")
+                            Text(if (isSuperSeriesTask) "Submit Super-Plan (Part 1 starts now; the rest chain automatically)" else "Submit Plan & Start Stage B Rendering")
                         }
                     }
                 }
@@ -666,7 +667,9 @@ fun TaskDetailScreen(
             // appears when manualSeriesContinuation yields a next part AND no
             // stage-a-request.json/status.json exists yet for the next job id
             // (deleting that next part makes the button reappear, just like the bot).
-            nextPart?.let { np ->
+            // Super Series parts NEVER get a Start Next Part button — that control
+            // belongs only to ordinary Series Mode. Parts 2..N dispatch automatically.
+            (if (isSuperSeriesTask) null else nextPart)?.let { np ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Series Continuation", style = MaterialTheme.typography.titleMedium)
@@ -719,7 +722,11 @@ fun TaskDetailScreen(
             val atStageA = state in setOf("queued", "stage_a_running", "awaiting_torrent_selection")
             val failedTask = state == "error" || state == "cancelled"
             val canRestartA = atStageA || failedTask
-            val canRestartB = plan != null || (failedTask && stageBStarted)
+            // Super Series scope rule: only Stage A or the CURRENT part's Stage B may
+            // be restarted/cancelled — an already-completed part shows none (absent,
+            // not disabled).
+            val canRestartB = (plan != null || (failedTask && stageBStarted)) &&
+                !(isSuperSeriesTask && state == "complete")
             val canCancel = state in setOf(
                 "queued", "stage_a_running", "stage_b_queued", "stage_b_running"
             )

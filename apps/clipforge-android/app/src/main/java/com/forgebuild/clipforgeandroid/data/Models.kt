@@ -352,15 +352,11 @@ object AgentPromptBuilder {
         val focus = options?.optString("focus", "").orEmpty().trim()
         val focusClause = if (focus.isNotBlank()) ", focused on: " + focus else ""
 
-        // Session-11 (task-77): the anchor task of a Super Series expects ONE
-        // whole-series super-plan document (series.super_series in its request),
-        // not a single-part production.json — the copied prompt must say so.
-        val isSuperSeries = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
-
-        if (isSuperSeries) {
-            return buildSuperSeriesPrompt(status, releaseUrl, focusClause)
+        // Super Series anchor task: expects ONE whole-series super-plan, not a
+        // single-part production.json — the copied prompt must say so.
+        if (request?.optJSONObject("series")?.optBoolean("super_series", false) == true) {
+            return buildSuperSeriesPrompt(status, focusClause)
         }
-
         val seriesClause = if (status.seriesEnabled) {
             "\n\nSERIES MODE — THIS IS PART " + status.part + " OF THE SERIES \"" + status.seriesId + "\" (not any other part number).\n" +
             "The production.json MUST include a nested \"series\" object whose series_id is EXACTLY \"" + status.seriesId + "\", part is " + status.part + ", start_seconds is " + status.startSeconds + ", plus end_seconds, is_final (boolean) and a concise summary of this part.\n" +
@@ -377,24 +373,14 @@ object AgentPromptBuilder {
             "Delivery: your ENTIRE reply must be ONLY the production.json. PREFER a .json file attachment; if you cannot attach files, reply with ONE ```json code block and nothing else. The JSON must be complete and valid: double quotes, no comments, no trailing commas, no truncation. No commentary, headings, or explanation outside the file or code block."
     }
 
-    /**
-     * Session-11 (task-77): prompt for the Super Series anchor task. States that
-     * this is a SUPER SERIES, that the reply plans the WHOLE series as parts
-     * (Part 1, Part 2, Part 3 … through the final part), and that each part is
-     * one video the pipeline will produce — matching the pipeline's
-     * SUPER_SERIES_DIRECTIVE semantics for the app's copy-to-clipboard surface.
-     */
-    private fun buildSuperSeriesPrompt(status: TaskStatus, releaseUrl: String, focusClause: String): String {
-        val seriesId = if (status.seriesId.isNotBlank()) status.seriesId else "<series id assigned on submit>"
-        return "Open this GitHub release: " + releaseUrl + "\n" +
-            "Download and read 00_READ_THIS_FIRST.txt FIRST, then inspect the evidence assets (transcript.json, scene_index.json, key_moments.json, and the screenshot composites as needed).\n" +
-            "\n" +
-            "SUPER SERIES MODE — THIS IS A SUPER SERIES TASK. You are planning the ENTIRE series in ONE document, not a single part.\n" +
-            "The series will be produced as multiple videos — Part 1, Part 2, Part 3, and so on through the final part — and your document defines every one of them up front.\n" +
-            "Produce exactly one super-plan document for the whole series" + focusClause + ": a JSON object with a top-level \"series_id\" that is EXACTLY \"" + seriesId + "\", \"video_duration_seconds\", \"target_total_duration_seconds\", and a \"parts\" array listing EVERY part in order.\n" +
-            "Each entry in \"parts\" is one part of the series (Part 1 = parts[0], Part 2 = parts[1], Part 3 = parts[2], …) and must carry its own nested \"series\" object with series_id EXACTLY \"" + seriesId + "\", its part number (1, 2, 3, …), start_seconds and end_seconds, is_final (true ONLY on the last part), and a concise summary of that part.\n" +
+
+    /** Prompt for the Super Series anchor task — ONE whole-series super-plan. */
+    private fun buildSuperSeriesPrompt(status: JSONObject, focusClause: String): String {
+        val seriesId = status.optJSONObject("series")?.optString("series_id", "") ?: ""
+        return "This task is the ANCHOR of a Super Series — it must be planned as ONE document covering EVERY part, not a single part." + focusClause + "\n" +
+            "Produce exactly one super-plan JSON object for the whole series with: a top-level \"series_id\" that is EXACTLY \"" + seriesId + "\", \"video_duration_seconds\", \"target_total_duration_seconds\", and a \"parts\" array listing EVERY part in order.\n" +
+            "Each entry in \"parts\" is one part (Part 1 = parts[0], Part 2 = parts[1], ...) and must carry its own nested \"series\" object with series_id EXACTLY \"" + seriesId + "\", its part number, start_seconds and end_seconds, is_final (true ONLY on the last part), and a concise summary of that part.\n" +
             "The parts must tile the source video with NO gaps and NO overlaps: Part 1 starts where the series starts, each next part starts exactly where the previous one ended, and the part marked is_final ends the series.\n" +
-            "\n" +
             "Delivery: your ENTIRE reply must be ONLY the super-plan JSON. PREFER a .json file attachment; if you cannot attach files, reply with ONE ```json code block and nothing else. The JSON must be complete and valid: double quotes, no comments, no trailing commas, no truncation. No commentary, headings, or explanation outside the file or code block."
     }
 }

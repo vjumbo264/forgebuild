@@ -47,9 +47,8 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     var customDurationText by remember { mutableStateOf("") }
     var isSeries by remember { mutableStateOf(settings.seriesDefault) }
     var seriesId by remember { mutableStateOf("") }
-    // Session-10 fix #9: Super Series is orthogonal ON TOP of Series Mode — its
-    // stored default only applies when Series Mode is on, and it can never be on
-    // while Series Mode is off (the two toggles cannot desync — bot wizard.js).
+    // Super Series is ON TOP of Series Mode — only meaningful when Series Mode is
+    // on, never on while Series Mode is off (backend wizard.js dependency).
     var isSuperSeries by remember { mutableStateOf(settings.seriesDefault && settings.superSeriesDefault) }
     var selectedMusicPath by remember { mutableStateOf(defaultMusic) }
 
@@ -292,7 +291,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                             checked = isSeries,
                             onCheckedChange = {
                                 isSeries = it
-                                // Bot dependency: switching Series Mode OFF forces Super Series OFF.
+                                // dependency: Series Mode OFF forces Super Series OFF
                                 if (!it) isSuperSeries = false
                             }
                         )
@@ -307,25 +306,21 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Session-10 fix #9: Super Series toggle — only present while
-                        // Series Mode is ON, exactly like the bot.
+                        // Super Series toggle — only present while Series Mode is ON.
+                        HorizontalDivider()
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text("Super Series", style = MaterialTheme.typography.titleSmall)
+                                Text("Super Series", style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Plan the ENTIRE series in one super-plan document — parts then dispatch automatically, one at a time.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Submit ONE whole-series super-plan; parts 2..N dispatch automatically on completion",
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                             }
-                            Switch(
-                                checked = isSuperSeries,
-                                onCheckedChange = { isSuperSeries = it }
-                            )
+                            Switch(checked = isSuperSeries, onCheckedChange = { isSuperSeries = it })
                         }
                     }
                 }

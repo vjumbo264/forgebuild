@@ -364,8 +364,6 @@ fun SettingsScreen(
                             Switch(
                                 checked = settings.seriesDefault,
                                 enabled = !busyOps.contains("save_series_default"),
-                                // Bot dependency (wizard.js): Series Mode OFF also
-                                // force-writes Super Series OFF — no desync possible.
                                 onCheckedChange = { vm.setSeriesDefaultWithDependency(it) }
                             )
                         }
@@ -373,36 +371,38 @@ fun SettingsScreen(
                 }
             }
 
-            // --- Section 5b: Super Series Default (session-10 fix #9) ---
-            // Its own stored setting at branding/super_series_settings.json (bot
-            // settings_super.js), parallel to the Series Mode default above. Only
-            // meaningful when Series Mode is on — disabled here whenever it isn't.
+            // --- Section 5b: Super Series (parallel to, not merged into, Series Mode) ---
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Super Series", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Whole-series planning: submit ONE super-plan and parts 2..N dispatch automatically on completion. Requires Series Mode — it is forced off when Series Mode is off.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Default Super Series", style = MaterialTheme.typography.titleMedium)
-                            Text("Plan whole multi-part series in one super-plan; parts dispatch automatically", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (busyOps.contains("save_super_series_default")) {
-                                ButtonSpinner()
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Switch(
-                                checked = settings.superSeriesDefault,
-                                enabled = settings.seriesDefault && !busyOps.contains("save_super_series_default"),
-                                onCheckedChange = { vm.setSuperSeriesDefault(it) }
+                            Text("Super Series default", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Stored at branding/super_series_settings.json",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        val superBusy = busyOps.contains("save_super")
+                        if (superBusy) ButtonSpinner()
+                        Switch(
+                            checked = settings.superSeriesDefault && settings.seriesDefault,
+                            enabled = settings.seriesDefault && !superBusy,
+                            onCheckedChange = { vm.setSuperSeriesDefault(it) }
+                        )
                     }
                     if (!settings.seriesDefault) {
                         Text(
-                            "Requires Series Mode — enable Default Series Mode first (the bot force-disables Super Series whenever Series Mode is off).",
+                            "Turn Series Mode on to enable Super Series.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -538,7 +538,7 @@ fun SettingsScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
-                    Text("Version v13", style = MaterialTheme.typography.bodyMedium)
+                    Text("Version v15", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
                         style = MaterialTheme.typography.bodySmall

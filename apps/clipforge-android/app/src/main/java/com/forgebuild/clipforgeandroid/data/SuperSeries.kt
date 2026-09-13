@@ -5,26 +5,26 @@ import org.json.JSONObject
 import org.json.JSONTokener
 
 /**
- * Super Series (feature-01) — Kotlin port of bot/src/super_series.js +
- * bot/src/plan.js validateProductionPlan, kept 1:1 with the bot and with
- * pipeline/plan/super_series.py: the SAME accept/reject decisions and the SAME
- * error strings for the same input (the bot/pipeline pin this equivalence in
- * pipeline/tests/test_super_series.py). Do NOT invent different validation.
+ * Super Series (feature-01) — freshly rebuilt against the REAL current backend
+ * (post session-22 task-92/93). Kept 1:1 with motionssalt/clipforge:
+ *   - site/js/super.js     validateSuperPlan / parseAndValidateSuperPlan / sliceSuperPart
+ *   - site/js/plan.js      validateProductionPlan / validateStringArray / extractSeries
+ *   - site/js/supertick.js submitSuperPlan / superQueueAdvance / buildSuperState
+ *   - branding/super_series_settings.json  {version, enabled, updated_at_epoch}
+ * The app produces the SAME accept/reject decisions and the SAME error strings
+ * for the same input. Do NOT invent different validation.
  *
- * Ground truth re-read 2026-09-12 from motionssalt/clipforge @ main:
- *   - validateSuperPlan (bot/src/super_series.js)
- *   - validateProductionPlan + validateStringArray + extractSeries (bot/src/plan.js)
- *   - superQueueAdvance halt-and-resume decision order (bot/src/super_series.js)
- *   - buildSuperState durable record shape (bot/src/super_series.js)
- *   - settings path branding/super_series_settings.json (bot/src/settings_super.js)
+ * Part 1 dispatches immediately on super-plan submission (one superQueueTick).
+ * Part 2..N dispatch automatically, chained by completion from a success-only
+ * final step of stage-b.yml — immune to the workflow_run default-branch
+ * restriction. The app NEVER dispatches them and has NO "Start Next Part" for
+ * Super Series parts.
  */
 object SuperSeries {
     const val MAX_PARTS = 20
     const val SETTINGS_PATH = "branding/super_series_settings.json"
 
-    // ---- JS type helpers (exact semantics: typeof number + Number.isFinite + floor) ----
-    private fun isPlainObject(v: Any?): Boolean = v is JSONObject
-
+    // ---- JS type helpers (typeof number + Number.isFinite + Math.floor) ----
     private fun isIntegerJs(v: Any?): Boolean =
         v is Number && v !is Boolean && v.toDouble().let { it.isFinite() && Math.floor(it) == it }
 
@@ -33,7 +33,7 @@ object SuperSeries {
     private fun intVal(v: Any?): Long = (v as Number).toLong()
 
     // ---------------------------------------------------------------------------
-    // parse + validate (bot parseAndValidateSuperPlan)
+    // parse + validate (backend parseAndValidateSuperPlan)
     // ---------------------------------------------------------------------------
 
     data class ParseResult(val document: JSONObject?, val errors: List<String>)
@@ -50,23 +50,23 @@ object SuperSeries {
     }
 
     // ---------------------------------------------------------------------------
-    // Super-plan validation (bot validateSuperPlan, exact error strings)
+    // Super-plan validation (backend validateSuperPlan, exact error strings)
     // ---------------------------------------------------------------------------
 
     fun validateSuperPlan(document: Any?): List<String> {
         val errors = mutableListOf<String>()
 
-        if (!isPlainObject(document)) return listOf("Top level must be a JSON object.")
-        val doc = document as JSONObject
+        if (document !is JSONObject) return listOf("Top level must be a JSON object.")
+        val doc = document
 
-        // -- Shared series id --
-        var seriesId: String? = doc.opt("series_id") as? String
-        if (!isNonemptyString(doc.opt("series_id"))) {
+        var seriesId: String? = null
+        val sidRaw = doc.opt("series_id")
+        if (!isNonemptyString(sidRaw)) {
             errors.add("`series_id` must be a non-empty string shared by every part.")
-            seriesId = null
+        } else {
+            seriesId = sidRaw as String
         }
 
-        // -- Required positive-integer scalars --
         val videoDuration = doc.opt("video_duration_seconds")
         if (!isIntegerJs(videoDuration) || intVal(videoDuration) <= 0) {
             errors.add("`video_duration_seconds` must be a positive integer.")
@@ -76,7 +76,6 @@ object SuperSeries {
             errors.add("`target_total_duration_seconds` must be a positive integer.")
         }
 
-        // -- parts array --
         val parts = doc.opt("parts")
         if (parts !is JSONArray) {
             errors.add("`parts` must be an array of per-part production plans.")
@@ -102,14 +101,13 @@ object SuperSeries {
                 continue
             }
 
-            // Every part must carry the same shared series_id.
             val partSeries = part.optJSONObject("series") ?: JSONObject()
             if (seriesId != null && partSeries.opt("series_id") != seriesId) {
                 errors.add("$at.series.series_id must equal the shared top-level series_id.")
             }
 
-            // Each part is itself an ordinary §7.3 series production plan; run the
-            // existing single-part validator with the positional part number.
+            // Each part is itself an ordinary series production plan; run the
+            // single-part validator with the positional part number.
             val partErrors = validateProductionPlan(part, index + 1)
             for (message in partErrors) errors.add("$at: $message")
 
@@ -155,11 +153,10 @@ object SuperSeries {
     }
 
     // ---------------------------------------------------------------------------
-    // Single-part production-plan validation (bot plan.js validateProductionPlan,
-    // exact error strings incl. the partNumber re-stamp used for super-plan parts)
+    // Single-part production-plan validation (backend plan.js validateProductionPlan)
     // ---------------------------------------------------------------------------
 
-    /** Nested-wins-per-field series extraction (bot plan.js extractSeries). */
+    /** Nested-wins-per-field series extraction (backend plan.js extractSeries). */
     private fun extractSeries(document: JSONObject): JSONObject? {
         val mapping = mapOf(
             "series_id" to "series_id",
@@ -184,7 +181,7 @@ object SuperSeries {
         return if (hasFlat || nested != null) values else null
     }
 
-    /** Bot plan.js validateStringArray — same messages, same order. */
+    /** Backend plan.js validateStringArray — same messages, same order. */
     private fun validateStringArray(
         document: JSONObject,
         name: String,
@@ -233,217 +230,195 @@ object SuperSeries {
     }
 
     /**
-     * Bot validateProductionPlan(document, { partNumber }): when [partNumber] is set
-     * the plan's own series.part is re-stamped to the positional number first.
+     * Backend validateProductionPlan(document, { partNumber }): when [partNumber]
+     * is set the plan's own series.part is re-stamped to the positional number
+     * first — the super-plan's authored part number is never trusted.
      */
     fun validateProductionPlan(input: Any?, partNumber: Int? = null): List<String> {
-        // feature-01: options.partNumber overrides the series part a sliced
-        // super-plan part is expected to carry (positional).
-        if (partNumber != null && isPlainObject(input)) {
-            val series = (input as JSONObject).optJSONObject("series")
-            if (series != null) series.put("part", partNumber)
-        }
-
-        if (!isPlainObject(input)) return listOf("Top level must be a JSON object.")
-        val doc = input as JSONObject
         val errors = mutableListOf<String>()
+        if (input !is JSONObject) return listOf("Plan must be a JSON object.")
+        val document = input
 
-        // -- Optional title --
-        if (doc.has("title") && !isNonemptyString(doc.opt("title"))) {
-            errors.add("`title` must be a non-empty string when present (or omit it entirely).")
+        if (partNumber != null) {
+            val series = document.optJSONObject("series") ?: JSONObject()
+            series.put("part", partNumber)
+            document.put("series", series)
         }
 
-        // -- Required positive-integer scalars --
-        for (key in listOf("video_duration_seconds", "target_total_duration_seconds")) {
-            val value = doc.opt(key)
-            if (!isIntegerJs(value) || intVal(value) <= 0) {
-                errors.add("`$key` must be a positive integer.")
+        val vd = document.opt("video_duration_seconds")
+        if (!isIntegerJs(vd) || intVal(vd) <= 0) {
+            errors.add("`video_duration_seconds` must be a positive integer.")
+        }
+        val td = document.opt("target_total_duration_seconds")
+        if (!isIntegerJs(td) || intVal(td) <= 0) {
+            errors.add("`target_total_duration_seconds` must be a positive integer.")
+        }
+
+        val segments = document.opt("segments")
+        if (segments !is JSONArray) {
+            errors.add("`segments` must be an array.")
+        } else if (segments.length() < 1) {
+            errors.add("`segments` must contain at least one segment.")
+        } else {
+            for (index in 0 until segments.length()) {
+                val at = "segments[$index]"
+                val seg = segments.opt(index)
+                if (seg !is JSONObject) {
+                    errors.add("$at must be an object.")
+                    continue
+                }
+                val start = seg.opt("start_seconds")
+                val end = seg.opt("end_seconds")
+                if (!isIntegerJs(start) || intVal(start) < 0) {
+                    errors.add("$at.start_seconds must be a non-negative integer.")
+                }
+                if (!isIntegerJs(end) || (isIntegerJs(start) && intVal(end) <= intVal(start))) {
+                    errors.add("$at.end_seconds must be an integer greater than start_seconds.")
+                }
+                if (!isNonemptyString(seg.opt("voiceover_text"))) {
+                    errors.add("$at.voiceover_text must be a non-empty string.")
+                }
+                if (seg.has("caption_text") && !seg.isNull("caption_text") && seg.opt("caption_text") !is String) {
+                    errors.add("$at.caption_text must be a string when present.")
+                }
             }
         }
 
-        // -- Optional tag arrays --
-        validateStringArray(doc, "hashtags", 5, 8,
-            requirePrefix = "#", forbidWhitespace = true, forbidPrefix = null, forbidSubstring = null, errors)
-        validateStringArray(doc, "youtube_tags", 10, 20,
-            requirePrefix = null, forbidWhitespace = false, forbidPrefix = "#", forbidSubstring = ",", errors)
-
-        // -- Series (optional) --
-        val seriesValues = extractSeries(doc)
-        var seriesStart: Long? = null
-        var seriesEnd: Long? = null
-
-        if (seriesValues != null) {
-            if (!isNonemptyString(seriesValues.opt("series_id"))) {
-                errors.add("`series_id` must be a non-empty string for a series production plan.")
+        val series = extractSeries(document)
+        if (series != null) {
+            if (!isNonemptyString(series.opt("series_id"))) {
+                errors.add("`series_id` must be a non-empty string when series is used.")
             }
-            val part = seriesValues.opt("part")
-            if (!isIntegerJs(part) || intVal(part) <= 0) {
-                errors.add("`series_part` must be a positive integer for a series production plan.")
+            val partVal = series.opt("part")
+            if (!isIntegerJs(partVal) || intVal(partVal) < 1) {
+                errors.add("`series_part` must be an integer ≥ 1.")
             }
-            val startVal = seriesValues.opt("start_seconds")
+            val startVal = series.opt("start_seconds")
+            val endVal = series.opt("end_seconds")
             if (!isIntegerJs(startVal) || intVal(startVal) < 0) {
-                errors.add("`series_start_seconds` must be a non-negative integer for a series production plan.")
-            } else {
-                seriesStart = intVal(startVal)
+                errors.add("`series_start_seconds` must be a non-negative integer.")
             }
-            val endVal = seriesValues.opt("end_seconds")
-            if (!isIntegerJs(endVal) || intVal(endVal) < 0) {
-                errors.add("`series_end_seconds` must be a non-negative integer for a series production plan.")
-            } else {
-                seriesEnd = intVal(endVal)
+            if (!isIntegerJs(endVal) || (isIntegerJs(startVal) && intVal(endVal) <= intVal(startVal))) {
+                errors.add("`series_end_seconds` must be an integer greater than series_start_seconds.")
             }
-            if (seriesStart != null && seriesEnd != null && seriesEnd <= seriesStart) {
-                errors.add("`series_end_seconds` must be greater than `series_start_seconds`.")
-            }
-            if (seriesValues.opt("is_final") !is Boolean) {
-                errors.add("`series_final` must be boolean for a series production plan.")
-            }
-            val summary = seriesValues.opt("summary")
-            if (!isNonemptyString(summary)) {
-                errors.add("`series_summary` must be a non-empty string for a series production plan.")
-            } else if ((summary as String).trim().length > 1200) {
-                errors.add("`series_summary` exceeds the maximum allowed length.")
+            if (!isNonemptyString(series.opt("summary"))) {
+                errors.add("`series_summary` must be a non-empty string.")
             }
         }
 
-        // -- Cuts --
-        val cuts = doc.opt("cuts")
-        if (cuts !is JSONArray) {
-            errors.add("`cuts` must be an array.")
-            return errors
-        }
-        if (cuts.length() < 1) {
-            errors.add("`cuts` is empty — at least one cut is required.")
-            return errors
-        }
-
-        val duration = doc.opt("video_duration_seconds")
-        val validDuration: Long? = if (isIntegerJs(duration)) intVal(duration) else null
-        var previousEnd: Long? = null
-
-        for (index in 0 until cuts.length()) {
-            val cut = cuts.opt(index)
-            val at = "cuts[$index]"
-            if (cut !is JSONObject) {
-                errors.add("$at must be an object.")
-                continue
-            }
-            val start = cut.opt("start_seconds")
-            val end = cut.opt("end_seconds")
-            if (!isIntegerJs(start)) errors.add("$at.start_seconds must be an integer.")
-            if (!isIntegerJs(end)) errors.add("$at.end_seconds must be an integer.")
-
-            var narration = cut.opt("voiceover_text")
-            if (!isNonemptyString(narration)) narration = cut.opt("raw_narration")
-            if (!isNonemptyString(narration)) {
-                errors.add("$at.voiceover_text must be a non-empty string (legacy raw_narration accepted).")
-            }
-
-            if (!isIntegerJs(start) || !isIntegerJs(end)) continue
-            val s = intVal(start)
-            val e = intVal(end)
-
-            if (s < 0) errors.add("$at.start_seconds must be at least 0.")
-            if (seriesStart != null && s < seriesStart) {
-                errors.add("$at.start_seconds precedes series_start_seconds.")
-            }
-            if (seriesEnd != null && e > seriesEnd) {
-                errors.add("$at.end_seconds exceeds series_end_seconds.")
-            }
-            if (e <= s) errors.add("$at.end_seconds must be greater than start_seconds.")
-            if (validDuration != null && e > validDuration) {
-                errors.add("$at.end_seconds exceeds video_duration_seconds.")
-            }
-            if (previousEnd != null && s < previousEnd) {
-                errors.add("$at overlaps or precedes the prior cut.")
-            }
-            previousEnd = e
-        }
+        validateStringArray(document, "hashtags", 1, 30, "#", true, null, null, errors)
+        validateStringArray(document, "hooks", 1, 10, null, false, null, null, errors)
 
         return errors
     }
 
     // ---------------------------------------------------------------------------
-    // Durable queue state (bot buildSuperState — jobs/<anchor>/super-plan.json)
+    // Slicing (backend sliceSuperPart — includes the task-92 "Part N" guarantee)
     // ---------------------------------------------------------------------------
 
-    fun buildSuperState(anchorJobId: String, seriesId: String, document: JSONObject): JSONObject =
-        JSONObject()
+    /**
+     * Return the ordinary single-part production.json for [partIndex] (0-based)
+     * of a VALID super-plan. [jobId] is the real spawned job id. Every spawned
+     * part's title reliably carries "Part N" — appended when the authored title
+     * lacks it; titles already naming that part are left verbatim.
+     */
+    fun sliceSuperPart(document: JSONObject, partIndex: Int, jobId: String): JSONObject {
+        val source = document.getJSONArray("parts").getJSONObject(partIndex)
+        val part = JSONObject(source.toString()) // deep copy
+        val series = part.optJSONObject("series") ?: JSONObject()
+        series.put("part", partIndex + 1)
+        part.put("series", series)
+        part.put("job_id", jobId)
+        val partNumber = partIndex + 1
+        val titleRaw = part.opt("title")
+        val title = if (isNonemptyString(titleRaw)) (titleRaw as String).trim() else ""
+        if (title.isNotEmpty() &&
+            !Regex("\\bpart\\s+$partNumber\\b", RegexOption.IGNORE_CASE).containsMatchIn(title)
+        ) {
+            part.put("title", "$title — Part $partNumber")
+        }
+        return part
+    }
+
+    // ---------------------------------------------------------------------------
+    // Durable queue state (stored at jobs/<anchor>/super-plan.json)
+    // ---------------------------------------------------------------------------
+
+    /** buildSuperState: the whole validated super-plan travels with the record. */
+    fun buildSuperState(anchorJobId: String, seriesId: String, document: JSONObject): JSONObject {
+        return JSONObject()
             .put("version", 1)
             .put("anchor_job_id", anchorJobId)
             .put("series_id", seriesId)
             .put("total_parts", document.getJSONArray("parts").length())
-            .put("video_duration_seconds", document.optLong("video_duration_seconds"))
+            .put("video_duration_seconds", document.opt("video_duration_seconds"))
             .put("plan", document)
             .put("spawned", JSONArray())
+    }
 
     // ---------------------------------------------------------------------------
-    // Queue decision (bot superQueueAdvance — same ordering, same halt messages)
+    // Pure queue decision (backend superQueueAdvance) — halt-and-resume order
     // ---------------------------------------------------------------------------
 
-    data class SpawnedPart(val part: Int, val jobId: String, val state: String)
-
-    data class QueueView(
-        val totalParts: Int,
-        val spawned: List<SpawnedPart>,
-        val queueStatus: Status,
-        /** The part the queue is currently stopped/moving on (halted part or next to queue). */
-        val focusPart: Int,
-        val focusJobId: String,
-        /** The bot's exact halt message when paused; null otherwise. */
-        val message: String?
-    ) {
-        enum class Status { DONE, WAITING, HALTED, QUEUING }
+    sealed class Advance {
+        data class Queue(val part: Int, val jobId: String, val plan: JSONObject) : Advance()
+        data class Halted(val part: Int, val jobId: String, val message: String) : Advance()
+        data class Waiting(val part: Int, val jobId: String) : Advance()
+        object Done : Advance()
     }
 
     /**
-     * Port of superQueueAdvance(state, statusFor): walk the spawned parts in spawn
-     * order; the FIRST not-complete part decides. error/cancelled -> HALTED (bot's
-     * exact message); anything else non-terminal -> WAITING; everything complete ->
-     * done when every part landed, otherwise the controller will QUEUE the next part.
+     * The FIRST spawned part that is not yet "complete" decides everything:
+     * error → halt, non-terminal → wait, complete → look at the next part, none
+     * remain → done. [statusOf] returns a spawned job's current status.json state.
      */
-    fun evaluateQueue(state: JSONObject, statusFor: (String) -> String?): QueueView {
-        val plan = state.optJSONObject("plan")
-        val planParts = plan?.optJSONArray("parts")
-        val totalParts = state.optInt("total_parts", 0)
-        val spawned = mutableListOf<SpawnedPart>()
-        val arr = state.optJSONArray("spawned")
-        if (arr != null) {
-            for (i in 0 until arr.length()) {
-                val entry = arr.optJSONObject(i) ?: continue
-                val jobId = entry.optString("job_id")
-                spawned.add(SpawnedPart(entry.optInt("part"), jobId, statusFor(jobId) ?: ""))
+    fun superQueueAdvance(state: JSONObject, statusOf: (String) -> String?): Advance {
+        val plan = state.getJSONObject("plan")
+        val totalParts = state.optInt("total_parts", plan.getJSONArray("parts").length())
+        val spawned = state.optJSONArray("spawned") ?: JSONArray()
+        for (i in 0 until spawned.length()) {
+            val entry = spawned.getJSONObject(i)
+            val jobId = entry.getString("job_id")
+            val partNo = entry.optInt("part", i + 1)
+            val st = statusOf(jobId)
+            if (st != "complete") {
+                return if (st == "error") {
+                    Advance.Halted(
+                        partNo, jobId,
+                        "Super Series part $partNo failed — restart its Stage B to resume the queue."
+                    )
+                } else {
+                    Advance.Waiting(partNo, jobId)
+                }
             }
         }
-        if (plan == null || planParts == null || totalParts < 1) {
-            return QueueView(totalParts, spawned, QueueView.Status.DONE, 0, "", null)
-        }
-        for (entry in spawned) {
-            if (entry.state == "complete") continue
-            if (entry.state == "error") {
-                return QueueView(
-                    totalParts, spawned, QueueView.Status.HALTED, entry.part, entry.jobId,
-                    "Super Series part ${entry.part} of $totalParts failed (task ${entry.jobId} is in state error). " +
-                        "The queue is PAUSED — no further parts will be queued. Open that task and use Restart Stage B; " +
-                        "the moment it reaches complete, the queue resumes automatically."
-                )
+        if (spawned.length() >= totalParts) return Advance.Done
+        val nextPart = spawned.length() + 1
+        val jobId = SeriesLogic.nextPartJobId(state.getString("series_id"), nextPart)
+        val sliced = sliceSuperPart(plan, nextPart - 1, jobId)
+        return Advance.Queue(nextPart, jobId, sliced)
+    }
+
+    // ---------------------------------------------------------------------------
+    // Queue/halt display view (backend describeSuperQueue)
+    // ---------------------------------------------------------------------------
+
+    data class QueueView(
+        val anchorJobId: String,
+        val seriesId: String,
+        val totalParts: Int,
+        val spawned: List<Pair<Int, String>>, // part -> jobId, in spawn order
+        val haltedPart: Int,                  // >0 when a part's error halted the chain
+        val waitingPart: Int,                 // >0 when a part is still running
+        val done: Boolean
+    ) {
+        val halted: Boolean get() = haltedPart > 0
+        val label: String
+            get() = when {
+                done -> "Super Series complete ($totalParts parts)"
+                halted -> "Super Series halted at part $haltedPart — restart that part to resume"
+                waitingPart > 0 -> "Super Series: part $waitingPart rendering — the next part dispatches automatically"
+                else -> "Super Series queued (${spawned.size}/$totalParts parts dispatched)"
             }
-            if (entry.state == "cancelled") {
-                return QueueView(
-                    totalParts, spawned, QueueView.Status.HALTED, entry.part, entry.jobId,
-                    "Super Series part ${entry.part} of $totalParts was cancelled (task ${entry.jobId}). " +
-                        "The queue is PAUSED — no further parts will be queued. Open that task and use Restart Stage B; " +
-                        "the moment it reaches complete, the queue resumes automatically."
-                )
-            }
-            // queued / stage_b_queued / stage_b_running / anything else non-terminal:
-            // the pipeline is working on it — the queue waits for it.
-            return QueueView(totalParts, spawned, QueueView.Status.WAITING, entry.part, entry.jobId, null)
-        }
-        if (spawned.size >= totalParts) {
-            return QueueView(totalParts, spawned, QueueView.Status.DONE, 0, "", null)
-        }
-        // Everything spawned so far is complete — the controller queues the next part.
-        return QueueView(totalParts, spawned, QueueView.Status.QUEUING, spawned.size + 1, "", null)
     }
 }

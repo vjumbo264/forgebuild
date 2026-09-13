@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forgebuild.clipforgeandroid.data.*
+import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.engine.data.CacheFirstStore
 import com.forgebuild.engine.files.SafeSave
 import kotlinx.coroutines.Dispatchers
@@ -500,29 +501,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     /**
      * Hold-to-delete an entire series (operator fix #3, session-13): removes every
-     * repo job directory identifiable as belonging to [seriesId] (every task the
-     * Series tab grouped under it, plus the Super Series anchor job when present),
-     * then refreshes so the series card disappears. Uses the same repo deleteFile
-     * primitive the app already uses; errors are surfaced via the native toast.
+     * repo job directory grouped under [seriesId] by the Series tab, then refreshes
+     * so the series card disappears. Uses the same repo deleteFile primitive the app
+     * already uses; errors are surfaced via the native toast.
      */
     fun deleteSeries(seriesId: String) = viewModelScope.launch {
         val c = api ?: run { toast("Not connected"); return@launch }
         val partJobIds = tasks.value
             .filter { it.seriesEnabled && it.seriesId == seriesId }
             .map { it.jobId }
-            .toMutableSet()
-        // Super Series anchor job: not a "part" task, so it isn't in partJobIds.
-        // Find it by scanning jobs/*/super-plan.json for this series' queue record.
-        try {
-            val jobsDir = c.listDir("jobs")
-            for (i in 0 until jobsDir.length()) {
-                val d = jobsDir.getJSONObject(i)
-                if (d.optString("type") != "dir") continue
-                val jid = d.optString("name")
-                val sp = c.readFile("jobs/$jid/super-plan.json") ?: continue
-                if (sp.first.contains("\"series_id\": \"$seriesId\"")) partJobIds.add(jid)
-            }
-        } catch (_: Exception) {}
         var failed = 0
         for (jobId in partJobIds) {
             try { deleteJobDir(c, jobId) } catch (e: Exception) { failed++ }
@@ -643,6 +630,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("part", if (isSeries) 1 else 0)
                 .put("start_seconds", 0)
                 .put("context", "")
+            // super_series rides the series block (backend wizard.js series.super_series)
+            if (isSuperSeries && isSeries) seriesJson.put("super_series", true)
 
             // Fix #1 — bot wizard parity (wizard.js musicKeyboard / describeMusic):
             // three real choices: an explicit library track, "no music", and "saved
@@ -669,11 +658,6 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("series", seriesJson)
                 .put("music", musicJson)
                 .put("saved_at_epoch", nowSec)
-            // Session-10 fix #9: super_series rides the series block exactly like the
-            // bot's wizard (series.super_series) — the bot's upload handler branches
-            // on it and its prompt template switches to SUPER_SERIES_DIRECTIVE.
-            if (isSuperSeries && isSeries) seriesJson.put("super_series", true)
-
             // Status record must satisfy schemas/job_status.schema.json. Field-for-field
             // parity with the bot's newStatus() (bot/src/jobs.js): version 2, status-series
             // block {enabled, series_id, part, start_seconds, is_final} (NOTE: unlike the
@@ -715,7 +699,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             c.dispatchWorkflow("stage-a.yml", mapOf("job_id" to jobId, "code_ref" to sha))
 
             _upload.value = UploadProgress("Task started!", 1f)
-            toast(if (isSuperSeries && isSeries) "Super Series task $jobId created — the agent will return ONE super-plan for the whole series." else "Task $jobId created")
+            toast("Task $jobId created")
             refreshTasks()
             onCreated(jobId)
         } catch (e: Exception) {
@@ -734,6 +718,16 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     private val _detailPlan = MutableStateFlow<String?>(null)
     val detailPlan: StateFlow<String?> = _detailPlan
+
+    // Super Series: durable queue record for the detail screen + overview map.
+    private val _detailSuperState = MutableStateFlow<JSONObject?>(null)
+    val detailSuperState: StateFlow<JSONObject?> = _detailSuperState
+
+    private val _superQueues = MutableStateFlow<Map<String, SuperSeries.QueueView>>(emptyMap())
+    val superQueues: StateFlow<Map<String, SuperSeries.QueueView>> = _superQueues
+
+    private val _superQueue = MutableStateFlow<SuperSeries.QueueView?>(null)
+    val superQueue: StateFlow<SuperSeries.QueueView?> = _superQueue
 
     /** Color-coding level for a pipeline step (maps to status colors in the UI). */
     enum class LogLevel { PENDING, RUNNING, SUCCESS, FAILURE, SKIPPED, CANCELLED, INFO }
@@ -912,6 +906,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
             val planFile = c.readFile("jobs/$jobId/production.json")
             _detailPlan.value = planFile?.first
+            // Super Series: the anchor's durable queue record lives at
+            // jobs/<id>/super-plan.json — its presence marks this job as a Super
+            // Series anchor. Non-anchor jobs simply have no such file.
+            _detailSuperState.value = try {
+                c.readFile("jobs/$jobId/super-plan.json")?.let { JSONObject(it.first) }
+            } catch (_: Exception) { null }
         } catch (_: Exception) {}
     }
 
@@ -1380,228 +1380,194 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     // such as Documents/ClipForge. The old app-private filesDir export was removed.
     fun clearDiagLog() { DiagLog.clear(app.applicationContext); toast("Diagnostic log cleared") }
 
-    // ---------------- Super Series (feature-01, session-10 fix #9) ----------------
 
-    /** Bot settings_super.js readSuperSeriesSettings:
-     *  branding/super_series_settings.json {version,enabled,updated_at_epoch}, or null. */
-    suspend fun readSuperSeriesSettings(): JSONObject? = try {
-        api?.readFile(SuperSeries.SETTINGS_PATH)?.let { JSONObject(it.first) }
-    } catch (_: Exception) { null }
+    // ---------------- Super Series (feature-01, rebuilt clean session-23) ----------------
 
-    /** Bot settings_super.js saveSuperSeriesSettings — same document shape. */
+    /** Super Series default — writes branding/super_series_settings.json exactly as the
+     *  backend expects ({version, enabled, updated_at_epoch}), mirroring saveSuperSeriesSettings. */
     fun setSuperSeriesDefault(enabled: Boolean) = viewModelScope.launch {
         val c = api ?: return@launch
-        withBusy("save_super_series_default") {
+        withBusy("save_super") {
             try {
-                val payload = JSONObject()
+                val doc = JSONObject()
                     .put("version", 1)
-                    .put("enabled", enabled == true)
+                    .put("enabled", enabled)
                     .put("updated_at_epoch", nowEpoch())
-                c.putFile(SuperSeries.SETTINGS_PATH, payload.toString(2).toByteArray(), "clipforge: update Super Series setting")
+                c.putFile(SuperSeries.SETTINGS_PATH, doc.toString(2).toByteArray(),
+                    "clipforge: ${if (enabled) "enable" else "disable"} super series")
                 _settings.value = _settings.value.copy(superSeriesDefault = enabled)
-                toast("Super Series default: ${if (enabled) "ON" else "OFF"}")
+                toast(if (enabled) "Super Series default ON" else "Super Series default OFF")
             } catch (e: Exception) {
-                toast("Super Series default update error: ${e.message}")
+                toast("Failed to save Super Series setting: ${e.message}")
             }
         }
     }
 
-    /** Bot toggle dependency (wizard.js: the two toggles cannot desync) — turning
-     *  Series Mode OFF also force-writes Super Series OFF. */
+    /** Backend dependency: Series Mode OFF also force-writes Super Series OFF (wizard.js). */
     fun setSeriesDefaultWithDependency(enabled: Boolean) {
         setSeriesDefault(enabled)
         if (!enabled && _settings.value.superSeriesDefault) setSuperSeriesDefault(false)
     }
 
-    /**
-     * Submit a Super Series super-plan for the anchor job — app-side port of bot
-     * handleSuperPlanUploadMessage: validate the WHOLE document with the bot's
-     * validator (identical accept/reject + error strings), verify the job is still
-     * awaiting_plan, verify the super-plan's series_id matches the anchor task's,
-     * write jobs/<anchor>/super-plan.json FIRST (the durable record the bot's
-     * per-minute queue sweep resumes from), then merge the status to stage_b_queued
-     * with the bot's acceptance message. Parts are then queued and dispatched
-     * SEQUENTIALLY by the bot's queue controller — no manual per-part button exists
-     * or is needed for Super Series parts.
-     */
+    /** Accept the operator's ONE super-plan, then immediately dispatch Part 1 via one
+     *  superQueueTick. Parts 2..N are chained automatically by the backend. */
     fun submitSuperPlan(jobId: String, text: String, onDone: () -> Unit) = viewModelScope.launch {
         val c = api ?: return@launch
-        val parsed = SuperSeries.parseAndValidateSuperPlan(text)
-        if (parsed.errors.isNotEmpty()) {
-            toast("That super-plan is not valid (${parsed.errors.size} problem${if (parsed.errors.size == 1) "" else "s"}): ${parsed.errors.first()}")
-            return@launch
-        }
-        val document = parsed.document ?: return@launch
-        withBusy("submit_super_plan") {
+        withBusy("submit_super") {
             try {
-                _upload.value = UploadProgress("Validating super-plan…", 0.2f)
-                val st = try { c.readFile("jobs/$jobId/status.json")?.let { JSONObject(it.first) } } catch (_: Exception) { null }
-                if (st != null && st.optString("state") != "awaiting_plan") {
-                    toast("Task $jobId is in state ${st.optString("state")}, not awaiting_plan. Refresh the task screen first.")
+                val parsed = SuperSeries.parseAndValidateSuperPlan(text)
+                if (parsed.errors.isNotEmpty() || parsed.document == null) {
+                    toast("Super-plan invalid: ${parsed.errors.firstOrNull() ?: "unknown error"}")
                     return@withBusy
                 }
-                val reqFile = try { c.readFile("jobs/$jobId/stage-a-request.json") } catch (_: Exception) { null }
-                val reqSeries = reqFile?.let { runCatching { JSONObject(it.first).optJSONObject("series") }.getOrNull() } ?: JSONObject()
-                val seriesId = reqSeries.optString("series_id", "")
-                if (seriesId.isBlank() || document.optString("series_id") != seriesId) {
-                    toast("The super-plan's series_id is ${document.optString("series_id").ifBlank { "(missing)" }} but this task expects $seriesId. Copy the exact id from the agent prompt and try again.")
+                val document = parsed.document
+                // Guard: task must be awaiting_plan and its series_id must match.
+                val status = try { c.readFile("jobs/$jobId/status.json")?.let { JSONObject(it.first) } } catch (_: Exception) { null }
+                val state = status?.optString("state") ?: ""
+                if (state.isNotEmpty() && state != "awaiting_plan") {
+                    toast("This task is in state $state, not awaiting_plan. Refresh the task screen first.")
                     return@withBusy
                 }
-                _upload.value = UploadProgress("Writing super-plan…", 0.5f)
-                c.putFile(
-                    "jobs/$jobId/super-plan.json",
-                    (SuperSeries.buildSuperState(jobId, seriesId, document).toString(2) + "\n").toByteArray(Charsets.UTF_8),
-                    "clipforge: accept super series plan ($jobId)"
-                )
-                // Root-cause fix (was: wrote super-plan.json then stopped, relying on the removed
-                // Telegram bot's cron to advance the queue — so Part 1 never actually dispatched).
-                // The app now advances the queue itself AND the headless super-sweep.yml workflow
-                // (triggered by this push) independently dispatches it — idempotent either way.
-                advanceSuperQueue(jobId)
-                val next = (st ?: JSONObject())
-                    .put("state", "stage_b_queued")
-                    .put("message", "Super Series plan accepted — ${document.getJSONArray("parts").length()} parts queued; part 1 dispatched.")
-                    .put("updated_at_epoch", nowEpoch())
-                c.putFile("jobs/$jobId/status.json", (next.toString(2) + "\n").toByteArray(Charsets.UTF_8), "clipforge: super plan accepted for job $jobId")
-                _upload.value = UploadProgress("Super Series plan accepted", 1f)
-                toast("⚡ Super Series plan accepted — ${document.getJSONArray("parts").length()} parts validated. Parts dispatch automatically, one at a time.")
+                val request = try { c.readFile("jobs/$jobId/stage-a-request.json")?.let { JSONObject(it.first) } } catch (_: Exception) { null }
+                val expectedSeries = request?.optJSONObject("series")?.optString("series_id", "") ?: ""
+                if (expectedSeries.isNotEmpty() && document.optString("series_id") != expectedSeries) {
+                    toast("The super-plan's series_id (${document.optString("series_id")}) does not match this task's series ($expectedSeries).")
+                    return@withBusy
+                }
+                val seriesId = document.getString("series_id")
+                // Durable queue record FIRST — every later sweep resumes from this.
+                c.putFile("jobs/$jobId/super-plan.json",
+                    SuperSeries.buildSuperState(jobId, seriesId, document).toString(2).toByteArray(),
+                    "clipforge: accept super series plan ($jobId)")
+                // Immediately dispatch Part 1 (one superQueueTick equivalent).
+                tickSuperQueue(c, jobId)
+                toast("Super Series accepted — Part 1 dispatched.")
+                onDone()
                 refreshTasks()
                 loadTaskDetail(jobId)
-                onDone()
             } catch (e: Exception) {
-                toast("Super-plan submission failed: ${e.message}")
-            } finally {
-                _upload.value = null
+                toast("Failed to submit super-plan: ${e.message}")
             }
         }
     }
 
-    /**
-     * Root-cause fix for Super Series never dispatching Stage B. The old flow wrote
-     * super-plan.json then stopped — queue advancement lived only in the removed bot's
-     * cron. This advances the queue ONE step the same way the headless super-sweep.yml
-     * workflow and the Dashboard do: build Part 1's request/plan/status, mark it spawned
-     * in super-plan.json (cursor advanced BEFORE dispatch => no double-dispatch), then
-     * dispatch stage-b.yml directly against the GitHub API. No bot, no Worker, no D1.
-     */
-    private suspend fun advanceSuperQueue(anchorJobId: String) {
-        // Never fail silently here: a quiet early-return previously left the anchor
-        // status claiming "part 1 dispatched" while nothing was spawned (stuck series).
-        val c = api ?: throw IllegalStateException("GitHub client not connected — cannot dispatch Super Series part 1")
-        val stateFile = c.readFile("jobs/$anchorJobId/super-plan.json") ?: throw IllegalStateException("super-plan.json unreadable for $anchorJobId right after writing it — please retry submitting the plan")
-        val state = JSONObject(stateFile.first)
-        val spawnedArr = state.optJSONArray("spawned") ?: org.json.JSONArray()
-        val plan = state.optJSONObject("plan") ?: throw IllegalStateException("super-plan.json has no plan object")
-        val parts = plan.optJSONArray("parts") ?: throw IllegalStateException("super-plan.json plan has no parts array")
-        if (spawnedArr.length() > 0) return  // already advanced — chain/another client owns it
-        val seriesId = state.optString("series_id", plan.optString("series_id"))
-        val reqFile = c.readFile("jobs/$anchorJobId/stage-a-request.json") ?: throw IllegalStateException("stage-a-request.json unreadable for $anchorJobId — Stage A may not be finished yet; retry in a moment")
-        val anchorReq = JSONObject(reqFile.first)
+    /** One superQueueTick: advance the queue by at most one part. The first
+     *  not-yet-complete spawned part decides everything (halt on error). */
+    private suspend fun tickSuperQueue(c: GitHubClient, anchorJobId: String) {
+        val state = c.readFile("jobs/$anchorJobId/super-plan.json")?.let { JSONObject(it.first) } ?: return
+        val statuses = HashMap<String, String?>()
+        val spawned = state.optJSONArray("spawned") ?: JSONArray()
+        for (i in 0 until spawned.length()) {
+            val jid = spawned.getJSONObject(i).getString("job_id")
+            statuses[jid] = try { c.readFile("jobs/$jid/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
+        }
+        when (val advance = SuperSeries.superQueueAdvance(state) { statuses[it] }) {
+            is SuperSeries.Advance.Queue -> dispatchSuperPart(c, state, advance)
+            else -> Unit // halted / waiting / done: nothing for the app to dispatch
+        }
+    }
 
-        val partNumber = 1
-        val partJobId = "$seriesId-p$partNumber"
-        if (c.readFile("jobs/$partJobId/status.json") != null || c.readFile("jobs/$partJobId/stage-a-request.json") != null) throw IllegalStateException("part 1 job $partJobId already exists but was never marked spawned — inconsistent repo state, needs operator attention")
-        val partDoc = JSONObject(parts.getJSONObject(0).toString())
-        partDoc.optJSONObject("series")?.put("part", partNumber)
-        // Production plan = the part's own self-contained document (positional part).
-        val options = anchorReq.optJSONObject("options") ?: org.json.JSONObject()
-        val source = anchorReq.optJSONObject("source") ?: org.json.JSONObject()
-        val music = anchorReq.optJSONObject("music") ?: org.json.JSONObject().put("ref", "").put("source", "none")
-        val startSeconds = partDoc.optJSONObject("series")?.optLong("start_seconds", 0) ?: 0
-        val isFinal = partDoc.optJSONObject("series")?.optBoolean("is_final", false) ?: false
-
-        val requestBody = org.json.JSONObject()
-            .put("job_id", partJobId)
-            .put("mode", "manual")
-            .put("source", source)
-            .put("options", options)
-            .put("music", music)
-            .put("series", org.json.JSONObject()
-                .put("enabled", true)
-                .put("series_id", seriesId)
-                .put("part", partNumber)
-                .put("start_seconds", startSeconds)
-                .put("source_job_id", anchorJobId)
-                .put("context", ""))
-
-        c.putFile("jobs/$partJobId/stage-a-request.json",
-            (requestBody.toString(2) + "\n").toByteArray(Charsets.UTF_8),
-            "clipforge: stage-a request for super part $partNumber ($partJobId)")
-        c.putFile("jobs/$partJobId/production.json",
-            (partDoc.toString(2) + "\n").toByteArray(Charsets.UTF_8),
-            "clipforge: production plan for super part $partNumber ($partJobId)")
-        val totalParts = state.optInt("total_parts", parts.length())
-        val partStatus = org.json.JSONObject()
+    /** Slice + write the part's production.json, mark anchor + part status, and dispatch Stage B. */
+    private suspend fun dispatchSuperPart(c: GitHubClient, state: JSONObject, advance: SuperSeries.Advance.Queue) {
+        val anchorJobId = state.getString("anchor_job_id")
+        val seriesId = state.getString("series_id")
+        val partJobId = advance.jobId
+        // Write the sliced part's production.json.
+        c.putFile("jobs/$partJobId/production.json", advance.plan.toString(2).toByteArray(),
+            "clipforge: production plan for super part ${advance.part} ($partJobId)")
+        // Anchor status.
+        c.putFile("jobs/$anchorJobId/status.json", JSONObject()
+            .put("version", 1).put("job_id", anchorJobId).put("mode", "manual")
+            .put("state", "stage_b_queued")
+            .put("message", "Super Series part ${advance.part}/${state.optInt("total_parts")} dispatched.")
+            .put("updated_at_epoch", nowEpoch())
+            .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
+                .put("part", advance.part).put("start_seconds", 0))
+            .toString(2).toByteArray(),
+            "clipforge: queue super series part ${advance.part} ($partJobId)")
+        // Part status (ordinary series part).
+        c.putFile("jobs/$partJobId/status.json", JSONObject()
             .put("version", 1).put("job_id", partJobId).put("mode", "manual")
             .put("state", "stage_b_queued")
-            .put("message", "Super Series part $partNumber of $totalParts — Stage B dispatched.")
+            .put("message", "Super Series part ${advance.part} queued for Stage B.")
             .put("updated_at_epoch", nowEpoch())
-            .put("release_tag", "clipforge-$partJobId")
-            .put("release_url", "https://github.com/motionssalt/clipforge/releases/tag/clipforge-$partJobId")
-            .put("series", org.json.JSONObject()
-                .put("enabled", true).put("series_id", seriesId)
-                .put("part", partNumber).put("start_seconds", startSeconds).put("is_final", isFinal))
-        c.putFile("jobs/$partJobId/status.json",
-            (partStatus.toString(2) + "\n").toByteArray(Charsets.UTF_8),
-            "clipforge: queue super series part $partNumber ($partJobId)")
-
-        // Advance the durable cursor BEFORE dispatching.
-        spawnedArr.put(org.json.JSONObject().put("part", partNumber).put("job_id", partJobId))
-        state.put("spawned", spawnedArr)
-        c.putFile("jobs/$anchorJobId/super-plan.json",
-            (state.toString(2) + "\n").toByteArray(Charsets.UTF_8),
-            "clipforge: super series part $partNumber spawned ($partJobId)")
-
+            .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
+                .put("part", advance.part)
+                .put("start_seconds", advance.plan.optJSONObject("series")?.optInt("start_seconds", 0) ?: 0))
+            .toString(2).toByteArray(),
+            "clipforge: queue super series part ${advance.part} ($partJobId)")
+        // Record the spawn in the durable state.
+        state.optJSONArray("spawned")?.put(JSONObject().put("part", advance.part).put("job_id", partJobId))
+        c.putFile("jobs/$anchorJobId/super-plan.json", (state.toString(2) + "\n").toByteArray(),
+            "clipforge: super series part ${advance.part} spawned ($partJobId)")
+        // Dispatch Stage B with production_ref pinned to the part's production.json.
+        val musicRef = resolveMusicRef(c, partJobId)
         c.dispatchWorkflow("stage-b.yml", mapOf(
             "job_id" to partJobId,
             "production_ref" to "path:jobs/$partJobId/production.json",
-            "music_ref" to resolveMusicRef(c, partJobId),
+            "music_ref" to musicRef,
             "code_ref" to c.defaultBranchSha()
         ))
     }
 
-    // ---- Super Series queue views (bot superQueueAdvance — series overview) ----
-    private val _superQueues = MutableStateFlow<Map<String, SuperSeries.QueueView>>(emptyMap())
-    val superQueues: StateFlow<Map<String, SuperSeries.QueueView>> = _superQueues
-
-    private val _superQueue = MutableStateFlow<SuperSeries.QueueView?>(null)
-    val superQueue: StateFlow<SuperSeries.QueueView?> = _superQueue
-
-    /** Read every anchor's durable super-plan record and evaluate each queue exactly
-     *  like the bot's sweep (first not-complete spawned part decides). */
+    /** describeSuperQueue for every anchor (Series overview). */
     fun refreshSuperQueues() = viewModelScope.launch {
         val c = api ?: return@launch
-        val out = mutableMapOf<String, SuperSeries.QueueView>()
-        for (task in taskStore.state.value) {
-            if (!task.seriesEnabled || task.seriesId.isBlank()) continue
-            val stateFile = try { c.readFile("jobs/${task.jobId}/super-plan.json") } catch (_: Exception) { null } ?: continue
-            val state = try { JSONObject(stateFile.first) } catch (_: Exception) { continue }
-            val statusMap = mutableMapOf<String, String>()
-            state.optJSONArray("spawned")?.let { arr ->
-                for (i in 0 until arr.length()) {
-                    val id = arr.optJSONObject(i)?.optString("job_id") ?: continue
-                    statusMap[id] = try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } ?: "" } catch (_: Exception) { "" }
-                }
+        try {
+            val jobsDir = c.listDir("jobs")
+            val map = LinkedHashMap<String, SuperSeries.QueueView>()
+            for (i in 0 until jobsDir.length()) {
+                val d = jobsDir.optJSONObject(i) ?: continue
+                if (d.optString("type") != "dir") continue
+                val jid = d.optString("name")
+                val sp = c.readFile("jobs/$jid/super-plan.json")?.let { JSONObject(it.first) } ?: continue
+                val view = describeQueue(c, jid, sp) ?: continue
+                map[view.seriesId] = view
             }
-            out[task.seriesId] = SuperSeries.evaluateQueue(state) { id -> statusMap[id] }
-        }
-        _superQueues.value = out
+            _superQueues.value = map
+        } catch (_: Exception) {}
     }
 
+    /** describeSuperQueue for one series' anchor (Series detail). */
     fun loadSuperQueue(seriesId: String) = viewModelScope.launch {
         val c = api ?: return@launch
         _superQueue.value = null
-        val anchor = taskStore.state.value.firstOrNull { it.seriesEnabled && it.seriesId == seriesId } ?: return@launch
-        val stateFile = try { c.readFile("jobs/${anchor.jobId}/super-plan.json") } catch (_: Exception) { null } ?: return@launch
-        val state = try { JSONObject(stateFile.first) } catch (_: Exception) { return@launch }
-        val statusMap = mutableMapOf<String, String>()
-        state.optJSONArray("spawned")?.let { arr ->
-            for (i in 0 until arr.length()) {
-                val id = arr.optJSONObject(i)?.optString("job_id") ?: continue
-                statusMap[id] = try { c.readFile("jobs/$id/status.json")?.let { JSONObject(it.first).optString("state") } ?: "" } catch (_: Exception) { "" }
+        try {
+            val jobsDir = c.listDir("jobs")
+            for (i in 0 until jobsDir.length()) {
+                val d = jobsDir.optJSONObject(i) ?: continue
+                if (d.optString("type") != "dir") continue
+                val jid = d.optString("name")
+                val sp = c.readFile("jobs/$jid/super-plan.json")?.let { JSONObject(it.first) } ?: continue
+                if (sp.optString("series_id") == seriesId) {
+                    _superQueue.value = describeQueue(c, jid, sp)
+                    return@launch
+                }
             }
+        } catch (_: Exception) {}
+    }
+
+    private suspend fun describeQueue(c: GitHubClient, anchorJobId: String, state: JSONObject): SuperSeries.QueueView? {
+        if (!state.has("plan")) return null
+        val spawnedArr = state.optJSONArray("spawned") ?: JSONArray()
+        val spawned = ArrayList<Pair<Int, String>>()
+        val statuses = HashMap<String, String?>()
+        for (i in 0 until spawnedArr.length()) {
+            val e = spawnedArr.getJSONObject(i)
+            val jid = e.getString("job_id")
+            spawned.add(e.optInt("part", i + 1) to jid)
+            statuses[jid] = try { c.readFile("jobs/$jid/status.json")?.let { JSONObject(it.first).optString("state") } } catch (_: Exception) { null }
         }
-        _superQueue.value = SuperSeries.evaluateQueue(state) { id -> statusMap[id] }
+        return when (val advance = SuperSeries.superQueueAdvance(state) { statuses[it] }) {
+            is SuperSeries.Advance.Halted -> SuperSeries.QueueView(anchorJobId, state.getString("series_id"),
+                state.optInt("total_parts"), spawned, advance.part, 0, false)
+            is SuperSeries.Advance.Waiting -> SuperSeries.QueueView(anchorJobId, state.getString("series_id"),
+                state.optInt("total_parts"), spawned, 0, advance.part, false)
+            is SuperSeries.Advance.Queue -> SuperSeries.QueueView(anchorJobId, state.getString("series_id"),
+                state.optInt("total_parts"), spawned, 0, 0, false)
+            is SuperSeries.Advance.Done -> SuperSeries.QueueView(anchorJobId, state.getString("series_id"),
+                state.optInt("total_parts"), spawned, 0, 0, true)
+        }
     }
 
     /** Called when the Music screen opens: instant cached render, then background refresh. */
@@ -1722,7 +1688,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val zernioAutomaticMode: String = "smart_schedule",
         val zernioKeyConfigured: Boolean = false,
         val zernioAccounts: List<ZernioAccount> = emptyList(),
-        // Session-10 fix #9: branding/super_series_settings.json {enabled}
+        // branding/super_series_settings.json {enabled} — only meaningful when Series Mode is on
         val superSeriesDefault: Boolean = false
     )
 
@@ -1773,9 +1739,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 }
             } catch (_: Exception) {}
 
-            // Session-10 fix #9: Super Series default — its own stored setting at
-            // branding/super_series_settings.json (bot settings_super.js), read with
-            // the same pattern as the Series Mode setting right above.
+            // Super Series default — its own stored setting (branding/super_series_settings.json)
             var superDef = false
             try {
                 c.readFile(SuperSeries.SETTINGS_PATH)?.let {
