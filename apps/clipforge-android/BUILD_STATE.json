@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-24",
-  "current_task": "task-100",
+  "current_task": "task-101",
   "tasks": [
     {
       "id": "task-80",
@@ -129,8 +129,8 @@
     {
       "id": "task-100",
       "title": "ForgeBuild Dashboard stuck-'ongoing' v9 fix (instruction Part 2): diagnose, fix status logic to derive from real Actions run state, verify v9 + APK reachable",
-      "status": "pending",
-      "notes": "PENDING. Diagnosis so far (session-24): apps/clipforge-android/BUILD_STATE.json is NOT stale (build_complete:true, all tasks done except intentionally-parked task-90 migration). REAL BUG CANDIDATE in site/app.js: releasesFor() returns releases in raw GitHub API order; live API returns clipforge-android-v9 FIRST (created_at asc quirk; v15 is real latest published 20:53) -> renderApps shows 'clipforge-android-v9' as latest and renderApp's inProg gate combines BUILD_STATE with no check of actual release.yml run state. Fix: sort releases by created_at desc AND derive per-version status from the corresponding release.yml workflow run via the Actions API, not BUILD_STATE/tag existence."
+      "status": "done",
+      "notes": "DONE (session-24) — forgebuild commit 7386146e, pushed + verified on origin/main; pages-deploy.yml run 34786413758 completed SUCCESS (live dashboard updated). DIAGNOSIS (instruction Part 2.1/2.2): apps/clipforge-android/BUILD_STATE.json was NOT stale — build_complete:true and every task done except deliberately-parked task-90. The bug was in the DASHBOARD's own logic (site/app.js), TWO compounding defects: (a) releasesFor() returned releases in raw GitHub API order, and the live API returned clipforge-android-v9 FIRST (list order is not published-chronological; v9 created 01:55 appeared ahead of v15 created 20:50) — so the Apps list and app page treated v9 as the newest version; (b) 'ongoing' was derived from BUILD_STATE.json (in_progress task + build_complete flag) and the mis-ordered 'latest' version, never from the actual build workflow run — exactly the 'tag existence / bookkeeping instead of real run state' failure mode the instruction suspected. FIX (instruction Part 2.3): releasesFor() now sorts newest-first by created_at; version status is derived from the Actions API — the release.yml run whose head_sha matches the commit the version's tag points at (tag -> sha -> run, exact 1:1). The in-progress banner shows ONLY while that run (or a newer not-yet-released run) is genuinely executing, with a direct run link; the newest version card carries a live status chip (released / building / failed + run id); every version card keeps direct APK download links. VERIFY (instruction Part 2.4, validated against the LIVE API via a node harness running the new logic verbatim): latest version = clipforge-android-v15 (not v9); inProg=false (latest run 34782014724 completed/success); v9's chip = 'released' (its run 34731741589 succeeded) — reported symptom gone; v15 APK browser_download_url present directly on the dashboard card. No PAT -> chips degrade gracefully to 'released' (no false 'ongoing')."
     },
     {
       "id": "task-101",
