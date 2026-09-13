@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-24",
-  "current_task": "task-97",
+  "current_task": "task-98",
   "tasks": [
     {
       "id": "task-80",
@@ -111,8 +111,8 @@
     {
       "id": "task-97",
       "title": "Investigate slow scene-detect run: source video duration/resolution/bitrate vs typical 2-3min runs (instruction Part 1.1)",
-      "status": "pending",
-      "notes": "PENDING. Compare the 20+min run's source video characteristics (ffprobe / stage-a.yml 'Probe source duration' step logs / recoverable jobs/ evidence) against typical prior runs. Record finding here regardless of outcome. No detection-logic change unless justified by data."
+      "status": "done",
+      "notes": "DONE (session-24, 2026-09-13) — slow run IDENTIFIED and explained by source characteristics; NO code regression. Slow run = stage-a.yml run 34783277244 (job manual-1789333712217, 2026-09-13 21:15-21:53Z, 37.5min total; the ONLY run whose 'Local vision-assist stack' step exceeded 20min). Step 18 'Local vision-assist stack' ran 21:26:51-21:52:49Z = 25m58s, split: baseline composites 9m50s + detect_shots scene-detect 13m09s (21:36:41 -> 21:49:50) + moments/events ~3m. SLOW RUN SOURCE (from the run's own logged ffprobe output in stage-a.yml steps 15 'Probe source duration' + 17): work/original.mkv = 1422.057s (23.7 min), 3840x2160 (4K UHD) HEVC Main-10 yuv420p10le 23.98fps, 14507 kb/s, 2,578,797,592 bytes (2.58 GB, from jobs/manual-1789333712217/ingest.json). TYPICAL PRIOR RUN for comparison = run 34721145161 (manual-1789249757677, vision step 2-3min): original.mkv = 1314.647s (21.9 min), 1920x1080 (FHD) HEVC Main-10 23.81fps, 1732 kb/s. Both runs decode work/original.mkv DIRECTLY for both ffmpeg passes (confirmed via '$ ffmpeg ... -i work/original.mkv' in both logs) — the comparison is like-for-like. Arithmetic: 4K/1080p = 4.0x pixels/frame; 14507/1732 = 8.4x bitrate; 10-bit HEVC at 4K is far costlier to software-decode per frame. Scene-detect wall time scaled 103s -> 789s = 7.7x, entirely consistent with the source delta. Per instruction Part 1.4: this run's source was a CLEAR OUTLIER (4K vs the 1080p norm at ~8.4x the bitrate), so detection logic itself is NOT altered — only the live-progress visibility fix (task-98) is warranted. scenes.py git history: exactly ONE commit (f438dc46, original implementation) — corroborates 'no recent code change plausibly regressed it'."
     },
     {
       "id": "task-98",
