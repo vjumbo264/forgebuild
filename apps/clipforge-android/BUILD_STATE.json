@@ -2,27 +2,27 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": true,
-  "updated_by": "session-13",
-  "current_task": null,
+  "build_complete": false,
+  "updated_by": "session-14",
+  "current_task": "task-86",
   "tasks": [
     {
       "id": "task-80",
-      "title": "Super Series repo-based anchor tracking (bot side) \u2014 no D1 dependency",
+      "title": "Super Series repo-based anchor tracking (bot side) — no D1 dependency",
       "status": "done",
-      "notes": "DONE (session-13): motionssalt/clipforge commit 11006dde. runSuperQueueSweep (bot/src/index.js) now discovers active anchors by scanning the GitHub repo (listJobIds + probing each jobs/<id>/super-plan.json via new isSuperSeriesAnchor()) instead of the D1 task_options super_series_anchor flag; superQueueTick takes preloaded options and no longer writes/clears the D1 anchor flag. App can start a working Super Series purely by writing jobs/<anchor>/super-plan.json \u2014 no bot-only step, no app->D1 dependency. task_options/setTaskOptions/getTaskOptions otherwise untouched. MIGRATION: live D1 checked via Cloudflare API 2026-09-13 \u2014 task_options has 5 rows, ZERO with super_series_anchor=true => no in-flight anchors, no migration step needed."
+      "notes": "DONE (session-13): motionssalt/clipforge commit 11006dde. runSuperQueueSweep (bot/src/index.js) now discovers active anchors by scanning the GitHub repo (listJobIds + probing each jobs/<id>/super-plan.json via new isSuperSeriesAnchor()) instead of the D1 task_options super_series_anchor flag; superQueueTick takes preloaded options and no longer writes/clears the D1 anchor flag. App can start a working Super Series purely by writing jobs/<anchor>/super-plan.json — no bot-only step, no app->D1 dependency. task_options/setTaskOptions/getTaskOptions otherwise untouched. MIGRATION: live D1 checked via Cloudflare API 2026-09-13 — task_options has 5 rows, ZERO with super_series_anchor=true => no in-flight anchors, no migration step needed."
     },
     {
       "id": "task-81",
       "title": "Super Series 'Part N' banner titles guaranteed at slicing time",
       "status": "done",
-      "notes": "DONE (session-13): sliceSuperPart (bot/src/super_series.js) + slice_part (pipeline/plan/super_series.py) append ' \u2014 Part N' when the authored title lacks it (regex \\bpart\\s+N\\b i), matching ordinary Series Mode convention (real production.json: 'The Parasite Memory Trap: Part 2' etc.). Validators unchanged; slicers stay 1:1 (test_super_series.py 15/15 OK + direct title assertions). Stage B banner reads production.json title (stage_b/captions.py build_banner_png) so the guarantee lands for BOTH bot and app entry points."
+      "notes": "DONE (session-13): sliceSuperPart (bot/src/super_series.js) + slice_part (pipeline/plan/super_series.py) append ' — Part N' when the authored title lacks it (regex \\bpart\\s+N\\b i), matching ordinary Series Mode convention (real production.json: 'The Parasite Memory Trap: Part 2' etc.). Validators unchanged; slicers stay 1:1 (test_super_series.py 15/15 OK + direct title assertions). Stage B banner reads production.json title (stage_b/captions.py build_banner_png) so the guarantee lands for BOTH bot and app entry points."
     },
     {
       "id": "task-82",
       "title": "Verify ordinary-series restart controls + app GitHub-writes-only Super Series (issues 2 + 1a)",
       "status": "done",
-      "notes": "Issue 2: confirmed NO separate bug \u2014 restart controls live on the per-part Task Detail screen ('canRestartB = plan != null || (failedTask && stageBStarted)' TasksScreens.kt) and appear for any spawned part; they were absent only because Super Series never spawned parts (issue 1). Gated on the part's own plan, not series type. Issue 1a E2E: live GitHub-writes-only anchor test running (orchestrate.py) \u2014 asserts Part 1 spawns + title carries 'Part 1'. E2E CONFIRMED LIVE (session-13): GitHub-writes-only anchor (jobs/manual-e2e-*/stage-a-request.json + super-plan.json, NOTHING else) was picked up by the repo-scanning cron sweep within one tick \u2014 jobs/e2esuper-1789264541-p1/production.json spawned with title 'E2E Alpha \u2014 Part 1' (plain authored title -> 'Part 1' appended at slicing, confirming task-81 end to end) and stage-b.yml run 34731756595 dispatched (in_progress). deploy-bots run 34731475435 completed success BEFORE the test, so the live Worker ran the new code. Test artifacts cleaned up. Bot-side flow unchanged: same commands/messages/halt-resume \u2014 only WHERE anchor state is read from changed."
+      "notes": "Issue 2: confirmed NO separate bug — restart controls live on the per-part Task Detail screen ('canRestartB = plan != null || (failedTask && stageBStarted)' TasksScreens.kt) and appear for any spawned part; they were absent only because Super Series never spawned parts (issue 1). Gated on the part's own plan, not series type. Issue 1a E2E: live GitHub-writes-only anchor test running (orchestrate.py) — asserts Part 1 spawns + title carries 'Part 1'. E2E CONFIRMED LIVE (session-13): GitHub-writes-only anchor (jobs/manual-e2e-*/stage-a-request.json + super-plan.json, NOTHING else) was picked up by the repo-scanning cron sweep within one tick — jobs/e2esuper-1789264541-p1/production.json spawned with title 'E2E Alpha — Part 1' (plain authored title -> 'Part 1' appended at slicing, confirming task-81 end to end) and stage-b.yml run 34731756595 dispatched (in_progress). deploy-bots run 34731475435 completed success BEFORE the test, so the live Worker ran the new code. Test artifacts cleaned up. Bot-side flow unchanged: same commands/messages/halt-resume — only WHERE anchor state is read from changed."
     },
     {
       "id": "task-83",
@@ -41,7 +41,19 @@
       "title": "Validate build + bump to v9 + release clipforge-android-v9",
       "status": "done",
       "notes": "versionCode/versionName 8->9; Settings About 'Version v9'. Brace/paren balance OK on all touched Kotlin files (SeriesScreens 0/0; ViewModel +1 paren is the known pre-existing string-template false positive present since v7). Markers verified: combinedClickable+OptIn+dialog inside SeriesScreen+vm.deleteSeries wired; strOr x11. Release dispatched via release.yml app_path=apps/clipforge-android -> auto-tag clipforge-android-v9. RELEASE VERIFIED LIVE via the GitHub Releases API: clipforge-android-v9 with APK + forgebuild-manifest.json assets. Prior releases v1..v8 untouched."
+    },
+    {
+      "id": "task-86",
+      "title": "Operator instruction 2026-09-13 (bot removal / GitHub-only Dashboard migration) — scope analysis for clipforge-android",
+      "status": "done",
+      "notes": "DONE (session-14): instruction is primarily a migration of motionssalt/clipforge (remove Telegram Bot A/B, build site/ Dashboard there). App-side deltas identified: (a) telegram_channel main-account gate must be reproduced identically in the app's source picker — AUDIT: already present (NewTaskWizard.kt lines 30/134/143/351, isOriginalRepo() gate at detection AND commit boundary; SourceClassifier TELEGRAM_PUBLIC_POST_RE matches wizard.js TELEGRAM_PUBLIC_POST_RE); (b) dashboard task-04 log-rework/behavior fixes must be verified in the app — session-13 already did the app log rework (strOr x11, per-step sections, active-step auto-expand, cached append-only polling in ClipForgeViewModel/TasksScreens); (c) no Worker/bot dependency may be introduced into the app — AUDIT: app is already GitHub-writes-only (GitHubClient talks to GitHub REST API directly; Super Series anchor is repo-based since session-13 task-80, verified live E2E). App remains compatible with the GitHub-only backend both before and after bot deletion because it never touches the bot Worker/D1/KV."
+    },
+    {
+      "id": "task-87",
+      "title": "Release clipforge-android-v10 (post-migration checkpoint of the app source)",
+      "status": "pending",
+      "notes": "Per EXTEND/UPDATE contract step 5: validate source, bump versionCode/versionName 9->10 + Settings About label, dispatch release.yml (app_path=apps/clipforge-android) -> auto-tag clipforge-android-v10, verify live via the GitHub Releases API. No Kotlin behavior changes this cycle (audit found the app already satisfies every app-side requirement of the instruction — telegram_channel gate, GitHub-only backend, log rework all landed in v9/session-13); the release checkpoints the current source as v10 per the contract's release step."
     }
   ],
-  "notes": "SESSION-13 COMPLETE (2026-09-13): all four operator items done and verified. task-80 repo-based Super Series anchor sweep (motionssalt/clipforge @11006dde, deploy-bots run 34731475435 success); task-81 'Part N' banner titles at slicing (JS+Python, 15/15 tests + live E2E title 'E2E Alpha \u2014 Part 1'); task-82 restart controls confirmed a side effect of issue 1 (appear per spawned part via canRestartB) + GitHub-writes-only E2E spawned Part 1 with Stage B run 34731756595 dispatched; task-83 hold-to-delete series w/ AlertDialog confirmation; task-84 step-log 'null' root-caused to org.json optString-on-null, fixed with strOr x11. clipforge-android-v9 VERIFIED LIVE on the Releases API. NOTHING REMAINS."
+  "notes": "SESSION-14 IN PROGRESS (2026-09-13): new operator instruction = ClipForge bot removal / GitHub-only Dashboard migration (motionssalt/clipforge, site/ dashboard, task-01..task-12 seeded in that repo's site/BUILD_STATE.json). Contract tasks 1-2 done: app BUILD_STATE read (no in_progress), prompt appended (b8caca4, verified on origin/main). App-side audit (task-86) found NO code deltas required: telegram_channel main-account gate present, backend already GitHub-only, log rework already done in v9. Remaining: task-87 release v10 per contract step 5. Dashboard migration itself proceeds in motionssalt/clipforge (its site/BUILD_STATE.json drives task-03..task-12)."
 }
