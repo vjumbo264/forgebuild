@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-24",
-  "current_task": "task-98",
+  "current_task": "task-100",
   "tasks": [
     {
       "id": "task-80",
@@ -117,14 +117,14 @@
     {
       "id": "task-98",
       "title": "Live progress visibility for vision-assist ffmpeg passes (instruction Part 1.3) — NO timeout/kill switch",
-      "status": "pending",
-      "notes": "PENDING. scenes.py detect_shots (line 62) and extract_baseline_composites (line 545) use subprocess.run(capture_output=True) on full single-pass decodes: zero output until done. Switch to Popen with stderr read incrementally, printing progress lines live. Emit_event_composite is per-moment bounded 4s windows (not the same problem class) but also capture_output=True; assess. INGEST.PY (file/ffprobe container sniff, instant) and bundle.py (python prompt-gen, not ffmpeg decode) are out of scope. Explicitly NO timeout= and no elapsed-time failure mechanism anywhere."
+      "status": "done",
+      "notes": "DONE (session-24) — motionssalt/clipforge commit f1515653, pushed + verified on origin/main. New run_ffmpeg_streaming() in pipeline/stage_a/scenes.py replaces subprocess.run(capture_output=True, text=True) at BOTH long single-pass decode call sites: detect_shots (scene-detect pass) and extract_baseline_composites (fps=1 tile pass) — the two passes observed running 9m50s/13m09s with zero output in slow run 34783277244. Implementation: Popen(stderr=PIPE, text mode, bufsize=1), reads stderr incrementally, splits CR/LF (ffmpeg stats use carriage returns), prints compact frame=/time= heartbeat lines throttled to ~1 per 32 chunks plus 1-in-25 sampled showinfo frame lines, returns (complete_stderr, returncode) exactly as capture_output would have provided. NO timeout=, NO kill switch, NO elapsed-time abort anywhere — proc.wait() blocks until the process exits however long it takes (instruction Part 1.2 honored verbatim). Scope decisions: emit_event_composite (line ~484) left on capture_output intentionally — it is a bounded 4-second-window pass (~1-3s each) that already prints a live per-composite line after every file ('event composite [start] @ 6.51s -> ...' seen every ~2s in the slow run's log), so it never had the no-visibility problem. ingest.py file/ffprobe container-sniff calls are instant probes, not decodes; bundle.py runs the python prompt generator, not ffmpeg. Both out of scope. NOTE: pipeline/stage_b/reframe.py carries its own identical detect_shots copy (line 82) with the same capture_output pattern, but it belongs to the Stage B cinematic-reframe path, NOT the 'Local vision-assist stack' step the instruction scopes to ('check scenes.py fully') — left untouched; flagged here for a future session if Stage B reframe ever shows the same symptom."
     },
     {
       "id": "task-99",
       "title": "Validate visibility fix is behavior-identical (instruction Part 1.5)",
-      "status": "pending",
-      "notes": "PENDING. Same shot-boundary results, same file outputs, same success path; only added live progress lines. Validate with synthetic video: scene_index.json identical before/after; failure path still raises with stderr tail."
+      "status": "done",
+      "notes": "DONE (session-24) — behavior-identity validated locally (node/ffmpeg sandbox) before pushing. Synthetic 48s 720p video with 4 hard-cut scenes (testsrc2|smptebars|mandelbrot|red). PASS 1: new detect_shots returns cut timestamps identical to a verbatim copy of the OLD capture_output implementation ([12.0, 24.0] on both). PASS 2: scene_index.json payload identical (shot_count=3, same boundaries/keyframe anchors). PASS 3: extract_baseline_composites writes the same 8 files with byte-identical sizes. PASS 4: failure path unchanged — non-video input still raises RuntimeError('ffmpeg scene-detect failed (exit 183)') promptly (0.0s) with stderr tail, no hang. PASS 5: run_ffmpeg_streaming returns the complete stderr text (2302 chars incl. both pts_time lines) + rc=0, and the Actions-visible log now carries live '[ffmpeg:scene-detect] frame=... time=...' heartbeat lines WHILE the decode runs (observed in validation stdout) instead of silence until exit. Same shot-boundary results, same file outputs, same success path — instruction Part 1.5 satisfied. Live-run confirmation on the real runner will occur naturally on the next stage-a.yml execution."
     },
     {
       "id": "task-100",
