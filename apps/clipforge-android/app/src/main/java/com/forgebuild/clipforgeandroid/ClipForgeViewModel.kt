@@ -1472,6 +1472,19 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val anchorJobId = state.getString("anchor_job_id")
         val seriesId = state.getString("series_id")
         val partJobId = advance.jobId
+        // Super Series spawned parts must carry their own stage-a-request.json (the file
+        // Stage B reads to re-fetch a source too large for a release asset). Reuse the
+        // same synthesis as site/js/supertick.js so the body is identical: the anchor's
+        // REAL source reference carried forward, never a placeholder.
+        val anchorRequest = c.readFile("jobs/$anchorJobId/stage-a-request.json")?.let { JSONObject(it.first) }
+            ?: throw IllegalStateException("Anchor $anchorJobId has no stage-a-request.json — cannot synthesize part ${advance.part}'s request.")
+        val requestBody = SuperSeries.superPartRequestBody(anchorRequest, state, advance.part, emptyList())
+        val requestJson = JSONObject(requestBody.toString())
+            .put("version", 2)
+            .put("job_id", partJobId)
+            .put("saved_at_epoch", nowEpoch())
+        c.putFile("jobs/$partJobId/stage-a-request.json", requestJson.toString(2).toByteArray(Charsets.UTF_8),
+            "clipforge: stage-a request for super part ${advance.part} ($partJobId)")
         // Write the sliced part's production.json.
         c.putFile("jobs/$partJobId/production.json", advance.plan.toString(2).toByteArray(),
             "clipforge: production plan for super part ${advance.part} ($partJobId)")

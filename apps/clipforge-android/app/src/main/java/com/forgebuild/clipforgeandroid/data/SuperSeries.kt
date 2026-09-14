@@ -360,6 +360,31 @@ object SuperSeries {
     // Pure queue decision (backend superQueueAdvance) — halt-and-resume order
     // ---------------------------------------------------------------------------
 
+    /**
+     * Port of scripts/super_chain/super.js superPartRequestBody: synthesize the
+     * ordinary §7.1 stage-a-request body for a spawned Super Series part by reusing
+     * SeriesLogic.nextPartRequestBody (the SAME series-continuation helper ordinary
+     * series parts use), so the result is byte-for-byte what a manual continuation
+     * would have written. Carries the anchor's REAL source reference forward (never a
+     * placeholder) so Stage B's >2GiB source re-fetch has something to re-fetch from.
+     */
+    fun superPartRequestBody(anchorRequest: JSONObject, state: JSONObject, partNumber: Int, summaries: List<Pair<Int, String>>): JSONObject {
+        val context = SeriesLogic.buildSeriesContext(summaries)
+        return SeriesLogic.nextPartRequestBody(
+            anchorRequest,
+            SeriesLogic.Continuation(state.getString("series_id"), partNumber, planStartSeconds(state, partNumber)),
+            context,
+            anchorRequest.optString("job_id")
+        )
+    }
+
+    private fun planStartSeconds(state: JSONObject, partNumber: Int): Int {
+        val parts = state.optJSONObject("plan")?.optJSONArray("parts")
+        val part = if (parts != null && partNumber >= 1 && partNumber <= parts.length()) parts.optJSONObject(partNumber - 1) else null
+        val series = part?.optJSONObject("series")
+        return if (series != null && series.has("start_seconds")) series.optInt("start_seconds", 0) else 0
+    }
+
     sealed class Advance {
         data class Queue(val part: Int, val jobId: String, val plan: JSONObject) : Advance()
         data class Halted(val part: Int, val jobId: String, val message: String) : Advance()
