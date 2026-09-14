@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "session-26",
-  "current_task": "task-107",
+  "current_task": "task-109",
   "tasks": [
     {
       "id": "task-80",
@@ -171,20 +171,20 @@
     {
       "id": "task-107",
       "title": "Diagnose new Super Series failure: spawned part Stage B (run 34824770259) not inheriting Stage A state + anchor card stuck 'Rendering queued'",
-      "status": "in_progress",
-      "notes": "STARTED (session-27, 2026-09-14). Reading live job data + failing Stage B run logs in motionssalt/clipforge for anchor manual-1789372351898 and its spawned part (screenshot: 'Rick-p1' card Failed, anchor card stuck 'Super Series part 1/7 dispatched')."
+      "status": "done",
+      "notes": "DONE (session-27). DIAGNOSIS from live data: jobs/Rick-p1/ held production.json+status.json but NO stage-a-request.json \u2014 the app's Part-1 spawn path (v17 in the field at 08:43, pre-v18-fix) dispatched Stage B with the inheritance file missing; Stage B run 34824770259 failed at 'Re-fetch omitted source from its original reference' ('no stage-a-request.json found') because the 15.7GB magnet source (S03 2160p, torrent_file_index=9) always exceeds the 2GiB asset limit. The anchor card (manual-1789372351898) stayed frozen at 'stage_b_queued / Super Series part 1/7 dispatched' because (a) the app wrote the anchor status BEFORE the part's files and nothing ever updated it again, (b) super-chain.mjs never writes anchor status at all. So: one orphaned failed part + one stale anchor card = the operator's screenshot. Third inheritance-class gap."
     },
     {
       "id": "task-108",
       "title": "Implement fix: spawned Super Series parts must inherit all Stage-A state Stage B needs; anchor status must reflect chain progress",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (session-27), three layers, all pushed+verified: (1) motionssalt/clipforge 40ee7cb \u2014 pipeline/stage_a/refetch_source.py: Super Series spawned parts whose own stage-a-request.json is missing now fall back to the ANCHOR's saved request, resolved via the durable spawn cursor (super-plan.json spawned list) \u2014 the anchor carries the same original source reference the part's request would have; own request stays authoritative when present; ordinary jobs untouched. 4 regression tests (19/19 in test_refetch_source.py; full suite identical pre/post change, only pre-existing env-dependent failures). (2) motionssalt/clipforge 1fd537f \u2014 super-chain.mjs: read-back VERIFY the spawned part's inherited stage-a-request.json (usable source) before production/status/dispatch (abort spawn visibly on inheritance failure) + anchor status.json updated after each chained dispatch (active part, job id, timestamp; non-fatal on failure). (3) vjumbo264/forgebuild d8db8c0 \u2014 app dispatchSuperPart: same read-back verification + abort-before-dispatch; part status written BEFORE anchor status; anchor status moved LAST (after dispatch) with active_part_job_id so the card can never again claim 'dispatched' for a part that doesn't fully exist. Node smoke test: superPartRequestBody carries the real magnet source/index, series block, continuity context and music forward for parts 1 and 2."
     },
     {
       "id": "task-109",
       "title": "Validate fix + unstick current live failed part / stale anchor",
-      "status": "pending",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "IN PROGRESS (session-27): backfilled jobs/Rick-p1/stage-a-request.json from anchor manual-1789372351898's real request (magnet, index 9) \u2014 pushed f85d631, verified on origin. Anchor status.json updated to 'part 1/7 running (Rick-p1)' with active_part_job_id (99ee94a). Dispatched fresh Stage B run 34828114788 on code_ref f85d631c (HTTP 204) \u2014 monitoring that it passes the re-fetch step. Chain cursor intact (spawned=[part1 Rick-p1]) so a successful completion auto-dispatches part 2 with the hardened chain code."
     },
     {
       "id": "task-110",
