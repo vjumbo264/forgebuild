@@ -1476,6 +1476,22 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         // Stage B reads to re-fetch a source too large for a release asset). Reuse the
         // same synthesis as site/js/supertick.js so the body is identical: the anchor's
         // REAL source reference carried forward, never a placeholder.
+        //
+        // 2026-09-14 hardening (third inheritance-class failure — job Rick-p1 spawned
+        // 2026-09-14 ~08:43 with production.json but NO stage-a-request.json, Stage B run
+        // 34824770259 failed the re-fetch): the inheritance write is now ATOMIC in
+        // observable effect — a GitHub Contents PUT can fail with a 4xx (stale-sha 409/422,
+        // transient 403, network) and any failure MUST abort the spawn instead of letting
+        // Stage B run against an incompletely-inherited job folder.
+        //   1. stage-a-request.json is written and then READ-BACK VERIFIED before anything
+        //      else is observable — if the file is not durably committed, no production.json,
+        //      no status files, no spawn cursor and NO Stage B dispatch happen (no orphaned
+        //      'queued' part card, no re-fetch failure possible).
+        //   2. The part's status.json is written BEFORE the anchor's status.json — the old
+        //      order flipped the anchor to 'part N dispatched' first, so a failure right
+        //      after left the operator's exact screenshot: a stale 'Rendering queued'
+        //      anchor card claiming the part started while no part existed. Now the anchor
+        //      status is only touched when the part job is fully formed.
         val anchorRequest = c.readFile("jobs/$anchorJobId/stage-a-request.json")?.let { JSONObject(it.first) }
             ?: throw IllegalStateException("Anchor $anchorJobId has no stage-a-request.json — cannot synthesize part ${advance.part}'s request.")
         val requestBody = SuperSeries.superPartRequestBody(anchorRequest, state, advance.part, emptyList())
@@ -1485,20 +1501,18 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             .put("saved_at_epoch", nowEpoch())
         c.putFile("jobs/$partJobId/stage-a-request.json", requestJson.toString(2).toByteArray(Charsets.UTF_8),
             "clipforge: stage-a request for super part ${advance.part} ($partJobId)")
+        // Read-back verify: the inherited source reference MUST be durably readable before
+        // the part is allowed to become visible/runnable — this is the exact file Stage B's
+        // re-fetch fallback depends on.
+        val verifyRequest = c.readFile("jobs/$partJobId/stage-a-request.json")
+            ?: throw IllegalStateException("stage-a-request.json for $partJobId did not commit durably — aborting the spawn of part ${advance.part} BEFORE dispatch so no part can run without its inherited Stage-A state.")
+        if (JSONObject(verifyRequest.first).optJSONObject("source")?.optString("kind", "")?.isEmpty() != false)
+            throw IllegalStateException("stage-a-request.json for $partJobId committed without a usable source reference — aborting before dispatch.")
         // Write the sliced part's production.json.
         c.putFile("jobs/$partJobId/production.json", advance.plan.toString(2).toByteArray(),
             "clipforge: production plan for super part ${advance.part} ($partJobId)")
-        // Anchor status.
-        c.putFile("jobs/$anchorJobId/status.json", JSONObject()
-            .put("version", 1).put("job_id", anchorJobId).put("mode", "manual")
-            .put("state", "stage_b_queued")
-            .put("message", "Super Series part ${advance.part}/${state.optInt("total_parts")} dispatched.")
-            .put("updated_at_epoch", nowEpoch())
-            .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
-                .put("part", advance.part).put("start_seconds", 0))
-            .toString(2).toByteArray(),
-            "clipforge: queue super series part ${advance.part} ($partJobId)")
-        // Part status (ordinary series part).
+        // Part status (ordinary series part) — BEFORE the anchor status, so the anchor
+        // never claims a part is dispatched while the part itself does not yet exist.
         c.putFile("jobs/$partJobId/status.json", JSONObject()
             .put("version", 1).put("job_id", partJobId).put("mode", "manual")
             .put("state", "stage_b_queued")
@@ -1509,7 +1523,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 .put("start_seconds", advance.plan.optJSONObject("series")?.optInt("start_seconds", 0) ?: 0))
             .toString(2).toByteArray(),
             "clipforge: queue super series part ${advance.part} ($partJobId)")
-        // Record the spawn in the durable state.
+        // Record the spawn in the durable state (same crash-safe order as
+        // site/js/supertick.js: the durable cursor exists BEFORE dispatching).
         state.optJSONArray("spawned")?.put(JSONObject().put("part", advance.part).put("job_id", partJobId))
         c.putFile("jobs/$anchorJobId/super-plan.json", (state.toString(2) + "\n").toByteArray(),
             "clipforge: super series part ${advance.part} spawned ($partJobId)")
@@ -1521,6 +1536,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             "music_ref" to musicRef,
             "code_ref" to c.defaultBranchSha()
         ))
+        // Anchor status LAST — the anchor card only flips to 'part N dispatched' once the
+        // part's full job folder exists AND Stage B was actually dispatched. It now also
+        // carries the live pointer to the part job so the operator can see WHICH part job
+        // the anchor is waiting on instead of an un-updating 'Rendering queued' card.
+        c.putFile("jobs/$anchorJobId/status.json", JSONObject()
+            .put("version", 1).put("job_id", anchorJobId).put("mode", "manual")
+            .put("state", "stage_b_queued")
+            .put("message", "Super Series part ${advance.part}/${state.optInt("total_parts")} dispatched ($partJobId). The chain updates this anchor when the part completes.")
+            .put("updated_at_epoch", nowEpoch())
+            .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
+                .put("part", advance.part).put("start_seconds", 0))
+            .put("active_part_job_id", partJobId)
+            .toString(2).toByteArray(),
+            "clipforge: super series part ${advance.part} dispatched ($partJobId)")
     }
 
     /** describeSuperQueue for every anchor (Series overview). */
