@@ -606,3 +606,33 @@ Verify by:
    anchor `jobs/manual-1789333712217/stage-a-request.json`) to unblock it
    immediately, separate from fixing the code so future parts don't hit
    this at all.
+
+---
+
+## 2026-09-14 — Super Series: Stage B spawned "outside" Stage A does not inherit Stage A state; stale duplicate card
+
+Operator report (verbatim, voice-transcribed): "When I start a new Super
+Plan, Stage A finishes and I put the production plan in it. It shows that
+it has started. But when I check it, the [anchor] is still [there]; I come
+out and check the full overview and I see that a new Stage B has started
+outside that one. The other one is showing as though it has already
+started, while it is not updating anything. The new one is the one that
+actually does the stuff. Because the Stage B is being created outside the
+Stage A, it is not continuing from where the Stage A stopped — some things
+are not being inherited by this Stage B from this Stage A. Please fix this;
+this is the third time a new issue has come up here."
+
+Screenshot (operator-provided): Dashboard "Active Tasks" shows
+- `Rick-p1` — Failed — "Series: Part 1" — "Stage B failed. See workflow
+  run for logs: https://github.com/motionssalt/clipforge/actions/runs/34824770259"
+- `manual-1789372351898` — "Rendering queued" — "Series: Part 1" —
+  "Super Series part 1/7 dispatched."
+
+Interpretation to verify against live job data: (a) the Super Series anchor
+job card stays in a stale "dispatched/queued" state forever because nothing
+updates the anchor's status.json after Part 1 is dispatched; (b) the
+spawned part (series-...-p1) failed in Stage B — read the failing run's
+logs to find what Stage-A output/state the spawned part's Stage B did not
+inherit (third inheritance-type gap after the 2GiB stage-a-request.json
+bug), and fix the spawn path so spawned parts inherit everything Stage B
+needs from the anchor's Stage A.
