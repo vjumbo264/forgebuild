@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-26",
-  "current_task": "task-104",
+  "current_task": "task-106",
   "tasks": [
     {
       "id": "task-80",
@@ -159,14 +159,14 @@
     {
       "id": "task-105",
       "title": "Validate app fix compiles/logic + confirm restarted Stage B progresses past re-fetch",
-      "status": "in_progress",
-      "notes": "Session-26: Kotlin edits verified (helpers present, call wired before production.json write, markers + versionCode 17 + 'Version v17' in SettingsScreen). Live confirmation: Stage B run 34790652480 in_progress after backfill \u2014 its re-fetch step reads the now-present stage-a-request.json; full-chain Part-2 auto-dispatch observed on success. App-source compilation is delegated to release.yml (session has no Android SDK)."
+      "status": "done",
+      "notes": "Session-26: Kotlin edits verified (helpers present, call wired before production.json write, markers + versionCode 17 + 'Version v17' in SettingsScreen). Live confirmation: Stage B run 34790652480 in_progress after backfill \u2014 its re-fetch step reads the now-present stage-a-request.json; full-chain Part-2 auto-dispatch observed on success. App-source compilation is delegated to release.yml (session has no Android SDK). | COMPLETE (session-26): release.yml run 34814060427 compiled the changed Kotlin and completed SUCCESS \u2014 the fix builds. Live confirmation: restarted Stage B run 34790652480 progressed PAST the re-fetch (job series-1789333712217-p1 state moved error -> stage_b_running 'producing final video'), i.e. it read the backfilled stage-a-request.json and re-fetched the >2GiB magnet source successfully \u2014 operator verification step 3 satisfied. On its success, super-chain.yml auto-dispatches Part 2 (already-correct chain writes Part 2's own stage-a-request.json)."
     },
     {
       "id": "task-106",
       "title": "Release next clipforge-android version via release.yml + verify live",
-      "status": "in_progress",
-      "notes": "Session-26: versionCode/versionName 16->17 (v17 tag already shipped v16 source from a prior double-dispatch, so this bump lands under the workflow's next tag v18). Settings About 'Version v17'. release.yml dispatched app_path=apps/clipforge-android; tag auto-increments (expected v18). Prior releases v1..v17 untouched. PENDING: confirm workflow success + release live on the Releases API, then set build_complete=true."
+      "status": "done",
+      "notes": "Session-26: versionCode/versionName 16->17 (v17 tag already shipped v16 source from a prior double-dispatch, so this bump lands under the workflow's next tag v18). Settings About 'Version v17'. release.yml dispatched app_path=apps/clipforge-android; tag auto-increments (expected v18). Prior releases v1..v17 untouched. PENDING: confirm workflow success + release live on the Releases API, then set build_complete=true. | RELEASED clipforge-android-v18: release.yml run 34814060427 completed success; release VERIFIED LIVE via the GitHub Releases API \u2014 tag clipforge-android-v18, draft=false, assets app-clipforge-android-v18.apk + forgebuild-manifest.json present. Prior releases v1..v17 untouched (v16/v17 spot-checked HTTP 200)."
     }
   ],
   "notes": "SESSION-24 (2026-09-13): EXTEND/UPDATE contract fully executed. (1) PROMPT_HISTORY appended (7db753b4). (2) Task-97: slow scene-detect run EXPLAINED \u2014 stage-a run 34783277244's source was a clear outlier (4K 3840x2160 HEVC-10bit 14507kbps 1422s/2.58GB vs typical 1080p 1732kbps 1315s); scene-detect 13m09s is ~7.7x the typical 103s, fully consistent with ~4x pixels x 8.4x bitrate; scenes.py untouched since its original commit -> no code regression, detection logic deliberately NOT altered. (3) Tasks 98/99: live ffmpeg progress visibility landed in motionssalt/clipforge f1515653 (run_ffmpeg_streaming; detect_shots + extract_baseline_composites; NO timeout/kill switch; validated behavior-identical on synthetic video \u2014 identical cuts, byte-identical outputs, same failure path). (4) Task-100: ForgeBuild Dashboard stuck-'ongoing' v9 bug FIXED in site/app.js (7386146e) \u2014 root cause was releases-API ordering (v9 listed first) + BUILD_STATE-derived status; now sorted newest-first + status from the real release.yml run via Actions API; live-validated; deployed by pages-deploy run 34786413758. (5) Task-101: clipforge-android-v16 RELEASED + verified live (run 34786479775 success; APK + manifest assets; v1..v15 untouched). build_complete=true. STILL OPEN (pre-existing, untouched by this instruction): task-90 Telegram-bot-removal migration remains parked pending the interactive Pages parity pass (per its own ordering rule); stage_b/reframe.py detect_shots copy noted in task-98 for future visibility parity if ever symptomatic.",
