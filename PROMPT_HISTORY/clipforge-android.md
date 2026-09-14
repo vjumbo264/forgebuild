@@ -534,3 +534,75 @@ by:
 "YOU SHOULD DELETE THE OLD TELEGRAM STUFF. I'VE VALIDATED AND CONFIRM THAT ITS NO LONGER NEEDED."
 
 → Operator confirms task-90's pending parity verification is complete: Bot A/B Workers, CLIPFORGE_BOT_D1 (720de60e-1a08-492a-9ce6-64cb9534098d), bot KV (b09957b233c247deb40cc703ffadc95d), deploy-bots.yml, telegram-relay.yml, bot/ and relay/ may all be deleted; docs updated to GitHub-only architecture.
+
+---
+
+## 2026-09-14 — Super Series spawned parts missing stage-a-request.json (Stage B re-fetch fails for >2GiB sources)
+
+(credentials redacted before commit — operator rule: never commit credential values)
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_REPO_PAT = (redacted)
+CLOUDFLARE_API_TOKEN = (redacted)
+CLOUDFLARE_ACCOUNT_ID = 5dc9710ac37c9ce333dce2434ce4343b
+
+# Bug: Super Series parts spawned via the completion-chain have no
+`stage-a-request.json`, so Stage B's source re-fetch fails whenever the
+original source exceeded GitHub's 2GiB per-asset limit
+
+Confirmed root cause by reading the actual job data and code:
+
+- A real failing job, `jobs/series-1789333712217-p1/`, contains only
+  `production.json` and `status.json` — no `stage-a-request.json`.
+- An ordinary Series Mode part's job folder (e.g. `jobs/
+  series-1789293925544-p1/`) DOES have its own `stage-a-request.json`,
+  confirming this file is supposed to exist on every spawned part, Super
+  Series included, and is what Stage B falls back to reading when it needs
+  to re-fetch a source video that was too large to keep as a release asset
+  (>2GiB), per the exact error in the operator's screenshot: "the Stage A
+  release intentionally omitted source_input.bin because it exceeded
+  GitHub's 2 GiB per-asset limit, so the source is being re-fetched from
+  the original source reference saved in stage-a-request.json... no
+  stage-a-request.json found for the job — cannot re-fetch."
+- The OLDER Super Series spawn path, `site/js/supertick.js` (line ~147),
+  correctly calls `saveStageARequest(credentials, repo, outcome.jobId,
+  requestBody)` when spawning a part — this is the correct, working
+  behavior, and `scripts/super_chain/super.js` even has a function
+  specifically for synthesizing this request body for a spawned part
+  (search for its comment: "Synthesize the ordinary §7.1 stage-a-request
+  body for a spawned Super Series part").
+- The NEWER completion-chain spawn path, `scripts/super_chain/
+  super-chain.mjs` (the one actually running now, per the earlier fix that
+  replaced cron/polling with a `workflow_run`-triggered chain), READS the
+  anchor's `stage-a-request.json` (to get the source reference) but never
+  WRITES one for the newly spawned part — `dispatch.mjs` even defines
+  `STAGE_A_REQUEST_PATH` as a constant but nothing calls a save function
+  with it anywhere in `super-chain.mjs` or `dispatch.mjs`. This step was
+  present in the older `supertick.js` path and was dropped when the
+  completion-chain dispatch replaced it — a real gap introduced by that
+  rewrite, not a pre-existing bug.
+
+**Fix:** In `super-chain.mjs` (or wherever it calls into `dispatch.mjs` to
+spawn the next part), add the missing step: synthesize and save
+`stage-a-request.json` for the newly spawned part, using the exact same
+approach `site/js/supertick.js` already uses correctly — reuse
+`super.js`'s existing part-request-synthesis function rather than writing
+new logic, since this was already built correctly once and just needs to
+be called from the code path that's actually running now. The synthesized
+request body must carry forward the anchor's real source reference (so a
+re-fetch has something to re-fetch from), not a placeholder.
+
+Verify by:
+1. Confirming, for a fresh Super Series run where the source exceeds
+   2GiB, that every spawned part's job folder now contains a correct
+   `stage-a-request.json` with the real source reference.
+2. Confirming Stage B's re-fetch path succeeds for such a part (does not
+   hit "no stage-a-request.json found for the job") when Stage B needs to
+   re-obtain the source video.
+3. Restarting the currently-failed job (`series-1789333712217-p1`, or
+   whichever job is the operator's current failed instance) after this
+   fix lands, and confirming it now progresses past the re-fetch step —
+   note in `BUILD_STATE.json` if this specific job needs its
+   `stage-a-request.json` backfilled manually (synthesized from the
+   anchor `jobs/manual-1789333712217/stage-a-request.json`) to unblock it
+   immediately, separate from fixing the code so future parts don't hit
+   this at all.
