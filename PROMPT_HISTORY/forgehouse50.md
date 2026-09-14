@@ -14,3 +14,6 @@ on-device token storage, cache-first data via Engine CacheFirstStore, daily read
 WorkManager with completion check, skippable-but-recurring in-app update prompts with newer-version
 supersession, Material 3 + Material Symbols only, system light/dark theme, proper adaptive icon from the
 web repo's committed logo artwork. Tasks 1-7 as seeded in apps/forgehouse50/BUILD_STATE.json.
+
+## Session 3 (2026-09-14)
+Re-sent the full ForgeBuild App Build Contract for the ForgeHouse 50 Android client (unchanged operator instructions; APP_DESCRIPTION, TASKS 1-7, engine helpers, per-step commit/push protocol, signing & releases). Resumed from repository state: tasks 1-4 done, task 5 in progress with 5.1/5.2 implemented, CI release attempts failing.
