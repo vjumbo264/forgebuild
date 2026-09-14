@@ -3,8 +3,8 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "session-26",
-  "current_task": "task-109",
+  "updated_by": "session-28",
+  "current_task": "task-110",
   "tasks": [
     {
       "id": "task-80",
@@ -183,14 +183,20 @@
     {
       "id": "task-109",
       "title": "Validate fix + unstick current live failed part / stale anchor",
-      "status": "in_progress",
-      "notes": "IN PROGRESS (session-27): backfilled jobs/Rick-p1/stage-a-request.json from anchor manual-1789372351898's real request (magnet, index 9) \u2014 pushed f85d631, verified on origin. Anchor status.json updated to 'part 1/7 running (Rick-p1)' with active_part_job_id (99ee94a). Dispatched fresh Stage B run 34828114788 on code_ref f85d631c (HTTP 204) \u2014 monitoring that it passes the re-fetch step. Chain cursor intact (spawned=[part1 Rick-p1]) so a successful completion auto-dispatches part 2 with the hardened chain code."
+      "status": "done",
+      "notes": "IN PROGRESS (session-27): backfilled jobs/Rick-p1/stage-a-request.json from anchor manual-1789372351898's real request (magnet, index 9) \u2014 pushed f85d631, verified on origin. Anchor status.json updated to 'part 1/7 running (Rick-p1)' with active_part_job_id (99ee94a). Dispatched fresh Stage B run 34828114788 on code_ref f85d631c (HTTP 204) \u2014 monitoring that it passes the re-fetch step. Chain cursor intact (spawned=[part1 Rick-p1]) so a successful completion auto-dispatches part 2 with the hardened chain code. CLOSED (session-28): restart run 34828114788 got PAST re-fetch (fix worked) but failed at 'Resolve production.json' \u2014 new root cause found: Rick-p1's production.json (and the anchor super-plan's 7 parts) carry the AI-authored `segments` key while the backend validator requires `cuts` (operator's exact screenshot errors come from the app-side mirror of this mismatch in SuperSeries.kt). Fixed both sides: schema.py + site/js/plan.js + scripts/super_chain/plan.js accept and normalize `segments`->`cuts`; super_series.slice_part normalizes too; app SuperSeries.kt accepts `cuts` and normalizes to `segments`. Live plans normalized; anchor super-plan now validates CLEAN; slice produces cuts. Rick-p1 Stage B re-dispatched on code_ref 33c1faa1 (HTTP 204)."
     },
     {
       "id": "task-110",
       "title": "Release next clipforge-android version via release.yml + verify live",
-      "status": "pending",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "(session-28) v18->v19 carries: segments<->cuts validator alias (app), submit-button busy state, super-plan prompt part-count/word-budget fix. Dispatching release.yml next."
+    },
+    {
+      "id": "task-111",
+      "title": "segments/cuts validator parity + AI part-count/word-budget prompt + submit-button loading state",
+      "status": "done",
+      "notes": "DONE (session-28). Backend clipforge 33c1faa1: schema.py/site plan.js/super_chain plan.js normalize `segments`->`cuts`; slice_part normalizes; prompt.py super-plan directive: no artificial part cap + explicit per-part word arithmetic + mandatory `cuts` key. App v19: SuperSeries.kt accepts `cuts` (alias->segments); TasksScreens submit button busy-guard (disabled + spinner, no double-fire); Models.kt super-plan prompt: cuts naming, no part cap, per-part word budget. Tests: test_super_series+test_refetch 34/34; test_stage_b 7 YOLO/reframe failures are pre-existing env-dependent (49 passed), unchanged by this fix."
     }
   ],
   "notes": "SESSION-24 (2026-09-13): EXTEND/UPDATE contract fully executed. (1) PROMPT_HISTORY appended (7db753b4). (2) Task-97: slow scene-detect run EXPLAINED \u2014 stage-a run 34783277244's source was a clear outlier (4K 3840x2160 HEVC-10bit 14507kbps 1422s/2.58GB vs typical 1080p 1732kbps 1315s); scene-detect 13m09s is ~7.7x the typical 103s, fully consistent with ~4x pixels x 8.4x bitrate; scenes.py untouched since its original commit -> no code regression, detection logic deliberately NOT altered. (3) Tasks 98/99: live ffmpeg progress visibility landed in motionssalt/clipforge f1515653 (run_ffmpeg_streaming; detect_shots + extract_baseline_composites; NO timeout/kill switch; validated behavior-identical on synthetic video \u2014 identical cuts, byte-identical outputs, same failure path). (4) Task-100: ForgeBuild Dashboard stuck-'ongoing' v9 bug FIXED in site/app.js (7386146e) \u2014 root cause was releases-API ordering (v9 listed first) + BUILD_STATE-derived status; now sorted newest-first + status from the real release.yml run via Actions API; live-validated; deployed by pages-deploy run 34786413758. (5) Task-101: clipforge-android-v16 RELEASED + verified live (run 34786479775 success; APK + manifest assets; v1..v15 untouched). build_complete=true. STILL OPEN (pre-existing, untouched by this instruction): task-90 Telegram-bot-removal migration remains parked pending the interactive Pages parity pass (per its own ordering rule); stage_b/reframe.py detect_shots copy noted in task-98 for future visibility parity if ever symptomatic.",

@@ -254,7 +254,17 @@ object SuperSeries {
             errors.add("`target_total_duration_seconds` must be a positive integer.")
         }
 
-        val segments = document.opt("segments")
+        // Canonical key is `cuts`; `segments` accepted as an alias and
+        // normalized in place so the plan matches the backend contract.
+        var segments = document.opt("segments")
+        if (segments !is JSONArray) {
+            val cutsAlias = document.opt("cuts")
+            if (cutsAlias is JSONArray && cutsAlias.length() > 0) {
+                document.put("segments", cutsAlias)
+                document.remove("cuts")
+                segments = cutsAlias
+            }
+        }
         if (segments !is JSONArray) {
             errors.add("`segments` must be an array.")
         } else if (segments.length() < 1) {

@@ -636,3 +636,26 @@ logs to find what Stage-A output/state the spawned part's Stage B did not
 inherit (third inheritance-type gap after the 2GiB stage-a-request.json
 bug), and fix the spawn path so spawned parts inherit everything Stage B
 needs from the anchor's Stage A.
+
+---
+
+## 2026-09-14 — Super Series fixes: segments/cuts validator mismatch, AI part-count conservatism + per-part word budget, submit-button double-fire
+
+Operator report (voice-transcribed, condensed): (1) submitting a Super-Plan
+shows "parts[N]: `segments` must be an array / `series_summary` must be a
+non-empty string" even when the plan is valid — root cause: the app validates
+`segments` (SuperSeries.kt) while the backend validates `cuts`
+(pipeline/plan/schema.py), so plans authored with `cuts` are rejected by the
+app and plans authored with `segments` are rejected by the backend. (2) The AI
+is conservative on part count (2-3 parts even when the source supports more)
+and ambiguous about per-part narration length (once treated a 30s PER-PART
+target as ~90 words for the WHOLE series). (3) The "Submit Super-Plan" button
+shows no loading state, so it gets tapped multiple times and the duplicate
+submit errors. Fix: accept/normalize `cuts`<->`segments` on BOTH validators
+(app SuperSeries.kt + backend schema.py, site/js/plan.js, scripts/super_chain/
+plan.js, super_series.py slicer); super-plan prompts now state no part-count
+cap (up to 20, plan as many as the source supports) and explicit per-part
+word-budget arithmetic (~3.1 words/s, per-part reference table); submit button
+disables itself and shows a spinner while the submit coroutine runs. Unstick:
+Rick-p1 production.json + anchor super-plan normalized to `cuts`; Stage B
+restarted on the fixed code.

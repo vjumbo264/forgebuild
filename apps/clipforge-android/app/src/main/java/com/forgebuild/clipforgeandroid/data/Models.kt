@@ -387,7 +387,8 @@ object AgentPromptBuilder {
         return "Open this GitHub release: " + releaseUrl + "\n" +
             "Download and read 00_READ_THIS_FIRST.txt FIRST, then inspect the evidence assets (transcript.json, scene_index.json, key_moments.json, and the screenshot composites as needed).\n" +
             (if (isSuperSeries)
-                "Produce exactly one WHOLE-SERIES super-plan document for this series" + focusClause + "." + seriesClause
+                "Produce exactly one WHOLE-SERIES super-plan document for this series" + focusClause + "." + seriesClause + "\n" +
+                "Each part's plan MUST use the key \"cuts\" for its cut list (never \"segments\"). PART COUNT: there is no cap — plan AS MANY parts as the source honestly supports (every strong thread with enough material for a full ~" + target + "s part deserves one); do not default to 2-3 parts out of caution. WORD BUDGET IS PER PART: ~" + words + " spoken words PER PART (~" + target + "s x 3.1; reference: 30s≈94, 60s≈188, 120s≈376 words) — never one part's budget for the whole series and never spread a part's words across its whole footage window."
             else
                 "Produce exactly one production.json for a vertical clip" + focusClause + "." + seriesClause) + "\n" +
             "The ~" + target + "s figure targets total SPOKEN NARRATION length only — it is NOT the video's length and must not influence how long any cut is, how many cuts you make, or where any end_seconds falls. The final video is exactly as long as the total narration, so keep TOTAL spoken words near " + target + " x 3.1 (about " + words + " words). Choose every cut's end_seconds at the full on-screen completion of its visual payoff (per the PICKING end_seconds rules in 00_READ_THIS_FIRST.txt), even when the footage then runs longer than the narration.\n" +

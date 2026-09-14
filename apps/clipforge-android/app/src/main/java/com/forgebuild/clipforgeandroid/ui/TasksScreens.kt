@@ -576,24 +576,38 @@ fun TaskDetailScreen(
                             )
                         }
 
+                        // Busy guard: one tap disables the button and shows a
+                        // spinner until the submit coroutine returns — prevents
+                        // double-fire (operator report: no feedback -> repeated taps -> duplicate-submit errors).
+                        var submitting by remember { mutableStateOf(false) }
                         Button(
                             onClick = {
+                                if (submitting) return@Button
+                                submitting = true
                                 if (isSuperSeriesTask) {
                                     vm.submitSuperPlan(jobId, rawPlanText) {
+                                        submitting = false
                                         rawPlanText = ""
                                         planErrors = emptyList()
                                     }
                                 } else {
                                     vm.submitProductionPlan(jobId, rawPlanText) {
+                                        submitting = false
                                         rawPlanText = ""
                                         planErrors = emptyList()
                                     }
                                 }
                             },
-                            enabled = rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
+                            enabled = !submitting && rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (isSuperSeriesTask) "Submit Super-Plan (Part 1 starts now; the rest chain automatically)" else "Submit Plan & Start Stage B Rendering")
+                            if (submitting) {
+                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (isSuperSeriesTask) "Starting Part 1…" else "Starting Stage B…")
+                            } else {
+                                Text(if (isSuperSeriesTask) "Submit Super-Plan (Part 1 starts now; the rest chain automatically)" else "Submit Plan & Start Stage B Rendering")
+                            }
                         }
                     }
                 }
