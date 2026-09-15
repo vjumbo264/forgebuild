@@ -659,3 +659,34 @@ word-budget arithmetic (~3.1 words/s, per-part reference table); submit button
 disables itself and shows a spinner while the submit coroutine runs. Unstick:
 Rick-p1 production.json + anchor super-plan normalized to `cuts`; Stage B
 restarted on the fixed code.
+
+## 2026-09-15 — EXTEND/UPDATE: ForgeHouse 50 — Leaderboard Points Fix, Broken Scripture Loading, New Icon (credentials redacted)
+
+Operator instruction (verbatim, credentials redacted): ForgeHouse 50 has
+three fixes. Issue 1: the leaderboard's primary "Overall Score" regressed to
+a per-day average / confidence-weighted adjusted_score
+((raw_average x elapsed_days) / (elapsed_days + K)); it must be raw
+cumulative total points (reading completion + quiz + streaks + observations +
+questions + community sharing + weekly targets + full-programme completion),
+no division, no damping, on both site and Android app (same backend — likely
+one backend fix; verify both surfaces; invalidate app-side cached leaderboard
+data so a stale averaged value cannot mask the fix). adjusted_score was only
+ever meant as a narrow secondary fairness signal for mid-programme averaged
+comparisons — if kept at all it must be a clearly-labeled secondary view,
+never the default; remove if it adds confusion. The end-of-programme final
+snapshot already uses raw totals — confirm untouched. Verify live: displayed
+value must match a manual sum of a real user's point history. Issue 2: the
+Bible/scripture reading screen is stuck on loading forever — diagnose which
+surface(s) (site and/or app), reproduce with real network evidence, fix the
+root cause (unhandled rejection / loading flag never flipped / hung request),
+add a timeout + clear error fallback, verify live on >= 2 reading days.
+Issue 3: replace app icon with newly attached forgehouse50-icon-v3.png
+(glossier blue rounded-square flame/house/globe/"50" mark) as the new master
+source replacing forgehouse50-logo-source.png; regenerate the Android
+adaptive icon set (foreground/background/safe-zone/legacy, no corner
+artifacts, pixel-verified) AND the web PWA icon set (192/512 + maskable,
+favicon, apple-touch-icon) from it; verify rendered on-device and in the web
+manifest. Discipline: BUILD_STATE.json as source of truth, persistent
+session, per-step commit+push, verify live with real evidence, section
+leaderboard_scripture_icon_fix_v1 appended to the web repo BUILD_STATE.json
+and the Android app's build-state file.

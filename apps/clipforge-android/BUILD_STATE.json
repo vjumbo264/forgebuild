@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "session-28",
-  "current_task": "task-110",
+  "build_complete": true,
+  "updated_by": "session-29",
+  "current_task": null,
   "tasks": [
     {
       "id": "task-80",
@@ -189,8 +189,8 @@
     {
       "id": "task-110",
       "title": "Release next clipforge-android version via release.yml + verify live",
-      "status": "in_progress",
-      "notes": "(session-28) v18->v19 carries: segments<->cuts validator alias (app), submit-button busy state, super-plan prompt part-count/word-budget fix. Dispatching release.yml next."
+      "status": "done",
+      "notes": "(session-28) v18->v19 carries: segments<->cuts validator alias (app), submit-button busy state, super-plan prompt part-count/word-budget fix. Dispatching release.yml next. CLOSED (session-29 verification): release clipforge-android-v19 VERIFIED LIVE via the GitHub Releases API \u2014 release+tag 200, draft=false, assets app-clipforge-android-v19.apk (5,282,210 bytes, uploaded) + forgebuild-manifest.json (version_tag=clipforge-android-v19, version_notes match task-111 scope). versionCode/versionName=19 in source. Prior releases untouched. Session-28 dispatched but did not record the verification; nothing was actually pending."
     },
     {
       "id": "task-111",
