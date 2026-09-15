@@ -83,3 +83,28 @@ ISSUE 3 — REPLACE APP ICON WITH NEW ATTACHED VERSION: regenerate the Android a
 
 TASK LIST: append a `leaderboard_scripture_icon_fix_v1` section (web repo's BUILD_STATE.json and, where app-specific work is involved, the Android app's own build-state file) with one task per issue at minimum, splitting further if an issue spans independent commits (e.g. Issue 1's backend fix vs. Android cache-invalidation vs. verification). For each task: inspect → implement → verify live/on-device with real evidence → commit → push → update the relevant build-state file → move to the next task without stopping to ask for confirmation. Mark the section complete only once all three issues are independently, genuinely verified as fixed — not source-inspected.
 """
+
+---
+
+## 2026-09-15 — Follow-up: scripture/audio STILL unavailable, leaderboard STILL /day (rewire request)
+
+Operator report after forgehouse50-v5 (verbatim, credentials redacted):
+
+> The fix has been applied but the scripture and audio is not still available,
+> also the leaderboards is still showing /day.
+>
+> The fix has been applied but I still don't see scriptures or audio, please
+> just rewire that entire function in the app so it will work properly.
+
+Interpretation / scope:
+- v5's gating fix stopped the infinite spinner but did NOT restore content:
+  the passage/audio LaunchedEffect in ReadScreen.kt was keyed on
+  (day, selected, translation) and early-returned while dayLoaded=false. For a
+  returning user (translation id already stored, never changes) the effect
+  fires once, returns, and never re-fires -> passage + audio never load.
+- Operator explicitly asks to REWIRE the whole scripture/audio load function
+  in the app so it works properly.
+- Leaderboard: app must show RAW TOTAL points, never any /day average. Prefer
+  the explicit total_points field and invalidate the stale local cache.
+
+(Credential values from the operator message are intentionally NOT recorded here.)
