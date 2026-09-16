@@ -317,11 +317,12 @@
     "research_decisions": {
       "date": "2026-09-16T11:48:12Z",
       "material3_expressive": {
-        "decision": "androidx.compose.material3:material3 1.4.0 (stable, 2026-08-12) via androidx.compose:compose-bom:2026.09.00",
-        "why": "1.4.0 is the first stable train carrying the M3 Expressive APIs (MaterialExpressiveTheme, MotionScheme.expressive(), expressive shape system, LinearWavyProgressIndicator / CircularWavyProgressIndicator, LoadingIndicator, expressive list items, FloatingToolbar). BOM 2026.09.00 maps material3 1.4.0 + compose ui/foundation 1.12.1. Official library only, no hand-rolled approximations.",
+        "decision": "androidx.compose.material3:material3 1.5.0-alpha28 (material3-android, minCompileSdk=37, minAGP=9.1.0). Compose stack aligned with BOM 2026.09.00 (ui/foundation 1.12.1 runtime \u2014 alpha28 declares 1.13.0-alpha01 api deps but is compatible against the 1.12.1 BOM train for the APIs used).",
+        "why": "Verification against the actual artifacts showed the Expressive public API surface is NOT in the 1.4.0 stable: in material3 1.4.0 MaterialExpressiveTheme/MotionScheme/ExperimentalMaterial3ExpressiveApi are all `internal` and wavy progress indicators do not exist at all. In 1.5.0-alpha28 they are public: MaterialExpressiveTheme(colorScheme, motionScheme, shapes, typography), MotionScheme.expressive() (spring spatial specs), expressiveLightColorScheme() (no expressiveDark* exists \u2014 dark expressive = darkColorScheme() + expressive motion/shapes, matching Google's own sample which toggles expressiveLight + darkTheme), LinearWavyProgressIndicator / CircularWavyProgressIndicator (stable, no opt-in), LoadingIndicator (@ExperimentalMaterial3ExpressiveApi), Shapes() with expressive defaults incl. LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge. No stable release carries these APIs yet (1.5.0 is alpha-only), so the newest alpha is the only way to ship REAL expressive components \u2014 the brief's 'no hand-rolled approximation where a real component exists' rule forces this choice. Trade-off recorded: alpha on the default Material theme until 1.5.0 goes stable.",
         "sources": [
-          "https://developer.android.com/jetpack/androidx/releases/compose-material3",
-          "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/2026.09.00/compose-bom-2026.09.00.pom"
+          "material3-android-1.4.0-sources.jar (internal expressive APIs, no wavy indicators)",
+          "material3-android-1.5.0-alpha28-sources.jar (public expressive APIs + WavyProgressIndicator.kt + LoadingIndicator.kt)",
+          "https://developer.android.com/jetpack/androidx/releases/compose-material3"
         ]
       },
       "miuix": {
