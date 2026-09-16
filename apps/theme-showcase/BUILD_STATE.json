@@ -1,9 +1,9 @@
 {
   "slug": "theme-showcase",
   "project": "forgebuild-app-theme-showcase",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-theme-showcase-1",
-  "current_task": "step-6",
+  "current_task": "complete",
   "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
   "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
   "tasks": [
@@ -40,14 +40,14 @@
     {
       "id": "step-6",
       "title": "Validate build config, release theme-showcase-v1 via release.yml (app_path=apps/theme-showcase), verify release + APK asset via Releases API",
-      "status": "in_progress",
-      "notes": "First release run 35097037474 FAILED at 'Build release APK': AGP 9.4.0 hard-error — legacy org.jetbrains.kotlin.android plugin 'no longer required for Kotlin support since AGP 9.0'. ENGINE-LEVEL bug (engine gradle files declared it at root+app), fixed in engine/ AND propagated to apps/theme-showcase/ (removed from both root and app build.gradle.kts; compose plugin retained). Older-snapshot apps (calcom, clipforge-android, forgehouse50, tapcounter on AGP 8.5.2/Kotlin 2.0.20) intentionally NOT touched — their toolchain still needs the plugin. Recorded as standing fix in engine/ARCHITECTURE.md. Re-dispatching release."
+      "status": "done",
+      "notes": "theme-showcase-v1 RELEASED and VERIFIED live on the GitHub Releases API: tag theme-showcase-v1 (public, not draft/prerelease) with app-theme-showcase-v1.apk (1299208 bytes) + forgebuild-manifest.json (412 bytes). Took three runs: run 35097037474 failed on AGP-9 kotlin-android plugin (engine-level bug — fixed in engine/ + propagated to theme-showcase, standing note in engine/ARCHITECTURE.md; 8.5.2-snapshot apps intentionally untouched); run 35097422253 failed on a LayerBackdrop type mismatch in GlassTheme.kt (engine-level — rememberLiquidGlassBackdrop/liquidBackdropSource retyped LayerBackdrop in engine/ + theme-showcase); run 35097734288 SUCCEEDED."
     },
     {
       "id": "step-7",
       "title": "Set build_complete: true only after theme-showcase-v1 verified live",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "theme-showcase-v1 verified live via GET /repos/vjumbo264/forgebuild/releases (APK asset 1299208 bytes + forgebuild-manifest.json present, draft=false, prerelease=false). build_complete set true."
     }
   ],
   "quality_constraints": {
@@ -62,8 +62,8 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "steps 1-4 done + verified; step-5 done (5a-5e each verified). Step-6 in progress: first release run failed on AGP-9 kotlin-android plugin (engine-level bug); fixed in engine/ + theme-showcase, re-dispatching."
+      "event": "BUILD COMPLETE. steps 1-7 done. theme-showcase-v1 verified live on Releases API (run 35097734288) after two engine-level fixes (AGP-9 kotlin-android plugin; LayerBackdrop typing), both applied in engine/ and propagated to this app's copy."
     }
   ],
-  "notes": "Next operation: re-dispatch release.yml for apps/theme-showcase after the AGP-9 kotlin-android engine fix; wait for the run; on success verify theme-showcase-v1 release + APK asset via the GitHub Releases API, then step-7 set build_complete. Compile verification happens in CI (no Android SDK in sandbox; static API cross-check already passed)."
+  "notes": "DONE — theme-showcase-v1 live (APK 1299208 bytes). Nothing remains for this app. Future work on this app: bump to theme-showcase-v2 by dispatching release.yml with app_path=apps/theme-showcase after committing changes; resume state is fully described in this file."
 }
