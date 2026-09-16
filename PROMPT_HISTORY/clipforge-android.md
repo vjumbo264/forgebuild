@@ -690,3 +690,8 @@ manifest. Discipline: BUILD_STATE.json as source of truth, persistent
 session, per-step commit+push, verify live with real evidence, section
 leaderboard_scripture_icon_fix_v1 appended to the web repo BUILD_STATE.json
 and the Android app's build-state file.
+
+## 2026-09-16 — Operator instruction
+"""
+Full UI overhaul with the new Google Material Design and loading, animations, squiggle, screens, everything nice to make the UI beautiful. change whatever you need in the UI.
+"""
