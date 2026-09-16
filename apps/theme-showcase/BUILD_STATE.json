@@ -3,21 +3,21 @@
   "project": "forgebuild-app-theme-showcase",
   "build_complete": false,
   "updated_by": "session-theme-showcase-1",
-  "current_task": "step-1",
+  "current_task": "step-3",
   "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
   "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
   "tasks": [
     {
       "id": "step-1",
       "title": "Choose slug, create apps/theme-showcase from engine copy, seed BUILD_STATE + PROMPT_HISTORY, push-access proof",
-      "status": "in_progress",
-      "notes": "Slug 'theme-showcase' chosen by building AI (operator left it blank). Checked apps/ — existing slugs calcom, clipforge-android, forgehouse50, tapcounter; no collision. Slug is permanent: folder apps/theme-showcase/, tags theme-showcase-vN, PROMPT_HISTORY/theme-showcase.md."
+      "status": "done",
+      "notes": "Slug 'theme-showcase' chosen by building AI (operator left it blank). Checked apps/ — existing slugs calcom, clipforge-android, forgehouse50, tapcounter; no collision. Slug is permanent: folder apps/theme-showcase/, tags theme-showcase-vN, PROMPT_HISTORY/theme-showcase.md. Seed commit d7204541aa pushed and VERIFIED on origin/main via GitHub API (push-access proof)."
     },
     {
       "id": "step-2",
       "title": "Set identity: namespace/applicationId com.forgebuild.themeshowcase, app_name 'Theme Showcase'",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "app/build.gradle.kts namespace + applicationId set to com.forgebuild.themeshowcase; MainActivity.kt moved app/ -> themeshowcase/ package dir with package line updated (matches tapcounter convention, engine/ library packages unchanged); strings.xml app_name = 'Theme Showcase'."
     },
     {
       "id": "step-3",
@@ -62,8 +62,8 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "step-1 in progress: engine copied into apps/theme-showcase/, BUILD_STATE + PROMPT_HISTORY seeded."
+      "event": "step-1 done (commit d7204541aa, verified on origin/main); step-2 done (identity com.forgebuild.themeshowcase / 'Theme Showcase')."
     }
   ],
-  "notes": "Next operation: commit + push step-1 seed, verify push on origin/main via GitHub API, then step-2 identity."
+  "notes": "Next operation: step-3 adaptive icon — generate foreground artwork, run tools/make_adaptive_icon.py, commit + push + verify."
 }

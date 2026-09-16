@@ -6,14 +6,14 @@ plugins {
 
 android {
     // FORGEBUILD: the generating AI replaces the namespace/applicationId per app.
-    namespace = "com.forgebuild.app"
+    namespace = "com.forgebuild.themeshowcase"
     // compileSdk 37 is REQUIRED by the Engine's theme libraries:
     // io.github.kyant0:backdrop (Liquid Glass) and top.yukonga.miuix.kmp:miuix-ui
     // both publish AARs with minCompileSdk=37. Do not lower.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.forgebuild.app"
+        applicationId = "com.forgebuild.themeshowcase"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
