@@ -54,6 +54,19 @@ Java 17 bytecode (CI uses JDK 17; AGP 9 runs on it). Compose stack pinned to
 `1.13.0-alpha01` (see MATERIAL note). New engine-level deps are limited to the
 three theme libraries + coroutines (cache-first data layer) — nothing else.
 
+**AGP 9 built-in Kotlin (STANDING, 2026-09-16 fix).** AGP 9 has Kotlin support
+BUILT IN — the legacy `org.jetbrains.kotlin.android` plugin must NOT be
+declared in the root build file nor applied in `app/build.gradle.kts`; applying
+it hard-fails the build (`"no longer required for Kotlin support since AGP
+9.0"`, surfaced by the first theme-showcase release build). Kotlin compilation,
+the `kotlin { compilerOptions { ... } }` DSL, and the
+`org.jetbrains.kotlin.plugin.compose` plugin all work without it. NOTE: this is
+toolchain-specific — apps generated on the older snapshot (AGP 8.5.2 / Kotlin
+2.0.20: calcom, clipforge-android, forgehouse50, tapcounter) still REQUIRE the
+kotlin-android plugin, so this fix is intentionally NOT back-propagated to
+them; it applies to engine/ and every app copied from the current engine
+(AGP 9.x).
+
 ## Structure
 
 ```

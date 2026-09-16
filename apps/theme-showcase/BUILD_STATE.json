@@ -40,8 +40,8 @@
     {
       "id": "step-6",
       "title": "Validate build config, release theme-showcase-v1 via release.yml (app_path=apps/theme-showcase), verify release + APK asset via Releases API",
-      "status": "pending",
-      "notes": ""
+      "status": "in_progress",
+      "notes": "First release run 35097037474 FAILED at 'Build release APK': AGP 9.4.0 hard-error — legacy org.jetbrains.kotlin.android plugin 'no longer required for Kotlin support since AGP 9.0'. ENGINE-LEVEL bug (engine gradle files declared it at root+app), fixed in engine/ AND propagated to apps/theme-showcase/ (removed from both root and app build.gradle.kts; compose plugin retained). Older-snapshot apps (calcom, clipforge-android, forgehouse50, tapcounter on AGP 8.5.2/Kotlin 2.0.20) intentionally NOT touched — their toolchain still needs the plugin. Recorded as standing fix in engine/ARCHITECTURE.md. Re-dispatching release."
     },
     {
       "id": "step-7",
@@ -62,8 +62,8 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "steps 1-4 done + verified (d7204541aa / 7273866444 / 61eecfa323 / secrets check). Step-5 done: 5a-5e each committed+pushed+verified (ac57ad9f3c, 656d33537a, 5ad5308e4c, be001cfb0b, 61d5baa)."
+      "event": "steps 1-4 done + verified; step-5 done (5a-5e each verified). Step-6 in progress: first release run failed on AGP-9 kotlin-android plugin (engine-level bug); fixed in engine/ + theme-showcase, re-dispatching."
     }
   ],
-  "notes": "Next operation: step-6 — dispatch release.yml with app_path=apps/theme-showcase, wait for run, then verify theme-showcase-v1 release + APK asset via the GitHub Releases API. Compile verification happens in CI (no Android SDK in this sandbox; static API cross-check already passed)."
+  "notes": "Next operation: re-dispatch release.yml for apps/theme-showcase after the AGP-9 kotlin-android engine fix; wait for the run; on success verify theme-showcase-v1 release + APK asset via the GitHub Releases API, then step-7 set build_complete. Compile verification happens in CI (no Android SDK in sandbox; static API cross-check already passed)."
 }

@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // No org.jetbrains.kotlin.android: AGP 9 built-in Kotlin (see root build file).
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
