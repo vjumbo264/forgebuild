@@ -580,6 +580,20 @@
      "BUILD_STATE.json"
     ],
     "notes": "Inventory recorded under forgebuild-material-only-revert.inventory. Removal will be manual per-file (not git revert) because the prior build's history also contains the M3E upgrade that must be kept plus later fixes and the interleaved theme-showcase build."
+   },
+   {
+    "id": "step-02",
+    "title": "remove EngineTheme selector enum entirely + MainActivity drops selector import/docs (Material 3 Expressive is the only theme)",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:06Z"
+    },
+    "files": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/EngineTheme.kt",
+     "engine/app/src/main/java/com/forgebuild/app/MainActivity.kt",
+     "BUILD_STATE.json"
+    ],
+    "notes": "EngineTheme.kt deleted (not hardcoded — no theme choice exposed at all). MainActivity rewritten: ForgeBuildTheme only, no EngineTheme import."
    }
   ]
  }
