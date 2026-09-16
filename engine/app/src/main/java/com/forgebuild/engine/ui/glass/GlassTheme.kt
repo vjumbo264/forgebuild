@@ -8,6 +8,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
@@ -91,14 +92,19 @@ fun LiquidGlassTheme(
     }
 }
 
-/** The shared [Backdrop] a screen's glass components draw from. */
+/**
+ * The shared backdrop a screen's glass components draw from. Typed as
+ * [LayerBackdrop] (the concrete type [rememberLayerBackdrop] returns and
+ * [layerBackdrop] requires); it IS-A [Backdrop], so every `Glass*` component
+ * taking the broader [Backdrop] still accepts it.
+ */
 @Composable
-fun rememberLiquidGlassBackdrop(): Backdrop = rememberLayerBackdrop()
+fun rememberLiquidGlassBackdrop(): LayerBackdrop = rememberLayerBackdrop()
 
 /**
  * Marks this modifier's layer as the glass SOURCE (background content the
  * glass refracts/blurs). Put it on the scrolling content / background behind
  * the glass components.
  */
-fun Modifier.liquidBackdropSource(backdrop: Backdrop): Modifier =
+fun Modifier.liquidBackdropSource(backdrop: LayerBackdrop): Modifier =
     this.layerBackdrop(backdrop)
