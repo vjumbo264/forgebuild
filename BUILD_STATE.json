@@ -530,7 +530,7 @@
  },
  "forgebuild-material-only-revert": {
   "title": "Engine revert: remove Miuix + Liquid Glass + EngineTheme selector; Material 3 Expressive becomes the one and only Engine theme",
-  "build_complete": false,
+  "build_complete": true,
   "inventory": {
    "source": "prior build 'forgebuild-m3e-miuix-liquidglass' BUILD_STATE entry + repo-wide grep on 2026-09-16",
    "to_remove": {
@@ -685,16 +685,16 @@
    {
     "id": "step-08",
     "title": "retry-2 — reword stale prior-build-id reference in app/build.gradle.kts comment flagged by the static guard (assemble itself was GREEN in run 35100487643)",
-    "status": "in-progress",
+    "status": "done",
     "timestamps": {
-     "done_at": "2026-09-16T13:18:01Z",
+     "done_at": "2026-09-16T13:20:07Z",
      "retry3_at": "2026-09-16T13:18:43Z"
     },
     "files": [
      "engine/app/build.gradle.kts",
      "BUILD_STATE.json"
     ],
-    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure. RETRY-3: retry-2's multi-line string replace did not match (comment lines interleaved differently) — the stale build-id was still on build.gradle.kts:62, so run 35100919910's grep guard failed again (assemble itself stayed green). Fixed line-wise with sed; local sweep now fully clean."
+    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure. RETRY-3: retry-2's multi-line string replace did not match (comment lines interleaved differently) — the stale build-id was still on build.gradle.kts:62, so run 35100919910's grep guard failed again (assemble itself stayed green). Fixed line-wise with sed; local sweep now fully clean. FINAL VERIFY: CI run https://github.com/vjumbo264/forgebuild/actions/runs/35101102866 -> completed/success. assembleDebug compiled the post-revert engine (Material 3 Expressive only) and the static guard passed — zero removed-theme references remain in kt/kts/xml."
    },
    {
     "id": "step-09",
@@ -709,6 +709,18 @@
      "BUILD_STATE.json"
     ],
     "notes": "Three-theme tables/sections, the below-API-33 capability section, and the per-theme structure/icon lines removed from engine/README.md + engine/ARCHITECTURE.md; both now document Material 3 Expressive as the single theme with a one-line revert-history note. Root README/ARCHITECTURE and site/ were already clean (verified step-01)."
+   },
+   {
+    "id": "step-10",
+    "title": "Final BUILD_STATE checkpoint — forgebuild-material-only-revert fully done",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:20:07Z"
+    },
+    "files": [
+     "BUILD_STATE.json"
+    ],
+    "notes": "All 10 steps done. Engine ships Material 3 Expressive as its one and only theme: EngineTheme selector deleted, all Miuix + Liquid Glass files/dependencies/fallback logic removed, docs rewritten, CI verify build green. Kept intact: ForgeBuildTheme (MaterialExpressiveTheme, dynamic color, dark mode), EngineProgress wavy/loading indicators, material3 1.5.0-alpha28 + compose 1.13.0-alpha01 pins, Material Symbols icons, permissions, ScreenSecurity FLAG_SECURE, SafeSave SAF flow, CacheFirstStore. NOTE: apps/<slug>/ are per-app engine copies owned by their own app repos — deliberately untouched by this engine-scoped revert."
    }
   ]
  }
