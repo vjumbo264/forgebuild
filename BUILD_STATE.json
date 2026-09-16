@@ -651,6 +651,18 @@
      "BUILD_STATE.json"
     ],
     "notes": "GlassTheme/LiquidGlassSupport(API-33 gate)/LiquidGlassFallback(frosted-lite) deleted (ui/glass/ package gone entirely); backdrop:2.0.1 + shapes:1.2.1 removed; compileSdk-37 comment reworded (37 stays — material3 1.5.0-alpha28 also requires it)."
+   },
+   {
+    "id": "step-07",
+    "title": "sweep for dead imports / leftover Miuix/Liquid Glass references across engine/ and site/",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:14Z"
+    },
+    "files": [
+     "BUILD_STATE.json"
+    ],
+    "notes": "Repo-wide grep over engine/ and site/ (kt/kts/md/xml/html/js/css): zero remaining references to miuix, liquid glass, backdrop, kyant, or EngineTheme outside BUILD_STATE.json history. Docs still referencing removed themes are handled in step-09."
    }
   ]
  }
