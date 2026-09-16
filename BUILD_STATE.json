@@ -406,10 +406,14 @@
       {
         "id": "step-05",
         "title": "Add Miuix dependency + base theme (colors, typography, shape).",
-        "status": "pending",
-        "timestamps": {},
-        "files": [],
-        "notes": ""
+        "status": "done",
+        "timestamps": {
+          "done_at": "2026-09-16T11:59:59Z"
+        },
+        "files": [
+          "engine/app/src/main/java/com/forgebuild/engine/ui/miuix/MiuixEngineTheme.kt"
+        ],
+        "notes": "Miuix base theme added: ui/miuix/MiuixEngineTheme.kt wraps top.yukonga.miuix.kmp:miuix-ui 0.9.3 MiuixTheme with lightColorScheme()/darkColorScheme() (Miuix's own Colors: primary MIUI blue 0xFF3482FF etc.) and Miuix TextStyles (main/paragraph/body1/body2/button/title1-4/headline1-2/footnote...). Shape/corner-radius note: Miuix has no Material-style Shapes object \u2014 squircle corner treatment is per-component (cornerRadius params), so shape coverage lands in the step-06 component wrappers. Monet dynamic color available via ThemeController (documented; base theme stays colors-based for parity + system dark mode preserved). Dependency line already added in step-02."
       },
       {
         "id": "step-06",
