@@ -3,7 +3,7 @@
   "project": "forgebuild-app-theme-showcase",
   "build_complete": false,
   "updated_by": "session-theme-showcase-1",
-  "current_task": "step-3",
+  "current_task": "step-4",
   "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
   "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
   "tasks": [
@@ -22,8 +22,8 @@
     {
       "id": "step-3",
       "title": "Adaptive icon via tools/make_adaptive_icon.py with generated foreground artwork",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Foreground artwork generated (tools/make_showcase_icon_fg.py -> icon_fg.png): three overlapping translucent discs — M3 Expressive purple #6750A4, MIUI orange #FF6900, frosted-glass white — one per showcased design language; no text/emoji. Ran tools/make_adaptive_icon.py --background-color #1C1B1F: safe-zoned foreground (72dp), solid dark background, alpha-silhouette monochrome for themed icons, all 5 densities + mipmap-anydpi-v26 XMLs. Visually verified."
     },
     {
       "id": "step-4",
@@ -62,8 +62,8 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "step-1 done (commit d7204541aa, verified on origin/main); step-2 done (identity com.forgebuild.themeshowcase / 'Theme Showcase')."
+      "event": "step-1 done (commit d7204541aa, verified); step-2 done (identity, commit 7273866444, verified); step-3 done (adaptive icon layers generated + visually verified)."
     }
   ],
-  "notes": "Next operation: step-3 adaptive icon — generate foreground artwork, run tools/make_adaptive_icon.py, commit + push + verify."
+  "notes": "Next operation: step-4 — confirm repo-level signing secrets exist via GitHub API (read-only check, values never touched), then step-5 feature implementation (5a selector+persistence, 5b M3 Expressive gallery, 5c Miuix gallery, 5d Liquid Glass gallery)."
 }
