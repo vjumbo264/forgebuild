@@ -3,7 +3,7 @@
   "project": "forgebuild-app-theme-showcase",
   "build_complete": false,
   "updated_by": "session-theme-showcase-1",
-  "current_task": "step-5",
+  "current_task": "step-6",
   "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
   "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
   "tasks": [
@@ -34,8 +34,8 @@
     {
       "id": "step-5",
       "title": "Implement the app (one feature per commit): theme selector (persisted) + Material 3 Expressive gallery + Miuix gallery + Liquid Glass gallery",
-      "status": "pending",
-      "notes": "Sub-steps: 5a theme selector + persistence; 5b Material 3 Expressive gallery; 5c Miuix gallery; 5d Liquid Glass gallery (API-33 gate via LiquidGlassSupport.isSupported)."
+      "status": "done",
+      "notes": "All sub-steps done, each its own commit+push+verify: 5a ThemeStore SharedPreferences persistence (ac57ad9f3c); 5b Material 3 Expressive gallery — ForgeBuildTheme, expressive shapes/motion, wavy linear+circular progress, morphing LoadingIndicator, buttons/card/switch/slider/AlertDialog/NavigationBar (656d33537a); 5c Miuix gallery — MiuixEngineTheme + squircle buttons/card/switch/slider/WindowDialog/NavigationBar via engine wrappers (5ad5308e4c); 5d Liquid Glass gallery — colorful liquidBackdropSource layer + Glass button/tinted button/card/switch/slider/dialog/bottom-nav, frosted fallback messaging via LiquidGlassSupport.isSupported (be001cfb0b); 5e SelectorScreen (3 theme cards with capability badge) + MainActivity wiring, persisted selection restored on launch, BackHandler gallery->selector (61d5baa). Engine StarterScreen placeholder removed from app copy. Static validation: all 19 engine wrapper symbols used by the app verified present in the engine copy; manifest declares 0 permissions; R8+shrinkResources on; no new dependencies (all three theme libraries already engine-level); no emoji — EngineIcons vectors / Miuix icons only."
     },
     {
       "id": "step-6",
@@ -62,8 +62,8 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "step-1 done (d7204541aa, verified); step-2 done (7273866444, verified); step-3 done (61eecfa323, verified); step-4 done (all 4 signing secrets confirmed present, reused)."
+      "event": "steps 1-4 done + verified (d7204541aa / 7273866444 / 61eecfa323 / secrets check). Step-5 done: 5a-5e each committed+pushed+verified (ac57ad9f3c, 656d33537a, 5ad5308e4c, be001cfb0b, 61d5baa)."
     }
   ],
-  "notes": "Next operation: step-4 — confirm repo-level signing secrets exist via GitHub API (read-only check, values never touched), then step-5 feature implementation (5a selector+persistence, 5b M3 Expressive gallery, 5c Miuix gallery, 5d Liquid Glass gallery)."
+  "notes": "Next operation: step-6 — dispatch release.yml with app_path=apps/theme-showcase, wait for run, then verify theme-showcase-v1 release + APK asset via the GitHub Releases API. Compile verification happens in CI (no Android SDK in this sandbox; static API cross-check already passed)."
 }
