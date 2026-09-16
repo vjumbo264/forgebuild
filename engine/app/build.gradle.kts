@@ -7,12 +7,15 @@ plugins {
 android {
     // FORGEBUILD: the generating AI replaces the namespace/applicationId per app.
     namespace = "com.forgebuild.app"
-    compileSdk = 34
+    // compileSdk 37 is REQUIRED by the Engine's theme libraries:
+    // io.github.kyant0:backdrop (Liquid Glass) and top.yukonga.miuix.kmp:miuix-ui
+    // both publish AARs with minCompileSdk=37. Do not lower.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.forgebuild.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 37
         versionCode = 1
         versionName = "1"
         vectorDrawables { useSupportLibrary = true }
@@ -51,21 +54,26 @@ android {
 }
 
 dependencies {
-    // Minimal starting set — Compose BOM + Material 3 + Material Symbols (bundled
-    // via compose-material-icons-extended is NOT used; we bundle local vectors in
-    // ui/icons to keep the APK lean and offline-friendly). Add deps ONLY when the
-    // app's features require them (document the justification in the app repo).
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
+    // Compose BOM 2026.09.00 pins material3 1.4.0 — the first STABLE release
+    // carrying the Material 3 Expressive APIs (MaterialExpressiveTheme,
+    // MotionScheme.expressive(), wavy progress indicators, LoadingIndicator).
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.5")
+    implementation("androidx.core:core-ktx:1.19.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core") // tiny core set; extended icons come from local bundled vectors
     // kotlinx-coroutines: REQUIRED by the Engine's standing cache-first data
     // layer (com.forgebuild.engine.data.CacheFirstStore) — justified engine-level
     // dependency, do not remove even though the starter UI itself is coroutine-free.
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    // Miuix theme (opt-in EngineTheme.MIUIX). Apache-2.0. Justification: the
+    // Engine ships three selectable theme systems; Miuix is one of them.
+    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.3")
+    // Liquid Glass theme (opt-in EngineTheme.LIQUID_GLASS). Apache-2.0.
+    // Backdrop/effect engine only; Engine components live in ui/glass/.
+    implementation("io.github.kyant0:backdrop:2.0.1")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
