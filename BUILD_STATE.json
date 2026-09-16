@@ -607,6 +607,20 @@
      "BUILD_STATE.json"
     ],
     "notes": "MiuixEngineComponents.kt (buttons, card, switch, slider, dialog, bottom nav wrappers) deleted."
+   },
+   {
+    "id": "step-04",
+    "title": "remove Miuix theme file + top.yukonga.miuix.kmp:miuix-ui Gradle dependency",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:10Z"
+    },
+    "files": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/miuix/MiuixEngineTheme.kt",
+     "engine/app/build.gradle.kts",
+     "BUILD_STATE.json"
+    ],
+    "notes": "MiuixEngineTheme.kt deleted (ui/miuix/ package gone entirely); miuix-ui:0.9.3 dependency + comment removed from app/build.gradle.kts."
    }
   ]
  }

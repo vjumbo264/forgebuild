@@ -76,9 +76,6 @@ dependencies {
     // layer (com.forgebuild.engine.data.CacheFirstStore) — justified engine-level
     // dependency, do not remove even though the starter UI itself is coroutine-free.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    // Miuix theme (opt-in EngineTheme.MIUIX). Apache-2.0. Justification: the
-    // Engine ships three selectable theme systems; Miuix is one of them.
-    implementation("top.yukonga.miuix.kmp:miuix-ui:0.9.3")
     // Liquid Glass theme (opt-in EngineTheme.LIQUID_GLASS). Apache-2.0.
     // Backdrop/effect engine only; Engine components live in ui/glass/.
     implementation("io.github.kyant0:backdrop:2.0.1")
