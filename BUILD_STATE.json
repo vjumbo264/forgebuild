@@ -382,10 +382,14 @@
       {
         "id": "step-03",
         "title": "Migrate/extend existing theme file(s) for Expressive shapes + motion.",
-        "status": "pending",
-        "timestamps": {},
-        "files": [],
-        "notes": ""
+        "status": "done",
+        "timestamps": {
+          "done_at": "2026-09-16T11:57:30Z"
+        },
+        "files": [
+          "engine/app/src/main/java/com/forgebuild/engine/ui/theme/Theme.kt"
+        ],
+        "notes": "Theme.kt migrated to Material 3 Expressive: ForgeBuildTheme now wraps MaterialExpressiveTheme with MotionScheme.expressive() (spring spatial/effects specs) + expressive Shapes() defaults (LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge morphing-capable tiers). Dynamic color (S+) and light/dark preserved; non-dynamic light path upgraded to expressiveLightColorScheme(); dark uses standard darkColorScheme (library ships no expressiveDark \u2014 verified in sources; expressive-ness for dark = motion+shape, per Google's own sample). Signature unchanged (darkTheme, dynamicColor, content) => fully backward compatible for existing generated apps."
       },
       {
         "id": "step-04",
