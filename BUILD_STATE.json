@@ -681,6 +681,19 @@
      "engine/app/src/main/res/values/colors.xml"
     ],
     "notes": "Added engine-verify.yml (assembleDebug of engine/ + grep guard that zero removed-theme references remain). Run triggered by this push; result polled and recorded next. ATTEMPT-1 CI run 35100025013 FAILED at :app:processDebugResources — AAPT: mipmap/ic_launcher_round not found. Root cause is a PRE-EXISTING engine-template gap (the template never carried launcher mipmaps; generated apps add theirs via tools/make_adaptive_icon.py), unrelated to the revert — Kotlin compilation of the post-revert sources was NOT the failing stage. Fix: placeholder adaptive-icon set added to the engine template (safe-zoned foreground + background + monochrome; overwritten per generated app). Retrying."
+   },
+   {
+    "id": "step-08",
+    "title": "retry-2 — reword stale prior-build-id reference in app/build.gradle.kts comment flagged by the static guard (assemble itself was GREEN in run 35100487643)",
+    "status": "in-progress",
+    "timestamps": {
+     "done_at": "2026-09-16T13:16:57Z"
+    },
+    "files": [
+     "engine/app/build.gradle.kts",
+     "BUILD_STATE.json"
+    ],
+    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push."
    }
   ]
  }
