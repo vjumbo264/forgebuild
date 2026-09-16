@@ -418,10 +418,14 @@
       {
         "id": "step-06",
         "title": "Port core Miuix components (buttons, cards, switches, dialogs, nav) into the Engine shared component set.",
-        "status": "pending",
-        "timestamps": {},
-        "files": [],
-        "notes": ""
+        "status": "done",
+        "timestamps": {
+          "done_at": "2026-09-16T12:01:10Z"
+        },
+        "files": [
+          "engine/app/src/main/java/com/forgebuild/engine/ui/miuix/MiuixEngineComponents.kt"
+        ],
+        "notes": "Core Miuix components ported into Engine shared set (ui/miuix/MiuixEngineComponents.kt) to Material coverage parity: MiuixEngineButton/MiuixEngineTextButton (buttons), MiuixEngineCard (cards), MiuixEngineSwitch (switches), MiuixEngineDialog via WindowDialog (dialogs, title+summary+content), MiuixEngineBottomNav+MiuixEngineBottomNavItem (nav), plus MiuixEngineSlider. All thin wrappers over real miuix-ui 0.9.3 components (Button/TextButton/Card/Switch/Slider/NavigationBar/NavigationBarItem/WindowDialog) with squircle cornerRadius exposed per component (Miuix's shape convention). Verified against 0.9.3 sources jar signatures."
       },
       {
         "id": "step-07",
