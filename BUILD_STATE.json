@@ -1,8 +1,8 @@
 {
   "project": "forgebuild",
-  "build_complete": true,
-  "updated_by": "session-correction-round-2",
-  "current_task": null,
+  "build_complete": false,
+  "updated_by": "session-m3e-miuix-liquidglass",
+  "current_task": "forgebuild-m3e-miuix-liquidglass",
   "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
   "tasks": [
     {
@@ -41,7 +41,7 @@
       "id": "task-04",
       "title": "Scaffold Dashboard frontend (Pages-deployable) + any Workers/Pages Functions; create Cloudflare Pages project via API; connect GitHub repo auto-deploy on push.",
       "status": "done",
-      "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) — Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token — Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
+      "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) \u2014 Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token \u2014 Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -50,7 +50,7 @@
       "id": "task-05",
       "title": "Home page: type-1 'Build new app' prompt generator (free-text description, persistent-session contract style, generate-from-template Engine reference, GITHUB_PAT placeholder field).",
       "status": "done",
-      "notes": "Home page (#/) implemented: free-text description + optional repo name → full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
+      "notes": "Home page (#/) implemented: free-text description + optional repo name \u2192 full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
       "commits": [],
       "files": [],
       "tests": ""
@@ -112,7 +112,7 @@
     },
     {
       "session": "session-1",
-      "event": "tasks 02–09 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
+      "event": "tasks 02\u201309 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
     },
     {
       "session": "session-1",
@@ -160,7 +160,7 @@
       "id": "task-M1",
       "title": "Import forgebuild-engine into forgebuild as engine/ (history preserved), apply pathData->addPath icon fix.",
       "status": "done",
-      "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings — output equals the hand-fixed file exactly.",
+      "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings \u2014 output equals the hand-fixed file exactly.",
       "commits": [],
       "files": [
         "engine/"
@@ -210,14 +210,14 @@
       "id": "task-M6",
       "title": "Redeploy Dashboard to Cloudflare Pages and verify live: apps list, tapcounter-v1 APK download, one-time PAT across reload, type-2 prompt references apps/tapcounter/ + forgebuild.",
       "status": "done",
-      "notes": "Verified live 2026-09-11: (1) Redeploy — pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload — so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
+      "notes": "Verified live 2026-09-11: (1) Redeploy \u2014 pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload \u2014 so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
       "commits": [],
       "files": [],
       "tests": ""
     },
     {
       "id": "task-M7",
-      "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API — LAST, only after M1-M6 verified live.",
+      "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API \u2014 LAST, only after M1-M6 verified live.",
       "status": "done",
       "notes": "2026-09-11: Deleted vjumbo264/forgebuild-engine and vjumbo264/forgebuild-demo-tapcounter via GitHub API (HTTP 204 each), ONLY after full pre-deletion verification: M1 engine/ import (12-entry apps/tapcounter, engine/tools/gen_icons.py + apps/tapcounter/tools/gen_icons.py both carrying the addPath fix), apps/tapcounter/BUILD_STATE.json, PROMPT_HISTORY/tapcounter.md, unified release.yml, tapcounter-v1 release with downloadable APK, and live dashboard (M6) all confirmed intact on forgebuild. Post-deletion: both source repos return 404; vjumbo264/forgebuild returns 200. forgebuild is now the sole repository.",
       "commits": [],
@@ -237,9 +237,9 @@
   "correction_round_2_tasks": [
     {
       "id": "task-C1",
-      "title": "Fix 1 — Slug ownership: remove Dashboard client-side slug derivation; type-1 blank-slug prompt delegates slug choice to building AI (writes slug field first in apps/<slug>/BUILD_STATE.json); Apps/App pages read slug from repo only; PROMPT_HISTORY naming assumptions updated.",
+      "title": "Fix 1 \u2014 Slug ownership: remove Dashboard client-side slug derivation; type-1 blank-slug prompt delegates slug choice to building AI (writes slug field first in apps/<slug>/BUILD_STATE.json); Apps/App pages read slug from repo only; PROMPT_HISTORY naming assumptions updated.",
       "status": "done",
-      "notes": "Fix 1 implemented. site/app.js: promptNewApp() rewritten — blank slug now produces an explicit APP_SLUG = NOT PREDETERMINED block instructing the building AI to choose a short kebab-case slug after reading the description, check apps/ for collisions, treat it as permanent (folder apps/<slug>/, tags <slug>-vN, PROMPT_HISTORY/<slug>.md), and write it as the FIRST field (\"slug\") of the first apps/<slug>/BUILD_STATE.json; operator-given slug passes verbatim with a do-not-alter instruction and concrete paths. Client-side description-based slug derivation REMOVED from renderHome (only operator-typed input is sanitized); slug label rewritten. Apps list / App page already discover slugs solely from the repo (Contents API on apps/ + release-tag prefix filter) — verified, no guessing remains. RULES gained standing Slugs/cache-first/FLAG_SECURE/SAF bullets. ARCHITECTURE.md + README.md document slug ownership (and the C3 delete-app model). Node simulation: 13/13 assertions PASS for both blank-slug and fixed-slug prompt branches. Live blank-slug E2E generation deferred to C5 (prompt wording already validated; a full AI-run build is out of scope for this session).",
+      "notes": "Fix 1 implemented. site/app.js: promptNewApp() rewritten \u2014 blank slug now produces an explicit APP_SLUG = NOT PREDETERMINED block instructing the building AI to choose a short kebab-case slug after reading the description, check apps/ for collisions, treat it as permanent (folder apps/<slug>/, tags <slug>-vN, PROMPT_HISTORY/<slug>.md), and write it as the FIRST field (\"slug\") of the first apps/<slug>/BUILD_STATE.json; operator-given slug passes verbatim with a do-not-alter instruction and concrete paths. Client-side description-based slug derivation REMOVED from renderHome (only operator-typed input is sanitized); slug label rewritten. Apps list / App page already discover slugs solely from the repo (Contents API on apps/ + release-tag prefix filter) \u2014 verified, no guessing remains. RULES gained standing Slugs/cache-first/FLAG_SECURE/SAF bullets. ARCHITECTURE.md + README.md document slug ownership (and the C3 delete-app model). Node simulation: 13/13 assertions PASS for both blank-slug and fixed-slug prompt branches. Live blank-slug E2E generation deferred to C5 (prompt wording already validated; a full AI-run build is out of scope for this session).",
       "commits": [
         "2b1ae8f"
       ],
@@ -252,9 +252,9 @@
     },
     {
       "id": "task-C2",
-      "title": "Fix 2 — Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
+      "title": "Fix 2 \u2014 Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
       "status": "done",
-      "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile — remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract — instant cached render + background reconcile, no re-flash — is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) — Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
+      "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile \u2014 remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract \u2014 instant cached render + background reconcile, no re-flash \u2014 is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) \u2014 Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
       "commits": [
         "95e7bac"
       ],
@@ -271,22 +271,22 @@
     },
     {
       "id": "task-C3",
-      "title": "Fix 3 — Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
+      "title": "Fix 3 \u2014 Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
       "status": "done",
-      "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) — deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree → null-sha entries → new tree → new commit → PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo — completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents — no separate index needed). Fixture fully cleaned up by the test itself.",
+      "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) \u2014 deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree \u2192 null-sha entries \u2192 new tree \u2192 new commit \u2192 PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo \u2014 completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents \u2014 no separate index needed). Fixture fully cleaned up by the test itself.",
       "commits": [
         "f07af98"
       ],
       "files": [
         "site/app.js"
       ],
-      "tests": "Static: node --check OK; 10/10 mocked-flow assertions PASS (order releases→tags→history→tree→commit→ref-patch; only <slug> entries null-sha’d). Live: disposable _delete-test app + release created then deleted via the shipped code path; all five live assertions PASS."
+      "tests": "Static: node --check OK; 10/10 mocked-flow assertions PASS (order releases\u2192tags\u2192history\u2192tree\u2192commit\u2192ref-patch; only <slug> entries null-sha\u2019d). Live: disposable _delete-test app + release created then deleted via the shipped code path; all five live assertions PASS."
     },
     {
       "id": "task-C4",
-      "title": "Fix 4 — Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
+      "title": "Fix 4 \u2014 Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
       "status": "done",
-      "notes": "Fix 4 implemented. Permissions.kt expanded from 6 to 24 EnginePermission entries covering the full practical Android surface: STORAGE (scoped-media 13+/legacy), CAMERA, NOTIFICATIONS (33+), FOREGROUND_SERVICE (+SPECIAL_USE 34+), LOCATION (fine/coarse foreground), BACKGROUND_LOCATION (runtime + Settings flow 11+), MICROPHONE, CONTACTS, CALENDAR, PHONE (phone state + call log), SMS, BODY_SENSORS, ACTIVITY_RECOGNITION (29+), BLUETOOTH (incl. Android 12+ SCAN/CONNECT/ADVERTISE split, legacy BLUETOOTH/ADMIN below), NFC, BIOMETRIC (reflection-gated BiometricManager — NO new engine dependency, preserving the lean constraint; apps using BiometricPrompt add androidx.biometric themselves with justification), EXACT_ALARM (USE_EXACT_ALARM 33+ / SCHEDULE_EXACT_ALARM 31-32 + Settings flow), ALL_FILES_ACCESS (MANAGE_EXTERNAL_STORAGE — Settings flow, documented sparing/file-manager-class-only/never-default), INSTALL_UNKNOWN_APPS (Settings flow), OVERLAY (SYSTEM_ALERT_WINDOW Settings flow), ACCESSIBILITY_SERVICE and NOTIFICATION_LISTENER (policy-driven Settings flows), VPN_SERVICE (VpnService.prepare consent), DEVICE_ADMIN (unchanged policy flow). Extensibility = one enum entry (+ one small helper for special-tier), no redesign. All opt-in per app, nothing declared by default — original non-negotiable preserved. Two new reusable helpers (already committed with C2's batch): security/ScreenSecurity.kt (per-screen FLAG_SECURE via setSecure/apply/clear, documented per-screen not app-wide) and files/SafeSave.kt (SAF ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE default, persistable grants, writeBytes/writeStream; DownloadManager explicitly banned; legacy WRITE_EXTERNAL_STORAGE fallback only where minSdk genuinely requires). engine/ARCHITECTURE.md: full permission catalog table + FLAG_SECURE per-screen section + SafeSave/SAF section. Prompt generators: RULES (type-1+type-2) carry standing bullets for FLAG_SECURE and SAF; helperHints() ties both to the description via keyword detection. VERIFICATION (task spec): generated type-1 prompt for 'A private vault for sensitive documents; lets me download and save files to storage' (blank slug) correctly surfaces BOTH helpers as available options tied to the description (SENSITIVE CONTENT -> ScreenSecurity per-screen; FILE SAVING -> SafeSave with ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE and the DownloadManager ban) — 9/9 assertions PASS.",
+      "notes": "Fix 4 implemented. Permissions.kt expanded from 6 to 24 EnginePermission entries covering the full practical Android surface: STORAGE (scoped-media 13+/legacy), CAMERA, NOTIFICATIONS (33+), FOREGROUND_SERVICE (+SPECIAL_USE 34+), LOCATION (fine/coarse foreground), BACKGROUND_LOCATION (runtime + Settings flow 11+), MICROPHONE, CONTACTS, CALENDAR, PHONE (phone state + call log), SMS, BODY_SENSORS, ACTIVITY_RECOGNITION (29+), BLUETOOTH (incl. Android 12+ SCAN/CONNECT/ADVERTISE split, legacy BLUETOOTH/ADMIN below), NFC, BIOMETRIC (reflection-gated BiometricManager \u2014 NO new engine dependency, preserving the lean constraint; apps using BiometricPrompt add androidx.biometric themselves with justification), EXACT_ALARM (USE_EXACT_ALARM 33+ / SCHEDULE_EXACT_ALARM 31-32 + Settings flow), ALL_FILES_ACCESS (MANAGE_EXTERNAL_STORAGE \u2014 Settings flow, documented sparing/file-manager-class-only/never-default), INSTALL_UNKNOWN_APPS (Settings flow), OVERLAY (SYSTEM_ALERT_WINDOW Settings flow), ACCESSIBILITY_SERVICE and NOTIFICATION_LISTENER (policy-driven Settings flows), VPN_SERVICE (VpnService.prepare consent), DEVICE_ADMIN (unchanged policy flow). Extensibility = one enum entry (+ one small helper for special-tier), no redesign. All opt-in per app, nothing declared by default \u2014 original non-negotiable preserved. Two new reusable helpers (already committed with C2's batch): security/ScreenSecurity.kt (per-screen FLAG_SECURE via setSecure/apply/clear, documented per-screen not app-wide) and files/SafeSave.kt (SAF ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE default, persistable grants, writeBytes/writeStream; DownloadManager explicitly banned; legacy WRITE_EXTERNAL_STORAGE fallback only where minSdk genuinely requires). engine/ARCHITECTURE.md: full permission catalog table + FLAG_SECURE per-screen section + SafeSave/SAF section. Prompt generators: RULES (type-1+type-2) carry standing bullets for FLAG_SECURE and SAF; helperHints() ties both to the description via keyword detection. VERIFICATION (task spec): generated type-1 prompt for 'A private vault for sensitive documents; lets me download and save files to storage' (blank slug) correctly surfaces BOTH helpers as available options tied to the description (SENSITIVE CONTENT -> ScreenSecurity per-screen; FILE SAVING -> SafeSave with ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE and the DownloadManager ban) \u2014 9/9 assertions PASS.",
       "commits": [
         "e988b53"
       ],
@@ -303,12 +303,163 @@
       "id": "task-C5",
       "title": "End-to-end re-verification of all four fixes against live Dashboard + live repo; fix anything broken; only then set build_complete true.",
       "status": "done",
-      "notes": "End-to-end re-verification of all four fixes against the live Dashboard (forgebuild.pages.dev) and live forgebuild repo, 2026-09-11. STATIC (40/40 PASS): C1 — no client-side slug derivation remains in site/app.js; blank-slug type-1 prompt carries the APP_SLUG=NOT PREDETERMINED block instructing the building AI to choose/record the slug; operator-given slug passes verbatim with do-not-alter; apps enumerated from Contents API on apps/ and releases filtered by <slug>- prefix. C2 — engine CacheFirstStore.kt (loadFromCache synchronous + background refresh/reconcile) present, ARCHITECTURE.md standing-requirement section present, prompt RULES mandate cache-first; apps/tapcounter verified offline (no INTERNET permission, no network code) and its BUILD_STATE.json records Fix 2 as not applicable. C3 — deleteAppTree (releases + tags + PROMPT_HISTORY/<slug>.md + whole-folder removal via Git Trees API), Danger-zone UI with type-the-slug confirmation; LIVE repo confirms _delete-test fixture fully gone (apps/_delete-test 404, PROMPT_HISTORY/_delete-test.md 404, no _delete-test releases/tags) and the earlier engine-compile-check throwaway app is likewise fully removed. C4 — Permissions.kt has all 24 entries (verified each of MICROPHONE/CONTACTS/CALENDAR/SMS/BODY_SENSORS/ACTIVITY_RECOGNITION/BLUETOOTH/NFC/BIOMETRIC/EXACT_ALARM/ALL_FILES_ACCESS/INSTALL_UNKNOWN_APPS/OVERLAY/ACCESSIBILITY_SERVICE/NOTIFICATION_LISTENER/VPN_SERVICE present); ScreenSecurity.kt (FLAG_SECURE per-screen) and SafeSave.kt (SAF ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE, DownloadManager banned) present and documented in engine/ARCHITECTURE.md; generators surface both helpers via keyword hints. All 9 engine Kotlin files brace-balanced; node --check site/app.js OK. LIVE: forgebuild.pages.dev/app.js serves all current markers (NOT PREDETERMINED, deleteAppTree, Danger zone, cache-first, FLAG_SECURE, ACTION_CREATE_DOCUMENT, fb_pat) and the latest Pages deploy run is green. Live repo shape: apps/ == [calcom, tapcounter]; releases == [tapcounter-v1, calcom-v1]; PROMPT_HISTORY/ == [calcom.md, tapcounter.md]; tapcounter-v1 APK asset downloads HTTP 200 (849915 bytes). calcom is the real blank-slug E2E app built by a building AI during this correction round (release calcom-v1 green): it proves Fix 1 end-to-end — the AI chose slug 'calcom' from the description and the Dashboard discovered it from the repo alone. Its BUILD_STATE.json pre-dated the C1 slug-field convention; the slug field (== folder name) was added in commit 82c7569. CI compile verification: run 34625313422 (workflow_dispatch, head 3a51cdd) SUCCESS — its 'Validate app folder' step confirms it compiled apps/engine-compile-check, i.e. the new Engine modules (CacheFirstStore, ScreenSecurity, SafeSave, 24-entry Permissions) compile in a real release build; the throwaway app and its releases were then deleted via the new C3 action. No broken items found requiring code fixes; the only gap (calcom slug field) was fixed in place. C1–C5 all done and verified live; setting build_complete: true.",
+      "notes": "End-to-end re-verification of all four fixes against the live Dashboard (forgebuild.pages.dev) and live forgebuild repo, 2026-09-11. STATIC (40/40 PASS): C1 \u2014 no client-side slug derivation remains in site/app.js; blank-slug type-1 prompt carries the APP_SLUG=NOT PREDETERMINED block instructing the building AI to choose/record the slug; operator-given slug passes verbatim with do-not-alter; apps enumerated from Contents API on apps/ and releases filtered by <slug>- prefix. C2 \u2014 engine CacheFirstStore.kt (loadFromCache synchronous + background refresh/reconcile) present, ARCHITECTURE.md standing-requirement section present, prompt RULES mandate cache-first; apps/tapcounter verified offline (no INTERNET permission, no network code) and its BUILD_STATE.json records Fix 2 as not applicable. C3 \u2014 deleteAppTree (releases + tags + PROMPT_HISTORY/<slug>.md + whole-folder removal via Git Trees API), Danger-zone UI with type-the-slug confirmation; LIVE repo confirms _delete-test fixture fully gone (apps/_delete-test 404, PROMPT_HISTORY/_delete-test.md 404, no _delete-test releases/tags) and the earlier engine-compile-check throwaway app is likewise fully removed. C4 \u2014 Permissions.kt has all 24 entries (verified each of MICROPHONE/CONTACTS/CALENDAR/SMS/BODY_SENSORS/ACTIVITY_RECOGNITION/BLUETOOTH/NFC/BIOMETRIC/EXACT_ALARM/ALL_FILES_ACCESS/INSTALL_UNKNOWN_APPS/OVERLAY/ACCESSIBILITY_SERVICE/NOTIFICATION_LISTENER/VPN_SERVICE present); ScreenSecurity.kt (FLAG_SECURE per-screen) and SafeSave.kt (SAF ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE, DownloadManager banned) present and documented in engine/ARCHITECTURE.md; generators surface both helpers via keyword hints. All 9 engine Kotlin files brace-balanced; node --check site/app.js OK. LIVE: forgebuild.pages.dev/app.js serves all current markers (NOT PREDETERMINED, deleteAppTree, Danger zone, cache-first, FLAG_SECURE, ACTION_CREATE_DOCUMENT, fb_pat) and the latest Pages deploy run is green. Live repo shape: apps/ == [calcom, tapcounter]; releases == [tapcounter-v1, calcom-v1]; PROMPT_HISTORY/ == [calcom.md, tapcounter.md]; tapcounter-v1 APK asset downloads HTTP 200 (849915 bytes). calcom is the real blank-slug E2E app built by a building AI during this correction round (release calcom-v1 green): it proves Fix 1 end-to-end \u2014 the AI chose slug 'calcom' from the description and the Dashboard discovered it from the repo alone. Its BUILD_STATE.json pre-dated the C1 slug-field convention; the slug field (== folder name) was added in commit 82c7569. CI compile verification: run 34625313422 (workflow_dispatch, head 3a51cdd) SUCCESS \u2014 its 'Validate app folder' step confirms it compiled apps/engine-compile-check, i.e. the new Engine modules (CacheFirstStore, ScreenSecurity, SafeSave, 24-entry Permissions) compile in a real release build; the throwaway app and its releases were then deleted via the new C3 action. No broken items found requiring code fixes; the only gap (calcom slug field) was fixed in place. C1\u2013C5 all done and verified live; setting build_complete: true.",
       "commits": [
         "82c7569"
       ],
       "files": [],
       "tests": "40/40 static assertions PASS; 14/15 live checks PASS on first run, remaining 2 (calcom slug field, compile-run identification) resolved and re-verified PASS."
     }
-  ]
+  ],
+  "forgebuild-m3e-miuix-liquidglass": {
+    "title": "Engine update: Material 3 Expressive (default) + Miuix + Liquid Glass themes with Engine-level theme selector",
+    "build_complete": false,
+    "research_decisions": {
+      "date": "2026-09-16T11:48:12Z",
+      "material3_expressive": {
+        "decision": "androidx.compose.material3:material3 1.4.0 (stable, 2026-08-12) via androidx.compose:compose-bom:2026.09.00",
+        "why": "1.4.0 is the first stable train carrying the M3 Expressive APIs (MaterialExpressiveTheme, MotionScheme.expressive(), expressive shape system, LinearWavyProgressIndicator / CircularWavyProgressIndicator, LoadingIndicator, expressive list items, FloatingToolbar). BOM 2026.09.00 maps material3 1.4.0 + compose ui/foundation 1.12.1. Official library only, no hand-rolled approximations.",
+        "sources": [
+          "https://developer.android.com/jetpack/androidx/releases/compose-material3",
+          "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/2026.09.00/compose-bom-2026.09.00.pom"
+        ]
+      },
+      "miuix": {
+        "decision": "top.yukonga.miuix.kmp:miuix-ui:0.9.3 (latest stable; 0.9.4-rc01 exists but is a release candidate)",
+        "implementation_chosen": "compose-miuix-ui/miuix",
+        "why": "Most active and most complete Miuix-for-Compose port (Apache-2.0, Compose Multiplatform, dedicated miuix-ui/miuix-icons modules, MiuixTheme + Monet ThemeController, full component set: Button/TextButton, Card, Switch, SuperArrow/SuperSwitch prefs, Dialog, BottomNavigationBar/NavigationBar, Slider). minSdk 23 (engine minSdk 26 unaffected). Pulls org.jetbrains.compose.foundation 1.11.1 which is binary-compatible with the BOM's androidx.compose.foundation 1.12.1.",
+        "sources": [
+          "https://github.com/compose-miuix-ui/miuix",
+          "https://repo1.maven.org/maven2/top/yukonga/miuix/kmp/miuix-ui-android/0.9.3/miuix-ui-android-0.9.3.pom"
+        ]
+      },
+      "liquid_glass": {
+        "decision": "io.github.kyant0:backdrop:2.0.1 (Apache-2.0) \u2014 the library specified in the build brief; used as-is, no substitute needed",
+        "api_notes": "backdrop 2.x API: rememberLayerBackdrop()/Modifier.layerBackdrop + Modifier.drawBackdrop(backdrop, shape, effects) with BackdropEffectScope effects { blur(), lens() (refraction), colorFilter(), highlight(), innerShadow(), shadow() }. Reference components live at app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/ (LiquidButton, LiquidToggle, LiquidSlider, LiquidBottomTabs) and are used as the starting point for the Engine components.",
+        "min_api_strategy": "Library AAR declares minSdk 21, but true refraction/lens uses AGSL RuntimeShader which requires API 33+. Engine strategy: EngineTheme.LIQUID_GLASS is selectable at any API; at runtime components query LiquidGlassSupport.isSupported (Build.VERSION.SDK_INT >= 33). Below API 33 every Liquid component automatically renders a graceful 'frosted-lite' fallback: semi-translucent solid surface + highlight + inner shadow, same layout/shape/typography \u2014 never a no-op or crash. The theme option is additionally annotated for app-level pickers so they can hide it below 33 if desired.",
+        "sources": [
+          "https://github.com/Kyant0/AndroidLiquidGlass",
+          "https://repo1.maven.org/maven2/io/github/kyant0/backdrop-android/2.0.1/backdrop-android-2.0.1.pom"
+        ]
+      },
+      "toolchain": {
+        "decision": "compileSdk 34->37, targetSdk 34->37 (both backdrop 2.0.1 and miuix-ui 0.9.3 AARs declare minCompileSdk=37), AGP 8.5.2->9.4.0 (latest stable), Kotlin 2.0.20->2.4.20 (backdrop built against kotlin-stdlib 2.4.10, miuix against 2.4.0), Gradle wrapper bumped to a version AGP 9.4.0 supports, androidx.core/activity/lifecycle refreshed to current stables, minSdk stays 26.",
+        "risk": "Toolchain bump is the only repo-wide behavioral change; guarded by step-11 build sanity check of a representative app."
+      }
+    },
+    "follow_ups": [
+      "App-level Material/Miuix/Liquid-Glass picker UI not built (out of scope per brief) \u2014 Engine exposes EngineTheme selector + LiquidGlassSupport.isSupported; a generated app can build the picker trivially on top."
+    ],
+    "steps": [
+      {
+        "id": "step-01",
+        "title": "Research + record decisions (M3 Expressive lib version, Miuix implementation, Liquid Glass min-API fallback) in BUILD_STATE.json before writing code.",
+        "status": "done",
+        "timestamps": {
+          "done_at": "2026-09-16T11:48:12Z"
+        },
+        "files": [
+          "BUILD_STATE.json",
+          "tools_update_state.py"
+        ],
+        "notes": "Research recorded: material3 1.4.0 (stable, Expressive APIs) via compose-bom 2026.09.00; Miuix = compose-miuix-ui/miuix top.yukonga.miuix.kmp:miuix-ui:0.9.3 (latest stable, Apache-2.0, full component set, minSdk 23); Liquid Glass = io.github.kyant0:backdrop:2.0.1 with runtime API-33 gate + frosted-lite fallback below 33 (never no-op); toolchain bump compileSdk/targetSdk 37, AGP 9.4.0, Kotlin 2.4.20, Gradle wrapper bump required by minCompileSdk=37 on both new libs; minSdk stays 26."
+      },
+      {
+        "id": "step-02",
+        "title": "Upgrade Material 3 dependency versions to ones supporting Expressive (BOM, material3, toolchain: AGP/Kotlin/Gradle/compileSdk as required).",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-03",
+        "title": "Migrate/extend existing theme file(s) for Expressive shapes + motion.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-04",
+        "title": "Add Expressive progress/loading indicators to the Engine shared component set.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-05",
+        "title": "Add Miuix dependency + base theme (colors, typography, shape).",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-06",
+        "title": "Port core Miuix components (buttons, cards, switches, dialogs, nav) into the Engine shared component set.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-07",
+        "title": "Add io.github.kyant0:backdrop dependency; confirm min API / build config handles AGSL requirement correctly.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-08",
+        "title": "Build core Liquid Glass components (buttons, cards, switches, dialogs, nav) from the library's reference examples.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-09",
+        "title": "Implement below-API-33 fallback/degradation behavior decided in step 1.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-10",
+        "title": "Add Engine-level theme selector enum/config (Material / Miuix / Liquid Glass).",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-11",
+        "title": "Verify a representative existing generated app still builds and renders correctly under all three themes.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-12",
+        "title": "Update Engine documentation/comments for the new theme options.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      },
+      {
+        "id": "step-13",
+        "title": "Final BUILD_STATE.json update marking the build fully done.",
+        "status": "pending",
+        "timestamps": {},
+        "files": [],
+        "notes": ""
+      }
+    ]
+  }
 }
