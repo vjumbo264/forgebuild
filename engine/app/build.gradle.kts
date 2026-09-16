@@ -82,5 +82,10 @@ dependencies {
     // Liquid Glass theme (opt-in EngineTheme.LIQUID_GLASS). Apache-2.0.
     // Backdrop/effect engine only; Engine components live in ui/glass/.
     implementation("io.github.kyant0:backdrop:2.0.1")
+    // Morphing shapes for Liquid Glass (Capsule()/etc. used by the reference
+    // components). Published by the same author (Kyant0) as a separate artifact —
+    // backdrop does NOT bundle it, so this is a required part of the Liquid Glass
+    // theme, not an extra dependency.
+    implementation("io.github.kyant0:shapes:1.2.1")
     debugImplementation("androidx.compose.ui:ui-tooling:$composeTrain")
 }
