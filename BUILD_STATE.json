@@ -685,15 +685,16 @@
    {
     "id": "step-08",
     "title": "retry-2 — reword stale prior-build-id reference in app/build.gradle.kts comment flagged by the static guard (assemble itself was GREEN in run 35100487643)",
-    "status": "failed",
+    "status": "in-progress",
     "timestamps": {
-     "done_at": "2026-09-16T13:18:01Z"
+     "done_at": "2026-09-16T13:18:01Z",
+     "retry3_at": "2026-09-16T13:18:43Z"
     },
     "files": [
      "engine/app/build.gradle.kts",
      "BUILD_STATE.json"
     ],
-    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure."
+    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure. RETRY-3: retry-2's multi-line string replace did not match (comment lines interleaved differently) — the stale build-id was still on build.gradle.kts:62, so run 35100919910's grep guard failed again (assemble itself stayed green). Fixed line-wise with sed; local sweep now fully clean."
    },
    {
     "id": "step-09",

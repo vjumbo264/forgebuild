@@ -59,7 +59,7 @@ dependencies {
     // LinearWavyProgressIndicator/CircularWavyProgressIndicator, LoadingIndicator)
     // exist ONLY on the 1.5.0 alpha line — verified against the published
     // artifacts (in stable 1.4.0 they are `internal` and the wavy indicators do
-    // not exist at all). See BUILD_STATE.json -> forgebuild-m3e-miuix-liquidglass
+    // not exist at all). Rationale is recorded in BUILD_STATE.json research
     // -> research_decisions.material3_expressive. ui/foundation are pinned to the
     // same 1.13.0-alpha01 train material3 1.5.0-alpha28 declares, so no mixed
     // stable/alpha linkage. A BOM is intentionally NOT used (latest BOM
