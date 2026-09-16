@@ -669,13 +669,18 @@
     "title": "verify representative engine app still builds on Material 3 Expressive only — CI verify workflow added and triggered",
     "status": "in-progress",
     "timestamps": {
-     "done_at": "2026-09-16T13:08:27Z"
+     "done_at": "2026-09-16T13:08:27Z",
+     "retry_at": "2026-09-16T13:12:53Z"
     },
     "files": [
      ".github/workflows/engine-verify.yml",
-     "BUILD_STATE.json"
+     "BUILD_STATE.json",
+     "engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+     "engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+     "engine/app/src/main/res/drawable/ic_launcher_foreground.xml",
+     "engine/app/src/main/res/values/colors.xml"
     ],
-    "notes": "Added engine-verify.yml (assembleDebug of engine/ + grep guard that zero removed-theme references remain). Run triggered by this push; result polled and recorded next."
+    "notes": "Added engine-verify.yml (assembleDebug of engine/ + grep guard that zero removed-theme references remain). Run triggered by this push; result polled and recorded next. ATTEMPT-1 CI run 35100025013 FAILED at :app:processDebugResources — AAPT: mipmap/ic_launcher_round not found. Root cause is a PRE-EXISTING engine-template gap (the template never carried launcher mipmaps; generated apps add theirs via tools/make_adaptive_icon.py), unrelated to the revert — Kotlin compilation of the post-revert sources was NOT the failing stage. Fix: placeholder adaptive-icon set added to the engine template (safe-zoned foreground + background + monochrome; overwritten per generated app). Retrying."
    }
   ]
  }
