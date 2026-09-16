@@ -635,6 +635,22 @@
      "BUILD_STATE.json"
     ],
     "notes": "GlassComponents.kt (button/card/switch/slider/dialog/bottom nav) and util/GlassInteractiveHighlight.kt deleted."
+   },
+   {
+    "id": "step-06",
+    "title": "remove Liquid Glass theme files, below-API-33 fallback logic, and io.github.kyant0:backdrop/shapes Gradle dependencies",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:13Z"
+    },
+    "files": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/glass/GlassTheme.kt",
+     "engine/app/src/main/java/com/forgebuild/engine/ui/glass/LiquidGlassSupport.kt",
+     "engine/app/src/main/java/com/forgebuild/engine/ui/glass/LiquidGlassFallback.kt",
+     "engine/app/build.gradle.kts",
+     "BUILD_STATE.json"
+    ],
+    "notes": "GlassTheme/LiquidGlassSupport(API-33 gate)/LiquidGlassFallback(frosted-lite) deleted (ui/glass/ package gone entirely); backdrop:2.0.1 + shapes:1.2.1 removed; compileSdk-37 comment reworded (37 stays — material3 1.5.0-alpha28 also requires it)."
    }
   ]
  }

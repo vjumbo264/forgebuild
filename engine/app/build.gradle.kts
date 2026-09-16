@@ -7,9 +7,9 @@ plugins {
 android {
     // FORGEBUILD: the generating AI replaces the namespace/applicationId per app.
     namespace = "com.forgebuild.app"
-    // compileSdk 37 is REQUIRED by the Engine's theme libraries:
-    // io.github.kyant0:backdrop (Liquid Glass) and top.yukonga.miuix.kmp:miuix-ui
-    // both publish AARs with minCompileSdk=37. Do not lower.
+    // compileSdk 37 is REQUIRED by the Engine's Material 3 Expressive library:
+    // androidx.compose.material3:material3:1.5.0-alpha28 publishes with
+    // minCompileSdk=37. Do not lower.
     compileSdk = 37
 
     defaultConfig {
@@ -76,13 +76,5 @@ dependencies {
     // layer (com.forgebuild.engine.data.CacheFirstStore) — justified engine-level
     // dependency, do not remove even though the starter UI itself is coroutine-free.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
-    // Liquid Glass theme (opt-in EngineTheme.LIQUID_GLASS). Apache-2.0.
-    // Backdrop/effect engine only; Engine components live in ui/glass/.
-    implementation("io.github.kyant0:backdrop:2.0.1")
-    // Morphing shapes for Liquid Glass (Capsule()/etc. used by the reference
-    // components). Published by the same author (Kyant0) as a separate artifact —
-    // backdrop does NOT bundle it, so this is a required part of the Liquid Glass
-    // theme, not an extra dependency.
-    implementation("io.github.kyant0:shapes:1.2.1")
     debugImplementation("androidx.compose.ui:ui-tooling:$composeTrain")
 }
