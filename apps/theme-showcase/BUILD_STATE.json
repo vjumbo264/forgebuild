@@ -3,7 +3,7 @@
   "project": "forgebuild-app-theme-showcase",
   "build_complete": false,
   "updated_by": "session-theme-showcase-1",
-  "current_task": "step-4",
+  "current_task": "step-5",
   "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
   "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
   "tasks": [
@@ -28,8 +28,8 @@
     {
       "id": "step-4",
       "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) — reuse, never regenerate",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified via GET /repos/vjumbo264/forgebuild/actions/secrets (names only, values never read): KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD all present. Reused as-is; NOT regenerated."
     },
     {
       "id": "step-5",
@@ -62,7 +62,7 @@
   "history": [
     {
       "session": "session-theme-showcase-1",
-      "event": "step-1 done (commit d7204541aa, verified); step-2 done (identity, commit 7273866444, verified); step-3 done (adaptive icon layers generated + visually verified)."
+      "event": "step-1 done (d7204541aa, verified); step-2 done (7273866444, verified); step-3 done (61eecfa323, verified); step-4 done (all 4 signing secrets confirmed present, reused)."
     }
   ],
   "notes": "Next operation: step-4 — confirm repo-level signing secrets exist via GitHub API (read-only check, values never touched), then step-5 feature implementation (5a selector+persistence, 5b M3 Expressive gallery, 5c Miuix gallery, 5d Liquid Glass gallery)."
