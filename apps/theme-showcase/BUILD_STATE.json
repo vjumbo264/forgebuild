@@ -1,0 +1,69 @@
+{
+  "slug": "theme-showcase",
+  "project": "forgebuild-app-theme-showcase",
+  "build_complete": false,
+  "updated_by": "session-theme-showcase-1",
+  "current_task": "step-1",
+  "app_description": "Simple test app to experience Google Expressive (Material 3 Expressive), MiuiX, and Liquid Glass's full new UI suite — a theme-suite showcase: selector between the Engine's three theme systems, each rendering a full component gallery.",
+  "credentials_note": "No credentials in this repo. Signing secrets live only in GitHub Actions secrets; operator credentials were used transiently for API/push operations only and are never committed.",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Choose slug, create apps/theme-showcase from engine copy, seed BUILD_STATE + PROMPT_HISTORY, push-access proof",
+      "status": "in_progress",
+      "notes": "Slug 'theme-showcase' chosen by building AI (operator left it blank). Checked apps/ — existing slugs calcom, clipforge-android, forgehouse50, tapcounter; no collision. Slug is permanent: folder apps/theme-showcase/, tags theme-showcase-vN, PROMPT_HISTORY/theme-showcase.md."
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity: namespace/applicationId com.forgebuild.themeshowcase, app_name 'Theme Showcase'",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Adaptive icon via tools/make_adaptive_icon.py with generated foreground artwork",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) — reuse, never regenerate",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement the app (one feature per commit): theme selector (persisted) + Material 3 Expressive gallery + Miuix gallery + Liquid Glass gallery",
+      "status": "pending",
+      "notes": "Sub-steps: 5a theme selector + persistence; 5b Material 3 Expressive gallery; 5c Miuix gallery; 5d Liquid Glass gallery (API-33 gate via LiquidGlassSupport.isSupported)."
+    },
+    {
+      "id": "step-6",
+      "title": "Validate build config, release theme-showcase-v1 via release.yml (app_path=apps/theme-showcase), verify release + APK asset via Releases API",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Set build_complete: true only after theme-showcase-v1 verified live",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "quality_constraints": {
+    "themes": "Material 3 Expressive (ForgeBuildTheme) default; MIUIX and LIQUID_GLASS via EngineTheme selector. EngineIcons / Miuix icons / minimal vectors per theme. No emoji anywhere.",
+    "engine_integrity": "engine/ folder NOT modified — this is app-level work on a copy in apps/theme-showcase/.",
+    "lightweight": "R8 + resource shrinking stay on; no new dependencies needed (all three theme libraries already engine-level).",
+    "permissions": "None — purely local demo app. No INTERNET, no sensitive permissions. PermissionWiring untouched.",
+    "cache_first": "NOT APPLICABLE — no network fetch/sync.",
+    "screen_security": "NOT APPLICABLE — no private/sensitive screens.",
+    "safe_save": "NOT APPLICABLE — app saves/downloads no files."
+  },
+  "history": [
+    {
+      "session": "session-theme-showcase-1",
+      "event": "step-1 in progress: engine copied into apps/theme-showcase/, BUILD_STATE + PROMPT_HISTORY seeded."
+    }
+  ],
+  "notes": "Next operation: commit + push step-1 seed, verify push on origin/main via GitHub API, then step-2 identity."
+}
