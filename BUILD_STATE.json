@@ -621,6 +621,20 @@
      "BUILD_STATE.json"
     ],
     "notes": "MiuixEngineTheme.kt deleted (ui/miuix/ package gone entirely); miuix-ui:0.9.3 dependency + comment removed from app/build.gradle.kts."
+   },
+   {
+    "id": "step-05",
+    "title": "remove all Liquid Glass components from the Engine shared component set",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:11Z"
+    },
+    "files": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/glass/GlassComponents.kt",
+     "engine/app/src/main/java/com/forgebuild/engine/ui/glass/util/GlassInteractiveHighlight.kt",
+     "BUILD_STATE.json"
+    ],
+    "notes": "GlassComponents.kt (button/card/switch/slider/dialog/bottom nav) and util/GlassInteractiveHighlight.kt deleted."
    }
   ]
  }
