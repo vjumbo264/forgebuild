@@ -594,6 +594,19 @@
      "BUILD_STATE.json"
     ],
     "notes": "EngineTheme.kt deleted (not hardcoded — no theme choice exposed at all). MainActivity rewritten: ForgeBuildTheme only, no EngineTheme import."
+   },
+   {
+    "id": "step-03",
+    "title": "remove all Miuix components from the Engine shared component set",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:07:08Z"
+    },
+    "files": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/miuix/MiuixEngineComponents.kt",
+     "BUILD_STATE.json"
+    ],
+    "notes": "MiuixEngineComponents.kt (buttons, card, switch, slider, dialog, bottom nav wrappers) deleted."
    }
   ]
  }
