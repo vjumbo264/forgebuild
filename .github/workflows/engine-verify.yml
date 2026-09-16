@@ -1,0 +1,28 @@
+name: "Engine verify build (Material 3 Expressive only)"
+
+# Compiles the shared Engine after the Miuix/Liquid Glass revert. A green
+# assembleDebug proves the engine still builds with Material 3 Expressive as
+# its one and only theme (no removed-symbol references, deps resolve).
+
+on:
+  push:
+    paths: ["engine/**", ".github/workflows/engine-verify.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Assemble engine debug APK
+        run: |
+          cd engine
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon
+      - name: Static guard — no removed-theme references may remain
+        run: |
+          ! grep -rniE "miuix|liquid.?glass|backdrop|kyant|EngineTheme" engine/ \
+            --include="*.kt" --include="*.kts" --include="*.xml"
