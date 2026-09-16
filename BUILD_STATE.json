@@ -394,10 +394,14 @@
       {
         "id": "step-04",
         "title": "Add Expressive progress/loading indicators to the Engine shared component set.",
-        "status": "pending",
-        "timestamps": {},
-        "files": [],
-        "notes": ""
+        "status": "done",
+        "timestamps": {
+          "done_at": "2026-09-16T11:58:20Z"
+        },
+        "files": [
+          "engine/app/src/main/java/com/forgebuild/engine/ui/components/EngineProgress.kt"
+        ],
+        "notes": "Engine shared expressive progress/loading component set added (ui/components/EngineProgress.kt): EngineLinearWavyProgress (determinate+indeterminate overloads), EngineCircularWavyProgress (both overloads), EngineLoadingIndicator (indeterminate + determinate) \u2014 all thin wrappers over the official material3 1.5.0-alpha28 LinearWavyProgressIndicator/CircularWavyProgressIndicator (stable, no opt-in) and LoadingIndicator (@ExperimentalMaterial3ExpressiveApi, opted-in at file level). No hand-rolled approximations."
       },
       {
         "id": "step-05",
