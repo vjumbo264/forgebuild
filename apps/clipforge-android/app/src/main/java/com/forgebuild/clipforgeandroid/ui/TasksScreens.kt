@@ -13,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -67,10 +68,7 @@ fun TasksScreen(
                         // both drive the same vm.refreshTasks()/tasksRefreshing state.
                         IconButton(onClick = { vm.refreshTasks() }) {
                             if (refreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                SquiggleCircularLoader(Modifier.size(20.dp))
                             } else {
                                 Icon(Icons.Default.Refresh, "Refresh")
                             }
@@ -82,7 +80,7 @@ fun TasksScreen(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (refreshing) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
+                SquiggleLoader(Modifier.fillMaxWidth())
             }
 
             // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area;
@@ -94,7 +92,7 @@ fun TasksScreen(
             ) {
                 if (activeTasks.isEmpty() && !refreshing) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No active tasks. Tap 'New Video' to begin.", style = MaterialTheme.typography.bodyMedium)
+                        CFEEmptyState(title = "No active tasks", body = "Tap 'New Video' to start your first render.")
                     }
                 } else {
                     LazyColumn(
@@ -102,9 +100,10 @@ fun TasksScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(activeTasks, key = { it.jobId }) { task ->
+                        itemsIndexed(activeTasks, key = { _, t -> t.jobId }) { index, task ->
                             val isSelected = selectedIds.contains(task.jobId)
                             TaskListItem(
+                                modifier = Modifier.staggeredAppear(index),
                                 task = task,
                                 isSelected = isSelected,
                                 isSelectionMode = selectedIds.isNotEmpty(),
@@ -173,10 +172,7 @@ fun CompletedScreen(
                         // Session-11 (task-74): spinning corner refresh — same state as swipe.
                         IconButton(onClick = { vm.refreshTasks() }) {
                             if (refreshing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                SquiggleCircularLoader(Modifier.size(20.dp))
                             } else {
                                 Icon(Icons.Default.Refresh, "Refresh")
                             }
@@ -188,7 +184,7 @@ fun CompletedScreen(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (refreshing) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
+                SquiggleLoader(Modifier.fillMaxWidth())
             }
 
             // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area.
@@ -199,7 +195,7 @@ fun CompletedScreen(
             ) {
                 if (completedTasks.isEmpty() && !refreshing) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No completed videos yet.", style = MaterialTheme.typography.bodyMedium)
+                        CFEEmptyState(title = "No completed videos yet", body = "Finished renders appear here, ready to play or download.")
                     }
                 } else {
                     LazyColumn(
@@ -207,7 +203,7 @@ fun CompletedScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(completedTasks, key = { it.jobId }) { task ->
+                        itemsIndexed(completedTasks, key = { _, t -> t.jobId }) { index, task ->
                             val isSelected = selectedIds.contains(task.jobId)
                             TaskListItem(
                                 task = task,
@@ -257,12 +253,13 @@ fun TaskListItem(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
         colors = if (isSelected) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         else CardDefaults.cardColors(),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
@@ -389,7 +386,7 @@ fun TaskDetailScreen(
         ) {
             val currentStatus = status
             if (currentStatus == null) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
+                SquiggleLoader(Modifier.fillMaxWidth())
                 Text("Loading task details…", style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
@@ -468,7 +465,7 @@ fun TaskDetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                SquiggleCircularLoader(Modifier.size(20.dp))
                                 Text("Submitting selection…", style = MaterialTheme.typography.bodySmall)
                             }
                         } else if (torrentFiles.isEmpty()) {
@@ -477,7 +474,7 @@ fun TaskDetailScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                            SquiggleLoader(Modifier.fillMaxWidth())
                         } else {
                             torrentFiles.forEach { opt ->
                                 OutlinedButton(
@@ -602,7 +599,7 @@ fun TaskDetailScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (submitting) {
-                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                SquiggleCircularLoader(Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(if (isSuperSeriesTask) "Starting Part 1…" else "Starting Stage B…")
                             } else {

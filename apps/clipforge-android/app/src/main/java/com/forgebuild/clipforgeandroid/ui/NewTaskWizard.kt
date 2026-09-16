@@ -383,7 +383,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 // the instant a stage starts — the operator never has to scroll to
                 // find the progress bar to confirm something happened.
                 if (upload != null) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(16.dp), color = LocalContentColor.current)
+                    SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
                     Spacer(Modifier.width(8.dp))
                     Text("Starting Stage A…")
                 } else {

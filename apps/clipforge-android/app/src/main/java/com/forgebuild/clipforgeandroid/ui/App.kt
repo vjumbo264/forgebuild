@@ -4,6 +4,10 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -112,8 +116,13 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
     }
 
     if (!ready) {
+        // M3 overhaul: branded squiggle splash instead of a bare spinner.
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Text("ClipForge", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+                SquiggleLoader(Modifier.width(160.dp))
+                Text("Loading your studio…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         return
     }
@@ -191,11 +200,7 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (connectBusy) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp),
-                            color = LocalContentColor.current
-                        )
+                        SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
                         Spacer(Modifier.width(8.dp))
                         Text("Connecting…")
                     } else {
@@ -228,11 +233,7 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (createBusy) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp),
-                            color = LocalContentColor.current
-                        )
+                        SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
                         Spacer(Modifier.width(8.dp))
                         Text("Working…")
                     } else {
@@ -357,7 +358,14 @@ fun MainScaffold(vm: ClipForgeViewModel) {
         }
     ) { innerPadding ->
         Box(Modifier.padding(innerPadding)) {
-            NavHost(navController = navController, startDestination = "tasks") {
+            NavHost(
+                navController = navController,
+                startDestination = "tasks",
+                enterTransition = { slideInHorizontally(animationSpec = CFMotion.fadeSpec(300)) { it / 4 } + fadeIn(animationSpec = CFMotion.fadeSpec(300)) },
+                exitTransition = { slideOutHorizontally(animationSpec = CFMotion.fadeSpec(300)) { -it / 6 } + fadeOut(animationSpec = CFMotion.fadeSpec(220)) },
+                popEnterTransition = { slideInHorizontally(animationSpec = CFMotion.fadeSpec(300)) { -it / 4 } + fadeIn(animationSpec = CFMotion.fadeSpec(300)) },
+                popExitTransition = { slideOutHorizontally(animationSpec = CFMotion.fadeSpec(300)) { it / 6 } + fadeOut(animationSpec = CFMotion.fadeSpec(220)) }
+            ) {
                 composable("new") {
                     NewTaskWizard(vm, onDone = {
                         navController.navigate("tasks") {

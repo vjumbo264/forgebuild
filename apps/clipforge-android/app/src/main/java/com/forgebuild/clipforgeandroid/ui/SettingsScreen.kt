@@ -23,11 +23,7 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 /** Small inline spinner used inside buttons while an async op runs. */
 @Composable
 private fun ButtonSpinner() {
-    CircularProgressIndicator(
-        strokeWidth = 2.dp,
-        modifier = Modifier.size(16.dp),
-        color = LocalContentColor.current
-    )
+    SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,7 +107,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                        SquiggleCircularLoader(Modifier.size(20.dp))
                         Text("Loading your saved settings…", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -264,10 +260,7 @@ fun SettingsScreen(
                             }
                             IconButton(onClick = { vm.previewVoice(voice.id) }) {
                                 when {
-                                    thisActive && audioState.isBuffering -> CircularProgressIndicator(
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    thisActive && audioState.isBuffering -> SquiggleCircularLoader(Modifier.size(20.dp))
                                     thisActive && audioState.isPlaying -> Icon(EngineIcons.Pause, "Pause preview")
                                     else -> Icon(Icons.Default.PlayArrow, "Voice preview for ${voice.label}")
                                 }
@@ -538,7 +531,7 @@ fun SettingsScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
-                    Text("Version v18", style = MaterialTheme.typography.bodyMedium)
+                    Text("Version v20", style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
                         style = MaterialTheme.typography.bodySmall

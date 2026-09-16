@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -68,10 +69,7 @@ fun SeriesScreen(
                     // Session-11 (task-74): spinning corner refresh — same state as swipe.
                     IconButton(onClick = { vm.refreshTasks() }) {
                         if (refreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
+                            SquiggleCircularLoader(Modifier.size(20.dp))
                         } else {
                             Icon(Icons.Default.Refresh, "Refresh")
                         }
@@ -82,7 +80,7 @@ fun SeriesScreen(
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             if (refreshing) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
+                SquiggleLoader(Modifier.fillMaxWidth())
             }
 
             // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area.
@@ -93,7 +91,7 @@ fun SeriesScreen(
             ) {
                 if (seriesGroups.isEmpty() && !refreshing) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No series created yet. Start a Series Video from 'New Video'.", style = MaterialTheme.typography.bodyMedium)
+                        CFEEmptyState(title = "No series yet", body = "Start a Series Video from the 'New Video' tab.")
                     }
                 } else {
                     LazyColumn(
@@ -101,12 +99,13 @@ fun SeriesScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(seriesGroups.entries.toList(), key = { it.key }) { (seriesId, partTasks) ->
+                    itemsIndexed(seriesGroups.entries.toList(), key = { _, e -> e.key }) { index, (seriesId, partTasks) ->
                         val sortedParts = partTasks.sortedBy { it.part }
                         val latestPart = sortedParts.lastOrNull()
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .staggeredAppear(index)
                                 .combinedClickable(
                                     onClick = { onSelectSeries(seriesId) },
                                     onLongClick = { seriesPendingDelete = seriesId }
