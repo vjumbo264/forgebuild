@@ -694,6 +694,20 @@
      "BUILD_STATE.json"
     ],
     "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push."
+   },
+   {
+    "id": "step-09",
+    "title": "update Engine docs/comments that referenced the removed themes — engine README + ARCHITECTURE rewritten M3E-only",
+    "status": "done",
+    "timestamps": {
+     "done_at": "2026-09-16T13:16:58Z"
+    },
+    "files": [
+     "engine/README.md",
+     "engine/ARCHITECTURE.md",
+     "BUILD_STATE.json"
+    ],
+    "notes": "Three-theme tables/sections, the below-API-33 capability section, and the per-theme structure/icon lines removed from engine/README.md + engine/ARCHITECTURE.md; both now document Material 3 Expressive as the single theme with a one-line revert-history note. Root README/ARCHITECTURE and site/ were already clean (verified step-01)."
    }
   ]
  }
