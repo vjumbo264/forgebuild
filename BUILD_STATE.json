@@ -1,6 +1,6 @@
 {
  "project": "forgebuild",
- "build_complete": false,
+ "build_complete": true,
  "updated_by": "session-real-expressive-fix",
  "current_task": "forgebuild-real-expressive-fix",
  "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
@@ -177,6 +177,10 @@
   {
    "session": "session-real-expressive-fix",
    "event": "Step-11 retry 2: Room 2.6.1 -> 2.8.5 (old processor broke KSP2 under Kotlin 2.4.20: KspAAWorkerAction 'unexpected jvm signature V'). 2.3.12 confirmed newest existing KSP. CI re-dispatched."
+  },
+  {
+   "session": "session-real-expressive-fix",
+   "event": "forgebuild-real-expressive-fix COMPLETE \u2014 CI run 35196712841 green, release forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10; hand-rolled Expressive approximations replaced by official material3 1.5.0-alpha28; permanent no-substitution rule live in all 3 prompt templates; full-suite checklist recorded."
   }
  ],
  "migration_tasks": [
@@ -747,7 +751,7 @@
  "forgebuild_real_expressive_fix": {
   "id": "forgebuild-real-expressive-fix",
   "title": "Replace hand-rolled Expressive approximations with the real official Material 3 Expressive library; ban silent approximation in all future prompt templates",
-  "status": "in_progress",
+  "status": "done",
   "started": "2026-09-17T07:28:42Z",
   "research_decisions": {
    "where_the_handrolled_code_is": "engine/ is already clean: it ships the REAL expressive stack (material3 1.5.0-alpha28, MaterialExpressiveTheme + MotionScheme.expressive + Shapes(), EngineProgress wrappers over official LinearWavyProgressIndicator/CircularWavyProgressIndicator/LoadingIndicator) on AGP 9.4.0 / Gradle 9.6.0 / compileSdk 37. There is NO engine/ui/Expressive.kt. The hand-rolled approximations live in apps/forgehouse50/app/src/main/java/com/forgebuild/forgehouse50/ui/Expressive.kt (ExpressiveLoading, ExpressiveButtonLoader, ExpressiveWavyProgress, ExpressiveButton), hand-rolled because that app is pinned to AGP 8.5.2 / compileSdk 34 / compose-bom 2024.09.00.",
@@ -874,17 +878,20 @@
    {
     "id": "step-11",
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
-    "status": "in-progress",
+    "status": "done",
     "files": [],
-    "note": "RETRY 2: run 35195463959 got past plugin resolution and failed at :app:kspReleaseKotlin \u2014 KSP2 KspAAWorkerAction \"unexpected jvm signature V\" (Room 2.6.1 processor, 2024, breaking under current KSP2 + Kotlin 2.4.20 on the () -> Unit handler typealiases). 2.3.12 is confirmed the NEWEST KSP in existence (plugins.gradle.org + Maven Central + GitHub releases all agree), so the fix is on the Room side: room-runtime/room-ktx/room-compiler 2.6.1 -> 2.8.5 (latest stable 2.x per androidx release notes, 2026-09-09; Room 3.x avoided as the breaking KMP major). Schema/DAO sources unchanged; existing install DB preserved (no version bump, no migration change). CI re-dispatched; awaiting run.",
-    "timestamp": "2026-09-17T07:52:19Z"
+    "note": "VERIFIED: CI run 35196712841 GREEN \u2014 release.yml built apps/forgehouse50 with the real material3 1.5.0-alpha28 expressive stack (AGP 9.4.0 / Gradle 9.6.0 / KGP 2.4.20 / KSP 2.3.12 / compileSdk 37 / Room 2.8.5) and published the signed APK to Releases (forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10). Representative-app build gate passed; runtime render uses the same official components the engine showcase already exercised.",
+    "timestamp": "2026-09-17T07:56:43Z"
    },
    {
     "id": "step-12",
     "title": "Final BUILD_STATE update: mark done, include completed checklist",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "BUILD_STATE.json"
+    ],
+    "note": "forgebuild-real-expressive-fix COMPLETE. Part 1: hand-rolled approximations fully replaced by the official library (toolchain upgraded; ui/Expressive.kt is now thin wrappers over LoadingIndicator + Button(shapes=ButtonDefaults.shapes()); AppTheme on MaterialExpressiveTheme(MotionScheme.expressive, Shapes)); no NEW substitutions \u2014 only the pre-existing operator-approved Nunito-for-Google-Sans-Flex (legally required, kept per FONT NOTE). Part 2: full expressive-suite checklist recorded above, every applicable gap closed. Part 3: permanent NO-SUBSTITUTION / substitution-disclosure rule live in the shared RULES block covering all three prompt types (new/extend/resume), delimited by === PERMANENT RULE === markers so future template edits cannot silently drop it.",
+    "timestamp": "2026-09-17T07:56:43Z"
    }
   ],
   "expressive_suite_checklist": [
@@ -977,6 +984,7 @@
    {
     "note": "Nunito-for-Google-Sans-Flex font substitution (pre-existing, operator-approved, legally required \u2014 proprietary font) stays as-is per the prompt's FONT NOTE. No NEW substitutions were made in this build: every expressive element is the official library implementation."
    }
-  ]
+  ],
+  "completed": "2026-09-17T07:56:43Z"
  }
 }
