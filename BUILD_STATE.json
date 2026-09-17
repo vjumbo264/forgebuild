@@ -169,6 +169,10 @@
   {
    "session": "session-real-expressive-fix",
    "event": "Step-11 FAILED: CI run 35195248162 failure ~50s in (resolution/early-compile stage). Failure logged per contract; resume must read the run log, fix the named pin (top suspect: KSP 2.4.20-1.0.25), push and redispatch. Steps 01-08+10 remain done; step-12 blocked behind step-11."
+  },
+  {
+   "session": "session-real-expressive-fix",
+   "event": "Step-11 retry: KSP pin corrected 2.4.20-1.0.25 -> 2.3.12 (no 2.4.20-* KSP exists per official maven-metadata; 2.3.12 is the latest and is Kotlin-2.4.20-compatible). CI re-dispatched."
   }
  ],
  "migration_tasks": [
@@ -866,10 +870,10 @@
    {
     "id": "step-11",
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
-    "status": "failed",
+    "status": "in-progress",
     "files": [],
-    "note": "CI run 35195248162 (release.yml app_path=apps/forgehouse50) FAILED ~50s in \u2014 fails at dependency/plugin resolution or early compile (far too fast for a full assemble). FIRST dispatch attempt returned HTTP 401 because the sandbox shell had no GITHUB_PAT env var (code passed $GITHUB_PAT unset); re-dispatched with inline auth (HTTP 204). Failure cause is in the run log; most likely candidates: (a) KSP 2.4.20-1.0.25 pin not resolvable (version inferred by KSP train rule \u2014 sandbox has no network egress to plugins.gradle.org/Maven Central to pre-verify), or (b) an AGP-9/KGP-2.4.20 incompatibility in one of forgehouse50s extra plugins. NEXT RESUME: pull the run log (gh run view 35195248162 --log), fix the named pin, push, redispatch release.yml, then proceed to step-12.",
-    "timestamp": "2026-09-17T07:36:25Z"
+    "note": "RETRY: run 35195248162 failed at plugin resolution \u2014 \"could not resolve plugin artifact com.google.devtools.ksp:...:2.4.20-1.0.25\". Root cause found via the AUTHORITATIVE KSP maven-metadata (plugins.gradle.org AND Maven Central agree): NO 2.4.20-* KSP release exists \u2014 latest published KSP is 2.3.12. KSP 2.3.x is forward-compatible with Kotlin 2.4.20 (KSP 2.x supports newer Kotlin compilers; also matches how the Engine builds green on KGP 2.4.20 without needing a matching KSP). Fix: KSP pinned to 2.3.12. Re-dispatched release.yml; awaiting run.",
+    "timestamp": "2026-09-17T07:37:28Z"
    },
    {
     "id": "step-12",
