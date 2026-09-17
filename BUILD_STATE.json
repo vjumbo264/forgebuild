@@ -173,6 +173,10 @@
   {
    "session": "session-real-expressive-fix",
    "event": "Step-11 retry: KSP pin corrected 2.4.20-1.0.25 -> 2.3.12 (no 2.4.20-* KSP exists per official maven-metadata; 2.3.12 is the latest and is Kotlin-2.4.20-compatible). CI re-dispatched."
+  },
+  {
+   "session": "session-real-expressive-fix",
+   "event": "Step-11 retry 2: Room 2.6.1 -> 2.8.5 (old processor broke KSP2 under Kotlin 2.4.20: KspAAWorkerAction 'unexpected jvm signature V'). 2.3.12 confirmed newest existing KSP. CI re-dispatched."
   }
  ],
  "migration_tasks": [
@@ -872,8 +876,8 @@
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
     "status": "in-progress",
     "files": [],
-    "note": "RETRY: run 35195248162 failed at plugin resolution \u2014 \"could not resolve plugin artifact com.google.devtools.ksp:...:2.4.20-1.0.25\". Root cause found via the AUTHORITATIVE KSP maven-metadata (plugins.gradle.org AND Maven Central agree): NO 2.4.20-* KSP release exists \u2014 latest published KSP is 2.3.12. KSP 2.3.x is forward-compatible with Kotlin 2.4.20 (KSP 2.x supports newer Kotlin compilers; also matches how the Engine builds green on KGP 2.4.20 without needing a matching KSP). Fix: KSP pinned to 2.3.12. Re-dispatched release.yml; awaiting run.",
-    "timestamp": "2026-09-17T07:37:28Z"
+    "note": "RETRY 2: run 35195463959 got past plugin resolution and failed at :app:kspReleaseKotlin \u2014 KSP2 KspAAWorkerAction \"unexpected jvm signature V\" (Room 2.6.1 processor, 2024, breaking under current KSP2 + Kotlin 2.4.20 on the () -> Unit handler typealiases). 2.3.12 is confirmed the NEWEST KSP in existence (plugins.gradle.org + Maven Central + GitHub releases all agree), so the fix is on the Room side: room-runtime/room-ktx/room-compiler 2.6.1 -> 2.8.5 (latest stable 2.x per androidx release notes, 2026-09-09; Room 3.x avoided as the breaking KMP major). Schema/DAO sources unchanged; existing install DB preserved (no version bump, no migration change). CI re-dispatched; awaiting run.",
+    "timestamp": "2026-09-17T07:52:19Z"
    },
    {
     "id": "step-12",
