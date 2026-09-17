@@ -122,6 +122,33 @@ BUILD QUALITY CONSTRAINTS (non-negotiable):
 - Slugs: if the operator's prompt gives a fixed APP_SLUG, use it exactly; if it says the slug is not predetermined, choose it yourself before creating anything, record it as the first field of apps/<slug>/BUILD_STATE.json, and treat it as permanent.
 - Free tier only. No paid services. The operator works from an Android phone (Termux/browser) — no local-CLI assumptions in any docs you write.
 
+=== PERMANENT RULE — NO LIBRARY SUBSTITUTION / NO HAND-ROLLED APPROXIMATION ===
+This section is a PERMANENT part of the ForgeBuild contract. It applies to every
+build (new app, extend/update, resume) and must never be removed, weakened, or
+buried during unrelated prompt-template edits.
+
+Never approximate, hand-roll, or substitute a workaround for an official library
+component, API, or design-system feature that genuinely exists and is available.
+If a real official implementation exists (Material 3, Material 3 Expressive, or
+any future added theme/library), use it. Do NOT hand-roll a custom version
+instead just because of a toolchain conflict, version mismatch, or convenience —
+resolve the underlying conflict (upgrade dependencies, adjust configuration)
+instead of working around it with custom code. (Precedent that triggered this
+rule: a prior session hand-rolled Expressive loader/progress/button
+approximations instead of upgrading AGP/compileSdk to use the real material3
+expressive library; that had to be reverted and redone properly.)
+
+The ONLY acceptable exception is when the real thing is GENUINELY UNAVAILABLE —
+not merely inconvenient: for example it is not published anywhere accessible, it
+is legally unredistributable (e.g. a proprietary font), or the feature literally
+does not exist in any released version of the library. In that specific case, and
+only that case, a substitute is allowed — but it MUST be explicitly recorded in
+the app's BUILD_STATE.json as a "substitution" entry stating: (1) what was
+substituted, (2) why the real thing was unavailable, and (3) what was used
+instead. SILENT SUBSTITUTION IS NEVER ALLOWED, even when a substitute is
+otherwise justified.
+=== END PERMANENT RULE ===
+
 SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) already exist as GitHub Actions secrets on ${OWNER}/${REPO} — reuse them; only regenerate if explicitly told. To release: dispatch the "Build & Release App APK" workflow (Actions > workflow_dispatch, or POST /repos/${OWNER}/${REPO}/actions/workflows/release.yml/dispatches with ref=main and inputs app_path="apps/<slug>", release_notes). The workflow builds the folder, auto-increments the tag as <slug>-vN, and creates a GitHub Release on this repo with the APK + forgebuild-manifest.json. Never overwrite an existing release/tag — versions are <slug>-v1, <slug>-v2, ... monotonically.
 
 STOPPING: only stop at a genuine execution boundary after committing/pushing an updated apps/<slug>/BUILD_STATE.json whose notes say exactly what is done, what remains, and the exact next operation — or when the release is fully verified live on the GitHub Releases API.`;
