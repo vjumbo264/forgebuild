@@ -165,6 +165,10 @@
   {
    "session": "session-real-expressive-fix",
    "event": "Steps 03-08+10 done and pushed (commit 2). Hand-rolled approximations fully replaced by official material3 1.5.0-alpha28 expressive APIs; permanent no-substitution rule live in all 3 prompt templates; full-suite checklist recorded. Step-11 CI verification dispatched."
+  },
+  {
+   "session": "session-real-expressive-fix",
+   "event": "Step-11 FAILED: CI run 35195248162 failure ~50s in (resolution/early-compile stage). Failure logged per contract; resume must read the run log, fix the named pin (top suspect: KSP 2.4.20-1.0.25), push and redispatch. Steps 01-08+10 remain done; step-12 blocked behind step-11."
   }
  ],
  "migration_tasks": [
@@ -862,10 +866,10 @@
    {
     "id": "step-11",
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
-    "status": "in-progress",
+    "status": "failed",
     "files": [],
-    "note": "CI verification dispatched: release.yml app_path=apps/forgehouse50 (builds forgehouse50-v10 with the real expressive stack). Also validates the KSP 2.4.20-1.0.25 pin. Awaiting run result; if the build fails, this step flips to failed with the log excerpt and the next resume retries.",
-    "timestamp": "2026-09-17T07:34:34Z"
+    "note": "CI run 35195248162 (release.yml app_path=apps/forgehouse50) FAILED ~50s in \u2014 fails at dependency/plugin resolution or early compile (far too fast for a full assemble). FIRST dispatch attempt returned HTTP 401 because the sandbox shell had no GITHUB_PAT env var (code passed $GITHUB_PAT unset); re-dispatched with inline auth (HTTP 204). Failure cause is in the run log; most likely candidates: (a) KSP 2.4.20-1.0.25 pin not resolvable (version inferred by KSP train rule \u2014 sandbox has no network egress to plugins.gradle.org/Maven Central to pre-verify), or (b) an AGP-9/KGP-2.4.20 incompatibility in one of forgehouse50s extra plugins. NEXT RESUME: pull the run log (gh run view 35195248162 --log), fix the named pin, push, redispatch release.yml, then proceed to step-12.",
+    "timestamp": "2026-09-17T07:36:25Z"
    },
    {
     "id": "step-12",
