@@ -161,6 +161,10 @@
   {
    "session": "session-real-expressive-fix",
    "event": "forgebuild-real-expressive-fix STARTED 2026-09-17. Step-01: hand-rolled approximations located in apps/forgehouse50 (engine/ already real). Step-02: toolchain plan recorded (mirror engine: AGP 9.4.0 / Gradle 9.6.0 / Kotlin 2.4.20 / compileSdk 37 / compose 1.13.0-alpha01 + material3 1.5.0-alpha28, BOM dropped). Step-09 pre-done: prompt templates located in site/app.js shared RULES block."
+  },
+  {
+   "session": "session-real-expressive-fix",
+   "event": "Steps 03-08+10 done and pushed (commit 2). Hand-rolled approximations fully replaced by official material3 1.5.0-alpha28 expressive APIs; permanent no-substitution rule live in all 3 prompt templates; full-suite checklist recorded. Step-11 CI verification dispatched."
   }
  ],
  "migration_tasks": [
@@ -778,44 +782,62 @@
    {
     "id": "step-03",
     "title": "Apply forgehouse50 toolchain + dependency upgrade",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "apps/forgehouse50/build.gradle.kts, app/build.gradle.kts, gradle/wrapper/*"
+    ],
+    "note": "AGP 8.5.2->9.4.0 (built-in Kotlin; kotlin.android plugin removed), Gradle wrapper 8.9->9.6.0 (jar+properties from engine/), KGP/serialization 2.0.20->2.4.20, KSP 2.0.20-1.0.25->2.4.20-1.0.25 (train rule; sandbox has no network egress to Maven \u2014 existence is CI-verified at step-11), compileSdk/targetSdk 34->37, minSdk 26 kept, BOM 2024.09.00 dropped -> explicit compose ui/foundation 1.13.0-alpha01 + material3 1.5.0-alpha28 + icons 1.7.8, core-ktx 1.19.0, activity-compose 1.13.0, lifecycle 2.11.0, coroutines 1.11.0, navigation-compose 2.8.0->2.10.1 (stable, verified live on dl.google.com), Room/work/ktor/coil/security-crypto unchanged (no compileSdk coupling).",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-04",
     "title": "Verify existing features unaffected (dynamic color, dark, adaptive icons, permissions, FLAG_SECURE, SAF, Room/KSP, WorkManager)",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "(static verification only)"
+    ],
+    "note": "Static checks pass: dynamic color (dynamicDark/LightColorScheme), light/dark, Nunito typeface, adaptive icon res, permissions module, ScreenSecurity FLAG_SECURE, SafeSave SAF flow, Room+KSP, WorkManager all present and untouched by the upgrade. No API used by forgehouse50 was removed between the pinned old versions and the new ones. Runtime/compile verification is CI (step-11).",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-05",
     "title": "Build full expressive-suite checklist from official 1.5.0-alpha release notes; record here",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Full expressive-suite checklist built from the official androidx.compose.material3 1.5.0-alpha18..alpha26 release notes + the 1.5.0-alpha28 sources jar; recorded in expressive_suite_checklist.",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-06",
     "title": "Delete apps/forgehouse50 ui/Expressive.kt hand-rolled components",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "apps/forgehouse50/.../ui/Expressive.kt"
+    ],
+    "note": "Hand-rolled Canvas approximations DELETED: rotating wavy/morphing ring (ExpressiveLoading), squiggly sine progress line (ExpressiveWavyProgress), spring-scale press button (ExpressiveButton body). Zero Canvas/rememberInfiniteTransition/animateFloatAsState imports remain in the file.",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-07",
     "title": "Replace all usages with official material3 expressive APIs; migrate AppTheme to MaterialExpressiveTheme",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "Expressive.kt, ui/AppTheme.kt"
+    ],
+    "note": "All usages now resolve to OFFICIAL material3 1.5.0-alpha28 expressive APIs via thin same-name wrappers (signatures verified against the published sources jar): ExpressiveLoading/ExpressiveButtonLoader -> LoadingIndicator (modifier.size for the size param the official API does not have); ExpressiveButton -> Button(shapes = ButtonDefaults.shapes()) official expressive pressed-shape morph; AppTheme -> MaterialExpressiveTheme(colorScheme, MotionScheme.expressive(), Shapes(), AppTypography). ExpressiveWavyProgress had ZERO call sites (TranslationsScreen already uses determinate LinearProgressIndicator) -> dropped, official LinearWavyProgressIndicator/CircularWavyProgressIndicator now reachable via the material3 dep for future use.",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-08",
     "title": "Sweep for dead imports/references repo-wide",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "(repo-wide sweep)"
+    ],
+    "note": "No hand-rolled refs remain in app src; no other app under apps/ references a ui.Expressive file; clipforge's Motion.kt/Models.kt mentions are its own unrelated motion-spec code; theme-showcase is an archived showcase of the reverted Miuix/Liquid-Glass experiment (separate pinned engine copy, intentionally untouched per the engine-scoped revert precedent).",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-09",
@@ -830,16 +852,20 @@
    {
     "id": "step-10",
     "title": "Add permanent NO-SUBSTITUTION / substitution-disclosure rule to RULES",
-    "status": "pending",
-    "files": [],
-    "note": ""
+    "status": "done",
+    "files": [
+     "site/app.js"
+    ],
+    "note": "PERMANENT no-substitution / substitution-disclosure rule added to the shared RULES constant (covers type-1 new-app, type-2 extend, type-3 resume prompts identically, since all three generators append RULES). Clearly delimited === PERMANENT RULE === header/footer so future template edits do not accidentally delete it. node --check passes.",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-11",
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
-    "status": "pending",
+    "status": "in-progress",
     "files": [],
-    "note": ""
+    "note": "CI verification dispatched: release.yml app_path=apps/forgehouse50 (builds forgehouse50-v10 with the real expressive stack). Also validates the KSP 2.4.20-1.0.25 pin. Awaiting run result; if the build fails, this step flips to failed with the log excerpt and the next resume retries.",
+    "timestamp": "2026-09-17T07:34:34Z"
    },
    {
     "id": "step-12",
@@ -849,7 +875,96 @@
     "note": ""
    }
   ],
-  "expressive_suite_checklist": "PENDING step-05 (will be built from the official 1.5.0-alpha18..alpha26 release-note changelog)",
-  "substitutions": []
+  "expressive_suite_checklist": [
+   {
+    "item": "MaterialExpressiveTheme (public theme entry point)",
+    "library_status": "public since 1.5.0-alpha18 (promoted stable); absent/internal in ALL 1.4.x",
+    "engine": "PRESENT (Theme.kt)",
+    "forgehouse50": "ADDED this build (AppTheme.kt)"
+   },
+   {
+    "item": "MotionScheme.expressive() spring spatial/effects motion",
+    "library_status": "public/stable alpha18",
+    "engine": "PRESENT",
+    "forgehouse50": "ADDED via MaterialExpressiveTheme; ExpressiveButton pressed morph uses official ButtonShapes"
+   },
+   {
+    "item": "Expressive Shapes() (LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge tiers)",
+    "library_status": "public alpha18",
+    "engine": "PRESENT",
+    "forgehouse50": "ADDED via MaterialExpressiveTheme"
+   },
+   {
+    "item": "expressiveLightColorScheme()",
+    "library_status": "public alpha18 (no expressiveDark \u2014 dark expressive = darkColorScheme + motion/shapes, per Google's own sample)",
+    "engine": "PRESENT",
+    "forgehouse50": "uses dynamic color + static fallback schemes under MaterialExpressiveTheme (same treatment as engine)"
+   },
+   {
+    "item": "LinearWavyProgressIndicator (determinate+indeterminate)",
+    "library_status": "STABLE, no opt-in, since alpha18",
+    "engine": "PRESENT (EngineProgress wrappers)",
+    "forgehouse50": "AVAILABLE via dep; app uses determinate flat progress for downloads (progress bars, not loaders) \u2014 wavy variant now one import away, no hand-rolled substitute exists anymore"
+   },
+   {
+    "item": "CircularWavyProgressIndicator (determinate+indeterminate)",
+    "library_status": "STABLE, no opt-in, since alpha18",
+    "engine": "PRESENT (EngineProgress wrappers)",
+    "forgehouse50": "AVAILABLE via dep (no circular-progress call sites in app)"
+   },
+   {
+    "item": "LoadingIndicator morphing-shape spinner (determinate+indeterminate)",
+    "library_status": "@ExperimentalMaterial3ExpressiveApi (stable promotion reverted in alpha19)",
+    "engine": "PRESENT (EngineProgress)",
+    "forgehouse50": "REPLACES the hand-rolled ExpressiveLoading/ExpressiveButtonLoader across all 11 screens this build"
+   },
+   {
+    "item": "Expressive Button shapes/sizes (ButtonShapes pressed morph, ButtonDefaults.shapes())",
+    "library_status": "promoted stable alpha19 (SmallButtonContentPadding experimental removed)",
+    "engine": "via MaterialExpressiveTheme defaults",
+    "forgehouse50": "ExpressiveButton now uses official Button(shapes=ButtonDefaults.shapes()) \u2014 replaces hand-rolled spring-scale"
+   },
+   {
+    "item": "Expressive FAB + FAB Menu",
+    "library_status": "graduated stable alpha19",
+    "engine": "available via dep",
+    "forgehouse50": "no FAB call sites (nothing to migrate)"
+   },
+   {
+    "item": "FloatingToolbar (expressive)",
+    "library_status": "graduated stable alpha22",
+    "engine": "available via dep",
+    "forgehouse50": "no toolbar call sites"
+   },
+   {
+    "item": "Expressive TopAppBar family (Medium/Large Flexible, TwoRows, FlexibleBottomAppBar)",
+    "library_status": "graduated stable alpha23",
+    "engine": "available via dep",
+    "forgehouse50": "app uses standard TopAppBar (valid M3 idiom; expressive variants opt-in)"
+   },
+   {
+    "item": "Expressive ListItem / SegmentedButton / SplitButton / ButtonGroup / ToggleButton",
+    "library_status": "list items + segmented graduated alpha23; SplitButton/ButtonGroup present in 1.5.0-alpha28 sources",
+    "engine": "available via dep",
+    "forgehouse50": "no such call sites"
+   },
+   {
+    "item": "MaterialShapes (RoundedPolygon shape library)",
+    "library_status": "experimental (promotion reverted alpha19)",
+    "engine": "available via dep",
+    "forgehouse50": "available via dep; confetti/avatar art stay custom-drawn \u2014 that is app content artwork, not a library-component substitute"
+   },
+   {
+    "item": "compileSdk-37 hard requirement",
+    "library_status": "required <=alpha22, REMOVED in alpha23",
+    "engine": "compileSdk 37 retained (safe)",
+    "forgehouse50": "compileSdk 37 (matches engine)"
+   }
+  ],
+  "substitutions": [
+   {
+    "note": "Nunito-for-Google-Sans-Flex font substitution (pre-existing, operator-approved, legally required \u2014 proprietary font) stays as-is per the prompt's FONT NOTE. No NEW substitutions were made in this build: every expressive element is the official library implementation."
+   }
+  ]
  }
 }
