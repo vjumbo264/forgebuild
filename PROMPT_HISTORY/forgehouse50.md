@@ -210,3 +210,34 @@ PART F — TRANSLATION DOWNLOAD: BROKEN PROGRESS BAR + "NOT GZIP FORMAT" ERROR: 
 PART G — LOGIN/SIGN-IN SCREEN PERSISTENTLY BROKEN DARK MODE: Login screen "always in a very broken dark mode" every app open — flagged in prior overhaul session, evidently not fixed. Reproduce on real device in light AND dark system modes with screenshots. Identify actual cause (hardcoded dark color in login composable bypassing theme tokens; theme-provider scoping bug rendering login outside themed subtree; or genuine visual/layout bug) via the actual screenshots. Fix so login correctly follows the same dynamic system-theme logic as the rest of the app, no hardcoded colors, visually correct in both modes. Verify live with both-mode screenshots.
 
 TASK LIST: append material3_expressive_correction_v1 section to Android build-state. One task per screen for Part A (auth, Home, Read, Notes, Progress, Leaderboard, Profile, admin, quiz, translation-download, completion/confetti) plus one per Part B-G. Every task's completion evidence must describe/reference a real screenshot/recording taken this session. Do not trust prior overhaul section's claims. Work through every task without stopping for confirmation. Mark section complete only once every screen genuinely re-verified with real Expressive components and all six Part B-G issues independently, concretely fixed and verified.
+
+---
+
+## 2026-09-18 — EXTEND / UPDATE: ForgeHouse 50 Android App — Post-Testing Polish Round
+
+(Credential values redacted per contract; never committed.)
+
+Six issues found through real device testing after the Material 3 Expressive
+correction session. Refinement, not a full correction.
+
+- ISSUE 1 — FONT STILL TOO THIN (SECOND REPORT): verify the real current body
+  weight value; move at least one full step up (e.g. Medium -> SemiBold); err
+  toward heavier rather than risk a third report.
+- ISSUE 2 — DOWNLOAD SPINNER LOW-CONTRAST IN DARK MODE: spinner too dark vs its
+  background in dark mode; fix it to use the same dynamic theme accent as every
+  other loading indicator; verify light + dark.
+- ISSUE 3 — NO "THIS IS YOU" ON THE LEADERBOARD: add a clear, tasteful visual
+  distinction (accent tint + "You" chip) for the current user's own row across
+  every category and the final-results screen, at any rank.
+- ISSUE 4 — FOOTNOTES MISSING FROM READING VIEW: implement single tappable
+  marker per verse-with-footnotes; tap expands ONE inline panel with all of that
+  verse's footnotes; only one panel open at a time per chapter; no marker when a
+  verse has none; Material 3 Expressive styling.
+- ISSUE 5 — PREVIOUS/NEXT CHAPTER NEED ICONS, NO SQUIGGLE: chevron icons +
+  button-like treatment; explicitly NO expressive squiggle/press-morph on these
+  two controls; calmer press state.
+- ISSUE 6 — APP ICON FULLY WHITE UNDER THEMED ICONS (MISSING MONOCHROME LAYER):
+  get the CURRENT icon source from the live website repo (forgehouse50-icon-v3),
+  extract the mark silhouette, add a real <monochrome> layer (not empty/opaque)
+  to the adaptive icon XML, sized in the safe zone; leave working foreground/
+  background layers untouched; verify with themed icons ON and OFF.
