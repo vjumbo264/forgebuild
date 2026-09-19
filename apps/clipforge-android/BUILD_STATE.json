@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": true,
-  "updated_by": "forgebuild-ai-session 2026-09-19 (round 4, complete UI redesign + logger fix)",
-  "current_task": "task-141",
+  "build_complete": false,
+  "updated_by": "forgebuild-ai-session 2026-09-19 (round 5: remove youtube_tags verification, publish 422 fix, logger skipped-cause)",
+  "current_task": "task-151",
   "tasks": [
     {
       "id": "task-80",
@@ -412,6 +412,30 @@
       "title": "Dispatch release.yml, verify clipforge-android-v25 live on GitHub Releases API, set build_complete=true",
       "status": "done",
       "notes": "DONE: release.yml workflow triggered and succeeded (run 35469410251). Release tag clipforge-android-v25 live on GitHub Releases API with app-clipforge-android-v25.apk (5.29 MB, 5,544,309 bytes, HTTP 200 verified). Prior releases intact. build_complete=true."
+    },
+    {
+      "id": "task-148",
+      "title": "Issue 1 \u2014 remove youtube_tags verification everywhere + validate plan before source download",
+      "status": "done",
+      "notes": "DONE (session round-5): motionssalt/clipforge commit a84f1b90. Removed the 10-20/#/comma youtube_tags validation from pipeline/plan/schema.py (Python source of truth), scripts/super_chain/plan.js and site/js/plan.js (JS mirrors) \u2014 any count incl. none and any format now accepted; consumers (stage_b/run.py write_metadata_txt, publish/zernio.py, common.normalize_plan) already read tags loosely (missing -> []). schemas/production_plan.schema.json min/max removed + documented never-validated; ARCHITECTURE.md \u00a77.3 example+rule updated; pipeline/plan/prompt.py AI prompt drops the 10-20/format rules; tests/fixtures/plan_cases.json reject-cases for tags removed + accept case added; pytest pipeline/tests (minus pre-broken telegram_relay collector, unrelated) run. App side: Models.kt already had no count bound (v23 task-140); comment updated to the never-validated policy. REORDER FIX: stage-b.yml 'Resolve production.json' (boundary validation + reconciler) moved BEFORE 'Load release metadata / Download source video / Re-fetch omitted source', so any remaining plan problem fails in seconds instead of after a ~7-min download (Rick-S04E08-p3 had wasted ~11 min on the tag field)."
+    },
+    {
+      "id": "task-149",
+      "title": "Issue 2 \u2014 fix publish HTTP 422 from every publish path + full copyable error",
+      "status": "done",
+      "notes": "ROOT CAUSE: ZernioPublish.taskDispatchInputs sent unaccepted inputs idempotency_key + scheduled_at and OMITTED required action -> GitHub 422 'Unexpected inputs provided'; postActionInputs sent raw app action 'publish_now' which is not a publish.yml choice. FIX (apps/clipforge-android data/ZernioPublish.kt): whole-task payload now sends exactly publish.yml's inputs \u2014 action=publish, job_id, mode (blank->publish_now), scheduled_for, timezone, targets_json, request_id (parity with site/js/features/tasks.js dispatchZernioPublish + zernioRequestId in github.js); per-post actions map publish_now->action=update+mode=publish_now and reschedule->action=update+mode=manual_schedule (site dispatchZernioPostAction parity). Automatic publish (stage-b.yml 'Dispatch automatic Zernio publish') is workflow-internal and was never affected. FULL ERROR: VM.publishFailed stores the complete untruncated error body in a publishError StateFlow; a copyable AlertDialog (SelectionContainer + Copy button) on the task detail screen shows it instead of the truncated toast; both whole-task and per-post paths wired."
+    },
+    {
+      "id": "task-150",
+      "title": "Issue 3 \u2014 logger names the failed step that caused skips",
+      "status": "done",
+      "notes": "DONE: ClipForgeViewModel LogStep gains skippedBecauseOf; after parsing a job's steps, the first FAILED step is found and every SKIPPED step in that job gets 'Skipped \u2014 never ran because earlier step \"<name>\" failed.' as a SKIPPED-level detail line (replacing the bare 'status: completed \u00b7 result: skipped'), so skipped entries can no longer read as empty/broken."
+    },
+    {
+      "id": "task-151",
+      "title": "Validate + release clipforge-android-v26",
+      "status": "in_progress",
+      "notes": "versionCode/versionName 25->26; edited Kotlin brace/paren balance verified 0-delta on all 4 touched files; release.yml dispatched for app_path=apps/clipforge-android; awaiting run completion + Releases API verification."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",

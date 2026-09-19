@@ -80,6 +80,9 @@ import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.ElevationTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.text.selection.SelectionContainer
 
 
 /** A document with a top-level parts[] array is a Super Series plan regardless of
@@ -257,6 +260,8 @@ private fun TaskListScaffold(
 
 @Composable
 fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) {
+    val publishError by vm.publishError.collectAsState()
+    publishError?.let { PublishErrorDialog(err = it, onDismiss = { vm.clearPublishError() }) }
     val context = LocalContext.current
     val status by vm.detailStatus.collectAsState()
     val request by vm.detailRequest.collectAsState()
@@ -704,6 +709,35 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
 
 /* ------------------------------ live logger ----------------------------- */
 @Composable
+@Composable
+private fun PublishErrorDialog(err: ClipForgeViewModel.ZernioDispatchError, onDismiss: () -> Unit) {
+    val clipboard = LocalClipboardManager.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Publish dispatch failed") },
+        text = {
+            Column {
+                Text(
+                    "GitHub rejected the request for ${err.action}. Full error:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(8.dp))
+                SelectionContainer {
+                    Text(err.message, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextActionButton(
+                label = "Copy error",
+                icon = EngineIcons.Copy,
+                onClick = { clipboard.setText(AnnotatedString(err.message)) }
+            )
+        },
+        dismissButton = { TextActionButton(label = "Close", onClick = onDismiss) }
+    )
+}
+
 private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.LogStep>, state: String) {
     val context = LocalContext.current
     val expandedKeys by vm.expandedStepKeys.collectAsState()

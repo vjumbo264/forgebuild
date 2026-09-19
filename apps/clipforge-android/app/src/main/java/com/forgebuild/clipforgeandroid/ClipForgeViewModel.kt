@@ -787,6 +787,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val level: LogLevel,
         val durationText: String,
         val details: List<LogDetail>
+        /** Issue 3 (2026-09-19): name of the earlier failed step that caused the skip. */
+        val skippedBecauseOf: String? = null
     )
 
     /** Null-safe JSON string: returns "" for missing or JSON null (never the literal "null"). */
@@ -977,6 +979,32 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                             details = stepDetailLines
                                         )
                                     )
+                                }
+                                // Issue 3 (2026-09-19): annotate steps skipped
+                                // because an earlier step failed, naming the cause.
+                                val firstFailedStep = (0 until stepsArr.length())
+                                    .map { stepsArr.getJSONObject(it) }
+                                    .firstOrNull {
+                                        logLevelFor(strOr(it, "status"), strOr(it, "conclusion")) == LogLevel.FAILURE
+                                    }
+                                if (firstFailedStep != null) {
+                                    val causeName = strOr(firstFailedStep, "name").ifBlank { "step" }
+                                    for (k in newSteps.indices.reversed()) {
+                                        val s = newSteps[k]
+                                        if (!s.key.startsWith("job-$i-step-")) break
+                                        if (s.level == LogLevel.SKIPPED) {
+                                            newSteps[k] = s.copy(
+                                                skippedBecauseOf = causeName,
+                                                details = listOf(
+                                                    LogDetail("status: completed  ·  result: skipped", LogLevel.INFO),
+                                                    LogDetail(
+                                                        "Skipped — never ran because earlier step \"$causeName\" failed.",
+                                                        LogLevel.SKIPPED
+                                                    )
+                                                ) + s.details.filter { !it.text.startsWith("status: completed") }
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2239,6 +2267,18 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      * SAME inputs the site uses (mode, scheduled_for/scheduled_at, timezone,
      * targets_json, idempotency key).
      */
+    /** Full, untruncated publish-dispatch error for the copyable error dialog
+     *  (operator 2026-09-19 issue 2 — the old toast truncated GitHub's 422 body). */
+    data class ZernioDispatchError(val action: String, val message: String)
+    private val _publishError = MutableStateFlow<ZernioDispatchError?>(null)
+    val publishError: StateFlow<ZernioDispatchError?> = _publishError
+    fun clearPublishError() { _publishError.value = null }
+    private fun publishFailed(action: String, e: Exception) {
+        val msg = e.message ?: e.toString()
+        _publishError.value = ZernioDispatchError(action, msg)
+        toast("Publish dispatch failed — full error is shown in the dialog.")
+    }
+
     fun publishTask(jobId: String, mode: String, scheduledFor: String = "") = viewModelScope.launch {
         val c = api ?: run { toast("Not connected"); return@launch }
         if (mode == "manual_schedule" && !ZernioPublish.validDateTime(scheduledFor)) {
@@ -2261,7 +2301,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 c.dispatchWorkflow(ZernioPublish.WORKFLOW, inputs)
                 toast(if (mode == "manual_schedule") "Zernio schedule request dispatched." else "Zernio publish request dispatched.")
                 kotlinx.coroutines.delay(1500); loadTaskPublish(jobId)
-            } catch (e: Exception) { toast("Publish dispatch failed: ${e.message}") }
+            } catch (e: Exception) {
+                publishFailed("publish job $jobId", e)
+                loadTaskPublish(jobId)
+            }
         }
     }
 
@@ -2281,7 +2324,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 c.dispatchWorkflow(ZernioPublish.WORKFLOW, inputs)
                 toast("Zernio $action request dispatched.")
                 kotlinx.coroutines.delay(1500); loadTaskPublish(jobId)
-            } catch (e: Exception) { toast("Zernio action failed: ${e.message}") }
+            } catch (e: Exception) {
+                publishFailed("$action post $postId on job $jobId", e)
+                loadTaskPublish(jobId)
+            }
         }
     }
 
