@@ -137,12 +137,14 @@ object PlanValidator {
             }
         }
 
-        // youtube_tags: 10..20, no #, no comma
+        // youtube_tags: optional string array. Stage B (pipeline/publish/zernio.py)
+        // reads youtube_tags/tags loosely with NO min/max count bound, so the app
+        // must not reject a count the pipeline itself accepts. Only structural
+        // checks here (must be an array); count bounds intentionally removed so a
+        // valid plan (e.g. 9 tags) is not blocked ahead of Stage B.
         if (doc.has("youtube_tags")) {
             val arr = doc.optJSONArray("youtube_tags")
             if (arr == null) errors.add("`youtube_tags` must be an array.")
-            else if (arr.length() < 10 || arr.length() > 20)
-                errors.add("`youtube_tags` must contain 10 to 20 entries (got " + arr.length() + ").")
         }
 
         // series block (nested preferred, legacy flat accepted)

@@ -364,9 +364,15 @@
       "title": "V23-R9 Bump versionCode/versionName 23, About shows v23, dispatch release.yml (app_path=apps/clipforge-android), verify clipforge-android-v23 + APK asset live via Releases API, never touch v1..v22, set build_complete=true LAST",
       "status": "pending",
       "notes": ""
+    },
+    {
+      "id": "task-140",
+      "title": "Operator bugfix: valid production/super plan rejected by app validation",
+      "status": "done",
+      "notes": "DONE (2026-09-19): root-caused against operator's validproduction.json + screenshot. (1) The old version ran the SINGLE-PART production.json validator on a SUPER-PLAN document (top-level parts[] array) -> false error 'cuts must contain at least one cut' (super-plans carry cuts inside each part). Fix: shape-based routing in TasksScreens.kt (looksLikeSuperPlan) \u2014 a doc with a top-level parts[] array is validated and submitted as a super-plan regardless of the task flag. (2) App rejected youtube_tags counts outside 10..20, but the Stage B pipeline (motionssalt/clipforge pipeline/publish/zernio.py) reads youtube_tags/tags loosely with NO count bound \u2014 the app was stricter than the pipeline that actually runs (operator's file has 9 tags on 4 parts). Fix: Models.kt PlanValidator keeps the structural array check and drops the count bound. Stage-B safety: zernio.py line ~673 reads youtube_tags OR tags with no min/max, so relaxing the app-side bound cannot reintroduce the old Stage B failure \u2014 everything the app now accepts, the pipeline accepts. Verified against the operator's exact file: valid super-plan (6 parts tiling 0->1358s, one is_final on last part, unique titles)."
     }
   ],
-  "notes": "2026-09-19 (round 3, forgebuild-ai-session): v23 complete-remake instruction received. PROMPT_HISTORY appended earlier (8b38bf7). tasks-131..138 DONE: old UI layer deleted and every screen rebuilt from scratch on the engine's real M3 Expressive stack (floating swipeable tab bar, busy-aware buttons everywhere, live logger, full Zernio publishing); data layer kept verbatim so every feature and saved setting carries over. Static validation green (balance, no raw buttons, engine copy byte-identical). NEXT (task-139): bump versionCode/versionName 23 (done in this commit), dispatch release.yml app_path=apps/clipforge-android, verify clipforge-android-v23 + APK asset live via the Releases API, never touch v1..v22, then set build_complete=true.",
+  "notes": "2026-09-19 (round 3, forgebuild-ai-session): v23 complete-remake instruction received. PROMPT_HISTORY appended earlier (8b38bf7). tasks-131..138 DONE: old UI layer deleted and every screen rebuilt from scratch on the engine's real M3 Expressive stack (floating swipeable tab bar, busy-aware buttons everywhere, live logger, full Zernio publishing); data layer kept verbatim so every feature and saved setting carries over. Static validation green (balance, no raw buttons, engine copy byte-identical). NEXT (task-139): bump versionCode/versionName 23 (done in this commit), dispatch release.yml app_path=apps/clipforge-android, verify clipforge-android-v23 + APK asset live via the Releases API, never touch v1..v22, then set build_complete=true. | task-140 plan-validation fix applied (shape-based super-plan routing + youtube_tags bound relaxed to match pipeline).",
   "session_log": [
     {
       "session": "session-17",
@@ -412,6 +418,11 @@
       "date": "2026-09-19",
       "event": "session-v23-remake",
       "detail": "tasks-131..138 done: full UI remake on engine M3 Expressive; floating swipeable tabs; busy-aware buttons; live logger; full Zernio; carry-over audit; static validation green."
+    },
+    {
+      "date": "2026-09-19",
+      "event": "bugfix",
+      "detail": "task-140: valid production/super plan no longer rejected; shape-based validator routing; youtube_tags count bound removed (pipeline has none)."
     }
   ]
 }
