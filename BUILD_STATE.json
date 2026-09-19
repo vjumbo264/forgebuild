@@ -1030,6 +1030,36 @@
       "material3 '1.4.x' in earlier prompts was factually incapable of public expressive APIs (verified vs release notes); the real expressive train is 1.5.0-alpha28, already pinned by the prior build. Extended, not redone."
      ]
     }
+   },
+   {
+    "step": "step-02-audit",
+    "status": "done",
+    "timestamp": "2026-09-19T02:15:54Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Audited engine/ theme+components against research. Recorded gap list and explicit reconciliation with the prior expressive-fix build (no duplication).",
+    "gap_analysis": {
+     "already_correct_and_kept": [
+      "Dynamic color: dynamicLight/DarkColorScheme(context) on API 31+, expressiveLightColorScheme + darkColorScheme fallback (Theme.kt).",
+      "MaterialExpressiveTheme entry point in use.",
+      "MotionScheme.expressive() applied globally.",
+      "Shapes() defaults (with expressive increased tiers on 1.5.0-alpha train) applied.",
+      "Official wavy progress + morphing LoadingIndicator wrapped in EngineProgress.kt (no hand-rolls)."
+     ],
+     "gaps_to_close": [
+      "No explicit tonal-palette+role documentation: research summary must be captured in code so future generated apps understand the full 30+ role set \u2014 introduce ColorTokens.kt.",
+      "Shape system is only the default; no role-map helper for expressive/decorative shapes or the 35-shape MaterialShapes library \u2014 introduce ShapeTokens.kt + document decorative-shape usage (no hand-rolled polygons).",
+      "Tonal elevation levels are not exposed as reusable tokens for apps that need custom containers \u2014 introduce ElevationTokens.kt mapping level0..level5 dp values + tonalElevationDp() + tonalContainerColor() helper against surfaceContainer* roles.",
+      "Type scale uses default Typography() implicitly \u2014 introduce TypographyTokens.kt that explicitly instantiates the full official 15-role scale so future edits stay disciplined.",
+      "No spacing/layout tokens exist \u2014 introduce SpacingTokens.kt with the 4dp baseline scale (Spacing.xxs..xxxl) + WindowMargins.kt for canonical compact/medium/expanded margins.",
+      "MotionScheme is applied but its six specs are not surfaced as convenience accessors for app-level custom animations \u2014 introduce MotionTokens.kt exposing default/fast/slow x spatial/effects helpers.",
+      "Expressive Button/FAB/Menu behavior comes free from MaterialExpressiveTheme but is not documented; documented via ARCHITECTURE_MATERIAL_DISCIPLINE.md so the Engine advertises its guarantees.",
+      "Dashboard prompt templates do not yet require applying the full discipline (only 'Material 3 only') \u2014 extend the permanent-rule section in site/app.js with a M3-DISCIPLINE clause.",
+      "StarterScreen.kt still uses ad-hoc 24dp padding \u2014 reroute through SpacingTokens so the Engine's own starter follows its own rule."
+     ],
+     "reconciliation_note": "Do NOT duplicate the prior forgebuild-real-expressive-fix work: MaterialExpressiveTheme/Motion/Shapes/wavy indicators remain the single source. This build ADDS tokens+helpers+docs+starter cleanup+prompt-rule around them."
+    }
    }
   ]
  }
