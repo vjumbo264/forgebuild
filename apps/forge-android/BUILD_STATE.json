@@ -58,6 +58,10 @@
   {
    "session": "session-1",
    "event": "Tasks 02-05 done: identity set, adaptive icon generated, signing secrets confirmed present (KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD), full app implemented (data layer + 3 screens + navigation) in per-feature commits."
+  },
+  {
+   "session": "session-1",
+   "event": "Release attempt 1 (run 35417234142) FAILED at compileReleaseKotlin: engine/'s EngineExpressive.kt referenced SplitButton/SplitButtonLeadingContentScope/SplitButtonTrailingContentScope/ButtonGroup(overflowIndicator) \u2014 absent from pinned material3 1.5.0-alpha28 (engine/ never CI-compiled after the real-expressive fix). Engine-level fix: replaced with the CI-green expressive component source from apps/forgehouse50/ui/Expressive.kt (package adjusted), applied in engine/ AND propagated into apps/forge-android/."
   }
  ],
  "substitutions": [],
