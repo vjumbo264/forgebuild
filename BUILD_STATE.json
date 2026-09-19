@@ -1069,6 +1069,15 @@
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/ColorTokens.kt"
     ],
     "note": "ColorTokens.kt: official HCT dynamic-color resolution chain (wallpaper-derived on API31+, expressiveLightColorScheme/darkColorScheme fallback). Full role set documented; no hand-picked colors."
+   },
+   {
+    "step": "step-04-shape-system",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:17Z",
+    "files_touched": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/ShapeTokens.kt"
+    ],
+    "note": "ShapeTokens.kt: official corner scale 4/8/12/16/20/28/32/48dp incl. expressive increased tiers, applied by component role via Shapes; decorative shapes routed to official MaterialShapes/Morph (never hand-rolled)."
    }
   ]
  }
