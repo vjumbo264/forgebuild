@@ -149,6 +149,55 @@ instead. SILENT SUBSTITUTION IS NEVER ALLOWED, even when a substitute is
 otherwise justified.
 === END PERMANENT RULE ===
 
+=== PERMANENT RULE — FULL MATERIAL 3 EXPRESSIVE DISCIPLINE (mandatory, never remove) ===
+This section is a PERMANENT part of the ForgeBuild contract, alongside the
+no-approximation rule above. It applies to every build (new app,
+extend/update, resume) and must never be removed, weakened, or buried during
+unrelated prompt-template edits.
+
+Every generated app must apply the COMPLETE Material 3 / Material 3 Expressive
+design discipline — not just import Material 3 components and stop there. All
+of this is already baked into the Engine (engine/.../ui/theme/ +
+engine/.../ui/components/, documented in
+engine/ARCHITECTURE_MATERIAL_DISCIPLINE.md); apply it through the Engine's
+tokens and helpers, never ad-hoc:
+
+1. DYNAMIC COLOR (Material You): always build inside ForgeBuildTheme so
+   wallpaper-derived dynamic color (API 31+) and the official static fallback
+   apply, light AND dark. Use MaterialTheme.colorScheme.<role> for every color
+   (primary/secondary/tertiary/error + on-*/container roles, surfaceContainer
+   levels, surface bright/dim, inverse*, outline(+variant)). NEVER hardcode
+   hex colors.
+2. SHAPE SYSTEM: use MaterialTheme.shapes.<tier> (the official scale 4/8/12/16/
+   20/28/32/48dp incl. expressive increased tiers) by component role — never
+   one reused border-radius everywhere. For decorative shapes (avatars, image
+   crops) use the official MaterialShapes library / Morph — never hand-rolled
+   polygons.
+3. TONAL ELEVATION: elevation is communicated by TONE through the
+   surfaceContainer roles (ElevationTokens.tonalContainerColor(level) for
+   custom containers; levels 0/1/3/6/8/12dp). Do not use the deprecated
+   surface-tint math; let official components keep their default elevation.
+4. TYPE SCALE: use MaterialTheme.typography.<role> for ALL text — the full
+   official 15-role scale (display/headline/title/body/label x large/medium/
+   small). Never arbitrary per-screen font sizes.
+5. SPACING/LAYOUT TOKENS: compose all padding/margins from SpacingTokens
+   (4dp baseline grid) and SpacingTokens.contentMargin() (16dp compact /
+   24dp medium+). Never ad-hoc dp literals.
+6. MOTION: the expressive spring-physics MotionScheme is global; for any
+   custom animation use MotionTokens specs (default/fast/slow x spatial/
+   effects) so motion matches the system instead of invented easings.
+7. EXPRESSIVE COMPONENTS: prefer the official expressive components —
+   EngineLinearWavyProgress / EngineCircularWavyProgress /
+   EngineLoadingIndicator (EngineProgress.kt), EngineButtonGroup /
+   EngineSplitButton / EngineFabMenu (EngineExpressive.kt). Buttons, FABs,
+   menus, sliders, app bars and list items already get expressive behavior
+   automatically under ForgeBuildTheme.
+
+Rule of thumb: if the UI reads as "generic Material components" instead of a
+premium, recognizably-Google Material You app, the discipline is not applied —
+fix it via the tokens/helpers above, not by styling around them.
+=== END PERMANENT RULE (M3 DISCIPLINE) ===
+
 SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) already exist as GitHub Actions secrets on ${OWNER}/${REPO} — reuse them; only regenerate if explicitly told. To release: dispatch the "Build & Release App APK" workflow (Actions > workflow_dispatch, or POST /repos/${OWNER}/${REPO}/actions/workflows/release.yml/dispatches with ref=main and inputs app_path="apps/<slug>", release_notes). The workflow builds the folder, auto-increments the tag as <slug>-vN, and creates a GitHub Release on this repo with the APK + forgebuild-manifest.json. Never overwrite an existing release/tag — versions are <slug>-v1, <slug>-v2, ... monotonically.
 
 STOPPING: only stop at a genuine execution boundary after committing/pushing an updated apps/<slug>/BUILD_STATE.json whose notes say exactly what is done, what remains, and the exact next operation — or when the release is fully verified live on the GitHub Releases API.`;

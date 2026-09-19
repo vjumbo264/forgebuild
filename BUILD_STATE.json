@@ -1135,6 +1135,15 @@
      "engine/"
     ],
     "note": "Static verification: engine theme/components intact and rewired to tokens; generated app (clipforge-android) still resolves ForgeBuildTheme unchanged (additive, non-breaking API); zero miuix/liquid-glass/EngineTheme-selector references remain; material3 1.5.0-alpha28 expressive pin intact. Full compile is enforced by the engine-verify.yml CI workflow (engine/** path trigger) which runs assembleDebug on push of these very engine/ changes."
+   },
+   {
+    "step": "step-11-prompt-templates",
+    "status": "done",
+    "timestamp": "2026-09-19T02:19:35Z",
+    "files_touched": [
+     "site/app.js"
+    ],
+    "note": "Added 'PERMANENT RULE \u2014 FULL MATERIAL 3 EXPRESSIVE DISCIPLINE' section to the shared RULES block in site/app.js, immediately after the existing END PERMANENT RULE anchor. Because promptNewApp/promptExtend/promptResume all append RULES, build/extend/resume prompts all inherit the rule automatically. The section is clearly labeled PERMANENT ('never remove, weaken, or bury during unrelated prompt-template edits') so it survives future template edits. Covers all 7 discipline areas (dynamic color, shape scale, tonal elevation, type scale, spacing tokens, motion tokens, expressive components) and points at the Engine tokens/helpers as the mechanism. JS sanity-checked (anchor + single insertion + node --check)."
    }
   ]
  }
