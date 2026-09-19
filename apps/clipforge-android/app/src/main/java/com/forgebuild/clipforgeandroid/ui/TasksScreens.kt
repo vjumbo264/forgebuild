@@ -1,3 +1,9 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
+
 package com.forgebuild.clipforgeandroid.ui
 
 import android.content.ClipData
@@ -7,220 +13,199 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.background
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.AgentPromptBuilder
 import com.forgebuild.clipforgeandroid.data.Pipeline
-import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.clipforgeandroid.data.PlanValidator
+import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.clipforgeandroid.data.TaskStatus
+import com.forgebuild.clipforgeandroid.data.ZernioPublish
 import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.ElevationTokens
+import com.forgebuild.engine.ui.theme.SpacingTokens
 
-/* ---------------- Tasks Screen (Active Tasks) ---------------- */
-@OptIn(ExperimentalMaterial3Api::class)
+/* ============================================================================
+ *  V23 TASKS — active list, completed list (with quick-publish), and the task
+ *  detail screen with the rebuilt LIVE LOGGER (v23-R5): every job + every step
+ *  of the run with its real GitHub Actions log lines, a designed loading state
+ *  while running (wavy progress on the live step, morphing loader while a
+ *  runner is queued), card timeline with status-colored nodes, copy-log.
+ * ============================================================================ */
+
+/* ------------------------------ task lists ------------------------------ */
+
 @Composable
-fun TasksScreen(
-    vm: ClipForgeViewModel,
-    onSelectTask: (String) -> Unit
-) {
-    // Cache-first open (recovered working architecture): instant cached render, then background refresh.
+fun TasksScreen(vm: ClipForgeViewModel, onSelectTask: (String) -> Unit) {
     LaunchedEffect(Unit) { vm.onTasksOpen() }
     val activeTasks by vm.activeTasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
-    var selectedIds by remember { mutableStateOf(setOf<String>()) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(if (selectedIds.isEmpty()) "Active Tasks" else "${selectedIds.size} Selected")
-                },
-                actions = {
-                    if (selectedIds.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, "Delete selected")
-                        }
-                    } else {
-                        // Session-11 (task-74): the corner refresh button spins while a
-                        // refresh is running — identical feedback to the swipe gesture,
-                        // both drive the same vm.refreshTasks()/tasksRefreshing state.
-                        IconButton(onClick = { vm.refreshTasks() }) {
-                            if (refreshing) {
-                                SquiggleCircularLoader(Modifier.size(20.dp))
-                            } else {
-                                Icon(Icons.Default.Refresh, "Refresh")
-                            }
-                        }
-                    }
-                }
-            )
-        }
-    ) { pad ->
-        Column(Modifier.padding(pad).fillMaxSize()) {
-            if (refreshing) {
-                SquiggleLoader(Modifier.fillMaxWidth())
-            }
-
-            // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area;
-            // the pull indicator spins exactly like the corner button does.
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = { vm.refreshTasks() },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (activeTasks.isEmpty() && !refreshing) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CFEEmptyState(title = "No active tasks", body = "Tap 'New Video' to start your first render.")
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(activeTasks, key = { _, t -> t.jobId }) { index, task ->
-                            val isSelected = selectedIds.contains(task.jobId)
-                            TaskListItem(
-                                modifier = Modifier.staggeredAppear(index),
-                                task = task,
-                                isSelected = isSelected,
-                                isSelectionMode = selectedIds.isNotEmpty(),
-                                onClick = {
-                                    if (selectedIds.isNotEmpty()) {
-                                        selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                                    } else {
-                                        onSelectTask(task.jobId)
-                                    }
-                                },
-                                onLongClick = {
-                                    selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Tasks") },
-            text = { Text("Delete ${selectedIds.size} task(s) and associated files?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    vm.deleteTasks(selectedIds)
-                    selectedIds = emptySet()
-                    showDeleteDialog = false
-                }) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
+    TaskListScaffold(
+        title = "Active tasks",
+        emptyTitle = "No active tasks",
+        emptyBody = "Start a render from the New Video tab.",
+        tasks = activeTasks,
+        refreshing = refreshing,
+        onRefresh = { vm.refreshTasks() },
+        onDelete = { ids -> vm.deleteTasks(ids) },
+        onSelectTask = onSelectTask,
+        rowActions = null,
+    )
 }
 
-/* ---------------- Completed Screen ---------------- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompletedScreen(
-    vm: ClipForgeViewModel,
-    onSelectTask: (String) -> Unit
-) {
+fun CompletedScreen(vm: ClipForgeViewModel, onSelectTask: (String) -> Unit) {
     LaunchedEffect(Unit) { vm.onTasksOpen() }
     val completedTasks by vm.completedTasks.collectAsState()
     val refreshing by vm.tasksRefreshing.collectAsState()
+    val settings by vm.settings.collectAsState()
+    TaskListScaffold(
+        title = "Completed videos",
+        emptyTitle = "No completed videos yet",
+        emptyBody = "Finished renders land here, ready to play, download and publish.",
+        tasks = completedTasks,
+        refreshing = refreshing,
+        onRefresh = { vm.refreshTasks() },
+        onDelete = { ids -> vm.deleteTasks(ids) },
+        onSelectTask = onSelectTask,
+        rowActions = if (settings.zernioEnabled) { task ->
+            // Quick publish straight from the completed list (auto mode).
+            { TextActionButton(label = "Publish", onClick = { vm.publishTask(task.jobId, "") }) }
+        } else null,
+    )
+}
+
+@Composable
+private fun TaskListScaffold(
+    title: String,
+    emptyTitle: String,
+    emptyBody: String,
+    tasks: List<TaskStatus>,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+    onDelete: (Set<String>) -> Unit,
+    onSelectTask: (String) -> Unit,
+    rowActions: ((TaskStatus) -> @Composable () -> Unit)?,
+) {
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(if (selectedIds.isEmpty()) "Completed Videos" else "${selectedIds.size} Selected")
-                },
+                title = { Text(if (selectedIds.isEmpty()) title else "${selectedIds.size} selected") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
                 actions = {
                     if (selectedIds.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, "Delete selected")
-                        }
+                        IconActionButton(EngineIcons.Cancel, "Delete selected", onClick = { showDeleteDialog = true })
                     } else {
-                        // Session-11 (task-74): spinning corner refresh — same state as swipe.
-                        IconButton(onClick = { vm.refreshTasks() }) {
-                            if (refreshing) {
-                                SquiggleCircularLoader(Modifier.size(20.dp))
-                            } else {
-                                Icon(Icons.Default.Refresh, "Refresh")
-                            }
-                        }
+                        IconActionButton(EngineIcons.Restart, "Refresh", onClick = onRefresh, busy = refreshing)
                     }
-                }
+                },
             )
-        }
+        },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
-            if (refreshing) {
-                SquiggleLoader(Modifier.fillMaxWidth())
-            }
-
-            // Session-11 (task-74): swipe-down-to-refresh wraps the whole list area.
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = { vm.refreshTasks() },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (completedTasks.isEmpty() && !refreshing) {
+            if (refreshing) EngineLinearWavyProgress(Modifier.fillMaxWidth())
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+                if (tasks.isEmpty() && !refreshing) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CFEEmptyState(title = "No completed videos yet", body = "Finished renders appear here, ready to play or download.")
+                        CfEmptyState(title = emptyTitle, body = emptyBody)
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentPadding = PaddingValues(SpacingTokens.Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
                     ) {
-                        itemsIndexed(completedTasks, key = { _, t -> t.jobId }) { index, task ->
+                        items(tasks, key = { it.jobId }) { task ->
                             val isSelected = selectedIds.contains(task.jobId)
-                            TaskListItem(
-                                task = task,
-                                isSelected = isSelected,
-                                isSelectionMode = selectedIds.isNotEmpty(),
-                                onClick = {
-                                    if (selectedIds.isNotEmpty()) {
-                                        selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
-                                    } else {
-                                        onSelectTask(task.jobId)
+                            Surface(
+                                shape = MaterialTheme.shapes.large,
+                                color = ElevationTokens.tonalContainerColor(if (isSelected) 3 else 1),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (selectedIds.isNotEmpty())
+                                                selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                            else onSelectTask(task.jobId)
+                                        },
+                                        onLongClick = {
+                                            selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                        },
+                                    ),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(SpacingTokens.Spacing.md),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                                        Text(task.jobId, style = MaterialTheme.typography.titleSmall)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                                            CfChip(label = Pipeline.describe(task.state), color = cfStateColor(task.state))
+                                            if (task.seriesEnabled) CfChip(label = "Series · Part ${task.part}", color = MaterialTheme.colorScheme.secondary)
+                                        }
+                                        if (task.message.isNotBlank()) {
+                                            Text(
+                                                task.message,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
-                                },
-                                onLongClick = {
-                                    selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                    rowActions?.let { it(task).invoke() }
+                                    if (selectedIds.isNotEmpty()) {
+                                        Checkbox(checked = isSelected, onCheckedChange = {
+                                            selectedIds = if (isSelected) selectedIds - task.jobId else selectedIds + task.jobId
+                                        })
+                                    }
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -231,84 +216,24 @@ fun CompletedScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Completed Videos") },
-            text = { Text("Delete ${selectedIds.size} completed video(s)?") },
+            title = { Text("Delete tasks") },
+            text = { Text("Delete ${selectedIds.size} task(s) and their files? This cannot be undone.") },
             confirmButton = {
-                TextButton(onClick = {
-                    vm.deleteTasks(selectedIds)
+                TextActionButton(label = "Delete", destructive = true, onClick = {
+                    onDelete(selectedIds)
                     selectedIds = emptySet()
                     showDeleteDialog = false
-                }) { Text("Delete") }
+                })
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showDeleteDialog = false }) },
         )
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun TaskListItem(
-    task: TaskStatus,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        colors = if (isSelected) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        else CardDefaults.cardColors(),
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(task.jobId, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(Pipeline.describe(task.state)) }
-                    )
-                    if (task.seriesEnabled) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("Series: Part ${task.part}") }
-                        )
-                    }
-                }
-                if (task.message.isNotBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(task.message, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            if (isSelectionMode) {
-                Checkbox(checked = isSelected, onCheckedChange = { onClick() })
-            }
-        }
-    }
-}
+/* ------------------------------ task detail ----------------------------- */
 
-/* ---------------- Task Detail Screen ---------------- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDetailScreen(
-    vm: ClipForgeViewModel,
-    jobId: String,
-    onBack: () -> Unit
-) {
+fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val status by vm.detailStatus.collectAsState()
     val request by vm.detailRequest.collectAsState()
@@ -319,34 +244,33 @@ fun TaskDetailScreen(
     val torrentSubmitting by vm.torrentSubmitting.collectAsState()
     val plan by vm.detailPlan.collectAsState()
     val superState by vm.detailSuperState.collectAsState()
-    // This detail view is a Super Series part iff its stage-a-request carries
-    // series.super_series — checked EXPLICITLY, never assumed from context.
-    val isSuperSeriesTask = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
-    val busyOps by vm.busyOps.collectAsState()
     val nextPart by vm.nextPart.collectAsState()
     val downloadedVideo by vm.downloadedVideoFor.collectAsState()
+    val settings by vm.settings.collectAsState()
+    val publish by vm.taskPublish.collectAsState()
+    val login by vm.login.collectAsState()
+    val playVideo by vm.playVideoUri.collectAsState()
+
+    val isSuperSeriesTask = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
-    // Fix #4: the cancel confirmation step — the bot always asks before the real
-    // cancel (confirmCancelStageB); the destructive action runs only after Yes.
     var showCancelConfirm by remember { mutableStateOf(false) }
+    var showScheduleDialog by remember { mutableStateOf(false) }
+    var scheduleInput by remember { mutableStateOf("") }
+    var reschedulePost by remember { mutableStateOf<ZernioPublish.Post?>(null) }
+    var rescheduleInput by remember { mutableStateOf("") }
+    var cancelPost by remember { mutableStateOf<ZernioPublish.Post?>(null) }
 
-    // JSON file picker for production.json
     val planFilePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
         try {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
                 rawPlanText = String(bytes, Charsets.UTF_8)
-                planErrors = if (isSuperSeriesTask)
-                    SuperSeries.parseAndValidateSuperPlan(rawPlanText).errors
+                planErrors = if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(rawPlanText).errors
                 else PlanValidator.validate(rawPlanText)
-                if (planErrors.isEmpty()) {
-                    vm.toast(if (isSuperSeriesTask) "Loaded valid super-plan" else "Loaded valid production.json")
-                } else {
-                    vm.toast("Validation error: ${planErrors.first()}")
-                }
+                vm.toast(if (planErrors.isEmpty()) "Loaded a valid plan" else "Validation error: ${planErrors.first()}")
             }
         } catch (e: Exception) {
             vm.toast("Failed to read JSON: ${e.message}")
@@ -358,495 +282,440 @@ fun TaskDetailScreen(
         vm.refreshNextPart(jobId)
         onDispose { vm.stopPollingTask() }
     }
-
-    // Fix #5 — in-app player for a previously-downloaded final MP4.
-    val playVideo by vm.playVideoUri.collectAsState()
-    playVideo?.let { (uri, title) ->
-        VideoPlayerDialog(uriString = uri, title = title, onDismiss = { vm.dismissVideoPlayer() })
+    LaunchedEffect(jobId, status?.isComplete) {
+        if (status?.isComplete == true) vm.loadTaskPublish(jobId)
     }
+
+    playVideo?.let { (uri, title) -> VideoPlayerDialog(uriString = uri, title = title, onDismiss = { vm.dismissVideoPlayer() }) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(jobId) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(EngineIcons.ArrowBack, "Back")
-                    }
-                }
+                title = { Text(jobId, style = MaterialTheme.typography.titleMedium) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
+                navigationIcon = { IconActionButton(EngineIcons.ArrowBack, "Back", onClick = onBack) },
             )
-        }
+        },
     ) { pad ->
         Column(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(SpacingTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
             val currentStatus = status
             if (currentStatus == null) {
-                SquiggleLoader(Modifier.fillMaxWidth())
-                Text("Loading task details…", style = MaterialTheme.typography.bodyMedium)
+                CfLoading("Loading task…")
                 return@Column
             }
 
-            upload?.let {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(it.label, style = MaterialTheme.typography.bodyMedium)
-                        EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
-                    }
-                }
-            }
+            upload?.let { CfCard(tonalLevel = 2) { CfProgress(label = it.label, fraction = it.fraction) } }
 
-            // Status Card
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
+            // ---- Status ----
+            CfSection(title = "Status") {
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    CfChip(label = Pipeline.describe(currentStatus.state), color = cfStateColor(currentStatus.state))
+                    if (isSuperSeriesTask) CfChip(label = "Super Series part", color = MaterialTheme.colorScheme.secondary)
+                }
+                if (currentStatus.message.isNotBlank()) Text(currentStatus.message, style = MaterialTheme.typography.bodyMedium)
+                if (currentStatus.releaseTag.isNotBlank()) {
+                    Text("Release: ${currentStatus.releaseTag}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (currentStatus.runUrl.isNotBlank()) {
+                    OutlinedActionButton(
+                        label = "Open workflow run" + if (currentStatus.runId > 0) " #${currentStatus.runId}" else "",
+                        icon = EngineIcons.OpenInNew,
+                        onClick = {
+                            try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentStatus.runUrl))) }
+                            catch (_: Exception) { vm.toast("No browser available to open the run") }
+                        },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Status", style = MaterialTheme.typography.titleMedium)
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(Pipeline.describe(currentStatus.state)) }
-                        )
-                    }
-                    if (currentStatus.message.isNotBlank()) {
-                        Text(currentStatus.message, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    if (currentStatus.releaseTag.isNotBlank()) {
-                        Text("Release Tag: ${currentStatus.releaseTag}", style = MaterialTheme.typography.bodySmall)
-                    }
-                    // Fix #3: direct link to the GitHub Actions workflow run associated
-                    // with the current stage. run.workflow_run_url is already parsed into
-                    // TaskStatus (real example: .../actions/runs/34666886936) — purely a
-                    // missing UI affordance. Opens in the system browser.
-                    if (currentStatus.runUrl.isNotBlank()) {
-                        OutlinedButton(
-                            onClick = {
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(currentStatus.runUrl)))
-                                } catch (_: Exception) {
-                                    vm.toast("No browser available to open the run")
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(EngineIcons.OpenInNew, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Open Workflow Run" + if (currentStatus.runId > 0) " #${currentStatus.runId}" else "")
-                        }
-                    }
+                    )
                 }
             }
 
-            // Awaiting Torrent Selection — user must pick which video inside
-            // the torrent to render (same step the Telegram bot used to ask for).
+            // ---- Super Series queue (anchor) ----
+            superState?.let { sp ->
+                val total = sp.optInt("total_parts", 0)
+                val spawned = sp.optJSONArray("spawned")?.length() ?: 0
+                CfSection(title = "Super Series queue", subtitle = "Parts dispatch automatically in sequence; a failed part halts the chain until it is restarted.") {
+                    CfChip(label = "$spawned / $total parts dispatched", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            // ---- Torrent selection ----
             if (currentStatus.state == "awaiting_torrent_selection") {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Select Video From Torrent", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "The torrent contains more than one file (or the pipeline needs your confirmation). Pick the video to process.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        if (torrentSubmitting || upload != null) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                SquiggleCircularLoader(Modifier.size(20.dp))
-                                Text("Submitting selection…", style = MaterialTheme.typography.bodySmall)
-                            }
-                        } else if (torrentFiles.isEmpty()) {
-                            Text(
-                                "Waiting for the pipeline to list the torrent contents… this page refreshes automatically.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                CfSection(title = "Select the video inside the torrent", subtitle = "The torrent holds more than one file — pick the one to process.") {
+                    when {
+                        torrentSubmitting || upload != null -> CfProgress(label = "Submitting selection…", fraction = null)
+                        torrentFiles.isEmpty() -> CfLoading("Waiting for the pipeline to list the torrent contents…")
+                        else -> torrentFiles.forEach { opt ->
+                            OutlinedActionButton(
+                                label = opt.name + if (opt.sizeBytes > 0) "  ·  " + vm.formatBytes(opt.sizeBytes) else "",
+                                onClick = { vm.submitTorrentSelection(jobId, opt.index) },
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            SquiggleLoader(Modifier.fillMaxWidth())
-                        } else {
-                            torrentFiles.forEach { opt ->
-                                OutlinedButton(
-                                    onClick = { vm.submitTorrentSelection(jobId, opt.index) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Text(
-                                            opt.name,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 2
-                                        )
-                                        if (opt.sizeBytes > 0) {
-                                            val mb = opt.sizeBytes / (1024.0 * 1024.0)
-                                            Text(
-                                                if (mb >= 1024) "%.2f GB".format(mb / 1024.0) else "%.1f MB".format(mb),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
             }
 
-            // "Copy Agent Prompt" button (available when awaiting_plan or complete)
+            // ---- Copy agent prompt ----
             if (currentStatus.state == "awaiting_plan" || currentStatus.isComplete) {
-                val loginCreds by vm.login.collectAsState()
-                Button(
+                ActionButton(
+                    label = "Copy agent prompt",
+                    icon = EngineIcons.Copy,
                     onClick = {
-                        val promptText = AgentPromptBuilder.build(currentStatus, request, loginCreds?.owner ?: "motionssalt", loginCreds?.repo ?: "clipforge")
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("ClipForge Agent Prompt", promptText))
-                        vm.toast("Agent prompt copied to clipboard!")
+                        val text = AgentPromptBuilder.build(
+                            currentStatus, request,
+                            login?.owner ?: "motionssalt", login?.repo ?: "clipforge",
+                        )
+                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("ClipForge Agent Prompt", text))
+                        vm.toast("Agent prompt copied")
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            // ---- Plan submission ----
+            if (currentStatus.state == "awaiting_plan") {
+                CfSection(
+                    title = if (isSuperSeriesTask) "Submit the Super Series plan" else "Submit production.json",
+                    subtitle = if (isSuperSeriesTask)
+                        "ONE whole-series document covering every part. Part 1 starts immediately; the rest chain automatically."
+                    else "Paste the generated JSON or upload the file.",
                 ) {
-                    Icon(EngineIcons.Copy, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Copy Agent Prompt to Clipboard")
+                    OutlinedActionButton(
+                        label = "Upload .json file",
+                        onClick = { planFilePicker.launch("application/json") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = rawPlanText,
+                        onValueChange = {
+                            rawPlanText = it
+                            planErrors = if (it.isBlank()) emptyList()
+                            else if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(it).errors
+                            else PlanValidator.validate(it)
+                        },
+                        label = { Text(if (isSuperSeriesTask) "Super-plan JSON" else "production.json") },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp, max = 320.dp),
+                        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    )
+                    if (planErrors.isNotEmpty()) {
+                        Text(
+                            "Validation errors:\n" + planErrors.joinToString("\n• ", "• "),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    ActionButton(
+                        label = if (isSuperSeriesTask) "Submit plan — Part 1 starts now" else "Submit plan & start Stage B",
+                        busy = busyOf(vm, "submit_super") || upload != null,
+                        enabled = rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
+                        onClick = {
+                            if (isSuperSeriesTask) vm.submitSuperPlan(jobId, rawPlanText) { rawPlanText = ""; planErrors = emptyList() }
+                            else vm.submitProductionPlan(jobId, rawPlanText) { rawPlanText = ""; planErrors = emptyList() }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
-            // Awaiting Plan Section
-            if (currentStatus.state == "awaiting_plan") {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            if (isSuperSeriesTask) "Provide the Super Series super-plan" else "Provide production.json",
-                            style = MaterialTheme.typography.titleMedium
+            // ---- Video ready ----
+            if (currentStatus.isComplete) {
+                CfSection(title = "Video ready") {
+                    val alreadyDownloaded = remember(downloadedVideo, jobId) { vm.downloadedVideoFor(jobId) }
+                    when {
+                        downloadState.isDownloading -> CfProgress(
+                            label = "${downloadState.downloadedText} / ${downloadState.totalText} · ${downloadState.speedText}",
+                            fraction = downloadState.progress,
                         )
-                        Text(
-                            if (isSuperSeriesTask)
-                                "This is a Super Series task — paste/upload the ONE super-plan document covering EVERY part (no size truncation). It is validated exactly as the backend validates it; Part 1 dispatches immediately, the rest chain automatically."
-                            else
-                                "Paste the generated JSON plan below or upload it directly from file storage.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = { planFilePicker.launch("application/json") },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Upload .json File")
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = rawPlanText,
-                            onValueChange = {
-                                rawPlanText = it
-                                planErrors = if (it.isBlank()) emptyList()
-                                else if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(it).errors
-                                else PlanValidator.validate(it)
-                            },
-                            label = { Text(if (isSuperSeriesTask) "Paste the super-plan JSON" else "Paste raw production.json") },
-                            placeholder = { Text(if (isSuperSeriesTask) """{"series_id": "...", "parts": [...]}""" else """{"video_duration_seconds": 120, ...}""") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 160.dp, max = 320.dp),
-                            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
-                        )
-
-                        if (planErrors.isNotEmpty()) {
-                            Text(
-                                text = "Validation Errors:\n" + planErrors.joinToString("\n• ", "• "),
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall
+                        alreadyDownloaded != null -> {
+                            ActionButton(
+                                label = "Play final video",
+                                icon = EngineIcons.Play,
+                                onClick = { vm.playDownloaded(jobId, alreadyDownloaded.optString("name").ifBlank { "$jobId.mp4" }) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            OutlinedActionButton(
+                                label = "Download again",
+                                icon = EngineIcons.Download,
+                                onClick = {
+                                    val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
+                                    vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
-
-                        // Busy guard: one tap disables the button and shows a
-                        // spinner until the submit coroutine returns — prevents
-                        // double-fire (operator report: no feedback -> repeated taps -> duplicate-submit errors).
-                        var submitting by remember { mutableStateOf(false) }
-                        Button(
+                        else -> ActionButton(
+                            label = "Download final MP4",
+                            icon = EngineIcons.Download,
                             onClick = {
-                                if (submitting) return@Button
-                                submitting = true
-                                if (isSuperSeriesTask) {
-                                    vm.submitSuperPlan(jobId, rawPlanText) {
-                                        submitting = false
-                                        rawPlanText = ""
-                                        planErrors = emptyList()
+                                val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
+                                vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+
+            // ---- Zernio publish card (completed tasks) ----
+            if (currentStatus.isComplete && settings.zernioEnabled) {
+                val pub = publish ?: ZernioPublish.TaskPublishState("not_requested")
+                CfSection(title = "Publishing", subtitle = ZernioPublish.statusLabel(pub.status)) {
+                    CfChip(
+                        label = ZernioPublish.statusLabel(pub.status),
+                        color = when (pub.status) {
+                            "published" -> MaterialTheme.colorScheme.tertiary
+                            "failed", "partial" -> MaterialTheme.colorScheme.error
+                            "publishing", "scheduled" -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                        ActionButton(
+                            label = if (pub.status == "published") "Publish again" else "Publish now",
+                            busy = busyOf(vm, "publish_task"),
+                            onClick = { vm.publishTask(jobId, "publish_now") },
+                        )
+                        TonalActionButton(
+                            label = "Smart schedule",
+                            busy = busyOf(vm, "publish_task"),
+                            onClick = { vm.publishTask(jobId, "smart_schedule") },
+                        )
+                        OutlinedActionButton(
+                            label = "Schedule for…",
+                            busy = busyOf(vm, "publish_task"),
+                            onClick = { scheduleInput = ""; showScheduleDialog = true },
+                        )
+                    }
+                    pub.posts.forEach { post ->
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = ElevationTokens.tonalContainerColor(2),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(Modifier.padding(SpacingTokens.Spacing.sm), verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        post.platform.replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    CfChip(
+                                        label = post.status,
+                                        color = if (post.status == "failed") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                if (post.scheduledFor.isNotBlank()) {
+                                    Text("Scheduled: ${post.scheduledFor}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (post.message.isNotBlank()) {
+                                    Text(post.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                                    if (post.status == "failed") {
+                                        TextActionButton(label = "Retry", busy = busyOf(vm, "zernio_post"),
+                                            onClick = { vm.zernioPostAction(jobId, "retry", post.postId) })
                                     }
-                                } else {
-                                    vm.submitProductionPlan(jobId, rawPlanText) {
-                                        submitting = false
-                                        rawPlanText = ""
-                                        planErrors = emptyList()
+                                    if (post.status != "published" && post.status != "publishing") {
+                                        TextActionButton(label = "Publish now", busy = busyOf(vm, "zernio_post"),
+                                            onClick = { vm.zernioPostAction(jobId, "publish_now", post.postId) })
+                                    }
+                                    if (post.status == "scheduled") {
+                                        TextActionButton(label = "Reschedule", busy = busyOf(vm, "zernio_post"),
+                                            onClick = { rescheduleInput = post.scheduledFor; reschedulePost = post })
+                                        TextActionButton(label = "Cancel", destructive = true, busy = busyOf(vm, "zernio_post"),
+                                            onClick = { cancelPost = post })
                                     }
                                 }
-                            },
-                            enabled = !submitting && rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (submitting) {
-                                SquiggleCircularLoader(Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (isSuperSeriesTask) "Starting Part 1…" else "Starting Stage B…")
-                            } else {
-                                Text(if (isSuperSeriesTask) "Submit Super-Plan (Part 1 starts now; the rest chain automatically)" else "Submit Plan & Start Stage B Rendering")
                             }
                         }
                     }
                 }
             }
 
-            // Completed Section: Save / Play Video (fixes 5 + 6)
-            if (currentStatus.isComplete) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Video Ready", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "The rendered vertical video is ready in the GitHub release.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        // Session-10 fix #2: verify the recorded download against real
-                        // device storage on every screen open — a stale registry entry
-                        // (deleted / never-finished file) must show Download, not Play.
-                        val alreadyDownloaded = remember(downloadedVideo, jobId) { vm.downloadedVideoFor(jobId) }
-                        if (downloadState.isDownloading) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                EngineLinearWavyProgress(progress = { downloadState.progress },
-                                    modifier = Modifier.fillMaxWidth())
-                                // Fix #6 — downloaded + TOTAL size alongside the speed.
-                                Text(
-                                    "${downloadState.downloadedText} / ${downloadState.totalText} · ${downloadState.speedText}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        } else if (alreadyDownloaded != null) {
-                            // Fix #5 — downloaded before: Play instead of Download.
-                            Button(
-                                onClick = { vm.playDownloaded(jobId, alreadyDownloaded.optString("name").ifBlank { "$jobId.mp4" }) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Play, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Play Final Video (${alreadyDownloaded.optString("name")})")
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
-                                    vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Download, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Download Again")
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    val tag = currentStatus.releaseTag.ifBlank { "clipforge-$jobId" }
-                                    vm.saveVideoToMovies(tag, "$jobId.mp4", jobId, currentStatus.seriesId)
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Download, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Download Final MP4")
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Fix #4 — Start Next Part for a completed manual series part. The button's
-            // presence/absence mirrors the bot's startNextSeriesPart exactly: it only
-            // appears when manualSeriesContinuation yields a next part AND no
-            // stage-a-request.json/status.json exists yet for the next job id
-            // (deleting that next part makes the button reappear, just like the bot).
-            // Super Series parts NEVER get a Start Next Part button — that control
-            // belongs only to ordinary Series Mode. Parts 2..N dispatch automatically.
+            // ---- Series continuation (ordinary series only) ----
             (if (isSuperSeriesTask) null else nextPart)?.let { np ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Series Continuation", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Series ${np.continuation.seriesId} — Part ${np.continuation.part - 1} finished at ${np.continuation.startSeconds}s.",
-                            style = MaterialTheme.typography.bodySmall
+                CfSection(title = "Series continuation", subtitle = "Series ${np.continuation.seriesId} — Part ${np.continuation.part - 1} finished at ${np.continuation.startSeconds}s.") {
+                    if (np.exists) {
+                        Text("Part ${np.continuation.part} already exists as task ${np.nextId}", style = MaterialTheme.typography.bodyMedium)
+                        OutlinedActionButton(label = "Re-check ${np.nextId}", onClick = { vm.refreshNextPart(jobId) }, modifier = Modifier.fillMaxWidth())
+                    } else {
+                        ActionButton(
+                            label = "Start next part (Part ${np.continuation.part})",
+                            icon = EngineIcons.Play,
+                            busy = busyOf(vm, "start_next"),
+                            onClick = { vm.startNextSeriesPart(jobId) },
+                            modifier = Modifier.fillMaxWidth(),
                         )
-                        if (np.exists) {
-                            Text(
-                                "Part ${np.continuation.part} already exists as task ${np.nextId}",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            OutlinedButton(
-                                onClick = { vm.refreshNextPart(jobId) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Re-check ${np.nextId}")
-                            }
-                        } else {
-                            val startBusy = busyOps.contains("start_next")
-                            Button(
-                                onClick = { vm.startNextSeriesPart(jobId) },
-                                enabled = !startBusy,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Play, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Start Next Part (Part ${np.continuation.part})")
-                            }
-                        }
                     }
                 }
             }
 
-            // ---------------- Stage Controls (fix #4) ----------------
-            // Availability per the operator's explicit rules, union'd with the bot's
-            // taskKeyboard display rules (runtime.js):
-            //   Restart Stage A — whenever the task IS at Stage A (queued / running /
-            //   awaiting torrent selection) or has failed (error/cancelled — the bot
-            //   always offers Restart A there, including Stage-B failures: re-run from
-            //   scratch). The bot's restarta action itself has no guard.
-            //   Restart Stage B — whenever a production.json exists (operator rule:
-            //   "has reached or passed Stage A"); the bot's bug-15 fallback (error/
-            //   cancelled + message says Stage B ran) keeps the button reachable when
-            //   the plan read failed — the tap then hits the bot-exact guard message.
-            //   Cancel — whenever a stage is actively running or dispatched; both bot
-            //   branches are implemented (Actions API cancel / local status merge).
+            // ---- Stage controls ----
             val state = currentStatus.state
             val stageBStarted = Regex("stage b", RegexOption.IGNORE_CASE).containsMatchIn(currentStatus.message)
             val atStageA = state in setOf("queued", "stage_a_running", "awaiting_torrent_selection")
             val failedTask = state == "error" || state == "cancelled"
             val canRestartA = atStageA || failedTask
-            // Super Series scope rule: only Stage A or the CURRENT part's Stage B may
-            // be restarted/cancelled — an already-completed part shows none (absent,
-            // not disabled).
-            val canRestartB = (plan != null || (failedTask && stageBStarted)) &&
-                !(isSuperSeriesTask && state == "complete")
-            val canCancel = state in setOf(
-                "queued", "stage_a_running", "stage_b_queued", "stage_b_running"
-            )
-            if (canRestartA || canCancel) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Stage Controls", style = MaterialTheme.typography.titleMedium)
-                        if (canRestartA) {
-                            Button(
-                                onClick = { vm.restartStageA(jobId) },
-                                enabled = !busyOps.contains("restart_a"),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Restart, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Restart Stage A")
-                            }
-                        }
-                        if (canRestartB) {
-                            Button(
-                                onClick = { vm.restartStageB(jobId) },
-                                enabled = !busyOps.contains("restart_b"),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Restart, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Restart Stage B")
-                            }
-                            if (plan == null) {
-                                Text(
-                                    "No production.json found on the clone — restarting Stage B will show the bot's guard message unless a plan is uploaded first.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (canCancel) {
-                            OutlinedButton(
-                                onClick = { showCancelConfirm = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(EngineIcons.Cancel, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Cancel Running Stage")
-                            }
+            val canRestartB = (plan != null || (failedTask && stageBStarted)) && !(isSuperSeriesTask && state == "complete")
+            val canCancel = state in setOf("queued", "stage_a_running", "stage_b_queued", "stage_b_running")
+            if (canRestartA || canRestartB || canCancel) {
+                CfSection(title = "Stage controls") {
+                    if (canRestartA) ActionButton(
+                        label = "Restart Stage A", icon = EngineIcons.Restart,
+                        busy = busyOf(vm, "restart_a"),
+                        onClick = { vm.restartStageA(jobId) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (canRestartB) {
+                        TonalActionButton(
+                            label = "Restart Stage B", icon = EngineIcons.Restart,
+                            busy = busyOf(vm, "restart_b"),
+                            onClick = { vm.restartStageB(jobId) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (plan == null) {
+                            Text(
+                                "No production.json yet — Stage B restart will ask you to upload one first.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
+                    if (canCancel) OutlinedActionButton(
+                        label = "Cancel running stage", icon = EngineIcons.Cancel, destructive = true,
+                        busy = busyOf(vm, "cancel_stage"),
+                        onClick = { showCancelConfirm = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
-            // Bot confirmCancelStageB, verbatim wording — the real cancel happens
-            // only on Yes (both branches: Actions API run cancel / local status write).
-            if (showCancelConfirm) {
-                AlertDialog(
-                    onDismissRequest = { showCancelConfirm = false },
-                    title = { Text("Cancel the running stage for task ${jobId.substringAfter("manual-")}?") },
-                    text = {
-                        Text("The running render is stopped and the job moves to cancelled. You can restart it afterwards.")
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showCancelConfirm = false
-                                vm.cancelRunningStage(jobId)
-                            }
-                        ) { Text("Yes, cancel") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showCancelConfirm = false }) { Text("Back") }
-                    }
-                )
-            }
+            // ---- LIVE LOGGER (v23-R5) ----
+            LoggerCard(vm = vm, logs = logs, state = currentStatus.state)
+        }
+    }
 
-            // Live Execution Logs — GitHub Actions style (fix #3): one collapsible
-            // section per pipeline step with a header (name + status icon + duration),
-            // detail lines collapsed by default; the CURRENTLY-RUNNING step is
-            // auto-expanded and auto-collapses when it finishes and the next starts.
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Live Execution Logs", style = MaterialTheme.typography.titleMedium)
-                    if (logs.isEmpty()) {
-                        Text(
-                            "Waiting for the first action…",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        val listState = rememberLazyListState()
-                        // Follow the action: scroll to the running step (or the latest
-                        // section when nothing is running) whenever the log updates.
-                        LaunchedEffect(logs) {
-                            if (logs.isNotEmpty()) {
-                                val runningIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
-                                val target = if (runningIdx >= 0) runningIdx else logs.size - 1
-                                listState.animateScrollToItem(target.coerceAtMost(logs.size - 1))
-                            }
-                        }
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 140.dp, max = 380.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            items(logs, key = { it.key }) { step ->
-                                LogStepRow(step, vm.isStepExpanded(step)) { vm.toggleStepExpanded(step.key) }
-                            }
-                        }
+    // ---- dialogs ----
+    if (showCancelConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirm = false },
+            title = { Text("Cancel the running stage for task ${jobId.substringAfter("manual-")}?") },
+            text = { Text("The running render is stopped and the job moves to cancelled. You can restart it afterwards.") },
+            confirmButton = {
+                TextActionButton(label = "Yes, cancel", destructive = true, busy = busyOf(vm, "cancel_stage"), onClick = {
+                    showCancelConfirm = false
+                    vm.cancelRunningStage(jobId)
+                })
+            },
+            dismissButton = { TextActionButton(label = "Back", onClick = { showCancelConfirm = false }) },
+        )
+    }
+    if (showScheduleDialog) {
+        AlertDialog(
+            onDismissRequest = { showScheduleDialog = false },
+            title = { Text("Schedule this video") },
+            text = {
+                OutlinedTextField(
+                    value = scheduleInput, onValueChange = { scheduleInput = it },
+                    label = { Text("Local time") },
+                    placeholder = { Text("2026-09-20T17:30") },
+                    supportingText = { Text("YYYY-MM-DDTHH:MM, in your publishing timezone (Settings → Publishing).") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextActionButton(label = "Schedule", enabled = ZernioPublish.validDateTime(scheduleInput), onClick = {
+                    showScheduleDialog = false
+                    vm.publishTask(jobId, "manual_schedule", scheduleInput)
+                })
+            },
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showScheduleDialog = false }) },
+        )
+    }
+    reschedulePost?.let { post ->
+        AlertDialog(
+            onDismissRequest = { reschedulePost = null },
+            title = { Text("Reschedule ${post.platform} post") },
+            text = {
+                OutlinedTextField(
+                    value = rescheduleInput, onValueChange = { rescheduleInput = it },
+                    label = { Text("Local time") },
+                    placeholder = { Text("2026-09-20T17:30") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextActionButton(label = "Reschedule", enabled = ZernioPublish.validDateTime(rescheduleInput), onClick = {
+                    vm.zernioPostAction(jobId, "reschedule", post.postId, "manual_schedule", rescheduleInput)
+                    reschedulePost = null
+                })
+            },
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { reschedulePost = null }) },
+        )
+    }
+    cancelPost?.let { post ->
+        AlertDialog(
+            onDismissRequest = { cancelPost = null },
+            title = { Text("Cancel ${post.platform} post?") },
+            text = { Text("The scheduled post is cancelled. You can schedule it again afterwards.") },
+            confirmButton = {
+                TextActionButton(label = "Cancel post", destructive = true, busy = busyOf(vm, "zernio_post"), onClick = {
+                    vm.zernioPostAction(jobId, "cancel", post.postId)
+                    cancelPost = null
+                })
+            },
+            dismissButton = { TextActionButton(label = "Back", onClick = { cancelPost = null }) },
+        )
+    }
+}
+
+/* ------------------------------ live logger ----------------------------- */
+
+@Composable
+private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.LogStep>, state: String) {
+    val context = LocalContext.current
+    CfSection(title = "Live execution log") {
+        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+            TextActionButton(label = "Copy log", onClick = {
+                val text = logs.joinToString("\n") { step ->
+                    "### " + step.name + "\n" + step.details.joinToString("\n") { it.text }
+                }
+                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                    .setPrimaryClip(ClipData.newPlainText("ClipForge log", text))
+                vm.toast("Log copied")
+            })
+        }
+        when {
+            logs.isEmpty() -> CfLoading(
+                if (state == "queued" || state.endsWith("queued")) "Waiting for a GitHub runner — steps appear here as soon as the run starts…"
+                else "Waiting for the first step…",
+            )
+            else -> {
+                val listState = rememberLazyListState()
+                LaunchedEffect(logs) {
+                    if (logs.isNotEmpty()) {
+                        val runningIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
+                        val target = if (runningIdx >= 0) runningIdx else logs.size - 1
+                        listState.animateScrollToItem(target.coerceAtMost(logs.size - 1))
+                    }
+                }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                ) {
+                    items(logs, key = { it.key }) { step ->
+                        LogStepRow(step, vm.isStepExpanded(step)) { vm.toggleStepExpanded(step.key) }
                     }
                 }
             }
@@ -854,90 +723,36 @@ fun TaskDetailScreen(
     }
 }
 
-/** Status color for a pipeline step — success/running/failed/pending (fix #3). */
-@Composable
-private fun logLevelColor(level: ClipForgeViewModel.LogLevel): androidx.compose.ui.graphics.Color {
-    val scheme = MaterialTheme.colorScheme
-    val success = androidx.compose.ui.graphics.Color(0xFF2E7D32)
-    val skipped = androidx.compose.ui.graphics.Color(0xFF9A6A00)
-    return when (level) {
-        ClipForgeViewModel.LogLevel.SUCCESS -> success
-        ClipForgeViewModel.LogLevel.FAILURE -> scheme.error
-        ClipForgeViewModel.LogLevel.SKIPPED -> skipped
-        ClipForgeViewModel.LogLevel.RUNNING -> scheme.primary
-        ClipForgeViewModel.LogLevel.CANCELLED -> scheme.outline
-        ClipForgeViewModel.LogLevel.PENDING -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
-        ClipForgeViewModel.LogLevel.INFO -> scheme.onSurfaceVariant
-    }
-}
-
-@Composable
-private fun logLevelIcon(level: ClipForgeViewModel.LogLevel): androidx.compose.ui.graphics.vector.ImageVector = when (level) {
-    ClipForgeViewModel.LogLevel.SUCCESS -> EngineIcons.CheckCircle
-    ClipForgeViewModel.LogLevel.FAILURE -> EngineIcons.Cancel
-    ClipForgeViewModel.LogLevel.RUNNING -> EngineIcons.Bolt
-    ClipForgeViewModel.LogLevel.CANCELLED -> EngineIcons.Cancel
-    ClipForgeViewModel.LogLevel.SKIPPED -> EngineIcons.ArrowBack // visually "skipped over"
-    ClipForgeViewModel.LogLevel.PENDING -> EngineIcons.CheckCircle
-    ClipForgeViewModel.LogLevel.INFO -> EngineIcons.CheckCircle
-}
-
-/**
- * One GitHub Actions-style collapsible pipeline step (fix #3): status-colored left
- * border + status icon, step name, live/elapsed duration, and detail lines in
- * readable monospace shown only while expanded.
- */
 @Composable
 private fun LogStepRow(step: ClipForgeViewModel.LogStep, expanded: Boolean, onToggle: () -> Unit) {
-    val accent = logLevelColor(step.level)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
-            .clickable { onToggle() }
+    val accent = cfStatusColor(step.level)
+    Surface(
+        onClick = onToggle,
+        shape = MaterialTheme.shapes.medium,
+        color = ElevationTokens.tonalContainerColor(2),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(IntrinsicSize.Min.let { 56.dp })
-                .background(accent)
-        )
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    logLevelIcon(step.level),
-                    contentDescription = step.level.name,
-                    tint = accent,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    step.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                if (step.durationText.isNotBlank()) {
-                    Text(
-                        step.durationText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Row(Modifier.padding(SpacingTokens.Spacing.sm)) {
+            // Status-colored timeline node.
+            Box(
+                modifier = Modifier
+                    .padding(top = SpacingTokens.Spacing.xxs)
+                    .size(SpacingTokens.Spacing.sm)
+                    .background(accent, CircleShape),
+            )
+            Spacer(Modifier.width(SpacingTokens.Spacing.sm))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(step.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), color = accent)
+                    if (step.durationText.isNotBlank()) {
+                        Text(step.durationText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    if (expanded) "▾" else "▸",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (expanded) {
-                Spacer(Modifier.height(6.dp))
-                step.details.forEach { d ->
-                    Text(
-                        text = d.text,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        color = logLevelColor(d.level)
-                    )
+                if (step.level == ClipForgeViewModel.LogLevel.RUNNING) {
+                    EngineLinearWavyProgress(Modifier.fillMaxWidth())
+                }
+                if (expanded) {
+                    step.details.forEach { d -> CfLogLine(d.text, cfStatusColor(d.level)) }
                 }
             }
         }

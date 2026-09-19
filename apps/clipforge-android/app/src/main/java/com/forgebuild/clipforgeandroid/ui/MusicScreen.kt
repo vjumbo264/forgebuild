@@ -1,17 +1,35 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
 
 package com.forgebuild.clipforgeandroid.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -19,19 +37,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.MusicTrack
-import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.ElevationTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 
-/** Music library (v22 task-123 rebuild): wavy engine progress everywhere, the
- *  shared busy-aware buttons for every action, tonal cards. */
-@OptIn(ExperimentalFoundationApi::class)
+/* ============================================================================
+ *  V23 MUSIC LIBRARY — rebuilt from scratch on the expressive stack.
+ *  Upload, streamed cached previews, default-track assignment, multi-select
+ *  delete — all through busy-aware action buttons.
+ * ============================================================================ */
+
 @Composable
-fun MusicScreen(
-    vm: ClipForgeViewModel,
-    onBack: () -> Unit,
-) {
+fun MusicScreen(vm: ClipForgeViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val musicList by vm.music.collectAsState()
     val refreshing by vm.musicRefreshing.collectAsState()
@@ -39,10 +56,12 @@ fun MusicScreen(
     val upload by vm.upload.collectAsState()
     val audioState by AudioPreview.state.collectAsState()
     val login by vm.login.collectAsState()
-    LaunchedEffect(Unit) { vm.onMusicOpen() }
 
-    var selectedTracks by remember { mutableStateOf(setOf<MusicTrack>()) }
+    var selectedPaths by remember { mutableStateOf(setOf<String>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { vm.onMusicOpen() }
+    DisposableEffect(Unit) { onDispose { AudioPreview.stop() } }
 
     val trackPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
@@ -57,43 +76,32 @@ fun MusicScreen(
         }
     }
 
-    DisposableEffect(Unit) { onDispose { AudioPreview.stop() } }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (selectedTracks.isEmpty()) "Music Library" else "${selectedTracks.size} Selected") },
+                title = { Text(if (selectedPaths.isEmpty()) "Music library" else "${selectedPaths.size} selected") },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
-                navigationIcon = {
-                    IconActionButton(EngineIcons.ArrowBack, "Back", onClick = onBack)
-                },
+                navigationIcon = { IconActionButton(EngineIcons.ArrowBack, "Back", onClick = onBack) },
                 actions = {
-                    if (selectedTracks.isNotEmpty()) {
-                        IconActionButton(Icons.Default.Delete, "Delete selected", onClick = { showDeleteDialog = true })
+                    if (selectedPaths.isNotEmpty()) {
+                        IconActionButton(EngineIcons.Cancel, "Delete selected", onClick = { showDeleteDialog = true })
                     } else {
-                        IconActionButton(Icons.Default.Refresh, "Refresh", onClick = { vm.refreshMusic() }, busy = refreshing)
+                        IconActionButton(EngineIcons.Restart, "Refresh", onClick = { vm.refreshMusic() }, busy = refreshing)
                     }
                 },
             )
         },
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
-            if (refreshing) {
-                EngineLinearWavyProgress(Modifier.fillMaxWidth())
-            }
+            if (refreshing) com.forgebuild.engine.ui.components.EngineLinearWavyProgress(Modifier.fillMaxWidth())
 
             upload?.let {
-                Column(
-                    Modifier.padding(SpacingTokens.Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs),
-                ) {
-                    Text(it.label, style = MaterialTheme.typography.bodySmall)
-                    EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
-                }
+                Box(Modifier.padding(SpacingTokens.Spacing.md)) { CfProgress(label = it.label, fraction = it.fraction) }
             }
 
             ActionButton(
-                label = "Upload New Audio Track",
+                label = "Upload new audio track",
+                icon = EngineIcons.Add,
                 onClick = { trackPicker.launch("audio/*") },
                 busy = upload != null,
                 modifier = Modifier
@@ -103,49 +111,29 @@ fun MusicScreen(
 
             if (musicList.isEmpty() && !refreshing) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EngineEmptyState(
-                        title = "No tracks yet",
-                        body = "Upload an audio track to use as background music in your renders.",
-                    )
+                    CfEmptyState(title = "No tracks yet", body = "Upload an audio track to use as background music in your renders.")
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(SpacingTokens.Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
                 ) {
-                    items(musicList, key = { it.path }) { track ->
-                        val isSelected = selectedTracks.contains(track)
+                    items(musicList, key = { it.path }) { track: MusicTrack ->
+                        val isSelected = selectedPaths.contains(track.path)
                         val isDefault = defaultPath == track.path
                         val previewUrl = vm.audioPreviewUrl(track.path)
-                        val isThisTrackActive = audioState.url == previewUrl
+                        val isThisActive = audioState.url == previewUrl
 
-                        Card(
-                            colors = if (isSelected)
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                            else CardDefaults.cardColors(containerColor = ElevationTokens.tonalContainerColor(1)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .animateItem()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (selectedTracks.isNotEmpty()) {
-                                            selectedTracks = if (isSelected) selectedTracks - track else selectedTracks + track
-                                        }
-                                    },
-                                    onLongClick = {
-                                        selectedTracks = if (isSelected) selectedTracks - track else selectedTracks + track
-                                    },
-                                ),
+                        CfCard(
+                            tonalLevel = if (isSelected) 3 else 1,
+                            onClick = {
+                                if (selectedPaths.isNotEmpty())
+                                    selectedPaths = if (isSelected) selectedPaths - track.path else selectedPaths + track.path
+                            },
                         ) {
-                            Column(
-                                Modifier.padding(SpacingTokens.Spacing.md - SpacingTokens.Spacing.xxs),
-                                verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
                                         Text(track.name, style = MaterialTheme.typography.titleSmall)
                                         Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
@@ -155,65 +143,42 @@ fun MusicScreen(
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             if (isDefault) {
-                                                Text(
-                                                    "• Default Track",
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                )
+                                                Text("Default track", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                                             }
                                         }
                                     }
-
                                     IconActionButton(
-                                        icon = if (isThisTrackActive && audioState.isPlaying) EngineIcons.Pause else EngineIcons.Play,
-                                        contentDescription = if (isThisTrackActive && audioState.isPlaying) "Pause" else "Play",
-                                        busy = isThisTrackActive && audioState.isBuffering,
+                                        icon = if (isThisActive && audioState.isPlaying) EngineIcons.Pause else EngineIcons.Play,
+                                        contentDescription = if (isThisActive && audioState.isPlaying) "Pause" else "Play preview",
+                                        busy = isThisActive && audioState.isBuffering,
                                         onClick = {
                                             val pat = login?.pat ?: return@IconActionButton
                                             AudioPreview.toggle(context, previewUrl, pat)
                                         },
                                     )
-
                                     TextActionButton(
-                                        label = if (isDefault) "Unset" else "Set Default",
+                                        label = if (isDefault) "Unset" else "Set default",
                                         onClick = { vm.setDefaultMusic(if (isDefault) null else track.path) },
                                     )
-
-                                    if (selectedTracks.isNotEmpty()) {
+                                    if (selectedPaths.isNotEmpty()) {
                                         Checkbox(checked = isSelected, onCheckedChange = {
-                                            selectedTracks = if (isSelected) selectedTracks - track else selectedTracks + track
+                                            selectedPaths = if (isSelected) selectedPaths - track.path else selectedPaths + track.path
                                         })
                                     }
                                 }
-
-                                if (isThisTrackActive && (audioState.isPlaying || audioState.isPaused)) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
-                                        EngineLinearWavyProgress(
-                                            progress = {
-                                                if (audioState.durationMs > 0)
-                                                    (audioState.positionMs.toFloat() / audioState.durationMs).coerceIn(0f, 1f)
-                                                else 0f
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                        ) {
-                                            Text(
-                                                "${audioState.positionMs / 1000}s / ${audioState.durationMs / 1000}s",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                            if (audioState.isPaused) {
-                                                Text(
-                                                    "Paused",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        }
-                                    }
+                                if (isThisActive && (audioState.isPlaying || audioState.isPaused)) {
+                                    CfProgress(
+                                        label = "${audioState.positionMs / 1000}s / ${audioState.durationMs / 1000}s" +
+                                            if (audioState.isPaused) " — paused" else "",
+                                        fraction = if (audioState.durationMs > 0)
+                                            (audioState.positionMs.toFloat() / audioState.durationMs).coerceIn(0f, 1f) else 0f,
+                                    )
+                                }
+                                if (selectedPaths.isEmpty()) {
+                                    TextActionButton(
+                                        label = "Select",
+                                        onClick = { selectedPaths = selectedPaths + track.path },
+                                    )
                                 }
                             }
                         }
@@ -224,20 +189,19 @@ fun MusicScreen(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
+        val doomed = musicList.filter { selectedPaths.contains(it.path) }.toSet()
+        androidx.compose.material3.AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Tracks") },
-            text = { Text("Delete ${selectedTracks.size} audio track(s) from the repository?") },
+            title = { Text("Delete tracks") },
+            text = { Text("Delete ${doomed.size} audio track(s) from the repository?") },
             confirmButton = {
                 TextActionButton(label = "Delete", destructive = true, onClick = {
-                    vm.deleteMusic(selectedTracks)
-                    selectedTracks = emptySet()
+                    vm.deleteMusic(doomed)
+                    selectedPaths = emptySet()
                     showDeleteDialog = false
                 })
             },
-            dismissButton = {
-                TextActionButton(label = "Cancel", onClick = { showDeleteDialog = false })
-            },
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showDeleteDialog = false }) },
         )
     }
 }

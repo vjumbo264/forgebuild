@@ -1,25 +1,59 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+)
+
 package com.forgebuild.clipforgeandroid.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.SourceClassifier
-import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.ElevationTokens
+import com.forgebuild.engine.ui.theme.SpacingTokens
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/* ============================================================================
+ *  V23 NEW-TASK WIZARD — rebuilt from scratch.
+ *  Paste-anything source auto-detection (magnet checked before the generic URL
+ *  fallback, exactly like the backend wizard), torrent upload, duration presets
+ *  + custom dialog, background-music pick, Series + Super Series toggles, and a
+ *  busy-aware submit that gives immediate visible feedback and cannot
+ *  double-fire.
+ * ============================================================================ */
+
 @Composable
 fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     val context = LocalContext.current
@@ -27,40 +61,31 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     val settings by vm.settings.collectAsState()
     val musicTracks by vm.music.collectAsState()
     val defaultMusic by vm.defaultMusic.collectAsState()
-
     val isOriginal = vm.api?.isOriginalRepo() == true
 
-    // Fix #8 — bot parity (wizard.js): the operator never picks a source type; the
-    // pasted text is classified directly (magnet checked BEFORE the generic URL
-    // fallback — the session-08 ordering fix must not regress). Only a .torrent
-    // upload is still an explicit action (there is nothing to classify in text).
     var detectedSourceKind by remember { mutableStateOf<String?>(null) }
     var sourceValue by remember { mutableStateOf("") }
     var torrentBytes by remember { mutableStateOf<ByteArray?>(null) }
     var torrentFileName by remember { mutableStateOf("") }
 
-    // Fix #1 — load the music library AND the current default track the moment this
-    // screen opens; never rely on the Music settings screen having been visited.
-    LaunchedEffect(Unit) { vm.onNewTaskOpen() }
-
     var focus by remember { mutableStateOf("") }
     var durationSeconds by remember { mutableStateOf(120) }
     var customDurationText by remember { mutableStateOf("") }
+    var showCustomDialog by remember { mutableStateOf(false) }
     var isSeries by remember { mutableStateOf(settings.seriesDefault) }
     var seriesId by remember { mutableStateOf("") }
-    // Super Series is ON TOP of Series Mode — only meaningful when Series Mode is
-    // on, never on while Series Mode is off (backend wizard.js dependency).
     var isSuperSeries by remember { mutableStateOf(settings.seriesDefault && settings.superSeriesDefault) }
     var selectedMusicPath by remember { mutableStateOf(defaultMusic) }
+
+    LaunchedEffect(Unit) { vm.onNewTaskOpen() }
 
     val torrentPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
         try {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
-                if (bytes.size > 1024 * 1024) {
-                    vm.toast("Torrent file exceeds 1 MB limit")
-                } else {
+                if (bytes.size > 1024 * 1024) vm.toast("Torrent file exceeds the 1 MB limit")
+                else {
                     torrentBytes = bytes
                     torrentFileName = uri.lastPathSegment?.substringAfterLast('/') ?: "source.torrent"
                     vm.toast("Loaded $torrentFileName (${bytes.size / 1024} KB)")
@@ -75,293 +100,188 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
         if (seriesId.isBlank()) {
             isSeries = settings.seriesDefault
             isSuperSeries = settings.seriesDefault && settings.superSeriesDefault
-        } else if (!isSeries) {
-            isSuperSeries = false
-        }
+        } else if (!isSeries) isSuperSeries = false
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Video Task") }
+                title = { Text("New video task") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
             )
-        }
+        },
     ) { pad ->
         Column(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(SpacingTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
-            upload?.let {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(it.label, style = MaterialTheme.typography.bodyMedium)
-                        EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
-                    }
-                }
-            }
+            upload?.let { CfCard(tonalLevel = 2) { CfProgress(label = it.label, fraction = it.fraction) } }
 
-            // --- Source Selection ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Video Source", style = MaterialTheme.typography.titleMedium)
-
-                    OutlinedTextField(
-                        value = sourceValue,
-                        onValueChange = { raw ->
-                            sourceValue = raw
-                            // Live classification exactly like the bot's wizard step 1
-                            // (classifySourceText). MAGNET is checked BEFORE the generic
-                            // URL fallback — SourceClassifier preserves the bot's exact
-                            // ordering, so a magnet URI can never degrade into kind:url.
-                            detectedSourceKind = when (val verdict = SourceClassifier.classify(raw)) {
-                                is SourceClassifier.Result.Kind -> verdict.kind
-                                is SourceClassifier.Result.Invalid -> null
-                            }
+            CfSection(
+                title = "Video source",
+                subtitle = "Paste any link — the type is detected automatically — or upload a .torrent file.",
+            ) {
+                OutlinedTextField(
+                    value = sourceValue,
+                    onValueChange = { raw ->
+                        sourceValue = raw
+                        detectedSourceKind = when (val verdict = SourceClassifier.classify(raw)) {
+                            is SourceClassifier.Result.Kind -> verdict.kind
+                            is SourceClassifier.Result.Invalid -> null
+                        }
+                    },
+                    label = { Text("Link") },
+                    placeholder = { Text("https://… | Google Drive | magnet:?xt=… | t.me/channel/123") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                detectedSourceKind?.let { detected ->
+                    val gated = detected == "telegram_channel" && !isOriginal
+                    CfChip(
+                        label = when (detected) {
+                            "magnet" -> "Detected: magnet link"
+                            "drive" -> "Detected: Google Drive link"
+                            "url" -> "Detected: direct URL"
+                            "telegram_channel" -> if (gated) "Telegram channel (official repo only)" else "Detected: Telegram channel post"
+                            else -> "Detected: $detected"
                         },
-                        label = { Text("Paste a link — the app detects the type automatically") },
-                        placeholder = { Text("https://… | Google Drive | magnet:?xt=… | t.me/channel/123") },
-                        modifier = Modifier.fillMaxWidth()
+                        color = if (gated) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     )
-                    val detected = detectedSourceKind
-                    if (detected != null) {
-                        val gated = detected == "telegram_channel" && !isOriginal
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    when (detected) {
-                                        "magnet" -> "Detected: Magnet link"
-                                        "drive" -> "Detected: Google Drive link"
-                                        "url" -> "Detected: Direct URL"
-                                        "telegram_channel" -> if (gated) "Telegram channel (official repo only)" else "Detected: Telegram channel post"
-                                        else -> "Detected: $detected"
-                                    }
-                                )
-                            }
-                        )
-                    }
-
-                    Text("— or upload a torrent file instead —", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
+                ) {
+                    OutlinedActionButton(
+                        label = if (torrentFileName.isNotBlank()) "Change .torrent file" else "Pick .torrent file",
                         onClick = { torrentPicker.launch("application/x-bittorrent") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (torrentFileName.isNotBlank()) "Change .torrent file" else "Pick .torrent file")
-                    }
-                    if (torrentFileName.isNotBlank()) {
-                        Text("Selected: $torrentFileName (${(torrentBytes?.size ?: 0) / 1024} KB)", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-
-            // --- Options: Focus & Target Duration ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Production Options", style = MaterialTheme.typography.titleMedium)
-
-                    OutlinedTextField(
-                        value = focus,
-                        onValueChange = { focus = it },
-                        label = { Text("Focus or Theme (Optional)") },
-                        placeholder = { Text("e.g. Best goals, dramatic reveal, funny moments") },
-                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    Text("Target Spoken Narration Duration: ${durationSeconds}s", style = MaterialTheme.typography.bodyMedium)
-                    // Presets match the Telegram bot (TARGET_DURATIONS = 30/60/120/180/300).
-                    // Custom opens a real input dialog (the previous chip toggled state but
-                    // never surfaced a usable field, so a custom value could not be entered).
-                    val presets = listOf(30, 60, 120, 180, 300)
-                    val customSelected = durationSeconds !in presets
-                    var showCustomDialog by remember { mutableStateOf(false) }
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        presets.forEach { dur ->
-                            FilterChip(
-                                selected = durationSeconds == dur,
-                                onClick = { durationSeconds = dur },
-                                label = { Text("${dur}s") }
-                            )
-                        }
-                        FilterChip(
-                            selected = customSelected,
-                            onClick = {
-                                // Prefill the dialog with the current custom value (if any).
-                                customDurationText = durationSeconds.takeIf { it !in presets }?.toString() ?: ""
-                                showCustomDialog = true
-                            },
-                            label = { Text(if (customSelected) "Custom (${durationSeconds}s)" else "Custom") }
-                        )
-                    }
-
-                    if (showCustomDialog) {
-                        val typed = customDurationText.toIntOrNull()
-                        val valid = typed != null && typed in 1..36000
-                        AlertDialog(
-                            onDismissRequest = { showCustomDialog = false },
-                            title = { Text("Custom duration") },
-                            text = {
-                                OutlinedTextField(
-                                    value = customDurationText,
-                                    onValueChange = { customDurationText = it.filter { c -> c.isDigit() }.take(5) },
-                                    label = { Text("Duration (seconds)") },
-                                    placeholder = { Text("e.g. 45") },
-                                    supportingText = { Text("Target spoken narration length, 1–36000 seconds") },
-                                    isError = customDurationText.isNotEmpty() && !valid,
-                                    singleLine = true,
-                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        typed?.let { durationSeconds = it }
-                                        showCustomDialog = false
-                                    },
-                                    enabled = valid
-                                ) { Text("Apply") }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showCustomDialog = false }) { Text("Cancel") }
-                            }
-                        )
-                    }
-                }
-            }
-
-            // --- Music Selection ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Background Music", style = MaterialTheme.typography.titleMedium)
-
-                    // Bot wizard parity: default/none resolves to the Settings default
-                    // track at render time when one is configured, silence otherwise.
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(
-                            selected = selectedMusicPath == null,
-                            onClick = { selectedMusicPath = null }
-                        )
+                    if (torrentFileName.isNotBlank()) {
                         Text(
-                            if (defaultMusic != null) "Use saved default ($defaultMusic)" else "No music",
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-
-                    if (musicTracks.isEmpty()) {
-                        Text(
-                            "Library is empty — add tracks in Settings → Music library",
+                            "$torrentFileName (${(torrentBytes?.size ?: 0) / 1024} KB)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                    musicTracks.forEach { track ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = selectedMusicPath == track.path,
-                                onClick = { selectedMusicPath = track.path }
-                            )
-                            Text(track.name, modifier = Modifier.padding(start = 8.dp))
-                        }
                     }
                 }
             }
 
-            // --- Series Mode ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CfSection(title = "Production options") {
+                OutlinedTextField(
+                    value = focus, onValueChange = { focus = it },
+                    label = { Text("Focus or theme (optional)") },
+                    placeholder = { Text("e.g. best goals, dramatic reveal, funny moments") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("Target spoken narration: ${durationSeconds}s", style = MaterialTheme.typography.bodyMedium)
+                val presets = listOf(30, 60, 120, 180, 300)
+                val customSelected = durationSeconds !in presets
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                    presets.forEach { dur ->
+                        FilterChip(selected = durationSeconds == dur, onClick = { durationSeconds = dur }, label = { Text("${dur}s") })
+                    }
+                    FilterChip(
+                        selected = customSelected,
+                        onClick = {
+                            customDurationText = durationSeconds.takeIf { it !in presets }?.toString() ?: ""
+                            showCustomDialog = true
+                        },
+                        label = { Text(if (customSelected) "Custom (${durationSeconds}s)" else "Custom") },
+                    )
+                }
+            }
+
+            CfSection(title = "Background music", subtitle = "The saved default is used unless you pick a track here.") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = selectedMusicPath == null, onClick = { selectedMusicPath = null })
+                    Text(
+                        if (defaultMusic != null) "Saved default ($defaultMusic)" else "No music",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = SpacingTokens.Spacing.xs),
+                    )
+                }
+                if (musicTracks.isEmpty()) {
+                    Text(
+                        "Library is empty — add tracks under Settings → Music library.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                musicTracks.forEach { track ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = selectedMusicPath == track.path, onClick = { selectedMusicPath = track.path })
+                        Text(track.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = SpacingTokens.Spacing.xs))
+                    }
+                }
+            }
+
+            CfSection(title = "Series", subtitle = "Split the content into sequential parts.") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Series Mode", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = isSeries,
+                        onCheckedChange = { on ->
+                            isSeries = on
+                            if (!on) isSuperSeries = false // dependency: Series OFF forces Super OFF
+                        },
+                    )
+                }
+                if (isSeries) {
+                    OutlinedTextField(
+                        value = seriesId, onValueChange = { seriesId = it },
+                        label = { Text("Series ID (blank = auto-generate)") },
+                        placeholder = { Text("e.g. doc-episodes-01") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column {
-                            Text("Series Mode", style = MaterialTheme.typography.titleMedium)
-                            Text("Split content into sequential multi-part series", style = MaterialTheme.typography.bodySmall)
+                        Column(Modifier.weight(1f)) {
+                            Text("Super Series", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "One whole-series plan; parts dispatch automatically in sequence.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        Switch(
-                            checked = isSeries,
-                            onCheckedChange = {
-                                isSeries = it
-                                // dependency: Series Mode OFF forces Super Series OFF
-                                if (!it) isSuperSeries = false
-                            }
-                        )
-                    }
-
-                    if (isSeries) {
-                        OutlinedTextField(
-                            value = seriesId,
-                            onValueChange = { seriesId = it },
-                            label = { Text("Series ID (leave blank to auto-generate)") },
-                            placeholder = { Text("e.g. doc-episodes-01") },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        // Super Series toggle — only present while Series Mode is ON.
-                        HorizontalDivider()
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Super Series", style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Submit ONE whole-series super-plan; parts 2..N dispatch automatically on completion",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                            Switch(checked = isSuperSeries, onCheckedChange = { isSuperSeries = it })
-                        }
+                        Switch(checked = isSuperSeries, onCheckedChange = { isSuperSeries = it })
                     }
                 }
             }
 
-            // --- Submit Button ---
-            Button(
+            ActionButton(
+                label = if (upload != null) "Starting Stage A…" else "Start video analysis (Stage A)",
+                icon = EngineIcons.Bolt,
+                busy = upload != null,
                 onClick = {
-                    // Fix #8 — bot wizard parity: a picked .torrent file IS the source
-                    // (torrent_file); otherwise classify the pasted text directly with
-                    // the ported classifier. No source-type selector exists any more.
                     var submitKind = ""
                     var submitValue = ""
                     if (torrentBytes != null && torrentBytes!!.isNotEmpty()) {
                         submitKind = "torrent_file"
                     } else {
                         when (val verdict = SourceClassifier.classify(sourceValue)) {
-                            is SourceClassifier.Result.Invalid -> {
-                                vm.toast(verdict.error)
-                                return@Button
-                            }
+                            is SourceClassifier.Result.Invalid -> { vm.toast(verdict.error); return@ActionButton }
                             is SourceClassifier.Result.Kind -> {
                                 if (verdict.kind == "telegram_channel" && !isOriginal) {
                                     vm.toast("Telegram channel sources are only available on the official ClipForge repo")
-                                    return@Button
+                                    return@ActionButton
                                 }
                                 submitKind = verdict.kind
                                 submitValue = verdict.value
                             }
                         }
-                        if (submitValue.isBlank()) {
-                            vm.toast("Please enter a valid source URL")
-                            return@Button
-                        }
+                        if (submitValue.isBlank()) { vm.toast("Please enter a valid source URL"); return@ActionButton }
                     }
-
-                    if (durationSeconds !in 1..36000) {
-                        vm.toast("Please enter a valid duration (1–36000 seconds)")
-                        return@Button
-                    }
+                    if (durationSeconds !in 1..36000) { vm.toast("Enter a valid duration (1–36000 seconds)"); return@ActionButton }
                     vm.createStageATask(
                         sourceKind = submitKind,
                         sourceValue = submitValue,
@@ -369,28 +289,40 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         targetDurationSeconds = durationSeconds,
                         selectedMusicPath = selectedMusicPath,
                         isSeries = isSeries,
-                        seriesId = if (seriesId.isNotBlank()) seriesId else null,
+                        seriesId = seriesId.ifBlank { null },
                         isSuperSeries = isSuperSeries && isSeries,
                         torrentBytes = torrentBytes,
-                        onCreated = {
-                            onDone()
-                        }
+                        onCreated = { onDone() },
                     )
                 },
-                enabled = upload == null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Session-10 fix #5: the button ITSELF enters an obvious loading state
-                // the instant a stage starts — the operator never has to scroll to
-                // find the progress bar to confirm something happened.
-                if (upload != null) {
-                    SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Starting Stage A…")
-                } else {
-                    Text("Start Video Analysis (Stage A)")
-                }
-            }
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
+    }
+
+    if (showCustomDialog) {
+        val typed = customDurationText.toIntOrNull()
+        val valid = typed != null && typed in 1..36000
+        AlertDialog(
+            onDismissRequest = { showCustomDialog = false },
+            title = { Text("Custom duration") },
+            text = {
+                OutlinedTextField(
+                    value = customDurationText,
+                    onValueChange = { customDurationText = it.filter { c -> c.isDigit() }.take(5) },
+                    label = { Text("Duration (seconds)") },
+                    placeholder = { Text("e.g. 45") },
+                    supportingText = { Text("Target spoken narration length, 1–36000 seconds") },
+                    isError = customDurationText.isNotEmpty() && !valid,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextActionButton(label = "Apply", enabled = valid, onClick = { typed?.let { durationSeconds = it }; showCustomDialog = false })
+            },
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showCustomDialog = false }) },
+        )
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.forgebuild.clipforgeandroid.ui.TextActionButton
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -99,7 +100,7 @@ fun VideoPlayerDialog(uriString: String, title: String, onDismiss: () -> Unit) {
                             maxLines = 1,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = onDismiss) { Text("Close") }
+                        TextActionButton(label = "Close", onClick = onDismiss)
                     }
                     Box(Modifier.fillMaxWidth().aspectRatio(9f / 16f)) {
                         PlayerSurface(player, Modifier.fillMaxSize())

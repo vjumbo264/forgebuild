@@ -1,641 +1,568 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+)
+
 package com.forgebuild.clipforgeandroid.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.DiagLog
 import com.forgebuild.clipforgeandroid.data.Voices
+import com.forgebuild.clipforgeandroid.data.ZernioSettings
 import com.forgebuild.engine.files.SafeSave
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.ElevationTokens
+import com.forgebuild.engine.ui.theme.SpacingTokens
+import kotlinx.coroutines.launch
 
-/** Small inline spinner used inside buttons while an async op runs. */
-@Composable
-private fun ButtonSpinner() {
-    SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
-}
+/* ============================================================================
+ *  V23 SETTINGS — every saved setting readable + writable in one fresh screen:
+ *  clone management, narrator voice (with previews), music library, watermark,
+ *  Series Mode + Super Series defaults, the FULL Zernio publishing surface
+ *  (auto-publish, mode, interval, preferred time, timezone, queue depth,
+ *  start mode, custom first slot, per-platform target accounts), About +
+ *  diagnostics export. All settings keep their existing storage shapes, so
+ *  nothing the operator already saved is lost.
+ * ============================================================================ */
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(
-    vm: ClipForgeViewModel,
-    onOpenMusic: () -> Unit
-) {
+fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val login by vm.login.collectAsState()
     val settings by vm.settings.collectAsState()
     val defaultMusic by vm.defaultMusic.collectAsState()
     val settingsLoading by vm.settingsLoading.collectAsState()
     val settingsLoaded by vm.settingsLoaded.collectAsState()
-    val busyOps by vm.busyOps.collectAsState()
     val audioState by AudioPreview.state.collectAsState()
 
-    // Session-11 (task-75): SAF export of the diagnostic log. The system picker
-    // (ACTION_CREATE_DOCUMENT) lets the operator save it wherever they choose —
-    // e.g. Documents/ClipForge — with NO storage permission, instead of an
-    // app-private folder they cannot reach. Write goes through the Engine
-    // SafeSave helper (never DownloadManager).
-    val context = LocalContext.current
     val diagExportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
         if (uri != null) {
             try {
-                val text = DiagLog.exportText(context.applicationContext)
-                SafeSave.writeBytes(context, uri, text.toByteArray(Charsets.UTF_8))
+                SafeSave.writeBytes(context, uri, DiagLog.exportText(context.applicationContext).toByteArray(Charsets.UTF_8))
                 vm.toast("Diagnostic log saved (${uri.lastPathSegment ?: "file"})")
-            } catch (_: Exception) {
-                vm.toast("Could not write diagnostic log")
-            }
+            } catch (_: Exception) { vm.toast("Could not write the diagnostic log") }
         }
-        // uri == null -> user cancelled the picker; nothing was saved.
     }
 
     val isOriginal = vm.api?.isOriginalRepo() == true
 
-    // Re-fetch settings from the clone every time the Settings screen becomes active,
-    // so watermark / Zernio / narrator / series values from a prior session are visible
-    // instead of the default "as if I should set it newly" state.
     LaunchedEffect(Unit) { vm.loadSettings() }
-
-    // Stop any voice preview when leaving the screen (fix #2).
     DisposableEffect(Unit) { onDispose { AudioPreview.stop() } }
 
     var showDeleteRepoDialog by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var showClearZernioDialog by remember { mutableStateOf(false) }
-
-    // Bind the local input state to the LOADED settings values so previously-saved
-    // watermark/etc. actually appear in the field once loadSettings() returns.
-    // The Zernio API key is a sealed GitHub Actions secret: its value can never be
-    // read back, so the input starts empty and only ever holds a NEW key the user types.
     var watermarkInput by remember(settings.watermarkText) { mutableStateOf(settings.watermarkText) }
     var zernioKeyInput by remember { mutableStateOf("") }
     var newsInput by remember { mutableStateOf("") }
 
+    // ---- Full Zernio settings editor state (v23-R6) ----
+    var zFull by remember { mutableStateOf<ZernioSettings.Settings?>(null) }
+    var zFullError by remember { mutableStateOf<String?>(null) }
+    var zSaving by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { zFull = vm.readZernioFull() }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") }
+                title = { Text("Settings") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
             )
-        }
+        },
     ) { pad ->
         Column(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(SpacingTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
-            // Explicit loading banner while first-load is in progress, so the screen
-            // does not silently render blank/default values as if nothing was saved.
             if (settingsLoading && !settingsLoaded) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        SquiggleCircularLoader(Modifier.size(20.dp))
-                        Text("Loading your saved settings…", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+                CfCard(tonalLevel = 2) { CfLoading("Loading your saved settings…") }
             }
 
-            // --- Section 1: GitHub Clone Management ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("GitHub Clone Repository", style = MaterialTheme.typography.titleMedium)
-
-                    login?.let {
-                        Text("${it.owner}/${it.repo}", style = MaterialTheme.typography.bodyLarge)
-                        Text("Signed in as ${it.login}", style = MaterialTheme.typography.bodySmall)
-                        val maskedPat = if (it.pat.length > 8) it.pat.take(4) + "••••••••" + it.pat.takeLast(4) else "••••••••"
-                        Text("PAT: $maskedPat", style = MaterialTheme.typography.bodySmall)
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            AssistChip(
-                                onClick = {},
-                                label = { Text(if (settings.isPrivate) "Private Repository" else "Public Repository") }
-                            )
-                            val visBusy = busyOps.contains("toggle_visibility")
-                            OutlinedButton(
-                                onClick = { vm.toggleRepoVisibility() },
-                                enabled = !visBusy
-                            ) {
-                                if (visBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                                Text(if (settings.isPrivate) "Make Public" else "Make Private")
-                            }
-                        }
-
-                        val syncBusy = busyOps.contains("sync_from_source")
-                        Button(
-                            onClick = { vm.syncFromSource() },
-                            enabled = !syncBusy,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (syncBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                            Text("Sync from motionssalt/clipforge (Source)")
-                        }
-
-                        Row(
+            // ---- GitHub clone ----
+            CfSection(title = "GitHub clone repository") {
+                login?.let { creds ->
+                    Text(creds.slug, style = MaterialTheme.typography.titleSmall)
+                    Text("Signed in as ${creds.login}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                        CfChip(
+                            label = if (settings.isPrivate) "Private" else "Public",
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        TextActionButton(
+                            label = if (settings.isPrivate) "Make public" else "Make private",
+                            busy = busyOf(vm, "toggle_visibility"),
+                            onClick = { vm.toggleRepoVisibility() },
+                        )
+                    }
+                    TonalActionButton(
+                        label = "Sync from motionssalt/clipforge",
+                        busy = busyOf(vm, "sync_from_source"),
+                        onClick = { vm.syncFromSource() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                        OutlinedActionButton(label = "Disconnect", onClick = { showDisconnectDialog = true }, modifier = Modifier.weight(1f))
+                        OutlinedActionButton(label = "Delete clone", destructive = true, onClick = { showDeleteRepoDialog = true }, modifier = Modifier.weight(1f))
+                    }
+                    if (isOriginal) {
+                        Text("Owner controls", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        TonalActionButton(
+                            label = "Push update to clones",
+                            busy = busyOf(vm, "push_update"),
+                            onClick = { vm.pushUpdateToClones() },
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { showDisconnectDialog = true },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Disconnect")
-                            }
-                            OutlinedButton(
-                                onClick = { showDeleteRepoDialog = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Delete Clone")
-                            }
-                        }
-
-                        // Main-Account Gated Features
-                        if (isOriginal) {
-                            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                            Text("Owner / Main-Account Controls", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleSmall)
-
-                            val pushBusy = busyOps.contains("push_update")
-                            Button(
-                                onClick = { vm.pushUpdateToClones() },
-                                enabled = !pushBusy,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                if (pushBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                                Text("Push Update to Clones")
-                            }
-
-                            OutlinedTextField(
-                                value = newsInput,
-                                onValueChange = { newsInput = it },
-                                label = { Text("Broadcast News to Clones") },
-                                placeholder = { Text("e.g. New model update live!") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            val newsBusy = busyOps.contains("push_news")
-                            Button(
-                                onClick = {
-                                    if (newsInput.isNotBlank()) {
-                                        vm.pushNews(newsInput)
-                                        newsInput = ""
-                                    }
-                                },
-                                enabled = newsInput.isNotBlank() && !newsBusy,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                if (newsBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                                Text("Broadcast News")
-                            }
-                        }
+                        )
+                        OutlinedTextField(
+                            value = newsInput, onValueChange = { newsInput = it },
+                            label = { Text("Broadcast news to clones") },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        ActionButton(
+                            label = "Broadcast news",
+                            busy = busyOf(vm, "push_news"),
+                            enabled = newsInput.isNotBlank(),
+                            onClick = { vm.pushNews(newsInput); newsInput = "" },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
 
-            // --- Section 2: Narrator Voice (TTS) ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // ---- Narrator voice ----
+            CfSection(title = "Narrator voice (Edge TTS)", subtitle = "Preview a voice before choosing it.") {
+                Voices.ALL.forEach { voice ->
+                    val isSelected = settings.narratorVoice == voice.id
+                    val previewUrl = vm.audioPreviewUrl("assets/tts-previews/${voice.id}.mp3")
+                    val thisActive = audioState.url == previewUrl
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !busyOf(vm, "save_narrator")) { vm.setNarratorVoice(voice.id) },
                     ) {
-                        Text("Narrator Voice (Edge TTS)", style = MaterialTheme.typography.titleMedium)
-                        if (busyOps.contains("save_narrator")) {
-                            ButtonSpinner()
+                        RadioButton(selected = isSelected, onClick = { vm.setNarratorVoice(voice.id) })
+                        Column(Modifier.weight(1f).padding(start = SpacingTokens.Spacing.xs)) {
+                            Text("${voice.label} (${voice.gender})", style = MaterialTheme.typography.bodyMedium)
+                            Text(voice.style, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    }
-                    Text("Select the voice used for spoken voiceovers across generated clips.", style = MaterialTheme.typography.bodySmall)
-
-                    // Fix #2 — every voice carries the bot's own preview affordance
-                    // (assets/tts-previews/<voiceId>.mp3, same file the bot sends via
-                    // getRepositoryFileBytes) so the operator can hear a voice before
-                    // choosing it. Streaming + caching go through the shared
-                    // AudioPreview pipeline — the sample is never re-synthesized.
-                    Voices.ALL.forEach { voice ->
-                        val isSelected = settings.narratorVoice == voice.id
-                        val previewUrl = vm.audioPreviewUrl("assets/tts-previews/${voice.id}.mp3")
-                        val thisActive = audioState.url == previewUrl
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { vm.setNarratorVoice(voice.id) }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { vm.setNarratorVoice(voice.id) }
-                            )
-                            Column(Modifier.padding(start = 8.dp).weight(1f)) {
-                                Text(
-                                    text = "${voice.label} (${voice.gender})",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = voice.style,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            IconButton(onClick = { vm.previewVoice(voice.id) }) {
-                                when {
-                                    thisActive && audioState.isBuffering -> SquiggleCircularLoader(Modifier.size(20.dp))
-                                    thisActive && audioState.isPlaying -> Icon(EngineIcons.Pause, "Pause preview")
-                                    else -> Icon(Icons.Default.PlayArrow, "Voice preview for ${voice.label}")
-                                }
-                            }
-                        }
+                        IconActionButton(
+                            icon = if (thisActive && audioState.isPlaying) EngineIcons.Pause else EngineIcons.Play,
+                            contentDescription = "Preview ${voice.label}",
+                            busy = thisActive && audioState.isBuffering,
+                            onClick = { vm.previewVoice(voice.id) },
+                        )
                     }
                 }
             }
 
-            // --- Section 3: Music Library ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Music Library", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Default Track: ${defaultMusic ?: "None (Silence / Sound effects only)"}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Button(
-                        onClick = onOpenMusic,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Manage Music & Tracks")
-                    }
-                }
+            // ---- Music library ----
+            CfSection(title = "Music library", subtitle = "Default track: ${defaultMusic ?: "none (silence)"}") {
+                ActionButton(label = "Manage music & tracks", onClick = onOpenMusic, modifier = Modifier.fillMaxWidth())
             }
 
-            // --- Section 4: Creator Watermark ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Creator Watermark", style = MaterialTheme.typography.titleMedium)
-                    Text("Burn a creator watermark handle or text onto the rendered video.", style = MaterialTheme.typography.bodySmall)
-
-                    OutlinedTextField(
-                        value = watermarkInput,
-                        onValueChange = { watermarkInput = it },
-                        label = { Text("Watermark text / handle") },
-                        placeholder = { Text("@your_channel") },
-                        modifier = Modifier.fillMaxWidth()
+            // ---- Watermark ----
+            CfSection(title = "Creator watermark", subtitle = "Burn a handle onto every rendered video.") {
+                OutlinedTextField(
+                    value = watermarkInput, onValueChange = { watermarkInput = it },
+                    label = { Text("Watermark text / handle") },
+                    placeholder = { Text("@your_channel") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                    ActionButton(
+                        label = "Save watermark",
+                        busy = busyOf(vm, "save_watermark"),
+                        onClick = { vm.setWatermark(watermarkInput) },
+                        modifier = Modifier.weight(1f),
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val wmBusy = busyOps.contains("save_watermark")
-                        Button(
-                            onClick = { vm.setWatermark(watermarkInput) },
-                            enabled = !wmBusy,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (wmBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                            Text("Save Watermark")
-                        }
-                        if (settings.watermarkText.isNotBlank()) {
-                            OutlinedButton(
-                                onClick = {
-                                    vm.clearWatermark()
-                                    watermarkInput = ""
-                                },
-                                enabled = !wmBusy,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Clear")
-                            }
-                        }
-                    }
                     if (settings.watermarkText.isNotBlank()) {
-                        Text(
-                            "Currently saved: \u201c${settings.watermarkText}\u201d",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        OutlinedActionButton(
+                            label = "Clear",
+                            busy = busyOf(vm, "save_watermark"),
+                            onClick = { vm.clearWatermark(); watermarkInput = "" },
+                            modifier = Modifier.weight(1f),
                         )
                     }
                 }
             }
 
-            // --- Section 5: Series Mode Default ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Default Series Mode", style = MaterialTheme.typography.titleMedium)
-                            Text("Automatically enable Series Mode on new video tasks", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (busyOps.contains("save_series_default")) {
-                                ButtonSpinner()
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            Switch(
-                                checked = settings.seriesDefault,
-                                enabled = !busyOps.contains("save_series_default"),
-                                onCheckedChange = { vm.setSeriesDefaultWithDependency(it) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // --- Section 5b: Super Series (parallel to, not merged into, Series Mode) ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Super Series", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Whole-series planning: submit ONE super-plan and parts 2..N dispatch automatically on completion. Requires Series Mode — it is forced off when Series Mode is off.",
-                        style = MaterialTheme.typography.bodySmall
+            // ---- Series + Super Series defaults ----
+            CfSection(title = "Series Mode default", subtitle = "Automatically enable Series Mode on new tasks.") {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Series Mode", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.seriesDefault,
+                        enabled = !busyOf(vm, "save_series_default"),
+                        onCheckedChange = { vm.setSeriesDefaultWithDependency(it) },
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Super Series default", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "Stored at branding/super_series_settings.json",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        val superBusy = busyOps.contains("save_super")
-                        if (superBusy) ButtonSpinner()
-                        Switch(
-                            checked = settings.superSeriesDefault && settings.seriesDefault,
-                            enabled = settings.seriesDefault && !superBusy,
-                            onCheckedChange = { vm.setSuperSeriesDefault(it) }
-                        )
-                    }
-                    if (!settings.seriesDefault) {
-                        Text(
-                            "Turn Series Mode on to enable Super Series.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                }
+            }
+            CfSection(title = "Super Series default", subtitle = "Whole-series planning. Requires Series Mode — it is forced off when Series Mode is off.") {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Super Series", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.superSeriesDefault && settings.seriesDefault,
+                        enabled = settings.seriesDefault && !busyOf(vm, "save_super"),
+                        onCheckedChange = { vm.setSuperSeriesDefault(it) },
+                    )
+                }
+                if (!settings.seriesDefault) {
+                    Text("Turn Series Mode on to enable Super Series.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
-            // --- Section 6: Zernio Publishing (full card: status, key, save, accounts, refresh) ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Zernio Publishing", style = MaterialTheme.typography.titleMedium)
-                            Text("Publish rendered clips directly to social channels", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Switch(
-                            checked = settings.zernioEnabled,
-                            onCheckedChange = { vm.saveZernioSettings(zernioKeyInput, it) }
-                        )
-                    }
-
-                    // Status row driven by the SEALED-secret existence check, never a
-                    // plaintext value (the key is a GitHub Actions secret and unreadable).
-                    val statusText = when {
-                        !settings.zernioKeyConfigured -> "No API key saved yet"
-                        settings.zernioEnabled -> "Active — publishing enabled"
-                        else -> "Key saved — publishing paused"
-                    }
-                    val statusColor = when {
-                        !settings.zernioKeyConfigured -> MaterialTheme.colorScheme.onSurfaceVariant
-                        settings.zernioEnabled -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.tertiary
-                    }
-                    AssistChip(onClick = {}, label = { Text(statusText, color = statusColor) })
-
+            // ---- ZERNIO PUBLISHING (full surface, v23-R6) ----
+            CfSection(title = "Zernio publishing", subtitle = "Publish rendered clips to your connected social accounts.") {
+                val zStatusText = when {
+                    !settings.zernioKeyConfigured -> "No API key saved yet"
+                    settings.zernioEnabled -> "Active — publishing enabled"
+                    else -> "Key saved — publishing paused"
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    CfChip(
+                        label = zStatusText,
+                        color = when {
+                            !settings.zernioKeyConfigured -> MaterialTheme.colorScheme.onSurfaceVariant
+                            settings.zernioEnabled -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.secondary
+                        },
+                    )
+                    Switch(
+                        checked = settings.zernioEnabled,
+                        enabled = !busyOf(vm, "save_zernio"),
+                        onCheckedChange = { vm.saveZernioSettings(zernioKeyInput, it) },
+                    )
+                }
+                OutlinedTextField(
+                    value = zernioKeyInput, onValueChange = { zernioKeyInput = it },
+                    label = { Text(if (settings.zernioKeyConfigured) "Replace Zernio API key" else "Zernio API key") },
+                    placeholder = { Text("zn_api_…") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                    ActionButton(
+                        label = "Save key",
+                        busy = busyOf(vm, "save_zernio"),
+                        enabled = zernioKeyInput.isNotBlank(),
+                        onClick = { vm.saveZernioSettings(zernioKeyInput, settings.zernioEnabled); zernioKeyInput = "" },
+                        modifier = Modifier.weight(1f),
+                    )
                     if (settings.zernioKeyConfigured) {
-                        Text(
-                            "An API key is saved (stored securely as a GitHub Actions secret). Enter a new key below only to replace it.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        OutlinedActionButton(
+                            label = "Remove key", destructive = true,
+                            onClick = { showClearZernioDialog = true },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                // Live summary of the full stored schedule.
+                zFull?.let { z ->
+                    Text(ZernioSettings.summary(z), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+
+                // Full schedule editor.
+                zFull?.let { z ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Automatic publishing", style = MaterialTheme.typography.bodyMedium)
+                            Text("Publish each finished video without manual action", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Switch(checked = z.autoPublish, onCheckedChange = { zFull = z.copy(autoPublish = it) })
+                    }
+
+                    Text("Automatic mode", style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                        FilterChip(
+                            selected = z.automaticMode == "publish_now",
+                            onClick = { zFull = z.copy(automaticMode = "publish_now") },
+                            label = { Text("Publish immediately") },
+                        )
+                        FilterChip(
+                            selected = z.automaticMode == "smart_schedule",
+                            onClick = { zFull = z.copy(automaticMode = "smart_schedule") },
+                            label = { Text("Smart schedule") },
                         )
                     }
 
-                    OutlinedTextField(
-                        value = zernioKeyInput,
-                        onValueChange = { zernioKeyInput = it },
-                        label = { Text(if (settings.zernioKeyConfigured) "Replace Zernio API Key" else "Zernio API Key") },
-                        placeholder = { Text("zn_api_••••••••") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val zSaveBusy = busyOps.contains("save_zernio")
-                        Button(
-                            onClick = { vm.saveZernioSettings(zernioKeyInput, settings.zernioEnabled) },
-                            enabled = !zSaveBusy,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            if (zSaveBusy) { ButtonSpinner(); Spacer(Modifier.width(8.dp)) }
-                            Text("Save")
+                    if (z.automaticMode == "smart_schedule") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                            OutlinedTextField(
+                                value = z.smart.intervalHours.toString(),
+                                onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(intervalHours = v.filter { c -> c.isDigit() }.toIntOrNull() ?: 0)) },
+                                label = { Text("Interval (hours)") },
+                                supportingText = { Text("1–8760") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                            )
+                            OutlinedTextField(
+                                value = z.smart.preferredTime,
+                                onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(preferredTime = v.take(5))) },
+                                label = { Text("Preferred time") },
+                                placeholder = { Text("05:00") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
-                        if (settings.zernioKeyConfigured) {
-                            OutlinedButton(
-                                onClick = { showClearZernioDialog = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Remove Key")
+                        OutlinedTextField(
+                            value = z.smart.queueDepth.toString(),
+                            onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(queueDepth = v.filter { c -> c.isDigit() }.toIntOrNull() ?: 0)) },
+                            label = { Text("Queue depth") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = z.smart.timezone,
+                            onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(timezone = v)) },
+                            label = { Text("Timezone (IANA)") },
+                            placeholder = { Text("UTC") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                            ZernioSettings.COMMON_TIMEZONES.take(8).forEach { zone ->
+                                FilterChip(
+                                    selected = z.smart.timezone == zone,
+                                    onClick = { zFull = z.copy(smart = z.smart.copy(timezone = zone)) },
+                                    label = { Text(zone, style = MaterialTheme.typography.labelSmall) },
+                                )
                             }
                         }
-                    }
-
-                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
-
-                    // Connected-channels area is ALWAYS shown so the section is never "empty".
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Connected Channels", style = MaterialTheme.typography.titleSmall)
-                        val zRefBusy = busyOps.contains("zernio_refresh")
-                        TextButton(
-                            onClick = { vm.refreshZernioAccounts() },
-                            enabled = !zRefBusy
-                        ) {
-                            if (zRefBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
-                            Text("Refresh")
+                        Text("Start mode", style = MaterialTheme.typography.bodyMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                            FilterChip(
+                                selected = z.smart.startMode == "next_available",
+                                onClick = { zFull = z.copy(smart = z.smart.copy(startMode = "next_available")) },
+                                label = { Text("Next available slot") },
+                            )
+                            FilterChip(
+                                selected = z.smart.startMode == "custom",
+                                onClick = { zFull = z.copy(smart = z.smart.copy(startMode = "custom")) },
+                                label = { Text("Custom first slot") },
+                            )
                         }
-                    }
-
-                    if (settings.zernioAccounts.isEmpty()) {
-                        Text(
-                            "No connected accounts found. Connect accounts in the Telegram bot or on Zernio, then tap \u2018Refresh\u2019.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        settings.zernioAccounts.forEach { acc ->
-                            Row(
+                        if (z.smart.startMode == "custom") {
+                            OutlinedTextField(
+                                value = z.smart.customStart,
+                                onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(customStart = v.take(16))) },
+                                label = { Text("First slot (YYYY-MM-DDTHH:MM)") },
+                                placeholder = { Text("2026-09-20T17:30") },
+                                singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(acc.label, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        acc.platform.replaceFirstChar { it.uppercase() } + if (acc.username.isNotBlank()) " · @${acc.username}" else "",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                            )
+                        }
+                    }
+
+                    // Per-platform target accounts.
+                    if (settings.zernioAccounts.isNotEmpty()) {
+                        Text("Target accounts", style = MaterialTheme.typography.bodyMedium)
+                        ZernioSettings.PLATFORMS.forEach { platform ->
+                            val accounts = settings.zernioAccounts.filter { it.platform == platform }
+                            if (accounts.isNotEmpty()) {
+                                Text(platform.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                accounts.forEach { acc ->
+                                    val checked = z.targetAccounts[platform]?.contains(acc.id) == true
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable(enabled = acc.available) {
+                                                val cur = z.targetAccounts[platform].orEmpty()
+                                                val next = if (checked) cur - acc.id else cur + acc.id
+                                                zFull = z.copy(targetAccounts = z.targetAccounts + (platform to next))
+                                            },
+                                    ) {
+                                        Checkbox(
+                                            checked = checked,
+                                            enabled = acc.available,
+                                            onCheckedChange = {
+                                                val cur = z.targetAccounts[platform].orEmpty()
+                                                val next = if (checked) cur - acc.id else cur + acc.id
+                                                zFull = z.copy(targetAccounts = z.targetAccounts + (platform to next))
+                                            },
+                                        )
+                                        Column(Modifier.padding(start = SpacingTokens.Spacing.xs)) {
+                                            Text(acc.label, style = MaterialTheme.typography.bodyMedium)
+                                            if (!acc.available) {
+                                                Text(
+                                                    if (acc.needsReconnection) "Needs reconnection" else "Unavailable",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                                val (stateLabel, stateColor) = when {
-                                    acc.needsReconnection -> "Reconnect" to MaterialTheme.colorScheme.error
-                                    !acc.isActive -> "Inactive" to MaterialTheme.colorScheme.onSurfaceVariant
-                                    !acc.enabled -> "Disabled" to MaterialTheme.colorScheme.onSurfaceVariant
-                                    else -> "Active" to MaterialTheme.colorScheme.primary
-                                }
-                                Text(stateLabel, style = MaterialTheme.typography.labelSmall, color = stateColor)
                             }
+                        }
+                    }
+
+                    zFullError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                    ActionButton(
+                        label = "Save publishing settings",
+                        busy = zSaving,
+                        onClick = {
+                            val candidate = zFull ?: return@ActionButton
+                            zSaving = true
+                            scope.launch {
+                                val err = vm.saveZernioFull(candidate)
+                                zSaving = false
+                                zFullError = err
+                                if (err == null) vm.toast("Publishing settings saved")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } ?: CfLoading("Loading publishing settings…")
+
+                // Connected accounts.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Connected channels", style = MaterialTheme.typography.titleSmall)
+                    TextActionButton(label = "Refresh", busy = busyOf(vm, "zernio_refresh"), onClick = { vm.refreshZernioAccounts() })
+                }
+                if (settings.zernioAccounts.isEmpty()) {
+                    Text(
+                        "No connected accounts found. Connect accounts on Zernio, then tap Refresh.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    settings.zernioAccounts.forEach { acc ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.weight(1f)) {
+                                Text(acc.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    acc.platform.replaceFirstChar { it.uppercase() } + if (acc.username.isNotBlank()) " · @${acc.username}" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            CfChip(
+                                label = when {
+                                    acc.needsReconnection -> "Reconnect"
+                                    !acc.isActive -> "Inactive"
+                                    !acc.enabled -> "Disabled"
+                                    else -> "Active"
+                                },
+                                color = if (acc.needsReconnection || !acc.isActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary,
+                            )
                         }
                     }
                 }
             }
-            // --- Section 7: About (fix #7) ---
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("About ClipForge Android", style = MaterialTheme.typography.titleMedium)
-                    Text("Version v20", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "A ForgeBuild client for the ClipForge pipeline (motionssalt/clipforge). Drive it from a Shadow Clone of the bot repository: it manages video tasks, production plans, music, narrator voices, series parts and Zernio publishing from your GitHub clone.",
-                        style = MaterialTheme.typography.bodySmall
+
+            // ---- About + diagnostics ----
+            CfSection(title = "About ClipForge Android") {
+                Text("Version v23", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "A ForgeBuild client for the ClipForge pipeline. It drives your GitHub clone: video tasks, production plans, music, narrator voices, series and Zernio publishing.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text("Pipeline: stage-a.yml → stage-b.yml via GitHub Actions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Built with the ForgeBuild Engine (Material 3 Expressive)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Diagnostics", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Every failed GitHub request is recorded on-device. Export it when reporting an issue — you pick where to save it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                    OutlinedActionButton(
+                        label = "Export diagnostic log",
+                        onClick = { diagExportLauncher.launch("clipforge-diagnostic-log-${System.currentTimeMillis() / 1000}.txt") },
+                        modifier = Modifier.weight(1f),
                     )
-                    HorizontalDivider()
-                    Text("Pipeline: stage-a.yml → stage-b.yml via GitHub Actions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Source: github.com/motionssalt/clipforge", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Built with the ForgeBuild Engine (Material 3, dynamic color)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    HorizontalDivider()
-                    // Session-10 fix #8: the exact-request diagnostic log (method, path,
-                    // HTTP code, response excerpt, Contents-API create/update intent).
-                    Text("Diagnostics", style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        "Every failed GitHub request is recorded on-device with its exact method, path and HTTP code. Export it when reporting an issue — the save picker lets you put it in Documents/ClipForge.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                val name = "clipforge-diagnostic-log-${System.currentTimeMillis() / 1000}.txt"
-                                diagExportLauncher.launch(name)
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Export Diagnostic Log")
-                        }
-                        OutlinedButton(onClick = { vm.clearDiagLog() }, modifier = Modifier.weight(1f)) {
-                            Text("Clear Log")
-                        }
-                    }
+                    OutlinedActionButton(label = "Clear", onClick = { vm.clearDiagLog() }, modifier = Modifier.weight(1f))
                 }
             }
         }
     }
 
-    // Confirmation dialogs
+    // ---- dialogs ----
     if (showDisconnectDialog) {
         AlertDialog(
             onDismissRequest = { showDisconnectDialog = false },
-            title = { Text("Disconnect Repository") },
-            text = { Text("Sign out and remove saved PAT credentials from this device?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDisconnectDialog = false
-                    vm.signOut()
-                }) { Text("Disconnect") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDisconnectDialog = false }) { Text("Cancel") }
-            }
+            title = { Text("Disconnect repository") },
+            text = { Text("Sign out and remove the saved credentials from this device?") },
+            confirmButton = { TextActionButton(label = "Disconnect", destructive = true, onClick = { showDisconnectDialog = false; vm.signOut() }) },
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showDisconnectDialog = false }) },
         )
     }
-
     if (showDeleteRepoDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteRepoDialog = false },
-            title = { Text("Delete Clone Repository") },
-            text = { Text("Permanently delete ${login?.slug} from GitHub? This action cannot be undone.") },
+            title = { Text("Delete clone repository") },
+            text = { Text("Permanently delete ${login?.slug} from GitHub? This cannot be undone.") },
             confirmButton = {
-                val delBusy = busyOps.contains("delete_clone")
-                TextButton(
-                    onClick = {
-                        showDeleteRepoDialog = false
-                        vm.deleteClone {}
-                    },
-                    enabled = !delBusy,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    if (delBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
-                    Text("Delete Permanently")
-                }
+                TextActionButton(label = "Delete permanently", destructive = true, busy = busyOf(vm, "delete_clone"), onClick = {
+                    showDeleteRepoDialog = false
+                    vm.deleteClone {}
+                })
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRepoDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showDeleteRepoDialog = false }) },
         )
     }
-
     if (showClearZernioDialog) {
         AlertDialog(
             onDismissRequest = { showClearZernioDialog = false },
-            title = { Text("Remove Zernio Key") },
-            text = { Text("Remove the stored Zernio API key (the GitHub Actions secret) and disable publishing? Connected accounts are kept.") },
+            title = { Text("Remove Zernio key") },
+            text = { Text("Remove the stored Zernio API key and disable publishing? Connected accounts are kept.") },
             confirmButton = {
-                val clearBusy = busyOps.contains("clear_zernio")
-                TextButton(
-                    onClick = {
-                        showClearZernioDialog = false
-                        zernioKeyInput = ""
-                        vm.clearZernioKey()
-                    },
-                    enabled = !clearBusy
-                ) {
-                    if (clearBusy) { ButtonSpinner(); Spacer(Modifier.width(6.dp)) }
-                    Text("Remove")
-                }
+                TextActionButton(label = "Remove", destructive = true, busy = busyOf(vm, "clear_zernio"), onClick = {
+                    showClearZernioDialog = false
+                    zernioKeyInput = ""
+                    vm.clearZernioKey()
+                })
             },
-            dismissButton = {
-                TextButton(onClick = { showClearZernioDialog = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextActionButton(label = "Cancel", onClick = { showClearZernioDialog = false }) },
         )
     }
 }
