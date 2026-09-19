@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -729,7 +730,6 @@ private fun PublishErrorDialog(err: ClipForgeViewModel.ZernioDispatchError, onDi
         confirmButton = {
             TextActionButton(
                 label = "Copy error",
-                icon = EngineIcons.Copy,
                 onClick = { clipboard.setText(AnnotatedString(err.message)) }
             )
         },
@@ -737,6 +737,7 @@ private fun PublishErrorDialog(err: ClipForgeViewModel.ZernioDispatchError, onDi
     )
 }
 
+@Composable
 private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.LogStep>, state: String) {
     val context = LocalContext.current
     val expandedKeys by vm.expandedStepKeys.collectAsState()
