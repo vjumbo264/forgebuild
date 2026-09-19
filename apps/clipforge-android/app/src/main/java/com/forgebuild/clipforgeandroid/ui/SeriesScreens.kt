@@ -86,7 +86,7 @@ fun SeriesScreen(
             )
         },
     ) { pad ->
-        Column(Modifier.padding(pad).fillMaxSize()) {
+        Column(Modifier.padding(top = pad.calculateTopPadding()).fillMaxSize()) {
             if (refreshing) EngineLinearWavyProgress(Modifier.fillMaxWidth())
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refreshTasks() }, modifier = Modifier.fillMaxSize()) {
                 if (seriesGroups.isEmpty() && !refreshing) {
@@ -96,7 +96,7 @@ fun SeriesScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(SpacingTokens.Spacing.md),
+                        contentPadding = contentPaddingForFloatingBar(),
                         verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
                     ) {
                         items(seriesGroups.entries.toList(), key = { it.key }) { (seriesId, partTasks) ->
@@ -183,7 +183,7 @@ fun SeriesDetailScreen(
     ) { pad ->
         LazyColumn(
             modifier = Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(SpacingTokens.Spacing.md),
+            contentPadding = contentPaddingForFloatingBar(),
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
         ) {
             superQueue?.let { q ->

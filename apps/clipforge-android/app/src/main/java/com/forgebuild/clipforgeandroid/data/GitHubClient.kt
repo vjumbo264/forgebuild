@@ -507,44 +507,136 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
     }
 
     /**
-     * Raw text of a single job's log (GET /actions/jobs/{job_id}/logs, follows redirect).
-     * v22 task-125: non-2xx is NO LONGER silently swallowed as "" (which the UI used to
-     * fall back to a fake status line). 403/404/410 (expired/deleted log, insufficient
-     * scope) now throw GhException so the caller surfaces an explicit error state.
+     * Raw text of a single job's log (GET /actions/jobs/{job_id}/logs).
+     * GitHub returns an HTTP 302 redirect to Azure Blob Storage
+     * (pipelines.actions.githubusercontent.com). If OkHttp follows this redirect
+     * automatically with the Authorization header attached, Azure rejects the
+     * request with HTTP 401 AuthenticationFailed.
+     *
+     * Fix: use an OkHttpClient that does NOT follow redirects automatically, capture
+     * the Location header, and make a clean GET request to Azure with NO Authorization
+     * and NO custom GitHub headers.
      */
     suspend fun jobLog(jobId: Long): String = withContext(Dispatchers.IO) {
-        client.newCall(
-            base("$api/repos/$owner/$repo/actions/jobs/$jobId/logs").get().build()
-        ).execute().use { resp ->
+        val noRedirectClient = client.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build()
+        val initialReq = base("$api/repos/$owner/$repo/actions/jobs/$jobId/logs").get().build()
+        val location = noRedirectClient.newCall(initialReq).execute().use { resp ->
+            when (resp.code) {
+                in 200..299 -> return@withContext resp.body?.string().orEmpty()
+                301, 302, 303, 307, 308 -> resp.header("Location")
+                else -> {
+                    val err = resp.body?.string().orEmpty()
+                    requestLog("GET", "/actions/jobs/$jobId/logs", resp.code, err)
+                    throw GhException(resp.code, "Failed to get job $jobId log redirect: $err".take(300))
+                }
+            }
+        } ?: throw GhException(404, "No redirect location for job $jobId log")
+
+        // Clean GET without Authorization or GitHub headers
+        val cleanReq = Request.Builder()
+            .url(location)
+            .header("User-Agent", "ClipForge-Android")
+            .get()
+            .build()
+        client.newCall(cleanReq).execute().use { resp ->
             val body = resp.body?.string().orEmpty()
-            if (resp.code in 200..299) body
-            else throw GhException(resp.code, body.take(400))
+            if (resp.code in 200..299) {
+                body
+            } else {
+                requestLog("GET", location.take(60), resp.code, body)
+                throw GhException(resp.code, "Blob download failed (${resp.code}): ${body.take(200)}")
+            }
         }
     }
 
     /**
-     * Split a raw Actions job log into per-step content. GitHub marks each step's
-     * block with ##[group] / ##[endgroup]; step lines also carry the
-     * "##[group]Run <command>" header. Timestamps (ISO prefix) and ANSI colour
-     * codes are stripped so the result is clean, copyable plain text.
+     * Parsed Actions job log structure providing both sequential step blocks
+     * and name/command lookup, preserving all step lines.
      */
-    fun splitLogByStep(raw: String): Map<String, List<String>> {
-        val out = linkedMapOf<String, MutableList<String>>()
+    data class ParsedJobLogs(
+        val rawLog: String,
+        val totalLines: Int,
+        val stepBlocks: List<StepBlock>,
+        val stepsByName: Map<String, List<String>>,
+    ) {
+        data class StepBlock(val name: String, val lines: List<String>)
+
+        fun linesForStep(index: Int, name: String): List<String> {
+            val byName = stepsByName.entries.firstOrNull { (k, _) ->
+                k.equals(name, ignoreCase = true) ||
+                name.contains(k, ignoreCase = true) ||
+                k.contains(name, ignoreCase = true)
+            }?.value
+            if (!byName.isNullOrEmpty()) return byName
+
+            if (index in stepBlocks.indices) {
+                val block = stepBlocks[index]
+                if (block.lines.isNotEmpty()) return block.lines
+            }
+            return emptyList()
+        }
+    }
+
+    /**
+     * Parse raw GitHub Actions job log into structured per-step blocks.
+     * Handles ##[group] delimiters, Run command prefixes, ANSI escapes,
+     * and ISO timestamps.
+     */
+    fun parseJobLogs(raw: String): ParsedJobLogs {
         val ansi = Regex("\\u001B\\[[;\\d]*m")
-        val ts = Regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z\\s*")
-        var current = "Setup"
+        val ts = Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s*""")
         fun clean(line: String): String = ansi.replace(ts.replace(line, ""), "").trimEnd()
+
+        val stepBlocks = mutableListOf<ParsedJobLogs.StepBlock>()
+        val byName = linkedMapOf<String, MutableList<String>>()
+
+        var currentBlockName = "Set up job"
+        val currentBlockLines = mutableListOf<String>()
+
         for (line in raw.lines()) {
             val c = clean(line)
-            when {
-                c.startsWith("##[group]") -> {
-                    current = c.removePrefix("##[group]").removePrefix("Run ").trim().ifBlank { "Step" }
-                    out.getOrPut(current) { mutableListOf() }
+            val isStepBoundary = c.startsWith("##[group]Run ") ||
+                (c.startsWith("##[group]") && (
+                    c.contains("Post ") ||
+                    c.contains("Stopping Gradle") ||
+                    c.contains("Complete job") ||
+                    c.contains("Cleaning up orphan")
+                ))
+
+            if (isStepBoundary) {
+                if (currentBlockLines.isNotEmpty()) {
+                    stepBlocks.add(ParsedJobLogs.StepBlock(currentBlockName, currentBlockLines.toList()))
+                    currentBlockLines.clear()
                 }
-                c.startsWith("##[endgroup]") -> { /* close group */ }
-                c.isNotBlank() -> out.getOrPut(current) { mutableListOf() }.add(c)
+                currentBlockName = c.removePrefix("##[group]")
+                    .removePrefix("Run ")
+                    .trim()
+                    .ifBlank { "Step" }
+                byName.getOrPut(currentBlockName) { mutableListOf() }
+            } else {
+                if (c.isNotBlank() && !c.startsWith("##[endgroup]")) {
+                    currentBlockLines.add(c)
+                    byName.getOrPut(currentBlockName) { mutableListOf() }.add(c)
+                }
             }
         }
-        return out
+        if (currentBlockLines.isNotEmpty()) {
+            stepBlocks.add(ParsedJobLogs.StepBlock(currentBlockName, currentBlockLines.toList()))
+        }
+
+        return ParsedJobLogs(
+            rawLog = raw,
+            totalLines = raw.lines().size,
+            stepBlocks = stepBlocks,
+            stepsByName = byName
+        )
     }
+
+    /**
+     * Split a raw Actions job log into per-step content. Kept for backward compatibility.
+     */
+    fun splitLogByStep(raw: String): Map<String, List<String>> = parseJobLogs(raw).stepsByName
 }

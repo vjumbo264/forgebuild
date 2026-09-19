@@ -41,6 +41,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.forgebuild.engine.ui.components.EngineCircularWavyProgress
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -159,7 +171,7 @@ private fun TaskListScaffold(
             )
         },
     ) { pad ->
-        Column(Modifier.padding(pad).fillMaxSize()) {
+        Column(Modifier.padding(top = pad.calculateTopPadding()).fillMaxSize()) {
             if (refreshing) EngineLinearWavyProgress(Modifier.fillMaxWidth())
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
                 if (tasks.isEmpty() && !refreshing) {
@@ -169,7 +181,7 @@ private fun TaskListScaffold(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(SpacingTokens.Spacing.md),
+                        contentPadding = contentPaddingForFloatingBar(),
                         verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
                     ) {
                         items(tasks, key = { it.jobId }) { task ->
@@ -691,42 +703,149 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
 }
 
 /* ------------------------------ live logger ----------------------------- */
-
 @Composable
 private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.LogStep>, state: String) {
     val context = LocalContext.current
-    CfSection(title = "Live execution log") {
-        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-            TextActionButton(label = "Copy log", onClick = {
-                val text = logs.joinToString("\n") { step ->
-                    "### " + step.name + "\n" + step.details.joinToString("\n") { it.text }
-                }
-                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                    .setPrimaryClip(ClipData.newPlainText("ClipForge log", text))
-                vm.toast("Log copied")
-            })
+    val expandedKeys by vm.expandedStepKeys.collectAsState()
+    val rawLog by vm.detailRawLog.collectAsState()
+    var viewMode by remember { mutableStateOf(0) } // 0 = Step View, 1 = Raw Terminal
+
+    val totalSteps = logs.size
+    val completedSteps = logs.count { it.level == ClipForgeViewModel.LogLevel.SUCCESS }
+    val runningStep = logs.firstOrNull { it.level == ClipForgeViewModel.LogLevel.RUNNING }
+    val failedStep = logs.firstOrNull { it.level == ClipForgeViewModel.LogLevel.FAILURE }
+
+    CfSection(
+        title = "Pipeline Execution Log",
+        subtitle = when {
+            runningStep != null -> "Running step: ${runningStep.name}"
+            failedStep != null -> "Failed at step: ${failedStep.name}"
+            completedSteps == totalSteps && totalSteps > 0 -> "All $totalSteps steps completed"
+            else -> "Real-time runner logs from GitHub Actions"
         }
-        when {
-            logs.isEmpty() -> CfLoading(
-                if (state == "queued" || state.endsWith("queued")) "Waiting for a GitHub runner — steps appear here as soon as the run starts…"
-                else "Waiting for the first step…",
-            )
-            else -> {
-                val listState = rememberLazyListState()
-                LaunchedEffect(logs) {
-                    if (logs.isNotEmpty()) {
-                        val runningIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
-                        val target = if (runningIdx >= 0) runningIdx else logs.size - 1
-                        listState.animateScrollToItem(target.coerceAtMost(logs.size - 1))
-                    }
+    ) {
+        // Top Toolbar: Mode Switcher + Expand/Collapse + Copy
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                FilterChip(
+                    selected = viewMode == 0,
+                    onClick = { viewMode = 0 },
+                    label = { Text("Steps (${logs.size})", style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    shape = CircleShape,
+                )
+                FilterChip(
+                    selected = viewMode == 1,
+                    onClick = { viewMode = 1 },
+                    label = { Text("Raw Console", style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                    shape = CircleShape,
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
+                if (viewMode == 0 && logs.isNotEmpty()) {
+                    val allExpanded = logs.isNotEmpty() && logs.all { vm.isStepExpanded(it) }
+                    TextActionButton(
+                        label = if (allExpanded) "Collapse" else "Expand all",
+                        onClick = {
+                            if (allExpanded) vm.collapseAllSteps() else vm.expandAllSteps()
+                        }
+                    )
                 }
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 420.dp),
+                TextActionButton(
+                    label = "Copy",
+                    onClick = {
+                        val textToCopy = if (viewMode == 1 && rawLog.isNotBlank()) {
+                            rawLog
+                        } else {
+                            logs.joinToString("\n\n") { step ->
+                                "### [${step.level}] ${step.name} (${step.durationText})\n" +
+                                        step.details.joinToString("\n") { it.text }
+                            }
+                        }
+                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("ClipForge Log", textToCopy))
+                        vm.toast("Log copied to clipboard")
+                    }
+                )
+            }
+        }
+
+        // Live execution status bar
+        if (runningStep != null) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SpacingTokens.Spacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
+                    ) {
+                        EngineCircularWavyProgress(Modifier.size(16.dp))
+                        Text(
+                            "In progress: ${runningStep.name}",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (runningStep.durationText.isNotBlank()) {
+                            Text(
+                                runningStep.durationText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    EngineLinearWavyProgress(Modifier.fillMaxWidth())
+                }
+            }
+        }
+
+        when {
+            logs.isEmpty() -> {
+                CfLoading(
+                    if (state == "queued" || state.endsWith("queued"))
+                        "Waiting for a GitHub runner — steps appear here as soon as the run starts…"
+                    else "Waiting for pipeline logs…",
+                )
+            }
+            viewMode == 1 -> {
+                // Raw Console Terminal View
+                RawConsoleTerminal(rawText = rawLog.ifBlank {
+                    logs.joinToString("\n") { step ->
+                        "==> ${step.name}\n" + step.details.joinToString("\n") { it.text }
+                    }
+                })
+            }
+            else -> {
+                // Structured Step-by-Step View
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
                 ) {
-                    items(logs, key = { it.key }) { step ->
-                        LogStepRow(step, vm.isStepExpanded(step)) { vm.toggleStepExpanded(step.key) }
+                    logs.forEach { step ->
+                        LogStepRow(
+                            step = step,
+                            expanded = vm.isStepExpanded(step),
+                            onToggle = { vm.toggleStepExpanded(step.key) }
+                        )
                     }
                 }
             }
@@ -735,37 +854,217 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
 }
 
 @Composable
-private fun LogStepRow(step: ClipForgeViewModel.LogStep, expanded: Boolean, onToggle: () -> Unit) {
+private fun LogStepRow(
+    step: ClipForgeViewModel.LogStep,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
     val accent = cfStatusColor(step.level)
+    val interactionSource = remember { MutableInteractionSource() }
+
     Surface(
         onClick = onToggle,
         shape = MaterialTheme.shapes.medium,
-        color = ElevationTokens.tonalContainerColor(2),
-        modifier = Modifier.fillMaxWidth(),
+        color = ElevationTokens.tonalContainerColor(if (expanded) 2 else 1),
+        border = BorderStroke(
+            1.dp,
+            if (expanded) accent.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .fillMaxWidth()
+            .expressiveBounce(interactionSource, pressedScale = 0.98f),
     ) {
-        Row(Modifier.padding(SpacingTokens.Spacing.sm)) {
-            // Status-colored timeline node.
-            Box(
-                modifier = Modifier
-                    .padding(top = SpacingTokens.Spacing.xxs)
-                    .size(SpacingTokens.Spacing.sm)
-                    .background(accent, CircleShape),
-            )
-            Spacer(Modifier.width(SpacingTokens.Spacing.sm))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(step.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f), color = accent)
-                    if (step.durationText.isNotBlank()) {
-                        Text(step.durationText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            modifier = Modifier.padding(SpacingTokens.Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)
+            ) {
+                // Status icon node
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (step.level) {
+                        ClipForgeViewModel.LogLevel.RUNNING -> {
+                            EngineCircularWavyProgress(Modifier.size(18.dp))
+                        }
+                        ClipForgeViewModel.LogLevel.SUCCESS -> {
+                            Icon(
+                                imageVector = EngineIcons.CheckCircle,
+                                contentDescription = "Success",
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        ClipForgeViewModel.LogLevel.FAILURE -> {
+                            Icon(
+                                imageVector = EngineIcons.Cancel,
+                                contentDescription = "Failed",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        else -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                            )
+                        }
                     }
                 }
-                if (step.level == ClipForgeViewModel.LogLevel.RUNNING) {
-                    EngineLinearWavyProgress(Modifier.fillMaxWidth())
+
+                Text(
+                    text = step.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = if (expanded || step.level == ClipForgeViewModel.LogLevel.RUNNING) FontWeight.SemiBold else FontWeight.Normal
+                    ),
+                    color = if (step.level == ClipForgeViewModel.LogLevel.FAILURE) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+
+                if (step.durationText.isNotBlank()) {
+                    Text(
+                        text = step.durationText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                if (expanded) {
-                    step.details.forEach { d -> CfLogLine(d.text, cfStatusColor(d.level)) }
+
+                // Animated chevron
+                val rotation by animateFloatAsState(
+                    targetValue = if (expanded) 90f else -90f,
+                    label = "chevronRotation"
+                )
+                Icon(
+                    imageVector = EngineIcons.ArrowBack,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(rotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (step.level == ClipForgeViewModel.LogLevel.RUNNING && !expanded) {
+                EngineLinearWavyProgress(Modifier.fillMaxWidth())
+            }
+
+            // Expanded terminal console view for step details
+            if (expanded) {
+                StepTerminalOutput(details = step.details)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepTerminalOutput(details: List<ClipForgeViewModel.LogDetail>) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF141416),
+        border = BorderStroke(1.dp, Color(0xFF26262B)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = SpacingTokens.Spacing.xxs)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${details.size} log lines",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp
+                    ),
+                    color = Color(0xFF7E7E8A)
+                )
+            }
+
+            // Scrollable terminal lines container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    details.forEachIndexed { idx, detail ->
+                        val isError = detail.level == ClipForgeViewModel.LogLevel.FAILURE ||
+                                detail.text.contains("error", ignoreCase = true) ||
+                                detail.text.contains("fatal", ignoreCase = true) ||
+                                detail.text.contains("failed", ignoreCase = true)
+                        val isWarn = detail.text.contains("warn", ignoreCase = true)
+
+                        val textColor = when {
+                            isError -> Color(0xFFFF8B8B)
+                            isWarn -> Color(0xFFFFD56B)
+                            detail.text.startsWith("##[") || detail.text.startsWith("===") -> Color(0xFF8CE090)
+                            else -> Color(0xFFD4D4DC)
+                        }
+
+                        Row(verticalAlignment = Alignment.Top) {
+                            Text(
+                                text = "${idx + 1}".padStart(3, ' ') + "  ",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp
+                                ),
+                                color = Color(0xFF55555F)
+                            )
+                            Text(
+                                text = detail.text,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp
+                                ),
+                                color = textColor
+                            )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RawConsoleTerminal(rawText: String) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF141416),
+        border = BorderStroke(1.dp, Color(0xFF26262B)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+                .horizontalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = rawText,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp
+                ),
+                color = Color(0xFFDCDCE5)
+            )
         }
     }
 }

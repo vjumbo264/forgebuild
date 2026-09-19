@@ -113,10 +113,10 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     ) { pad ->
         Column(
             modifier = Modifier
-                .padding(pad)
+                .padding(top = pad.calculateTopPadding())
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(SpacingTokens.Spacing.md),
+                .padding(contentPaddingForFloatingBar()),
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
             upload?.let { CfCard(tonalLevel = 2) { CfProgress(label = it.label, fraction = it.fraction) } }

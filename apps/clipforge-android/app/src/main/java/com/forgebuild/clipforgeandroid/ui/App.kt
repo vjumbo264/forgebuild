@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +47,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -337,24 +351,25 @@ private fun MainTabs(
     onOpenSeries: (String) -> Unit,
     onOpenMusic: () -> Unit,
 ) {
-    val tabs = listOf(
-        MainTab("New Video", EngineIcons.Add),
-        MainTab("Tasks", EngineIcons.Bolt),
-        MainTab("Completed", EngineIcons.CheckCircle),
-        MainTab("Series", EngineIcons.Playlist),
-        MainTab("Settings", EngineIcons.Settings),
-    )
+    val tabs = remember {
+        listOf(
+            MainTab("New", EngineIcons.Add),
+            MainTab("Tasks", EngineIcons.Bolt),
+            MainTab("Done", EngineIcons.CheckCircle),
+            MainTab("Series", EngineIcons.Playlist),
+            MainTab("Settings", EngineIcons.Settings),
+        )
+    }
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(Modifier.fillMaxSize()) {
-        // Swipe between tabs. The floating bar sits below the content; pages get
-        // bottom padding equal to the bar so nothing is obscured.
+        // Content flows FULL SCREEN behind the floating bar.
+        // No black strip, no cut-off, no leftover bar area, and seamless content scrolling.
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = SpacingTokens.Spacing.xxxl + SpacingTokens.Spacing.xl),
+            modifier = Modifier.fillMaxSize(),
         ) { page ->
             when (page) {
                 0 -> NewTaskWizard(vm = vm, onDone = { scope.launch { pagerState.animateScrollToPage(1) } })
@@ -365,30 +380,100 @@ private fun MainTabs(
             }
         }
 
-        // FLOATING tab bar — a detached tonal pill, kept in sync with the swipe.
-        Surface(
+        // Truly FLOATING expressive navigation pill dock
+        FloatingExpressiveNavigationBar(
+            tabs = tabs,
+            selectedTab = pagerState.currentPage,
+            onTabSelected = { index ->
+                scope.launch { pagerState.animateScrollToPage(index) }
+            },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(SpacingTokens.Spacing.md),
-            shape = MaterialTheme.shapes.extraExtraLarge,
-            color = ElevationTokens.tonalContainerColor(3),
-            shadowElevation = ElevationTokens.level3,
+                .padding(horizontal = 20.dp)
+                .padding(bottom = (navBottom + 12.dp).coerceAtLeast(16.dp)),
+        )
+    }
+}
+
+@Composable
+private fun FloatingExpressiveNavigationBar(
+    tabs: List<MainTab>,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(68.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+        tonalElevation = 6.dp,
+        shadowElevation = 10.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.padding(SpacingTokens.Spacing.xxs),
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    SegmentedButton(
-                        selected = pagerState.settledPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(active = pagerState.settledPage == index) {
-                                Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(SegmentedButtonDefaults.IconSize))
-                            }
-                        },
-                        label = { Text(tab.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
-                    )
+            tabs.forEachIndexed { index, tab ->
+                val isSelected = selectedTab == index
+                val interactionSource = remember { MutableInteractionSource() }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .expressiveBounce(interactionSource, pressedScale = 0.88f)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = { onTabSelected(index) },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .width(if (isSelected) 52.dp else 36.dp)
+                                .background(
+                                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                    else Color.Transparent,
+                                    shape = CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = tab.label,
+                                modifier = Modifier.size(20.dp),
+                                tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                fontSize = 11.sp,
+                            ),
+                            maxLines = 1,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                        )
+                    }
                 }
             }
         }

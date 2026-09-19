@@ -113,10 +113,10 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
     ) { pad ->
         Column(
             modifier = Modifier
-                .padding(pad)
+                .padding(top = pad.calculateTopPadding())
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(SpacingTokens.Spacing.md),
+                .padding(contentPaddingForFloatingBar()),
             verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
             if (settingsLoading && !settingsLoaded) {

@@ -371,21 +371,35 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _nextPart = MutableStateFlow<NextPartInfo?>(null)
     val nextPart: StateFlow<NextPartInfo?> = _nextPart
 
-    /** GitHub Actions-style log expansion (fix #3): null = follow the running step. */
-    private var expandedStepKey: String? = null
-    private var autoCollapseDone = false
+        private val _expandedStepKeys = MutableStateFlow<Set<String>>(emptySet())
+    val expandedStepKeys: StateFlow<Set<String>> = _expandedStepKeys.asStateFlow()
 
-    fun isStepExpanded(step: LogStep): Boolean =
-        expandedStepKey?.let { it == step.key }
-            ?: (!autoCollapseDone && step.level == LogLevel.RUNNING)
+    private val _detailRawLog = MutableStateFlow("")
+    val detailRawLog: StateFlow<String> = _detailRawLog.asStateFlow()
+
+    fun isStepExpanded(step: LogStep): Boolean {
+        val set = _expandedStepKeys.value
+        if (set.contains(step.key)) return true
+        if (set.isEmpty() && (step.level == LogLevel.RUNNING || step.level == LogLevel.FAILURE)) return true
+        return false
+    }
 
     fun toggleStepExpanded(key: String) {
-        if (expandedStepKey == key) {
-            expandedStepKey = null // collapse: return to auto-follow of the running step
+        val current = _expandedStepKeys.value.toMutableSet()
+        if (current.contains(key)) {
+            current.remove(key)
         } else {
-            expandedStepKey = key
-            autoCollapseDone = true // manual pick wins; the running step no longer auto-expands
+            current.add(key)
         }
+        _expandedStepKeys.value = current
+    }
+
+    fun expandAllSteps() {
+        _expandedStepKeys.value = _detailLogs.value.map { it.key }.toSet()
+    }
+
+    fun collapseAllSteps() {
+        _expandedStepKeys.value = emptySet()
     }
 
     /** Fix #2 — stream the bot's pre-rendered sample assets/tts-previews/<voiceId>.mp3
@@ -796,8 +810,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         pollJob?.cancel()
         // Fresh log buffer + expansion state for a fresh task view.
         _detailLogs.value = emptyList()
-        expandedStepKey = null
-        autoCollapseDone = false
+        _expandedStepKeys.value = emptySet()
+        _detailRawLog.value = ""
         pollJob = viewModelScope.launch {
             while (isActive) {
                 loadTaskDetail(jobId)
@@ -811,8 +825,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         pollJob = null
         _detailStatus.value = null
         _detailLogs.value = emptyList()
-        expandedStepKey = null
-        autoCollapseDone = false
+        _expandedStepKeys.value = emptySet()
+        _detailRawLog.value = ""
         _nextPart.value = null
         _downloadedVideoFor.value = null
         _playVideoUri.value = null
@@ -895,28 +909,33 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                             val jConclusion = strOr(jobObj, "conclusion")
                             val jobLevel = logLevelFor(jStatus, jConclusion)
                             val jobIdNum = jobIds.getOrElse(i) { -1L }
+                            // Fetch real job logs via GitHubClient.parseJobLogs
+                            val parsedLogs: GitHubClient.ParsedJobLogs? = try {
+                                if (jobIdNum > 0 && (jStatus == "in_progress" || jStatus == "completed")) {
+                                    val raw = c.jobLog(jobIdNum)
+                                    _detailRawLog.value = raw
+                                    c.parseJobLogs(raw)
+                                } else null
+                            } catch (e: Exception) {
+                                DiagLog.log(app.applicationContext, "Logger", "Failed to fetch logs for job $jobIdNum: ${e.message}")
+                                null
+                            }
 
-                            // Fetch the job's real step log when it has started/finished.
-                            val stepLogs: Map<String, List<String>> = try {
-                                if (jobIdNum > 0 && (jStatus == "in_progress" || jStatus == "completed"))
-                                    c.splitLogByStep(c.jobLog(jobIdNum)) else emptyMap()
-                            } catch (_: Exception) { emptyMap() }
-                            fun linesForStep(stepName: String): List<LogDetail> {
-                                val key = stepLogs.keys.firstOrNull { k ->
-                                    k.equals(stepName, true) || stepName.contains(k, true) || k.contains(stepName, true)
-                                } ?: return emptyList()
-                                return stepLogs[key].orEmpty().takeLast(400)
-                                    .map { LogDetail(it, LogLevel.INFO) }
+                            fun linesForStep(stepIdx: Int, stepName: String): List<LogDetail> {
+                                val lines = parsedLogs?.linesForStep(stepIdx, stepName) ?: emptyList()
+                                return lines.takeLast(500).map { LogDetail(it, LogLevel.INFO) }
                             }
 
                             val jobDetails = mutableListOf(
                                 LogDetail("status: $jStatus  ·  result: ${jConclusion.ifBlank { "—" }}", LogLevel.INFO)
                             )
-                            // If the job has no steps array, surface whatever its log holds.
                             val stepsArr = jobObj.optJSONArray("steps")
-                            if (stepsArr == null && stepLogs.isNotEmpty()) {
-                                stepLogs.values.flatten().takeLast(120).forEach { jobDetails.add(LogDetail(it, LogLevel.INFO)) }
+                            if (stepsArr == null && parsedLogs != null && parsedLogs.stepBlocks.isNotEmpty()) {
+                                parsedLogs.stepBlocks.flatMap { it.lines }.takeLast(200).forEach {
+                                    jobDetails.add(LogDetail(it, LogLevel.INFO))
+                                }
                             }
+
                             newSteps.add(
                                 LogStep(
                                     key = "job-$i",
@@ -927,7 +946,6 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                 )
                             )
 
-                            // steps array may be null early in a run — do NOT skip the job.
                             if (stepsArr != null) {
                                 for (si in 0 until stepsArr.length()) {
                                     val step = stepsArr.getJSONObject(si)
@@ -935,11 +953,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                     val sStatus = strOr(step, "status")
                                     val sConclusion = strOr(step, "conclusion")
                                     val level = logLevelFor(sStatus, sConclusion)
-                                    val stepDetailLines = linesForStep(sName).toMutableList()
-                                    if (stepDetailLines.isEmpty())
+                                    val stepDetailLines = linesForStep(si, sName).toMutableList()
+                                    if (stepDetailLines.isEmpty()) {
                                         stepDetailLines.add(LogDetail("status: $sStatus  ·  result: ${sConclusion.ifBlank { "—" }}", LogLevel.INFO))
-                                    if (level == LogLevel.FAILURE)
-                                        stepDetailLines.takeLast(6).forEach { it.copy(level = LogLevel.FAILURE) }
+                                    }
+                                    if (level == LogLevel.FAILURE) {
+                                        val highlighted = stepDetailLines.map { d ->
+                                            val lower = d.text.lowercase()
+                                            if (lower.contains("error") || lower.contains("fatal") || lower.contains("fail") || lower.contains("exception")) {
+                                                d.copy(level = LogLevel.FAILURE)
+                                            } else d
+                                        }
+                                        stepDetailLines.clear()
+                                        stepDetailLines.addAll(highlighted)
+                                    }
                                     newSteps.add(
                                         LogStep(
                                             key = "job-$i-step-$si",
@@ -952,7 +979,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                                 }
                             }
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        DiagLog.log(app.applicationContext, "Logger", "Job parsing failed: ${e.message}")
+                    }
                 }
                 _detailLogs.value = newSteps
             }

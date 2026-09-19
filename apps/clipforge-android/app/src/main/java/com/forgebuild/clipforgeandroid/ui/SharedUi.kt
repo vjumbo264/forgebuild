@@ -2,11 +2,16 @@
     androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
     androidx.compose.material3.ExperimentalMaterial3Api::class,
 )
-
 package com.forgebuild.clipforgeandroid.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +19,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -34,74 +43,105 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
+import com.forgebuild.engine.ui.components.EngineCircularWavyProgress
 import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.components.EngineLoadingIndicator
 import com.forgebuild.engine.ui.components.ExpressiveButton
 import com.forgebuild.engine.ui.components.ExpressiveButtonLoader
 import com.forgebuild.engine.ui.components.ExpressiveTonalButton
 import com.forgebuild.engine.ui.theme.ElevationTokens
-import com.forgebuild.engine.ui.theme.MotionTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 
-/* ============================================================================
- *  V23 SHARED UI — built from scratch on the engine's real M3 Expressive stack.
- *
- *  Nothing here is carried over from the old screens: every action control in
- *  the app is one of the busy-aware ActionButton variants below, every wait is
- *  an official wavy/morphing loader, every surface is tonal, every spacing and
- *  motion value comes from the engine tokens. No hex colors, no ad-hoc dp
- *  radii, no per-screen type sizes, no hand-rolled loaders.
- * ============================================================================ */
-
-/** Animated status color — semantic log/status levels mapped onto scheme roles. */
+/**
+ * Material 3 Expressive tactile bounce: on press, scales with physics spring
+ * to provide unmistakable Google-grade tactile touch response.
+ */
 @Composable
-fun cfStatusColor(level: ClipForgeViewModel.LogLevel): Color {
-    val scheme = MaterialTheme.colorScheme
-    return when (level) {
-        ClipForgeViewModel.LogLevel.SUCCESS -> scheme.tertiary
-        ClipForgeViewModel.LogLevel.FAILURE -> scheme.error
-        ClipForgeViewModel.LogLevel.SKIPPED -> scheme.secondary
-        ClipForgeViewModel.LogLevel.RUNNING -> scheme.primary
-        ClipForgeViewModel.LogLevel.CANCELLED -> scheme.outline
-        ClipForgeViewModel.LogLevel.PENDING -> scheme.onSurfaceVariant.copy(alpha = 0.55f)
-        ClipForgeViewModel.LogLevel.INFO -> scheme.onSurfaceVariant
+fun Modifier.expressiveBounce(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean = true,
+    pressedScale: Float = 0.94f,
+): Modifier {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && enabled) pressedScale else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "expressiveBounce",
+    )
+    return this.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
     }
 }
 
-/** Pipeline-state label color (same semantic mapping as the logger). */
+/**
+ * Standard content padding for scrollable screens so content scrolls seamlessly
+ * behind the floating navigation bar and the bottom-most item has comfortable clearance.
+ */
 @Composable
-fun cfStateColor(state: String): Color {
-    val scheme = MaterialTheme.colorScheme
-    return when (state) {
-        "complete" -> scheme.tertiary
-        "error" -> scheme.error
-        "cancelled" -> scheme.outline
-        "awaiting_torrent_selection", "awaiting_plan" -> scheme.secondary
-        "queued" -> scheme.onSurfaceVariant
-        else -> scheme.primary // stage_a_running / stage_b_running / live states
-    }
+fun contentPaddingForFloatingBar(extraBottom: Dp = 0.dp): PaddingValues {
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return PaddingValues(
+        start = SpacingTokens.Spacing.md,
+        end = SpacingTokens.Spacing.md,
+        top = SpacingTokens.Spacing.md,
+        bottom = 88.dp + navBottom + extraBottom,
+    )
 }
 
-/** Animated tonal status chip — colors crossfade via the expressive effects spec. */
+/* ---------------------------------------------------------------------------
+ * SEMANTIC STATUS COLORS
+ * ------------------------------------------------------------------------- */
 @Composable
-fun CfChip(label: String, color: Color) {
+fun cfStatusColor(status: String): Color = when (status.lowercase()) {
+    "complete" -> MaterialTheme.colorScheme.tertiary
+    "error", "cancelled" -> MaterialTheme.colorScheme.error
+    "stage_a_running", "stage_b_running", "running" -> MaterialTheme.colorScheme.primary
+    "awaiting_plan", "awaiting_torrent_selection" -> MaterialTheme.colorScheme.secondary
+    "queued", "stage_b_queued" -> MaterialTheme.colorScheme.outline
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+@Composable
+fun cfStatusColor(level: ClipForgeViewModel.LogLevel): Color = when (level) {
+    ClipForgeViewModel.LogLevel.SUCCESS -> MaterialTheme.colorScheme.tertiary
+    ClipForgeViewModel.LogLevel.FAILURE -> MaterialTheme.colorScheme.error
+    ClipForgeViewModel.LogLevel.RUNNING -> MaterialTheme.colorScheme.primary
+    ClipForgeViewModel.LogLevel.PENDING -> MaterialTheme.colorScheme.outline
+    ClipForgeViewModel.LogLevel.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+/** Status chip using Material 3 Expressive pill shapes and soft tonal containers. */
+@Composable
+fun CfChip(
+    label: String,
+    color: Color = MaterialTheme.colorScheme.primary,
+    modifier: Modifier = Modifier,
+) {
     val animated by animateColorAsState(
         targetValue = color,
-        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
-        label = "chipColor",
+        label = "cfChipColor",
     )
     Surface(
-        shape = MaterialTheme.shapes.large,
-        color = animated.copy(alpha = 0.16f),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = animated.copy(alpha = 0.14f),
         contentColor = animated,
+        border = BorderStroke(1.dp, animated.copy(alpha = 0.3f)),
+        modifier = modifier,
     ) {
         Text(
             label,
@@ -114,7 +154,10 @@ fun CfChip(label: String, color: Color) {
     }
 }
 
-/** The one card the app uses: tonal level-1 surface, official shape tier. */
+/**
+ * Standard Card in ClipForge: high-quality container with M3 Expressive shape,
+ * subtle border outline, and tactile spring squish on tap when interactive.
+ */
 @Composable
 fun CfCard(
     modifier: Modifier = Modifier,
@@ -122,24 +165,40 @@ fun CfCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    val colors = androidx.compose.material3.CardDefaults.cardColors(
+    val colors = CardDefaults.cardColors(
         containerColor = ElevationTokens.tonalContainerColor(tonalLevel),
     )
+    val border = BorderStroke(
+        width = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+    )
     if (onClick != null) {
+        val interactionSource = remember { MutableInteractionSource() }
         androidx.compose.material3.Card(
             onClick = onClick,
             colors = colors,
-            modifier = modifier.fillMaxWidth(),
-        ) { Box(Modifier.padding(SpacingTokens.Spacing.md)) { content() } }
+            shape = MaterialTheme.shapes.large,
+            border = border,
+            interactionSource = interactionSource,
+            modifier = modifier
+                .fillMaxWidth()
+                .expressiveBounce(interactionSource, pressedScale = 0.98f),
+        ) {
+            Box(Modifier.padding(SpacingTokens.Spacing.md)) { content() }
+        }
     } else {
         androidx.compose.material3.Card(
             colors = colors,
+            shape = MaterialTheme.shapes.large,
+            border = border,
             modifier = modifier.fillMaxWidth(),
-        ) { Box(Modifier.padding(SpacingTokens.Spacing.md)) { content() } }
+        ) {
+            Box(Modifier.padding(SpacingTokens.Spacing.md)) { content() }
+        }
     }
 }
 
-/** Screen section card with a title (titleMedium) and optional subtitle. */
+/** Screen section card with an expressive title, subtitle, and action slot. */
 @Composable
 fun CfSection(
     title: String,
@@ -162,7 +221,7 @@ fun CfSection(
     }
 }
 
-/** Designed empty state — decorative official MaterialShapes cookie + text. */
+/** Designed empty state — decorative official MaterialShapes cookie + typography. */
 @Composable
 fun CfEmptyState(title: String, body: String, modifier: Modifier = Modifier) {
     Column(
@@ -179,7 +238,15 @@ fun CfEmptyState(title: String, body: String, modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = MaterialShapes.Cookie12Sided.toShape(),
                 ),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = com.forgebuild.engine.ui.icons.EngineIcons.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(32.dp),
+            )
+        }
         Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         Text(
             body,
@@ -190,7 +257,7 @@ fun CfEmptyState(title: String, body: String, modifier: Modifier = Modifier) {
     }
 }
 
-/** Designed loading block — official morphing LoadingIndicator + caption. */
+/** Designed loading block — official morphing LoadingIndicator or wavy spinner + caption. */
 @Composable
 fun CfLoading(label: String, modifier: Modifier = Modifier) {
     Column(
@@ -198,7 +265,7 @@ fun CfLoading(label: String, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
     ) {
-        EngineLoadingIndicator()
+        EngineCircularWavyProgress(Modifier.size(44.dp))
         Text(
             label,
             style = MaterialTheme.typography.bodyMedium,
@@ -219,14 +286,13 @@ fun CfProgress(label: String, fraction: Float?, modifier: Modifier = Modifier) {
 }
 
 /* ---------------------------------------------------------------------------
- * THE shared busy-aware action-button family (v23-R4).
+ * THE shared busy-aware action-button family with expressive spring bounce.
  *
- * Every button in the app is one of these. On tap the control disables within
- * one frame and swaps to the official morphing LoadingIndicator (label stays);
- * the ViewModel's withBusy(key) re-entrancy guard makes a second tap a no-op
- * while an operation is in flight — a button can never double-fire.
+ * Every button in the app is one of these. On tap the control scales down
+ * with spring physics, disables within one frame, and swaps to the official
+ * morphing LoadingIndicator (label stays); the ViewModel's withBusy(key)
+ * re-entrancy guard makes a second tap a no-op — a button can never double-fire.
  * ------------------------------------------------------------------------- */
-
 @Composable
 fun ActionButton(
     label: String,
@@ -236,10 +302,11 @@ fun ActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     ExpressiveButton(
         onClick = { if (!busy) onClick() },
         enabled = enabled && !busy,
-        modifier = modifier,
+        modifier = modifier.expressiveBounce(interactionSource, enabled = enabled && !busy),
     ) {
         if (busy) {
             ExpressiveButtonLoader(color = MaterialTheme.colorScheme.onPrimary)
@@ -262,10 +329,11 @@ fun TonalActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     ExpressiveTonalButton(
         onClick = { if (!busy) onClick() },
         enabled = enabled && !busy,
-        modifier = modifier,
+        modifier = modifier.expressiveBounce(interactionSource, enabled = enabled && !busy),
     ) {
         if (busy) {
             ExpressiveButtonLoader(color = MaterialTheme.colorScheme.onSecondaryContainer)
@@ -289,13 +357,15 @@ fun OutlinedActionButton(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = { if (!busy) onClick() },
         enabled = enabled && !busy,
+        interactionSource = interactionSource,
         shapes = ButtonDefaults.shapes(),
         colors = if (destructive) ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
         else ButtonDefaults.outlinedButtonColors(),
-        modifier = modifier,
+        modifier = modifier.expressiveBounce(interactionSource, enabled = enabled && !busy),
     ) {
         if (busy) {
             ExpressiveButtonLoader(color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
@@ -318,13 +388,15 @@ fun TextActionButton(
     destructive: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     TextButton(
         onClick = { if (!busy) onClick() },
         enabled = enabled && !busy,
+        interactionSource = interactionSource,
         shapes = ButtonDefaults.shapes(),
         colors = if (destructive) ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
         else ButtonDefaults.textButtonColors(),
-        modifier = modifier,
+        modifier = modifier.expressiveBounce(interactionSource, enabled = enabled && !busy),
     ) {
         if (busy) {
             ExpressiveButtonLoader(color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
@@ -343,10 +415,12 @@ fun IconActionButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     IconButton(
         onClick = { if (!busy) onClick() },
         enabled = enabled && !busy,
-        modifier = modifier,
+        interactionSource = interactionSource,
+        modifier = modifier.expressiveBounce(interactionSource, enabled = enabled && !busy),
     ) {
         if (busy) ExpressiveButtonLoader(color = LocalContentColor.current)
         else Icon(icon, contentDescription = contentDescription)
