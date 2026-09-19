@@ -747,3 +747,181 @@ Bump versionCode/versionName, run release.yml, verify the release, tag and APK a
 
 Hard rules: BUILD_STATE.json is the source of truth; persistent session; per-step commit+push; never redo completed work; never commit tokens/PATs; the build session must never delete the repository; never touch prior releases.
 """
+
+
+---
+
+<!-- appended 2026-09-19 (second round) by ForgeBuild AI session -->
+
+# EXTEND/UPDATE — clipforge-android (v21 → v22)
+
+Operator instruction 2026-09-19 (second round). Follow the standard extend contract: append this instruction verbatim to `PROMPT_HISTORY/clipforge-android.md`, seed tasks, checkpoint `BUILD_STATE.json` after every task, cut `clipforge-android-v22`, never touch prior releases, never delete the repository, never commit tokens/PATs.
+
+**AUTONOMY:** Run fully autonomously. Ask no clarifying questions. Where something is ambiguous, pick the most sensible option, record the decision in BUILD_STATE notes, and continue.
+
+**NO DEVICE TESTING:** You cannot install or run the APK. Do NOT screenshot, do NOT attempt emulator or on-device testing, and do NOT put screenshot or run-the-app steps in any prompt, task or workflow. Verification = successful compile, unit tests, `release.yml` run success, and the Releases API asset check only.
+
+**WHY THIS ROUND EXISTS:** v21 was released but the operator saw NO change in the logger or the UI, the Zernio settings did not land, and background audio is intermittent. The operator is angry. v20 and v21 were marked "done" without the work actually reaching the screen. This round must fix root causes and must be verified by reading the code that ships (see the "Proof of work" section), not by trusting earlier BUILD_STATE claims. Do not mark any task done on the strength of existing notes.
+
+---
+
+## PRIORITY 1 — THE UI IS STILL THE OLD UI. REBUILD IT ON THE ENGINE'S REAL M3 EXPRESSIVE STACK
+
+### 1.0 Root cause (verified in the repo, fix this FIRST)
+
+The app cannot look like the new UI because it is on the wrong library. Facts:
+
+- `apps/clipforge-android/app/build.gradle.kts` uses `platform("androidx.compose:compose-bom:2024.09.00")` and plain `androidx.compose.material3:material3` (M3 1.3.x). That version has NO `MaterialExpressiveTheme`, NO `MotionScheme.expressive()`, NO wavy progress, NO `LoadingIndicator`, NO `ButtonGroup`, NO `SplitButton`, NO `FloatingActionButtonMenu`. Previous sessions could only imitate them by hand.
+- The engine (`engine/`) uses `androidx.compose.material3:material3:1.5.0-alpha28` on the `1.13.0-alpha01` compose train, with NO BOM (the latest BOM still pins the non-expressive 1.4.0), AGP 9.4.0, Kotlin plugin 2.4.20, `activity-compose:1.13.0`.
+- Only **2 files** in the app (`MainActivity.kt`, `VideoPlayer.kt`) reference the engine theme. Every other screen uses stock or hand-rolled widgets. `ui/Motion.kt` is a hand-drawn imitation of a squiggle loader.
+
+### 1.1 Re-base the app on the engine stack
+
+1. Read `engine/ARCHITECTURE_MATERIAL_DISCIPLINE.md`, `engine/app/build.gradle.kts` and `engine/build.gradle.kts` in full. They are the contract.
+2. Make `apps/clipforge-android` build files match the engine EXACTLY: remove the BOM, pin the same compose train and the same `material3:1.5.0-alpha28`, same AGP, same Kotlin compose plugin, same `activity-compose`, same compileSdk/minSdk/targetSdk, and copy any opt-in flags or repositories the engine needs. Keep the app's own signing/versioning/`applicationId`.
+3. Copy the engine's UI layer into the app (or reference it as a module, whichever compiles cleanly) so these exist in the app: `ui/theme/Theme.kt (ForgeBuildTheme → MaterialExpressiveTheme)`, `ColorTokens`, `ShapeTokens`, `TypographyTokens`, `MotionTokens`, `ElevationTokens`, `SpacingTokens`, and `ui/components/EngineExpressive.kt` + `EngineProgress.kt`. Do not fork or approximate them; use the real files.
+4. If the compile breaks, fix the compile errors. Do NOT fall back to the old BOM. The whole point is to get onto the expressive library.
+
+### 1.2 Delete the old UI and rebuild every screen (no preservation)
+
+The operator's words: *"It should not preserve any previous UI. It should reinvent the UI. Every single thing must be changed."*
+
+- Delete `ui/Motion.kt` (the hand-drawn imitation) and every hand-rolled loader, spinner, shimmer and bespoke card style. Replace with the real engine components.
+- Rebuild EVERY screen from scratch on the new stack, none skipped: splash, setup/login (Connect Existing + Create New Clone), tasks list, task detail, new-task wizard (source/torrent selection, duration incl. 30s and custom, music, series, Super Series), completed videos, music library, series screens, Settings (every section), all dialogs and bottom sheets, empty/error states, snackbars, nav bar/rail, video player, audio preview, and the logger.
+- Everything inside `ForgeBuildTheme`. No raw hex colours, no raw dp corner radii, no per-screen font sizes. Use `MaterialTheme.colorScheme` roles, `MaterialTheme.typography` roles, `MaterialTheme.shapes` tiers, `SpacingTokens`, `ElevationTokens.tonalContainerColor`, `MotionTokens`. Dynamic colour on API 31+.
+- Use the official expressive components everywhere they apply: `EngineLinearWavyProgress`, `EngineCircularWavyProgress`, `EngineLoadingIndicator` (morphing shapes), `EngineButtonGroup`, `EngineSplitButton`, `EngineFabMenu`, `ExpressiveButton` / `ExpressiveTonalButton`, `ExpressiveButtonLoader`. Use the official `MaterialShapes` library and `Morph` for decorative shapes. Large-touch-target controls, tonal surfaces instead of hard borders, expressive top app bars, expressive `ListItem`s, expressive sliders.
+- Result must read as a modern Google app (Material 3 Expressive), visibly different from v21 on first launch: new colour, new shapes, new type, new motion.
+- Splash → main transition, screen-to-screen transitions, list entrances and expand/collapse all use `MotionTokens` spring specs.
+
+### 1.3 EVERY button must show feedback (fixes "I tap 2-3 times, then get errors")
+
+Measured problem: 76 `Button(` calls in `ui/`, only 21 `busyOps` references. Most buttons give no feedback, so the operator re-taps and triggers duplicate-request errors.
+
+- Introduce ONE shared action-button composable (built on `ExpressiveButton` + `ExpressiveButtonLoader`) that takes `onClick: suspend/async` and a `busy` state. On tap it must, within one frame: disable itself, swap its content for the morphing loading indicator (label may stay), and ignore further taps until the operation finishes.
+- Replace ALL 76 raw buttons (including `TextButton`, `IconButton`, dialog confirm buttons, FABs, list-row actions, menu items that trigger network work) with it. Every operation that hits the network, GitHub API, or dispatches a workflow must have a busy key in the ViewModel (`withBusy(key)`), and that key must drive the button.
+- Add a global re-entrancy guard in the ViewModel: a second tap on an operation that is already in flight is ignored (not queued, not errored). Idempotent operations use their key as the lock.
+- Success/failure end state: brief success tick or an error shake with a snackbar. Never leave a button with no visible change.
+- Add a grep-based CI check to `release.yml` that FAILS the build if any `Button(` / `TextButton(` / `IconButton(` / `FilledTonalButton(` remains in `ui/` outside the shared action-button file. This is how you prove the sweep is complete.
+
+---
+
+## PRIORITY 2 — LOGGER MUST SHOW THE REAL GITHUB ACTIONS LOG TEXT
+
+### 2.0 Answer to the operator's question
+
+**Yes, GitHub fully supports it.** `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` returns the raw step-by-step log text (it 302-redirects to a signed URL that OkHttp follows), and `GET /actions/runs/{run_id}/logs` returns a zip of every job's log. The PAT the clone already uses can read them (needs `Actions: read`). This is not a GitHub limitation. The code for it exists in `GitHubClient.jobLog()` and `splitLogByStep()`, yet the screen still shows only "status … · result …". So the wiring is broken. Find and fix why.
+
+### 2.1 Defects found in `ClipForgeViewModel.kt` (around lines 893-957) — fix all of them
+
+1. **Silent failure.** `try { c.splitLogByStep(c.jobLog(id)) } catch (_: Exception) { emptyMap() }` swallows every error, and `jobLog()` returns `""` on ANY non-2xx response. A 403 (missing `Actions: read`), 404, 410 (log expired), rate limit or timeout all become an empty map, which then renders as the fallback `"status: … · result: …"` line. That fallback IS what the operator keeps seeing. Errors must be surfaced, not hidden.
+2. **Fallback masquerades as content.** When step lines are empty, the code adds `LogDetail("status: $sStatus · result: …")`. Remove this fallback as the primary content. Replace with explicit states: "Loading log…" (shimmer), "Log not available yet (step still queued)", "Log unavailable: <HTTP code and reason>" with a Retry button, or "Log expired/removed by GitHub".
+3. **Fuzzy step matching is unreliable.** `linesForStep` matches on `equals || contains` after `removePrefix("Run ")`. Steps like "Run actions/checkout@v4", "Set up job", "Post Run …", "Complete job" and steps whose group header is the shell command do not match their API step name, so lines land on the wrong step or none. Replace the name-matching with the deterministic approach in 2.2.
+4. **Polling gap.** Logs are only fetched when a job is `in_progress` or `completed`, and only re-fetched on the detail refresh. A running step's log never streams in. Add a live poll (see 2.3).
+5. **Truncation.** `takeLast(400)` per step and `takeLast(120)` per job hide the actual beginning of long logs. Keep the full log in memory-efficient chunks, render lazily, and add "jump to top/bottom".
+
+### 2.2 Correct log parsing
+
+- Fetch per-job logs via `GET /actions/jobs/{job_id}/logs`. Verify the Authorization header is preserved on the redirect correctly (the redirect target is a pre-signed URL and must NOT carry the Authorization header, or it returns 403; use a client that strips auth on cross-host redirect, or fetch with `followRedirects(false)` and follow manually).
+- Map log text to steps by **step number order**, not by name. In the job log, steps appear in order and each begins at its `##[group]…` marker; the API's `steps[]` array is ordered by `number`. Split the log into ordered blocks and zip them to `steps[]` by index (accounting for the synthetic "Set up job" / "Complete job" blocks that appear in the log). Fall back to name matching only if counts disagree, and log a diagnostic when they do.
+- Strip ISO timestamps, ANSI escape codes, and convert `##[error]`, `##[warning]`, `##[notice]`, `##[command]`, `::error::` into styled line levels (red / amber / blue / dim). Preserve blank lines and indentation.
+- Handle the ZIP fallback (`/runs/{id}/logs`) for completed runs where the per-job endpoint is unavailable: unzip in memory, match `<n>_<job name>/<m>_<step name>.txt` entries to steps.
+
+### 2.3 Live behaviour
+
+- While any run is `queued`/`in_progress`: poll jobs + logs on an adaptive interval (2-3s in progress, 8s queued), append new lines incrementally (track byte/line offset), auto-expand and autoscroll the running step, show `EngineLinearWavyProgress` on the running step and `EngineLoadingIndicator` on a queued run ("Waiting for a runner…"). Stop polling when the run is terminal or the screen is left.
+- Completed tasks: show the full step history with real log text, an overall result chip and total duration; failed steps auto-expand with the last error lines highlighted; actions: copy step, copy whole log, share log as `.txt`.
+- Show every job and every step for every relevant run (stage-a, stage-b, publish, super-chain), not just the newest.
+
+### 2.4 Visual
+
+Card timeline with a vertical connector and status-coloured nodes (pending grey, running animated accent, success green, failed red, skipped amber, cancelled muted), monospaced selectable log body, expand/collapse with `MotionTokens` springs, sticky step headers. Built entirely from the new engine components and theme, matching the rest of the redesigned app.
+
+---
+
+## PRIORITY 3 — ZERNIO PUBLISHING SETTINGS AND PER-TASK PUBLISHING STILL MISSING
+
+Operator confirms the v21 changes for these did not land. Re-verify against the source at the end of this task by reading the shipped Kotlin, not by trusting BUILD_STATE.
+
+The source of truth is `motionssalt/clipforge` → `site/js/features/settings.js` and `site/js/features/tasks.js`, plus `pipeline/publish/zernio.py` and the clone's `branding/zernio_settings.json`. Schema:
+
+```
+{ version, enabled, auto_publish,
+  automatic_mode: "publish_now" | "smart_schedule",
+  target_accounts: { platform: [accountIds] },
+  smart_schedule: { timezone (IANA), interval_hours (1-8760), preferred_time "HH:MM",
+                    queue_depth, start_mode: "next_available" | "custom",
+                    custom_start "YYYY-MM-DDTHH:MM" } }
+```
+
+### 3.1 Settings screen (main Settings → Publishing)
+
+Controls: automatic publish on/off; automatic mode (publish now vs smart schedule); interval hours; preferred time picker; searchable IANA timezone picker; queue depth; start mode (next available / custom first slot with date-time picker); per-platform target-account selection. Validate exactly like `zernio.py` (interval whole hours 1-8760, HH:MM, valid IANA zone, `custom_start` required when `start_mode=custom`). Read and write `branding/zernio_settings.json` through the contents API with SHA-safe updates (re-read, merge, PUT with the latest SHA, retry on 409) so the site and the app never overwrite each other. Show a live summary line, e.g. "every 6h at 05:00 UTC, queue depth 100, next available".
+
+### 3.2 Completed tasks (task detail AND completed list)
+
+Verified fact: the app currently has zero publish UI on completed tasks (`grep -i publish ui/TasksScreens.kt` returns nothing). Port `zernioTaskPublishButton`, `dispatchZernioPublish`, `dispatchZernioPostAction` from `site/js/features/tasks.js`:
+
+- Publish card showing status (`not_requested / publishing / scheduled / published / partial / failed`) and targets, visible when Zernio is enabled.
+- Actions: **Publish now**, **Smart schedule**, **Schedule for…** (date-time picker in the settings timezone, validated `YYYY-MM-DDTHH:MM`).
+- Per-post controls per platform: **Retry**, **Publish now**, **Reschedule**, **Cancel** (with confirm).
+- Also on already-published tasks: **Publish again / Reschedule**.
+- Dispatch `publish.yml` with exactly the inputs the site sends (`mode`, `scheduled_for`, `timezone`, task label, idempotency key, action and post id; check `settings.js`/`tasks.js` lines ~688-734 for the exact payload) and reflect the result live in the task detail.
+- Quick publish action on rows in the completed-videos list.
+- All of it built with the new shared busy-aware button so a tap always shows feedback.
+
+---
+
+## PRIORITY 4 — BACKGROUND AUDIO IS INTERMITTENT ("coin toss"): INVESTIGATE AND MAKE IT DETERMINISTIC
+
+Operator: a music track is selected, yet sometimes the finished video has no background audio, sometimes it does. Unacceptable for professional work. Diagnosis from the code (fix all of these):
+
+### 4.1 Root causes found
+
+1. **The app silently converts every failure into "no music".** `ClipForgeViewModel.resolveMusicRef()` (~line 1112):
+   - `readFile("jobs/<id>/stage-a-request.json")` is wrapped in `catch (_: Exception) { null }`, and a null request falls through to `music.optString("source","none")` → `"none"` → returns `""`.
+   - For `source:"default"`, both the `music_default.json` read and its parse are wrapped in `catch → ""`.
+   - So a network blip, a 404, a rate limit, or a not-yet-visible file all yield an empty `music_ref`. `stage-b.yml` then prints "No music_ref supplied — final video ships without background music" and **still finishes successfully**. Nothing in the app or the video flags it. That is the coin toss.
+2. **Race on the request file.** The ref is resolved at dispatch time by re-reading `stage-a-request.json` over the API; if the read happens before the commit is visible (or hits a cache), the ref is empty.
+3. **`source:"default"` is resolved late and ambiguously.** Whether music plays depends on `branding/music_default.json` at dispatch time. If it is changed, unset, or unreadable, the same task flips to silent.
+4. **No verification that music was actually mixed.** `pipeline/stage_b/run.py` records `music_applied`, but nothing enforces or surfaces it. The `amix` path in `pipeline/stage_b/render.py` also has no guard against the measured gain landing effectively inaudible (`MUSIC_TO_VOICE_LOUDNESS_RATIO = 0.15`, clamps −60..+24 dB) or against a silent/corrupt file falling back to the fixed 0.33 volume.
+5. In `stage-b.yml`, a `path:` ref pointing at a missing library file does `exit 1` (loud), but an empty ref exits 0 (silent). The silent path is the dangerous one.
+
+### 4.2 Fixes (both repos; app in ForgeBuild, pipeline in the user's clone / `motionssalt/clipforge`)
+
+**App (`clipforge-android`):**
+- **Resolve once, freeze, and pass through.** At task creation, resolve the final music to a concrete `path:` ref and store BOTH the resolved ref and the resolution source in `jobs/<id>/stage-a-request.json` (`music.ref` always a concrete path when music was chosen; keep `source` for audit). `resolveMusicRef` must then read only that frozen ref; the late `source:"default"` indirection is removed for new tasks.
+- **Never swallow errors here.** `resolveMusicRef` must throw a typed error on read failure/parse failure/missing ref-when-music-expected, retry with backoff (3 attempts), and if it still cannot resolve, ABORT the dispatch with a clear error card ("Couldn't confirm your background music. Retry / Continue without music") instead of dispatching silently. Only an explicit user choice of "no music" may produce an empty ref.
+- After dispatch, when the run completes, read the stage-b result/status (`music_applied`) and show a **"Background music: applied ✓ / NOT applied ⚠"** badge on the task, with the track name. If the operator chose music and `music_applied` is false, mark the task with a warning and offer one-tap "Re-render with music".
+- Apply the same fix to `restartStageB`, `startNextSeriesPart`, super-series part spawning and every other caller (~lines 1159, 1590).
+
+**Pipeline (clone / `motionssalt/clipforge`):**
+- `stage-b.yml`: if the job's request says music was chosen (`music.source != none`) but `music_ref` arrives empty, **fail loudly** (`exit 1`) instead of shipping silent, with a message that names the cause. Also re-resolve from `jobs/<id>/stage-a-request.json` inside the workflow as a second source of truth, so a dropped dispatch input cannot silence the video.
+- `render.py` / `run.py`: after mixing, run an **audibility check** (measure integrated loudness of the output's non-voice component or compare the mixed track against voice-only; e.g. `ffmpeg volumedetect`/`ebur128` on the music stem before mix) and record `music_applied`, `music_gain_db`, `music_lufs`, `music_fallback_used` in the job status. If music was requested and (`music_applied` is false OR the measured music level is below an audibility floor OR the fixed-volume fallback was used because measurement failed) → fail the stage with an explicit message rather than producing a silently-wrong video. Add unit tests for the empty-ref, missing-file, silent-file and inaudible-gain cases.
+- Log the resolved music ref, source, LUFS values and final gain at the top of the Stage B run so the (now real) logger shows them.
+
+Acceptance: with music selected, it is impossible for a video to finish "successfully" without audible background music. Any failure path is loud and visible in both the logger and the task card.
+
+---
+
+## PRIORITY 5 — CARRY-OVER CHECKS (do not regress)
+
+- Icon from v21 stays; if the operator's launcher still shows the old icon, verify the adaptive-icon XML, the round variants and the legacy mipmaps all reference the new assets.
+- Clone creation resilience from v21 stays. Migrate its UI to the new components.
+- Cleanup workflow email-spam fix from v21 stays; confirm the latest cleanup runs are green and no failure emails are possible (fail-soft). Do not re-open unless it regressed.
+
+---
+
+## PROOF OF WORK (mandatory before `build_complete=true`)
+
+Because previous "done" claims were false, this round is closed only with evidence recorded in `BUILD_STATE.json`:
+
+1. **Build files:** show that `app/build.gradle.kts` now has `material3:1.5.0-alpha28`, no BOM, and matches the engine; paste the dependency lines.
+2. **Old UI gone:** `ui/Motion.kt` deleted; grep output showing no `CircularProgressIndicator(`/`LinearProgressIndicator(` hand-rolled loaders and no raw `Button(`/`TextButton(`/`IconButton(` outside the shared action-button file; count of engine component usages per screen file (`ForgeBuildTheme`, `EngineLoadingIndicator`, `EngineLinearWavyProgress`, `ExpressiveButton`, etc.) showing EVERY screen file uses them.
+3. **Logger:** show the deployed code path that returns real log lines (function names + a unit test that feeds a sample raw GitHub job log and asserts steps get the correct lines), and a test for the 403/404/410 states asserting an explicit error state instead of the status fallback.
+4. **Zernio:** grep proof that `SettingsScreen.kt` contains controls for `auto_publish`, `automatic_mode`, `interval_hours`, `preferred_time`, `timezone`, `queue_depth`, `start_mode`, `custom_start`, and that `TasksScreens.kt` contains the publish card and per-post actions; a unit test for validation parity with `zernio.py`.
+5. **Audio:** unit tests for `resolveMusicRef` error handling, and pipeline tests for the fail-loud and audibility cases, all passing.
+6. `release.yml` green, `clipforge-android-v22` release exists with the APK asset, verified via the Releases API. Bump `versionCode`/`versionName` to 22.
+
+Mark each task done only after its proof is recorded. Set `build_complete=true` last.
+
+**Hard rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never redo completed work that is genuinely verified; never commit tokens/PATs; never delete the repository; never touch prior releases.
