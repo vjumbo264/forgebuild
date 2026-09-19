@@ -4,7 +4,7 @@
  "description": "An android version of the forge build site: a native Android client for the ForgeBuild dashboard \u2014 browse apps in apps/, view per-app releases/APK downloads, BUILD_STATE.json and PROMPT_HISTORY, and generate type-1 new-app contract prompts, all against the GitHub API of vjumbo264/forgebuild.",
  "package": "com.forgebuild.forgeandroid",
  "build_complete": false,
- "current_task": "task-04",
+ "current_task": "task-06",
  "updated_by": "forge-android-build session-1",
  "tasks": [
   {
@@ -28,14 +28,14 @@
   {
    "id": "task-04",
    "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) via GitHub API; do not regenerate.",
-   "status": "pending",
-   "notes": ""
+   "status": "done",
+   "notes": "Verified via GitHub API actions/secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD all present on vjumbo264/forgebuild. Not regenerated."
   },
   {
    "id": "task-05",
    "title": "Implement the app (one feature per commit): GitHub API data layer + INTERNET permission; apps list screen (cache-first); app detail screen (releases/APK/build state/prompt history); type-1 new-app prompt generator screen; navigation + M3 Expressive polish.",
-   "status": "pending",
-   "notes": ""
+   "status": "done",
+   "notes": "App implemented: GitHub REST client (platform HttpURLConnection + org.json \u2014 zero new dependencies) + PatStore; AppsRepository/DetailRepository on Engine CacheFirstStore (instant cached render, background reconcile, non-blocking refresh affordance); INTERNET permission declared (only permission the app uses); 3 screens (apps list, app detail with releases/build-state/prompt-history tabs, type-1 new-app prompt generator) + single-activity navigation; all UI inside ForgeBuildTheme with EngineIcons, SpacingTokens, MaterialTheme shapes/typography/colorScheme, PrimaryTabRow, expressive EngineLoadingIndicator. No emoji, no hardcoded colors, no substitutions."
   },
   {
    "id": "task-06",
@@ -54,8 +54,14 @@
   {
    "session": "session-1",
    "event": "New-app build started 2026-09-19. Operator description: \"An android version of the forge build site\". Slug forge-android chosen (not predetermined; no apps/ collision). Folder seeded from engine/."
+  },
+  {
+   "session": "session-1",
+   "event": "Tasks 02-05 done: identity set, adaptive icon generated, signing secrets confirmed present (KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD), full app implemented (data layer + 3 screens + navigation) in per-feature commits."
   }
  ],
  "substitutions": [],
- "dependency_justifications": []
+ "dependency_justifications": [
+  "NONE added beyond the Engine's own deps \u2014 networking uses platform HttpURLConnection + org.json; persistence uses SharedPreferences + CacheFirstStore JSON files."
+ ]
 }
