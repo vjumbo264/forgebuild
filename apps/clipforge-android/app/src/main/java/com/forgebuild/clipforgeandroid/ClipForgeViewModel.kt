@@ -2303,8 +2303,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     /** Concrete default ref (path:...) from branding/music_default.json, or "" when unset. */
     private fun readDefaultMusicRef(c: GitHubClient): String {
-        val (text, _) = c.readFile("branding/music_default.json")
-        val p = JSONObject(text).optString("library_track_path", "")
+        val file = c.readFile("branding/music_default.json")
+            ?: throw java.io.IOException("branding/music_default.json not found")
+        val p = JSONObject(file.first).optString("library_track_path", "")
         return if (p.isNotBlank()) "path:$p" else ""
     }
 }
