@@ -2,72 +2,147 @@
 
 package com.forgebuild.engine.ui.components
 
-import androidx.compose.material3.ButtonGroup
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SplitButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
- * Engine shared Material 3 Expressive component surface.
+ * Material 3 Expressive components — REAL official library implementations.
  *
- * These are the OFFICIAL M3 Expressive components from the pinned material3
- * 1.5.0-alpha train — NEVER hand-rolled approximations (standing permanent
- * rule). Wavy progress indicators and the morphing LoadingIndicator already
- * live in [EngineProgress] (single source, not duplicated here).
+ * This file used to contain HAND-ROLLED Canvas approximations (a rotating
+ * wavy ring, a squiggly progress line, a spring-scale button) because the
+ * app's toolchain was pinned at AGP 8.5.2 / compileSdk 34 / compose-bom
+ * 2024.09.00, which cannot see the real expressive APIs. That was wrong: the
+ * correct fix is to upgrade the toolchain and use the official library, which
+ * is exactly what forgebuild-real-expressive-fix did (AGP 9.4.0, compileSdk
+ * 37, material3 1.5.0-alpha28 — the first released train where these APIs are
+ * public; in stable 1.4.x they are internal/absent).
  *
- * What you get FOR FREE under ForgeBuildTheme (MaterialExpressiveTheme +
- * MotionScheme.expressive()): expressive Button/FAB shapes and spring-based
- * press/expand behavior, expressive Menus, Sliders, TopAppBars, ListItems —
- * no opt-in needed. The wrappers below exist for the expressive components
- * that DO have distinct APIs apps should prefer over plain counterparts.
+ * The composables below are now THIN WRAPPERS over the official
+ * androidx.compose.material3 expressive components, keeping the established
+ * call sites (`ExpressiveLoading`, `ExpressiveButtonLoader`,
+ * `ExpressiveButton`) source-compatible. There is no longer any hand-rolled
+ * geometry, physics, or animation in this file.
  *
- * Full discipline reference: engine/ARCHITECTURE_MATERIAL_DISCIPLINE.md.
+ * - ExpressiveLoading / ExpressiveButtonLoader -> official
+ *   [androidx.compose.material3.LoadingIndicator] (morphing-shape spinner,
+ *   @ExperimentalMaterial3ExpressiveApi — opted in at file level above).
+ * - ExpressiveButton -> official [androidx.compose.material3.Button] with the
+ *   official expressive [androidx.compose.material3.ButtonShapes] (pressed
+ *   shape morph). The busy in-button loader is the official LoadingIndicator.
  */
 
-/**
- * Expressive [ButtonGroup] — a group of related buttons with official
- * spring-based press/expand spacing animation. Prefer this over a hand-spaced
- * Row of buttons for toolbars/actions.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+/** Expressive loading indicator (official morphing-shape [LoadingIndicator]). */
 @Composable
-fun EngineButtonGroup(
+fun ExpressiveLoading(
     modifier: Modifier = Modifier,
-    content: @Composable androidx.compose.material3.ButtonGroupScope.() -> Unit
+    size: Dp = 56.dp,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    ButtonGroup(modifier = modifier, content = content)
+    LoadingIndicator(modifier = modifier.size(size), color = color)
 }
 
 /**
- * Expressive [SplitButton] — a leading action button + trailing menu button
- * with the official expressive chevron expansion behavior. Prefer this over a
- * hand-built "button + dropdown" pair.
+ * Small busy indicator at 18.dp (official [LoadingIndicator]).
+ *
+ * post_testing_polish_v1 ISSUE 2 (2026-09-18): the translation-download spinner
+ * read too dark/low-contrast in dark mode. Root cause: this helper defaulted to
+ * onPrimary (the colour meant for use ON a filled-primary surface), but the
+ * TranslationsScreen calls it on a plain Card surface, where onPrimary is not
+ * the correct reading and lands as a low-contrast near-background tone in dark
+ * mode. The default is now the dynamic theme accent (colorScheme.primary) so
+ * the standalone spinner matches every other loading indicator in the app and
+ * keeps correct contrast in BOTH light and dark dynamic schemes.
+ *
+ * Genuine in-button loaders (ExpressiveButton/ExpressiveTonalButton below)
+ * still pass their explicit onPrimary/onSecondaryContainer override, so the
+ * on-filled-button contrast there is unchanged.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun EngineSplitButton(
-    leadingContent: @Composable androidx.compose.material3.SplitButtonLeadingContentScope.() -> Unit,
-    trailingContent: @Composable androidx.compose.material3.SplitButtonTrailingContentScope.() -> Unit,
-    modifier: Modifier = Modifier
+fun ExpressiveButtonLoader(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    SplitButton(leadingContent = leadingContent, trailingContent = trailingContent, modifier = modifier)
+    LoadingIndicator(modifier = modifier.size(18.dp), color = color)
 }
 
 /**
- * Expressive [FloatingActionButtonMenu] — FAB that expands into a menu of
- * related actions with the official expressive motion. Prefer this over a
- * hand-rolled speed-dial.
+ * Expressive determinate progress bar: the official
+ * [LinearWavyProgressIndicator] (wavy/shape-morphing), replacing every legacy
+ * [androidx.compose.material3.LinearProgressIndicator]. [progress] is a real
+ * 0..1 fraction driven by genuine work (e.g. bytes downloaded).
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun EngineFabMenu(
-    expanded: Boolean,
-    button: @Composable () -> Unit,
+fun ExpressiveLinearProgress(
+    progress: () -> Float,
     modifier: Modifier = Modifier,
-    content: @Composable androidx.compose.material3.FloatingActionButtonMenuScope.() -> Unit
+    color: Color = MaterialTheme.colorScheme.primary,
 ) {
-    FloatingActionButtonMenu(expanded = expanded, button = button, modifier = modifier, content = content)
+    LinearWavyProgressIndicator(progress = progress, modifier = modifier, color = color)
+}
+
+/** Expressive indeterminate circular progress (official wavy indicator). */
+@Composable
+fun ExpressiveCircularProgress(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary,
+) {
+    CircularWavyProgressIndicator(modifier = modifier, color = color)
+}
+
+/**
+ * Expressive button: official material3 [Button] with the official expressive
+ * [ButtonShapes] pressed-state shape morph, plus the official [LoadingIndicator]
+ * as the busy in-button loader. Drop-in replacement for material3 Button with
+ * the same call shape (plus [busy]).
+ */
+@Composable
+fun ExpressiveButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    busy: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !busy,
+        modifier = modifier,
+        shapes = ButtonDefaults.shapes(),
+    ) {
+        if (busy) ExpressiveButtonLoader() else content()
+    }
+}
+
+/**
+ * Expressive filled-tonal button variant (same real [ButtonShapes] morph +
+ * [LoadingIndicator] busy state), for secondary actions.
+ */
+@Composable
+fun ExpressiveTonalButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    busy: Boolean = false,
+    content: @Composable RowScope.() -> Unit,
+) {
+    androidx.compose.material3.FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled && !busy,
+        modifier = modifier,
+        shapes = ButtonDefaults.shapes(),
+    ) {
+        if (busy) ExpressiveButtonLoader(color = MaterialTheme.colorScheme.onSecondaryContainer) else content()
+    }
 }
