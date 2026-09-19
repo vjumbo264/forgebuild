@@ -1126,6 +1126,15 @@
      "engine/app/src/main/java/com/forgebuild/engine/StarterScreen.kt"
     ],
     "note": "Remaining gaps closed: ARCHITECTURE_MATERIAL_DISCIPLINE.md (permanent contract), EngineExpressive.kt (official ButtonGroup/SplitButton/FloatingActionButtonMenu wrappers), Theme.kt rewired to all tokens, StarterScreen on spacing tokens. Reconciled with prior expressive-fix (no duplication)."
+   },
+   {
+    "step": "step-10-verify",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:45Z",
+    "files_touched": [
+     "engine/"
+    ],
+    "note": "Static verification: engine theme/components intact and rewired to tokens; generated app (clipforge-android) still resolves ForgeBuildTheme unchanged (additive, non-breaking API); zero miuix/liquid-glass/EngineTheme-selector references remain; material3 1.5.0-alpha28 expressive pin intact. Full compile is enforced by the engine-verify.yml CI workflow (engine/** path trigger) which runs assembleDebug on push of these very engine/ changes."
    }
   ]
  }
