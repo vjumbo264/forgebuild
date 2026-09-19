@@ -1105,6 +1105,15 @@
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/SpacingTokens.kt"
     ],
     "note": "SpacingTokens.kt: 4dp baseline scale + canonical margins (16dp compact / 24dp medium+); StarterScreen rerouted to tokens."
+   },
+   {
+    "step": "step-08-motion-system",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:22Z",
+    "files_touched": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/MotionTokens.kt"
+    ],
+    "note": "MotionTokens.kt: MotionScheme.expressive() global + accessors for the six official specs (default/fast/slow x spatial/effects) so custom app animations match system spring physics; expressive component motion is automatic."
    }
   ]
  }
