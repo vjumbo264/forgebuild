@@ -16,4 +16,13 @@ object EngineIcons {
     val Home: ImageVector get() = EngineIconsGenerated.Home
     val Search: ImageVector get() = EngineIconsGenerated.Search
     val ArrowBack: ImageVector get() = EngineIconsGenerated.ArrowBack
+    val Restart: ImageVector get() = EngineIconsGenerated.Restart
+    val OpenInNew: ImageVector get() = EngineIconsGenerated.OpenInNew
+    val Copy: ImageVector get() = EngineIconsGenerated.Copy
+    val Cancel: ImageVector get() = EngineIconsGenerated.Cancel
+    val Playlist: ImageVector get() = EngineIconsGenerated.Playlist
+    val Play: ImageVector get() = EngineIconsGenerated.Play
+    val Pause: ImageVector get() = EngineIconsGenerated.Pause
+    val Download: ImageVector get() = EngineIconsGenerated.Download
+    val CheckCircle: ImageVector get() = EngineIconsGenerated.CheckCircle
 }

@@ -2255,4 +2255,56 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    // ---------------- v22 task-127: deterministic background music ----------------
+    /** Pending "music could not be confirmed" decision shown as MusicConfirmDialog. */
+    data class MusicConfirmState(
+        val reason: String,
+        val jobId: String,
+        val retry: () -> Unit,
+        val continueWithoutMusic: () -> Unit,
+    )
+    private val _musicConfirm = MutableStateFlow<MusicConfirmState?>(null)
+    val musicConfirm: StateFlow<MusicConfirmState?> = _musicConfirm
+    fun dismissMusicConfirm() { _musicConfirm.value = null }
+
+    /**
+     * task-127: at task-creation time the app freezes a CONCRETE music path:... ref into
+     * stage-a-request.json (no runtime default-resolution). When the chosen/default track
+     * cannot be read+parsed after retries, dispatch is aborted and the operator gets the
+     * explicit Retry / continue-without-music choice — never a silent music-less render.
+     */
+    fun freezeMusicRefForCreation(jobId: String, selectedMusicPath: String?, retry: () -> Unit): String? {
+        val c = api ?: return null
+        val wanted = selectedMusicPath?.takeIf { it.isNotBlank() }
+        if (wanted == null) {
+            // No explicit track: freeze the CURRENT default as a concrete ref, or 'none'.
+            val def = try { readDefaultMusicRef(c) } catch (e: Exception) {
+                _musicConfirm.value = MusicConfirmState(
+                    reason = "Reading branding/music_default.json failed: ${e.message}",
+                    jobId = jobId, retry = retry,
+                    continueWithoutMusic = { _musicConfirm.value = null })
+                return null
+            }
+            return def.ifBlank { "none" }
+        }
+        // Explicit pick: verify the bytes are actually readable before freezing.
+        return try {
+            c.readFile(wanted)
+            "path:$wanted"
+        } catch (e: Exception) {
+            _musicConfirm.value = MusicConfirmState(
+                reason = "The track '$wanted' could not be read from the repository: ${e.message}",
+                jobId = jobId, retry = retry,
+                continueWithoutMusic = { _musicConfirm.value = null })
+            null
+        }
+    }
+
+    /** Concrete default ref (path:...) from branding/music_default.json, or "" when unset. */
+    private fun readDefaultMusicRef(c: GitHubClient): String {
+        val (text, _) = c.readFile("branding/music_default.json")
+        val p = JSONObject(text).optString("library_track_path", "")
+        return if (p.isNotBlank()) "path:$p" else ""
+    }
 }

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.SourceClassifier
+import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -101,7 +102,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(it.label, style = MaterialTheme.typography.bodyMedium)
-                        LinearProgressIndicator(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
+                        EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }

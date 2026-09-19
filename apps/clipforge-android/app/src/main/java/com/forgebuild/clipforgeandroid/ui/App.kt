@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.forgebuild.clipforgeandroid.ui
 
 import android.Manifest
@@ -8,43 +10,48 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
+import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
+import com.forgebuild.engine.ui.components.EngineLoadingIndicator
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.ElevationTokens
+import com.forgebuild.engine.ui.theme.SpacingTokens
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * App root + splash + onboarding (v22 task-123 rebuild on the engine's real M3
+ * Expressive stack). The hand-rolled squiggle splash is gone: the splash is the
+ * official morphing LoadingIndicator under a MaterialShapes decorative cookie,
+ * and screen-to-screen transitions read their spring specs from the expressive
+ * MotionScheme (never invented easings).
+ */
 @Composable
 fun ClipForgeApp(vm: ClipForgeViewModel) {
     val ready by vm.ready.collectAsState()
     val login by vm.login.collectAsState()
     val lastCrash by vm.lastCrash.collectAsState()
 
-    // Session-10 fix #7: storage access is driven by the ACTUAL OS-level grant state
-    // (ContextCompat.checkSelfPermission read live at need time), never by the stale
-    // persisted "did we ask before" flag that caused re-prompts after the grant.
+    // Storage access is driven by the ACTUAL OS-level grant state (read live at
+    // need time), never by a stale persisted flag.
     var needsStoragePermission by remember { mutableStateOf(false) }
 
-    // Second-launch crash diagnosis: if the PREVIOUS launch died, the startup
-    // crash-catcher saved the real stack trace — surface it once so the actual
-    // cause is visible instead of being guessed at again.
+    // Second-launch crash diagnosis: surface the captured trace once.
     lastCrash?.let { trace ->
         AlertDialog(
             onDismissRequest = { vm.dismissCrashReport() },
@@ -53,24 +60,23 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(
                         "The app crashed on its previous run. This is the captured stack trace — please share it when reporting the issue:",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(SpacingTokens.Spacing.xs))
                     Text(
                         trace.take(3000),
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        fontFamily = FontFamily.Monospace,
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { vm.dismissCrashReport() }) { Text("Dismiss") }
-            }
+                TextActionButton(label = "Dismiss", onClick = { vm.dismissCrashReport() })
+            },
         )
     }
 
-    // Re-check the REAL grant state on every resume — returning to the app can
-    // never re-prompt when the permission is already granted.
+    // Re-check the REAL grant state on every resume.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         needsStoragePermission = !vm.isStorageGrantedNow()
@@ -96,34 +102,29 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
             text = {
                 Text(
                     "ClipForge saves generated vertical videos into your device's Movies/ClipForge directory.\n\n" +
-                    "Grant storage access to enable automatic downloads."
+                        "Grant storage access to enable automatic downloads."
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                ActionButton(label = "Grant Access", onClick = {
                     val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
                     } else {
                         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     }
                     storageLauncher.launch(perms)
-                }) { Text("Grant Access") }
+                })
             },
             dismissButton = {
-                TextButton(onClick = { needsStoragePermission = false }) { Text("Later") }
-            }
+                TextActionButton(label = "Later", onClick = { needsStoragePermission = false })
+            },
         )
     }
 
+    MusicConfirmDialog(vm)
+
     if (!ready) {
-        // M3 overhaul: branded squiggle splash instead of a bare spinner.
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                Text("ClipForge", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
-                SquiggleLoader(Modifier.width(160.dp))
-                Text("Loading your studio…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        SplashScreen()
         return
     }
 
@@ -134,7 +135,44 @@ fun ClipForgeApp(vm: ClipForgeViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** v22 splash: official morphing LoadingIndicator + a MaterialShapes cookie. */
+@Composable
+private fun SplashScreen() {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.lg),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(SpacingTokens.Spacing.xxxl + SpacingTokens.Spacing.xl)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = MaterialShapes.Cookie9Sided.toShape(),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "C",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Text(
+                "ClipForge",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            EngineLoadingIndicator()
+            Text(
+                "Loading your studio…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 fun OnboardingScreen(vm: ClipForgeViewModel) {
     var mode by remember { mutableStateOf(0) } // 0 = connect, 1 = create
@@ -146,7 +184,6 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
     val cloneCopyProgress by vm.cloneCopyProgress.collectAsState()
     val cloneSuccess by vm.cloneSuccess.collectAsState()
     val cloneFailure by vm.cloneFailure.collectAsState()
-    // Session-10 fix #4: auto-generate the clone name (bot bug-45 blank-name option).
     var autoName by remember { mutableStateOf(false) }
     val busyOps by vm.busyOps.collectAsState()
     val connectBusy = busyOps.contains("connect")
@@ -154,20 +191,25 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("ClipForge Setup") })
-        }
+            TopAppBar(
+                title = { Text("ClipForge Setup") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ElevationTokens.tonalContainerColor(2)
+                ),
+            )
+        },
     ) { pad ->
         Column(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(SpacingTokens.Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md),
         ) {
             Text(
                 "Connect your ClipForge GitHub repository to manage video rendering tasks, inspect production plans, and preview audio.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             TabRow(selectedTabIndex = mode) {
@@ -182,7 +224,7 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                 placeholder = { Text("github_pat_... or ghp_...") },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             if (mode == 0) {
@@ -191,31 +233,29 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     onValueChange = { repoSlug = it },
                     label = { Text("Clone Repository Slug") },
                     placeholder = { Text("username/clipforge-clone") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
-                Button(
+                ActionButton(
+                    label = if (connectBusy) "Connecting…" else "Connect Repository",
                     onClick = { vm.connectExisting(pat, repoSlug) },
-                    enabled = pat.isNotBlank() && repoSlug.isNotBlank() && !connectBusy,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (connectBusy) {
-                        SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Connecting…")
-                    } else {
-                        Text("Connect Repository")
-                    }
-                }
+                    busy = connectBusy,
+                    enabled = pat.isNotBlank() && repoSlug.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             } else {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Checkbox(checked = autoName, onCheckedChange = { autoName = it })
                     Column {
                         Text("Auto-generate a name", style = MaterialTheme.typography.bodyMedium)
-                        Text("The app picks clipforge-clone-<suffix> for you", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "The app picks clipforge-clone-<suffix> for you",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
                 OutlinedTextField(
@@ -224,58 +264,63 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
                     label = { Text("New Private Repo Name") },
                     placeholder = { Text(if (autoName) "(auto-generated)" else "my-clipforge-clone") },
                     enabled = !autoName,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
-                Button(
+                ActionButton(
+                    label = if (createBusy) "Working…" else "Create & Initialize Private Clone",
                     onClick = { vm.createClone(pat, if (autoName) "" else newRepoName) },
-                    enabled = pat.isNotBlank() && cloneProgress == null && !createBusy,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (createBusy) {
-                        SquiggleCircularLoader(Modifier.size(16.dp), color = LocalContentColor.current)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Working…")
-                    } else {
-                        Text("Create & Initialize Private Clone")
-                    }
-                }
+                    busy = createBusy,
+                    enabled = pat.isNotBlank() && cloneProgress == null,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 cloneProgress?.let { text ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        // Determinate bar while the one-time copy workflow reports
-                        // done/total (fix #2: the copy takes minutes on a runner — the
-                        // UI must show it advancing instead of an indeterminate hum).
+                    Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
                         val copy = cloneCopyProgress
                         if (copy != null && copy.stage == "copy" && copy.total > 0) {
-                            LinearProgressIndicator(
+                            EngineLinearWavyProgress(
                                 progress = { (copy.done.toFloat() / copy.total).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                            EngineLinearWavyProgress(Modifier.fillMaxWidth())
                         }
                         Text(text, style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
-                // Session-10 fix #3: an unmissable confirmation once creation GENUINELY
-                // completes (the copy poll finished and finalize verified the tree).
                 cloneSuccess?.let { msg ->
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            Modifier.padding(SpacingTokens.Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                        ) {
                             Text("Clone created successfully", style = MaterialTheme.typography.titleMedium)
                             Text(msg, style = MaterialTheme.typography.bodyMedium)
-                            TextButton(onClick = { vm.dismissCloneOutcome() }) { Text("Dismiss") }
+                            TextActionButton(label = "Dismiss", onClick = { vm.dismissCloneOutcome() })
                         }
                     }
                 }
                 cloneFailure?.let { msg ->
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Clone creation failed", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(
+                            Modifier.padding(SpacingTokens.Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                        ) {
+                            Text(
+                                "Clone creation failed",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                             Text(msg, style = MaterialTheme.typography.bodyMedium)
-                            TextButton(onClick = { vm.dismissCloneOutcome() }) { Text("Dismiss") }
+                            TextActionButton(label = "Dismiss", onClick = { vm.dismissCloneOutcome() })
                         }
                     }
                 }
@@ -284,12 +329,22 @@ fun OnboardingScreen(vm: ClipForgeViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(vm: ClipForgeViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    // Expressive spring physics for screen-to-screen transitions — the official
+    // MotionScheme specs, never invented easings (v22 task-123).
+    val motion = MaterialTheme.motionScheme
+
+    fun go(route: String) {
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -298,106 +353,76 @@ fun MainScaffold(vm: ClipForgeViewModel) {
                     icon = { Icon(EngineIcons.Add, contentDescription = "New Video") },
                     label = { Text("New Video") },
                     selected = currentRoute == "new",
-                    onClick = {
-                        navController.navigate("new") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onClick = { go("new") },
                 )
                 NavigationBarItem(
                     icon = { Icon(EngineIcons.Bolt, contentDescription = "Tasks") },
                     label = { Text("Tasks") },
                     selected = currentRoute == "tasks",
-                    onClick = {
-                        navController.navigate("tasks") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onClick = { go("tasks") },
                 )
                 NavigationBarItem(
                     icon = { Icon(EngineIcons.CheckCircle, contentDescription = "Completed") },
                     label = { Text("Completed") },
                     selected = currentRoute == "completed",
-                    onClick = {
-                        navController.navigate("completed") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onClick = { go("completed") },
                 )
                 NavigationBarItem(
                     icon = { Icon(EngineIcons.Playlist, contentDescription = "Series") },
                     label = { Text("Series") },
                     selected = currentRoute == "series",
-                    onClick = {
-                        navController.navigate("series") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onClick = { go("series") },
                 )
                 NavigationBarItem(
                     icon = { Icon(EngineIcons.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") },
                     selected = currentRoute == "settings",
-                    onClick = {
-                        navController.navigate("settings") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                    onClick = { go("settings") },
                 )
             }
-        }
+        },
     ) { innerPadding ->
         Box(Modifier.padding(innerPadding)) {
             NavHost(
                 navController = navController,
                 startDestination = "tasks",
-                enterTransition = { slideInHorizontally(animationSpec = CFMotion.fadeSpec(300)) { it / 4 } + fadeIn(animationSpec = CFMotion.fadeSpec(300)) },
-                exitTransition = { slideOutHorizontally(animationSpec = CFMotion.fadeSpec(300)) { -it / 6 } + fadeOut(animationSpec = CFMotion.fadeSpec(220)) },
-                popEnterTransition = { slideInHorizontally(animationSpec = CFMotion.fadeSpec(300)) { -it / 4 } + fadeIn(animationSpec = CFMotion.fadeSpec(300)) },
-                popExitTransition = { slideOutHorizontally(animationSpec = CFMotion.fadeSpec(300)) { it / 6 } + fadeOut(animationSpec = CFMotion.fadeSpec(220)) }
+                enterTransition = {
+                    slideInHorizontally(motion.defaultSpatialSpec()) { it / 4 } +
+                        fadeIn(motion.fastEffectsSpec())
+                },
+                exitTransition = {
+                    slideOutHorizontally(motion.defaultSpatialSpec()) { -it / 6 } +
+                        fadeOut(motion.fastEffectsSpec())
+                },
+                popEnterTransition = {
+                    slideInHorizontally(motion.defaultSpatialSpec()) { -it / 4 } +
+                        fadeIn(motion.fastEffectsSpec())
+                },
+                popExitTransition = {
+                    slideOutHorizontally(motion.defaultSpatialSpec()) { it / 6 } +
+                        fadeOut(motion.fastEffectsSpec())
+                },
             ) {
                 composable("new") {
                     NewTaskWizard(vm, onDone = {
-                        navController.navigate("tasks") {
-                            popUpTo("tasks") { inclusive = true }
-                        }
+                        navController.navigate("tasks") { popUpTo("tasks") { inclusive = true } }
                     })
                 }
                 composable("tasks") {
-                    TasksScreen(vm, onSelectTask = { jobId ->
-                        navController.navigate("task/$jobId")
-                    })
+                    TasksScreen(vm, onSelectTask = { jobId -> navController.navigate("task/$jobId") })
                 }
                 composable("completed") {
-                    CompletedScreen(vm, onSelectTask = { jobId ->
-                        navController.navigate("task/$jobId")
-                    })
+                    CompletedScreen(vm, onSelectTask = { jobId -> navController.navigate("task/$jobId") })
                 }
                 composable("series") {
                     SeriesScreen(
                         vm,
-                        onSelectSeries = { seriesId ->
-                            navController.navigate("series/$seriesId")
-                        },
-                        onSelectTask = { jobId ->
-                            navController.navigate("task/$jobId")
-                        }
+                        onSelectSeries = { seriesId -> navController.navigate("series/$seriesId") },
+                        onSelectTask = { jobId -> navController.navigate("task/$jobId") },
                     )
                 }
                 composable("settings") {
-                    SettingsScreen(vm, onOpenMusic = {
-                        navController.navigate("music")
-                    })
+                    SettingsScreen(vm, onOpenMusic = { navController.navigate("music") })
                 }
                 composable("task/{jobId}") { backStackEntry ->
                     val jobId = backStackEntry.arguments?.getString("jobId") ?: return@composable
@@ -409,7 +434,7 @@ fun MainScaffold(vm: ClipForgeViewModel) {
                         vm = vm,
                         seriesId = seriesId,
                         onBack = { navController.popBackStack() },
-                        onSelectTask = { jobId -> navController.navigate("task/$jobId") }
+                        onSelectTask = { jobId -> navController.navigate("task/$jobId") },
                     )
                 }
                 composable("music") {

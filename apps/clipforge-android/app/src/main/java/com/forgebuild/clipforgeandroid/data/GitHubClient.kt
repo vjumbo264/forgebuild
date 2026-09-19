@@ -506,12 +506,19 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
         merged to ids
     }
 
-    /** Raw text of a single job's log (GET /actions/jobs/{job_id}/logs, follows redirect). */
+    /**
+     * Raw text of a single job's log (GET /actions/jobs/{job_id}/logs, follows redirect).
+     * v22 task-125: non-2xx is NO LONGER silently swallowed as "" (which the UI used to
+     * fall back to a fake status line). 403/404/410 (expired/deleted log, insufficient
+     * scope) now throw GhException so the caller surfaces an explicit error state.
+     */
     suspend fun jobLog(jobId: Long): String = withContext(Dispatchers.IO) {
         client.newCall(
             base("$api/repos/$owner/$repo/actions/jobs/$jobId/logs").get().build()
         ).execute().use { resp ->
-            if (resp.code in 200..299) resp.body?.string().orEmpty() else ""
+            val body = resp.body?.string().orEmpty()
+            if (resp.code in 200..299) body
+            else throw GhException(resp.code, body.take(400))
         }
     }
 

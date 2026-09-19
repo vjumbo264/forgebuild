@@ -1,10 +1,9 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package com.forgebuild.clipforgeandroid.ui
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,16 +15,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.forgebuild.clipforgeandroid.ClipForgeViewModel
 import com.forgebuild.clipforgeandroid.data.MusicTrack
+import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.ElevationTokens
+import com.forgebuild.engine.ui.theme.SpacingTokens
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+/** Music library (v22 task-123 rebuild): wavy engine progress everywhere, the
+ *  shared busy-aware buttons for every action, tonal cards. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MusicScreen(
     vm: ClipForgeViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val musicList by vm.music.collectAsState()
@@ -34,13 +39,12 @@ fun MusicScreen(
     val upload by vm.upload.collectAsState()
     val audioState by AudioPreview.state.collectAsState()
     val login by vm.login.collectAsState()
-    // Cache-first open: render cached library instantly, refresh in background.
     LaunchedEffect(Unit) { vm.onMusicOpen() }
 
     var selectedTracks by remember { mutableStateOf(setOf<MusicTrack>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val trackPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+    val trackPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
         try {
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -53,74 +57,62 @@ fun MusicScreen(
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            AudioPreview.stop()
-        }
-    }
+    DisposableEffect(Unit) { onDispose { AudioPreview.stop() } }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(if (selectedTracks.isEmpty()) "Music Library" else "${selectedTracks.size} Selected")
-                },
+                title = { Text(if (selectedTracks.isEmpty()) "Music Library" else "${selectedTracks.size} Selected") },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ElevationTokens.tonalContainerColor(2)),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(EngineIcons.ArrowBack, "Back")
-                    }
+                    IconActionButton(EngineIcons.ArrowBack, "Back", onClick = onBack)
                 },
                 actions = {
                     if (selectedTracks.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.Delete, "Delete selected")
-                        }
+                        IconActionButton(Icons.Default.Delete, "Delete selected", onClick = { showDeleteDialog = true })
                     } else {
-                        IconButton(onClick = { vm.refreshMusic() }) {
-                            Icon(Icons.Default.Refresh, "Refresh")
-                        }
+                        IconActionButton(Icons.Default.Refresh, "Refresh", onClick = { vm.refreshMusic() }, busy = refreshing)
                     }
-                }
+                },
             )
-        }
+        },
     ) { pad ->
-        Column(
-            modifier = Modifier
-                .padding(pad)
-                .fillMaxSize()
-        ) {
+        Column(Modifier.padding(pad).fillMaxSize()) {
             if (refreshing) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
+                EngineLinearWavyProgress(Modifier.fillMaxWidth())
             }
 
             upload?.let {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(
+                    Modifier.padding(SpacingTokens.Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs),
+                ) {
                     Text(it.label, style = MaterialTheme.typography.bodySmall)
-                    LinearProgressIndicator(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
+                    EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
                 }
             }
 
-            // Upload button
-            PaddingValues(16.dp).let {
-                Button(
-                    onClick = { trackPicker.launch("audio/*") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text("Upload New Audio Track")
-                }
-            }
+            ActionButton(
+                label = "Upload New Audio Track",
+                onClick = { trackPicker.launch("audio/*") },
+                busy = upload != null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = SpacingTokens.Spacing.md, vertical = SpacingTokens.Spacing.xs),
+            )
 
             if (musicList.isEmpty() && !refreshing) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No tracks found in audio-library/.", style = MaterialTheme.typography.bodyMedium)
+                    EngineEmptyState(
+                        title = "No tracks yet",
+                        body = "Upload an audio track to use as background music in your renders.",
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    contentPadding = PaddingValues(SpacingTokens.Spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
                 ) {
                     items(musicList, key = { it.path }) { track ->
                         val isSelected = selectedTracks.contains(track)
@@ -129,10 +121,12 @@ fun MusicScreen(
                         val isThisTrackActive = audioState.url == previewUrl
 
                         Card(
-                            colors = if (isSelected) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                            else CardDefaults.cardColors(),
+                            colors = if (isSelected)
+                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            else CardDefaults.cardColors(containerColor = ElevationTokens.tonalContainerColor(1)),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .animateItem()
                                 .combinedClickable(
                                     onClick = {
                                         if (selectedTracks.isNotEmpty()) {
@@ -141,46 +135,49 @@ fun MusicScreen(
                                     },
                                     onLongClick = {
                                         selectedTracks = if (isSelected) selectedTracks - track else selectedTracks + track
-                                    }
-                                )
+                                    },
+                                ),
                         ) {
-                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(
+                                Modifier.padding(SpacingTokens.Spacing.md - SpacingTokens.Spacing.xxs),
+                                verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                            ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(track.name, style = MaterialTheme.typography.titleSmall)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("${track.size / 1024} KB", style = MaterialTheme.typography.bodySmall)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                                            Text(
+                                                "${track.size / 1024} KB",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
                                             if (isDefault) {
-                                                Text("• Default Track", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    "• Default Track",
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
                                             }
                                         }
                                     }
 
-                                    // Play / Pause button
-                                    IconButton(
+                                    IconActionButton(
+                                        icon = if (isThisTrackActive && audioState.isPlaying) EngineIcons.Pause else EngineIcons.Play,
+                                        contentDescription = if (isThisTrackActive && audioState.isPlaying) "Pause" else "Play",
+                                        busy = isThisTrackActive && audioState.isBuffering,
                                         onClick = {
-                                            val pat = login?.pat ?: return@IconButton
+                                            val pat = login?.pat ?: return@IconActionButton
                                             AudioPreview.toggle(context, previewUrl, pat)
-                                        }
-                                    ) {
-                                        if (isThisTrackActive && audioState.isPlaying) {
-                                            Icon(EngineIcons.Pause, "Pause")
-                                        } else {
-                                            Icon(EngineIcons.Play, "Play")
-                                        }
-                                    }
+                                        },
+                                    )
 
-                                    // Set default track button
-                                    TextButton(
-                                        onClick = {
-                                            vm.setDefaultMusic(if (isDefault) null else track.path)
-                                        }
-                                    ) {
-                                        Text(if (isDefault) "Unset" else "Set Default")
-                                    }
+                                    TextActionButton(
+                                        label = if (isDefault) "Unset" else "Set Default",
+                                        onClick = { vm.setDefaultMusic(if (isDefault) null else track.path) },
+                                    )
 
                                     if (selectedTracks.isNotEmpty()) {
                                         Checkbox(checked = isSelected, onCheckedChange = {
@@ -189,27 +186,31 @@ fun MusicScreen(
                                     }
                                 }
 
-                                // Audio playback progress indicator
                                 if (isThisTrackActive && (audioState.isPlaying || audioState.isPaused)) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        LinearProgressIndicator(
+                                    Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
+                                        EngineLinearWavyProgress(
                                             progress = {
                                                 if (audioState.durationMs > 0)
                                                     (audioState.positionMs.toFloat() / audioState.durationMs).coerceIn(0f, 1f)
                                                 else 0f
                                             },
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier.fillMaxWidth(),
                                         )
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                            horizontalArrangement = Arrangement.SpaceBetween,
                                         ) {
                                             Text(
                                                 "${audioState.positionMs / 1000}s / ${audioState.durationMs / 1000}s",
-                                                style = MaterialTheme.typography.bodySmall
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
                                             if (audioState.isPaused) {
-                                                Text("Paused", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    "Paused",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
                                             }
                                         }
                                     }
@@ -228,15 +229,15 @@ fun MusicScreen(
             title = { Text("Delete Tracks") },
             text = { Text("Delete ${selectedTracks.size} audio track(s) from the repository?") },
             confirmButton = {
-                TextButton(onClick = {
+                TextActionButton(label = "Delete", destructive = true, onClick = {
                     vm.deleteMusic(selectedTracks)
                     selectedTracks = emptySet()
                     showDeleteDialog = false
-                }) { Text("Delete") }
+                })
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            }
+                TextActionButton(label = "Cancel", onClick = { showDeleteDialog = false })
+            },
         )
     }
 }

@@ -35,6 +35,7 @@ import com.forgebuild.clipforgeandroid.data.Pipeline
 import com.forgebuild.clipforgeandroid.data.SuperSeries
 import com.forgebuild.clipforgeandroid.data.PlanValidator
 import com.forgebuild.clipforgeandroid.data.TaskStatus
+import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 
 /* ---------------- Tasks Screen (Active Tasks) ---------------- */
@@ -398,7 +399,7 @@ fun TaskDetailScreen(
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(it.label, style = MaterialTheme.typography.bodyMedium)
-                        LinearProgressIndicator(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
+                        EngineLinearWavyProgress(progress = { it.fraction }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -626,10 +627,8 @@ fun TaskDetailScreen(
                         val alreadyDownloaded = remember(downloadedVideo, jobId) { vm.downloadedVideoFor(jobId) }
                         if (downloadState.isDownloading) {
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                LinearProgressIndicator(
-                                    progress = { downloadState.progress },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                EngineLinearWavyProgress(progress = { downloadState.progress },
+                                    modifier = Modifier.fillMaxWidth())
                                 // Fix #6 — downloaded + TOTAL size alongside the speed.
                                 Text(
                                     "${downloadState.downloadedText} / ${downloadState.totalText} · ${downloadState.speedText}",
