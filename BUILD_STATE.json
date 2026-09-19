@@ -1,8 +1,8 @@
 {
  "project": "forgebuild",
  "build_complete": true,
- "updated_by": "session-real-expressive-fix",
- "current_task": "forgebuild-real-expressive-fix",
+ "updated_by": "forgebuild-material-discipline",
+ "current_task": "forgebuild-material-discipline",
  "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
  "tasks": [
   {
@@ -986,5 +986,51 @@
    }
   ],
   "completed": "2026-09-17T07:56:43Z"
+ },
+ "forgebuild-material-discipline": {
+  "id": "forgebuild-material-discipline",
+  "title": "Research & bake the full official Material 3 / M3 Expressive design discipline into the Engine theme system and Dashboard prompt templates",
+  "status": "in_progress",
+  "started": "2026-09-19T02:15:53Z",
+  "steps": [
+   {
+    "step": "step-01-research",
+    "status": "done",
+    "timestamp": "2026-09-19T02:15:53Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Official-spec research complete for all 8 discipline areas. Sources, per-area discipline, and ambiguity decisions recorded here before any code was written.",
+    "research": {
+     "sources_official": [
+      "https://m3.material.io/styles/color/roles (full color role set: primary/secondary/tertiary/error + on-* + container/on-container, 5 surface container levels, fixed/fixed-dim/on-fixed(+variant), surface bright/dim, inverse*, outline/outline-variant; roles are tokenized and accessibility-paired >=3:1)",
+      "https://developer.android.com/develop/ui/compose/designsystems/material3 (official Compose mapping: shape scale values, full type scale table, dynamic color API dynamicLight/DarkColorScheme API31+, tonal elevation overlays from primary slot)",
+      "https://m3.material.io/styles/elevation/tokens (6 elevation levels 0/1/3/6/8/12dp with per-component resting-level table; 'Surface tint color is deprecated. Use elevation level tokens (0-5) instead.')",
+      "androidx source: compose/material3/material3/.../MotionScheme.kt @ androidx-main (MotionScheme interface: default/fast/slow x spatial/effects FiniteAnimationSpecs; standard() = linear-feel utilitarian scheme, expressive() = spring-based scheme for prominent UI; specs built from StandardMotionTokens / ExpressiveMotionTokens spring damping+stiffness)",
+      "https://developer.android.com/jetpack/androidx/releases/compose-material3 (expressive public APIs exist only on material3 1.5.0-alpha train: MaterialExpressiveTheme/expressiveLightColorScheme stable since 1.5.0-alpha18; expressive Button/FAB/Menu alpha19; FloatingToolbar alpha22; expressive TopAppBar/ListItem alpha23; no 1.4.x release carries public expressive APIs)",
+      "https://m3.material.io/blog/building-with-m3-expressive + https://m3.material.io/get-started (Expressive = new features over M3: vibrant color, spring motion physics, shape library of 35 shapes with built-in shape-morph, flexible/emphasized typography, contrasting shapes; wavy progress indicators flat+wavy variants)",
+      "composables.com MaterialShapes API listing (official expressive shape library: 35 RoundedPolygon shapes - cookie 4/6/7/9/12-sided, clover, arch, gem, oval, pill, burst, flower, puffy, ghostish, heart etc. - usable directly or in Morph)"
+     ],
+     "sources_blocked_corroborated": "Several m3.material.io pages (shape/overview, elevation/overview, motion/easing-and-duration, motion/overview/specs, layout pages, expressive blog body) are JS-only and returned no crawlable text on 2026-09-19. For each, values were corroborated against developer.android.com official docs and the androidx library source code instead. No third-party blog was used as the basis for any implementation decision.",
+     "discipline_by_area": {
+      "1_dynamic_color": "Material You: a single seed/source color is run through the HCT-based tonal palette algorithm producing primary/secondary/tertiary/neutral/neutral-variant/error palettes at tones 0-100, from which the FULL role set is derived: primary/on-primary/primary-container/on-primary-container (x secondary, tertiary, error), surface + on-surface/on-surface-variant, 5 surface-container levels (lowest/low/DEFAULT/high/highest), surface-bright/dim, inverse-surface/inverse-on-surface/inverse-primary, outline/outline-variant, and add-on fixed/fixed-dim/on-fixed/on-fixed-variant roles. Wired for light AND dark. In Compose: dynamicLightColorScheme/dynamicDarkColorScheme(context) on API 31+; official fallback when no seed/dynamic color is available = a static scheme (baseline lightColorScheme/darkColorScheme, or expressiveLightColorScheme for the expressive default). Error stays static across dynamic schemes. ENGINE STATUS: already correct (dynamic on S+, expressiveLightColorScheme light fallback, darkColorScheme dark fallback - the library ships no separate expressive dark scheme BY DESIGN; expressive-ness in dark comes from motion+shape, matching Google's own sample).",
+      "2_shape": "Official corner scale: extraSmall=4dp, small=8dp, medium=12dp, large=16dp, extraLarge=28dp; Expressive adds largeIncreased=20dp, extraLargeIncreased=32dp, extraExtraLarge=48dp. Shape is applied BY COMPONENT ROLE through the Shapes theme token, never one radius reused everywhere. Expressive adds the 35-shape MaterialShapes RoundedPolygon library for decorative elements (avatars, image crops) and Morph for shape-morph animation. Compose: Shapes() defaults already include the expressive increased tiers on the 1.5.0-alpha train.",
+      "3_elevation": "Tonal elevation is the PRIMARY signal: surfaces shift through surface-container tones as level rises. Official levels: 0=0dp, 1=1dp, 2=3dp, 3=6dp, 4=8dp, 5=12dp, with a per-component resting-level table (dialogs/FAB/pickers=3, nav bar/menus/scrolled app bar=2, elevated cards/buttons/chips/modal sheets=1, most others=0). Current spec DEPRECATES the surface-tint token in favor of the container roles; shadows remain appropriate for components that must visibly lift (dialogs, FAB, menus, tooltips) and are handled by component defaults.",
+      "4_type_scale": "15 roles, Roboto defaults (size/line-height): display 57/64, 45/52, 36/44; headline 32/40, 28/36, 24/32; title 22/28(Medium), 16/24(Medium), 14/20(Medium); body 16/24, 14/20, 12/16; label 14/20(Medium), 12/16(Medium), 11/16(Medium). Applied by role via the Typography theme token, never per-screen ad-hoc sizes. Expressive adds emphasized type variants paired with the motion system. Compose Typography() default implements exactly this scale.",
+      "5_spacing_layout": "4dp baseline grid: all spacing in multiples of 4 (4/8/12/16/24/32/40/48). Canonical margins: 16dp on compact, 24dp on medium/expanded window sizes; consistent gutters between panes. Applied via tokens, not ad-hoc padding/margin values.",
+      "6_motion": "M3 Expressive replaces pure easing/duration with a physics (spring) system. Two official schemes: standard (utilitarian, linear feel) and expressive (spring-based, prominent/hero interactions). Each scheme exposes SIX specs: default/fast/slow x SPATIAL (bounds/shape changes) and EFFECTS (color/alpha). Specs are built from spring damping-ratio/stiffness tokens (StandardMotionTokens/ExpressiveMotionTokens in the library). Transition PATTERNS (container transform, shared axis x/y/z, fade-through, fade) map onto these specs and are provided by the navigation/adaptive libraries, not material3 core. Engine decision: apply MotionScheme.expressive() globally via MaterialExpressiveTheme and expose the six specs as Engine helpers for custom animations, so every interactive component inherits official motion.",
+      "7_expressive_components": "Official expressive set on material3 1.5.0-alpha: LinearWavyProgressIndicator + CircularWavyProgressIndicator (flat AND wavy variants, wavy = expressive default), LoadingIndicator (morphing-shape spinner), expressive Button/FAB shape+press behavior, ButtonGroup, SplitButton, FloatingToolbar, WideNavigationRail, expressive TopAppBar/Flexible app bars, ListItem, Menu, Slider. ENGINE STATUS: progress/loading set already wrapped in EngineProgress.kt by the prior forgebuild-real-expressive-fix build - this build RECONCILES (references, documents, does not duplicate) and adds theme-level discipline so button/FAB/etc. expressive behavior applies automatically under MaterialExpressiveTheme.",
+      "8_beyond_the_list": "Additional core items found in research: (a) MaterialExpressiveTheme is the official entry point that wires motionScheme+expressive color+shape together - already used; (b) MaterialShapes/Morph is the official decorative-shape answer - documented as the required tool (never hand-rolled polygons); (c) emphasized typography variants pair with expressive motion; (d) user-controlled contrast levels (standard/medium/high) exist in the dynamic color system - supported automatically by the library schemes; (e) edge-to-edge + predictive back are the platform-level expressive defaults on modern Android (Engine already edge-to-edge via its existing setup; verified non-regressed)."
+     },
+     "ambiguity_decisions": [
+      "m3.material.io JS-only pages could not be crawled verbatim; all values cross-checked against developer.android.com + androidx source. No implementation decision rests on a third-party summary.",
+      "No expressiveDarkColorScheme exists in the library: official pattern (Google's own MaterialExpressiveTheme sample) is expressiveLightColorScheme for light + darkColorScheme for dark, with expressive identity carried by motion+shape. Followed as-is.",
+      "Elevation spec deprecates surfaceTint tokens while the Compose library still exposes surfaceContainer* roles: Engine helpers map elevation levels to surfaceContainer roles (the non-deprecated path).",
+      "Transition patterns (shared axis/fade-through/container transform) are not in material3 core; they live in navigation3/adaptive libraries. Decision: Engine standardizes component-level motion on MotionScheme specs and maps the patterns in docs rather than hand-rolling transitions.",
+      "material3 '1.4.x' in earlier prompts was factually incapable of public expressive APIs (verified vs release notes); the real expressive train is 1.5.0-alpha28, already pinned by the prior build. Extended, not redone."
+     ]
+    }
+   }
+  ]
  }
 }
