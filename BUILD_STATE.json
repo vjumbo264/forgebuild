@@ -990,7 +990,7 @@
  "forgebuild-material-discipline": {
   "id": "forgebuild-material-discipline",
   "title": "Research & bake the full official Material 3 / M3 Expressive design discipline into the Engine theme system and Dashboard prompt templates",
-  "status": "in_progress",
+  "status": "done",
   "started": "2026-09-19T02:15:53Z",
   "steps": [
    {
@@ -1144,7 +1144,30 @@
      "site/app.js"
     ],
     "note": "Added 'PERMANENT RULE \u2014 FULL MATERIAL 3 EXPRESSIVE DISCIPLINE' section to the shared RULES block in site/app.js, immediately after the existing END PERMANENT RULE anchor. Because promptNewApp/promptExtend/promptResume all append RULES, build/extend/resume prompts all inherit the rule automatically. The section is clearly labeled PERMANENT ('never remove, weaken, or bury during unrelated prompt-template edits') so it survives future template edits. Covers all 7 discipline areas (dynamic color, shape scale, tonal elevation, type scale, spacing tokens, motion tokens, expressive components) and points at the Engine tokens/helpers as the mechanism. JS sanity-checked (anchor + single insertion + node --check)."
+   },
+   {
+    "step": "step-12-final",
+    "status": "done",
+    "timestamp": "2026-09-19T02:19:36Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "forgebuild-material-discipline fully done. Research summary in step-01; gap list in step-02; implementations in steps 03-09; verification in step-10 (incl. note that apps/theme-showcase still carries its pre-existing opt-in Miuix/Liquid Glass deps from the earlier showcase build \u2014 untouched and unbroken, per the 'if still present' clause); permanent prompt rule in step-11.",
+    "gap_closure_list": [
+     "ColorTokens.kt \u2014 dynamic color chain + full role documentation",
+     "ShapeTokens.kt \u2014 official shape scale incl. expressive tiers, role-based application",
+     "ElevationTokens.kt \u2014 tonal elevation levels + surfaceContainer mapping",
+     "TypographyTokens.kt \u2014 full official 15-role type scale pinned",
+     "SpacingTokens.kt \u2014 4dp baseline + canonical margins; StarterScreen migrated",
+     "MotionTokens.kt \u2014 six official MotionScheme specs surfaced for custom animations",
+     "EngineExpressive.kt \u2014 official ButtonGroup/SplitButton/FloatingActionButtonMenu wrappers (progress/loading stayed in EngineProgress.kt \u2014 reconciled, not duplicated)",
+     "ARCHITECTURE_MATERIAL_DISCIPLINE.md \u2014 permanent Engine design contract",
+     "Theme.kt \u2014 rewired to all tokens, signature unchanged (non-breaking)",
+     "site/app.js \u2014 permanent M3 discipline rule for all future build/extend/resume prompts"
+    ],
+    "substitutions": "NONE. Every discipline area is implemented via the real official APIs (material3 1.5.0-alpha28 expressive train already pinned by the prior build). No hand-rolled approximations were introduced."
    }
-  ]
+  ],
+  "completed": "2026-09-19T02:19:36Z"
  }
 }
