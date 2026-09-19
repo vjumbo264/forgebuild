@@ -69,6 +69,16 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.ElevationTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 
+
+/** A document with a top-level parts[] array is a Super Series plan regardless of
+ *  how the task's super_series flag was recorded — validation and submission must
+ *  follow the document's actual shape, never the flag alone. (Operator fix:
+ *  previous versions ran the single-part production.json validator on a valid
+ *  super-plan and rejected it with "'cuts' must contain at least one cut.") */
+private fun looksLikeSuperPlan(text: String): Boolean = try {
+    org.json.JSONObject(text).optJSONArray("parts") != null
+} catch (_: Exception) { false }
+
 /* ============================================================================
  *  V23 TASKS — active list, completed list (with quick-publish), and the task
  *  detail screen with the rebuilt LIVE LOGGER (v23-R5): every job + every step
@@ -269,7 +279,7 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
             val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
             if (bytes != null) {
                 rawPlanText = String(bytes, Charsets.UTF_8)
-                planErrors = if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(rawPlanText).errors
+                planErrors = if (isSuperSeriesTask || looksLikeSuperPlan(rawPlanText)) SuperSeries.parseAndValidateSuperPlan(rawPlanText).errors
                 else PlanValidator.validate(rawPlanText)
                 vm.toast(if (planErrors.isEmpty()) "Loaded a valid plan" else "Validation error: ${planErrors.first()}")
             }
@@ -399,7 +409,7 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
                         onValueChange = {
                             rawPlanText = it
                             planErrors = if (it.isBlank()) emptyList()
-                            else if (isSuperSeriesTask) SuperSeries.parseAndValidateSuperPlan(it).errors
+                            else if (isSuperSeriesTask || looksLikeSuperPlan(it)) SuperSeries.parseAndValidateSuperPlan(it).errors
                             else PlanValidator.validate(it)
                         },
                         label = { Text(if (isSuperSeriesTask) "Super-plan JSON" else "production.json") },
@@ -418,7 +428,7 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
                         busy = busyOf(vm, "submit_super") || upload != null,
                         enabled = rawPlanText.isNotBlank() && planErrors.isEmpty() && upload == null,
                         onClick = {
-                            if (isSuperSeriesTask) vm.submitSuperPlan(jobId, rawPlanText) { rawPlanText = ""; planErrors = emptyList() }
+                            if (isSuperSeriesTask || looksLikeSuperPlan(rawPlanText)) vm.submitSuperPlan(jobId, rawPlanText) { rawPlanText = ""; planErrors = emptyList() }
                             else vm.submitProductionPlan(jobId, rawPlanText) { rawPlanText = ""; planErrors = emptyList() }
                         },
                         modifier = Modifier.fillMaxWidth(),
