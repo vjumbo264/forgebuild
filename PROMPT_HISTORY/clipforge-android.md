@@ -925,3 +925,44 @@ Because previous "done" claims were false, this round is closed only with eviden
 Mark each task done only after its proof is recorded. Set `build_complete=true` last.
 
 **Hard rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never redo completed work that is genuinely verified; never commit tokens/PATs; never delete the repository; never touch prior releases.
+
+
+---
+
+## 2026-09-19 — EXTEND/UPDATE: clipforge-android (v23, complete remake)
+
+Operator instruction 2026-09-19 (third round). Follow the standard extend contract: append this instruction verbatim to `PROMPT_HISTORY/clipforge-android.md`, seed tasks, checkpoint `BUILD_STATE.json` after every task, cut `clipforge-android-v23`, never touch prior releases, never delete the repository, never commit tokens/PATs.
+
+**AUTONOMY:** Run fully autonomously. Ask no clarifying questions. Where something is ambiguous, pick the most sensible option, record the decision in BUILD_STATE notes, and continue.
+
+**NO DEVICE TESTING:** You cannot install or run the APK. Do NOT screenshot, do NOT attempt emulator or on-device testing, and do NOT put screenshot or run-the-app steps in any prompt, task or workflow. Verification = successful compile, unit tests, `release.yml` run success, and the Releases API asset check only.
+
+---
+
+## THE TASK
+
+**Remake the app from scratch.** The next version is a complete remake of ClipForge Android with a fresh new UI. Do not reuse the previous app in any way: no old screens, no old components, no old styling carried forward. Everything is rebuilt new.
+
+**Migrate everything the app does.** Every setting and every feature from the current app must exist in the remake. All of the operator's saved settings must carry over so nothing has to be set up again. Nothing may be lost in the move.
+
+## THE PROBLEM
+
+The last rounds did not deliver what was asked. The operator saw only a little UI change. These are still not fixed:
+
+- **The entire UI.** It does not look like a fresh, professional Google app built on Material 3 Expressive. The new button animations, loading animations and squiggly loaders from the operator's tool are not showing up. Buttons still give no visible feedback when tapped, so the operator taps two or three times and then gets duplicate-request errors. The entire UI must be changed, on every screen and every part of the app, including torrent/source selection, settings, dialogs, the logger, and everything else.
+- **The logger.** It still shows only status and result lines ("status in progress", "status completed", "result success/skipped/failed") instead of the actual log details of each step. The clone has GitHub access, so the real logs must be shown. A running task must show a loading state with its steps appearing live, not empty space. The logger's UI must also be new.
+- **The Zernio settings.** Still missing. The publishing settings that used to exist in the Telegram bot and the main settings must be in the app: smart schedule mode, interval, publish immediately vs scheduled, and the rest of the full settings. Completed tasks must have publishing settings too, so a finished video can be published or scheduled again.
+
+## REQUIREMENTS
+
+- **Floating bottom tabs.** The bottom navigation must be floating tabs, not a standard docked bar.
+- **Horizontal swiping.** The operator must be able to swipe horizontally to move between tabs, and the floating tab bar must stay in sync with the swipe.
+- **Fresh new UI everywhere**, built on the operator's current tool UI (Material 3 Expressive), with the new animations and loaders used throughout.
+- **Every button gives immediate visible feedback** when tapped and cannot be double-fired.
+- **Everything else the app currently does keeps working**: clone creation, background music selection, series and Super Series, cleanup, and all other features and settings.
+
+Investigate the current app and repository yourself, decide how to do this, and do it.
+
+---
+
+**Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
