@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "forgebuild-ai-session 2026-09-19 (round 5: remove youtube_tags verification, publish 422 fix, logger skipped-cause)",
-  "current_task": "task-151",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -434,8 +434,8 @@
     {
       "id": "task-151",
       "title": "Validate + release clipforge-android-v26",
-      "status": "in_progress",
-      "notes": "versionCode/versionName 25->26; edited Kotlin brace/paren balance verified 0-delta on all 4 touched files; release.yml dispatched for app_path=apps/clipforge-android; awaiting run completion + Releases API verification."
+      "status": "done",
+      "notes": "DONE: versionCode/versionName 26; release.yml run 35473340562 completed success after three compile-error fixes (LogStep comma, duplicate @Composable consumed from LoggerCard, layout.height import shadowed by existing heightIn import, icon param not supported by TextActionButton). Release clipforge-android-v26 verified live on the Releases API with APK + forgebuild-manifest.json assets. Prior releases untouched. build_complete=true."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
