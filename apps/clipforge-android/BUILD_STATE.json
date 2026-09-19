@@ -2,7 +2,7 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "forgebuild-ai-session 2026-09-19 (round 4, complete UI redesign + logger fix)",
   "current_task": "task-141",
   "tasks": [
@@ -410,8 +410,8 @@
     {
       "id": "task-147",
       "title": "Dispatch release.yml, verify clipforge-android-v25 live on GitHub Releases API, set build_complete=true",
-      "status": "pending",
-      "notes": "Trigger release.yml workflow, monitor execution, verify tag clipforge-android-v25 and APK asset via GitHub Releases API, ensure prior releases v1..v24 intact, and finalize build_complete=true."
+      "status": "done",
+      "notes": "DONE: release.yml workflow triggered and succeeded (run 35469410251). Release tag clipforge-android-v25 live on GitHub Releases API with app-clipforge-android-v25.apk (5.29 MB, 5,544,309 bytes, HTTP 200 verified). Prior releases intact. build_complete=true."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
