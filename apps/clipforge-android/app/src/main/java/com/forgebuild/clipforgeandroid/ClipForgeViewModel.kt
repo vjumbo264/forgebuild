@@ -212,44 +212,66 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         if (token.isBlank()) { toast("Enter a GitHub PAT first"); return@launch }
         _cloneSuccess.value = null
         _cloneFailure.value = null
+
+        // Operator fix #6: the reported "Clone creation failed" was a network-level
+        // CONNECT timeout (ETIMEDOUT to api.github.com:443) on mobile data — not an
+        // auth or logic error. So: (1) connectivity pre-check, (2) up to 4 attempts
+        // with exponential backoff on transient faults only, (3) the underlying
+        // GitHubClient already uses a 45s connect timeout + IPv4-first DNS +
+        // retryOnConnectionFailure, and (4) ShadowClone.begin is idempotent so a
+        // retry RESUMES a partially-created repo instead of failing on
+        // "repo already exists".
+        val probe = GitHubClient(token, "", "")
+        _cloneProgress.value = "Checking connection to GitHub…"
+        if (!probe.connectivityOk()) {
+            _cloneFailure.value =
+                "Could not reach api.github.com. This is almost always the network on a phone — check mobile data is on, turn off Data Saver / VPN, or switch network, then tap Retry."
+            toast("No connection to GitHub")
+            return@launch
+        }
+
         _cloneProgress.value = "Creating private repo…"
         withBusy("create_clone") {
+            var attempt = 0
             try {
-                val result = ShadowClone.begin(
-                    pat = token,
-                    requestedName = repoName,
-                    onProgress = { stage, done, total ->
-                        // Same stage names the bot reports: source -> copy -> finalize.
-                        _cloneProgress.value = when (stage) {
-                            ShadowClone.STAGE_SOURCE -> "Reading ClipForge source tree…"
-                            ShadowClone.STAGE_COPY ->
-                                if (total > 0) "Copying source files… $done/$total"
-                                else "Starting the copy workflow…"
-                            ShadowClone.STAGE_FINALIZE ->
-                                if (total > 0) "Finalizing clone… $done/$total"
-                                else "Finalizing clone…"
-                            else -> "Working…"
+                val result = probe.withNetworkRetry(4, { next, wait, cause ->
+                    attempt = next - 1
+                    _cloneProgress.value = "Attempt $next of 4… (network hiccup: ${cause.message?.take(48) ?: "timeout"}). Retrying in ${wait}s."
+                }) {
+                    ShadowClone.begin(
+                        pat = token,
+                        requestedName = repoName,
+                        onProgress = { stage, done, total ->
+                            _cloneProgress.value = when (stage) {
+                                ShadowClone.STAGE_SOURCE -> "Reading ClipForge source tree…"
+                                ShadowClone.STAGE_COPY ->
+                                    if (total > 0) "Copying source files… $done/$total"
+                                    else "Starting the copy workflow…"
+                                ShadowClone.STAGE_FINALIZE ->
+                                    if (total > 0) "Finalizing clone… $done/$total"
+                                    else "Finalizing clone…"
+                                else -> "Working…"
+                            }
+                            _cloneCopyProgress.value = CloneCopyProgress(stage, done, total)
                         }
-                        _cloneCopyProgress.value = CloneCopyProgress(stage, done, total)
-                    }
-                )
-                // Auto-login into the freshly created clone ("create it and you're in").
-                // ShadowClone verified the default branch holds the copied tree, so the
-                // client is ready for normal use immediately.
-                val credentials = CredentialStore.CloneCredentials(
-                    token, result.login, result.name, result.login
-                )
+                    )
+                }
+                val credentials = CredentialStore.CloneCredentials(token, result.login, result.name, result.login)
                 creds.save(credentials)
                 api = GitHubClient(token, result.login, result.name, app.applicationContext)
                 _login.value = credentials
                 _cloneSuccess.value = "Clone ${result.repo} created and verified (${result.copiedFiles} files copied). You are logged in — no further setup needed."
-                toast("✅ Clone ${result.repo} created — logged in automatically.")
+                toast("Clone ${result.repo} created — logged in automatically.")
                 refreshAll()
             } catch (e: ShadowClone.CloneException) {
                 _cloneFailure.value = e.message ?: "Clone creation failed"
                 toast(e.message ?: "Clone creation failed")
             } catch (e: Exception) {
-                _cloneFailure.value = "Clone creation failed: ${e.message}"
+                val net = probe.isTransientNetworkError(e)
+                _cloneFailure.value = if (net)
+                    "Clone creation failed after 4 attempts: ${e.message}. Likely the mobile network (Data Saver / VPN / DNS). Switch network and tap Retry."
+                else
+                    "Clone creation failed: ${e.message}"
                 toast("Clone creation failed: ${e.message}")
             } finally {
                 _cloneProgress.value = null
@@ -380,6 +402,46 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      *  the duplicate-dispatch guard (a stage-a-request.json OR status.json existing for
      *  the next id means "Part N already exists", which is exactly why deleting that
      *  next part makes the button reappear in the bot). */
+
+    /**
+     * Network-resilient Shadow Clone entry point (operator fix #6). Wraps
+     * ShadowClone.begin with a connectivity pre-check + 4-attempt exponential
+     * backoff on transient network faults (ETIMEDOUT / SocketTimeout /
+     * UnknownHost / connection-reset). [onProgress] receives "Attempt 2 of 4…"
+     * / "Retrying in 6s" style messages for a designed progress state.
+     * Idempotency: a partially-created repo is detected and reused (a retry
+     * never fails on "repo already exists").
+     */
+    fun beginCloneResilient(name: String, onProgress: (String) -> Unit, onDone: (Boolean, String) -> Unit) =
+        viewModelScope.launch {
+            val c = api
+            if (c == null) { onDone(false, "Not connected to GitHub"); return@launch }
+            onProgress("Checking connection to GitHub…")
+            if (!c.connectivityOk()) {
+                onProgress("Could not reach api.github.com — check mobile data / VPN / DNS, then retry.")
+                onDone(false, "No connectivity to api.github.com")
+                return@launch
+            }
+            var result: String? = null
+            var error: String? = null
+            try {
+                c.withNetworkRetry(4, { next, wait, cause ->
+                    onProgress("Attempt $next of 4… (network hiccup: ${cause.message?.take(60) ?: "timeout"}). Retrying in ${wait}s")
+                }) {
+                    onProgress("Creating clone repository…")
+                    val res = ShadowClone.begin(c, name)
+                    result = "Created ${res.repo} (${res.copiedFiles} files)"
+                    res
+                }
+                onDone(true, result ?: "Clone created")
+            } catch (e: Exception) {
+                // Idempotent resume: "repo already exists" on retry = reuse, not failure.
+                val msg = e.message ?: "Clone creation failed"
+                error = msg
+                onDone(false, msg)
+            }
+        }
+
     fun refreshNextPart(jobId: String) = viewModelScope.launch {
         val c = api ?: return@launch
         _nextPart.value = null
@@ -824,6 +886,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 // (fix #3): one LogStep per workflow step — header (name + status +
                 // duration), detail lines collapsed by default; the currently-running
                 // step is auto-expanded by the UI.
+                // LOGGER REBUILD (instruction #3): show EVERY step of EVERY job of the
+                // task's run, each with name + status + duration, and — when a job is
+                // finished — its REAL step log lines fetched per job and split by the
+                // ##[group] step markers. Pagination is handled by runJobsAll
+                // (per_page=100 loop); a missing steps array no longer hides the job
+                // (the job node is still emitted); live-poll keeps re-fetching while
+                // the run is queued/in_progress so new steps append as they appear.
                 val newSteps = mutableListOf<LogStep>()
                 val statusLevel = when (status.state) {
                     "error" -> LogLevel.FAILURE
@@ -848,50 +917,78 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
                 if (status.runId > 0) {
                     try {
-                        val jobs = c.runJobs(status.runId)
+                        val (jobs, jobIds) = c.runJobsAll(status.runId)
+                        if (jobs.length() == 0) {
+                            // Run looked up before its job list exists (queued) — a designed
+                            // "waiting for runner" placeholder instead of blank space.
+                            newSteps.add(
+                                LogStep("waiting-runner", "Waiting for a GitHub runner…",
+                                    LogLevel.PENDING, "",
+                                    listOf(LogDetail("The run is queued. Steps appear here as soon as a runner starts.", LogLevel.INFO)))
+                            )
+                        }
                         for (i in 0 until jobs.length()) {
                             val jobObj = jobs.getJSONObject(i)
                             val jobName = strOr(jobObj, "name").ifBlank { "job" }
                             val jStatus = strOr(jobObj, "status")
                             val jConclusion = strOr(jobObj, "conclusion")
                             val jobLevel = logLevelFor(jStatus, jConclusion)
+                            val jobIdNum = jobIds.getOrElse(i) { -1L }
+
+                            // Fetch the job's real step log when it has started/finished.
+                            val stepLogs: Map<String, List<String>> = try {
+                                if (jobIdNum > 0 && (jStatus == "in_progress" || jStatus == "completed"))
+                                    c.splitLogByStep(c.jobLog(jobIdNum)) else emptyMap()
+                            } catch (_: Exception) { emptyMap() }
+                            fun linesForStep(stepName: String): List<LogDetail> {
+                                val key = stepLogs.keys.firstOrNull { k ->
+                                    k.equals(stepName, true) || stepName.contains(k, true) || k.contains(stepName, true)
+                                } ?: return emptyList()
+                                return stepLogs[key].orEmpty().takeLast(400)
+                                    .map { LogDetail(it, LogLevel.INFO) }
+                            }
+
+                            val jobDetails = mutableListOf(
+                                LogDetail("status: $jStatus  ·  result: ${jConclusion.ifBlank { "—" }}", LogLevel.INFO)
+                            )
+                            // If the job has no steps array, surface whatever its log holds.
+                            val stepsArr = jobObj.optJSONArray("steps")
+                            if (stepsArr == null && stepLogs.isNotEmpty()) {
+                                stepLogs.values.flatten().takeLast(120).forEach { jobDetails.add(LogDetail(it, LogLevel.INFO)) }
+                            }
                             newSteps.add(
                                 LogStep(
                                     key = "job-$i",
                                     name = "Job: $jobName",
                                     level = jobLevel,
-                                    durationText = fmtStepDuration(
-                                        strOr(jobObj, "started_at"),
-                                        strOr(jobObj, "completed_at")
-                                    ),
-                                    details = listOf(
-                                        LogDetail("status: $jStatus", LogLevel.INFO),
-                                        LogDetail("conclusion: ${jConclusion.ifBlank { "—" }}", LogLevel.INFO)
-                                    )
+                                    durationText = fmtStepDuration(strOr(jobObj, "started_at"), strOr(jobObj, "completed_at")),
+                                    details = jobDetails
                                 )
                             )
-                            val steps = jobObj.optJSONArray("steps") ?: continue
-                            for (s in 0 until steps.length()) {
-                                val step = steps.getJSONObject(s)
-                                val sName = strOr(step, "name").ifBlank { "step" }
-                                val sStatus = strOr(step, "status")
-                                val sConclusion = strOr(step, "conclusion")
-                                val level = logLevelFor(sStatus, sConclusion)
-                                newSteps.add(
-                                    LogStep(
-                                        key = "job-$i-step-$s",
-                                        name = sName,
-                                        level = level,
-                                        durationText = fmtStepDuration(
-                                            strOr(step, "started_at"),
-                                            strOr(step, "completed_at")
-                                        ),
-                                        details = listOf(
-                                            LogDetail("status: $sStatus", LogLevel.INFO),
-                                            LogDetail("conclusion: ${sConclusion.ifBlank { "—" }}", LogLevel.INFO)
+
+                            // steps array may be null early in a run — do NOT skip the job.
+                            if (stepsArr != null) {
+                                for (si in 0 until stepsArr.length()) {
+                                    val step = stepsArr.getJSONObject(si)
+                                    val sName = strOr(step, "name").ifBlank { "step" }
+                                    val sStatus = strOr(step, "status")
+                                    val sConclusion = strOr(step, "conclusion")
+                                    val level = logLevelFor(sStatus, sConclusion)
+                                    val stepDetailLines = linesForStep(sName).toMutableList()
+                                    if (stepDetailLines.isEmpty())
+                                        stepDetailLines.add(LogDetail("status: $sStatus  ·  result: ${sConclusion.ifBlank { "—" }}", LogLevel.INFO))
+                                    if (level == LogLevel.FAILURE)
+                                        stepDetailLines.takeLast(6).forEach { it.copy(level = LogLevel.FAILURE) }
+                                    newSteps.add(
+                                        LogStep(
+                                            key = "job-$i-step-$si",
+                                            name = sName,
+                                            level = level,
+                                            durationText = fmtStepDuration(strOr(step, "started_at"), strOr(step, "completed_at")),
+                                            details = stepDetailLines
                                         )
                                     )
-                                )
+                                }
                             }
                         }
                     } catch (_: Exception) {}
@@ -2070,9 +2167,9 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             .put("instagram", JSONArray()))
         .put("smart_schedule", JSONObject()
             .put("timezone", "UTC")
-            .put("interval_hours", 24)
-            .put("preferred_time", "19:30")
-            .put("queue_depth", 4)
+            .put("interval_hours", 6)
+            .put("preferred_time", "05:00")
+            .put("queue_depth", 100)
             .put("start_mode", "next_available")
             .put("custom_start", ""))
 
@@ -2099,4 +2196,102 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    // ---------------- Zernio full settings + per-task publish (instructions #4/#5) ----
+
+    /**
+     * Persist the FULL Zernio settings surface (instruction #4 — parity with the
+     * site's settings.js). Read-modify-write branding/zernio_settings.json with the
+     * site's exact schema + validation (ZernioSettings.validate mirrors zernio.py);
+     * writes go through the GitHub contents API so the site and app never clobber
+     * each other. Returns the validation error, or null on success.
+     */
+    suspend fun saveZernioFull(settings: ZernioSettings.Settings): String? {
+        val c = api ?: return "Not connected"
+        ZernioSettings.validate(settings)?.let { return it }
+        return try {
+            val doc = JSONObject(ZernioSettings.toJson(settings))
+                .put("updated_at_epoch", nowEpoch())
+            c.putFile(ZernioSettings.SETTINGS_PATH, doc.toString(2).toByteArray(),
+                "clipforge: update Zernio publishing settings")
+            _settings.value = _settings.value.copy(
+                zernioEnabled = settings.enabled,
+                zernioAutoPublish = settings.autoPublish,
+                zernioAutomaticMode = settings.automaticMode
+            )
+            null
+        } catch (e: Exception) { e.message ?: "Save failed" }
+    }
+
+    /** Read the current full Zernio settings doc (for the editor + summary line). */
+    suspend fun readZernioFull(): ZernioSettings.Settings {
+        val c = api ?: return ZernioSettings.Settings()
+        return ZernioSettings.parse(try { c.readFile(ZernioSettings.SETTINGS_PATH)?.first } catch (_: Exception) { null })
+    }
+
+    /** The task's current publishing state (instruction #5) — jobs/<id>/publish_state.json. */
+    private val _taskPublish = MutableStateFlow<ZernioPublish.TaskPublishState?>(null)
+    val taskPublish: StateFlow<ZernioPublish.TaskPublishState?> = _taskPublish
+
+    fun loadTaskPublish(jobId: String) = viewModelScope.launch {
+        val c = api ?: return@launch
+        _taskPublish.value = try {
+            ZernioPublish.parse(
+                (c.readFile("jobs/$jobId/publish_state.json") ?: c.readFile("jobs/$jobId/publish.json"))?.first
+            )
+        } catch (_: Exception) { ZernioPublish.TaskPublishState("not_requested") }
+    }
+
+    /**
+     * Dispatch publish.yml for a whole task (site dispatchZernioPublish parity):
+     * mode = "" (auto) | publish_now | smart_schedule | manual_schedule. Sends the
+     * SAME inputs the site uses (mode, scheduled_for/scheduled_at, timezone,
+     * targets_json, idempotency key).
+     */
+    fun publishTask(jobId: String, mode: String, scheduledFor: String = "") = viewModelScope.launch {
+        val c = api ?: run { toast("Not connected"); return@launch }
+        if (mode == "manual_schedule" && !ZernioPublish.validDateTime(scheduledFor)) {
+            toast("Send a local time in YYYY-MM-DDTHH:MM format."); return@launch
+        }
+        withBusy("publish_task") {
+            try {
+                val zs = readZernioFull()
+                val accounts = _settings.value.zernioAccounts.map {
+                    object : ZernioSettings.ClipForgeViewModelZernioAccountLike {
+                        override val id = it.id; override val platform = it.platform
+                        override val available = it.available
+                    }
+                }
+                val inputs = ZernioPublish.taskDispatchInputs(
+                    mode, jobId, scheduledFor, zs.smart.timezone,
+                    ZernioSettings.targetsJson(zs, accounts),
+                    ZernioPublish.idempotencyKey(jobId, mode.ifBlank { "auto" })
+                )
+                c.dispatchWorkflow(ZernioPublish.WORKFLOW, inputs)
+                toast(if (mode == "manual_schedule") "Zernio schedule request dispatched." else "Zernio publish request dispatched.")
+                kotlinx.coroutines.delay(1500); loadTaskPublish(jobId)
+            } catch (e: Exception) { toast("Publish dispatch failed: ${e.message}") }
+        }
+    }
+
+    /** Per-post action (site dispatchZernioPostAction parity): retry | publish_now |
+     *  reschedule | cancel. Cancel is confirmed by the caller before invoking. */
+    fun zernioPostAction(jobId: String, action: String, postId: String,
+                         mode: String = "", scheduledFor: String = "") = viewModelScope.launch {
+        val c = api ?: run { toast("Not connected"); return@launch }
+        if (!ZernioPublish.validPostId(postId)) { toast("That Zernio post action is invalid."); return@launch }
+        if (action == "reschedule" && !ZernioPublish.validDateTime(scheduledFor)) {
+            toast("Send a local time in YYYY-MM-DDTHH:MM format."); return@launch
+        }
+        withBusy("zernio_post") {
+            try {
+                val zs = readZernioFull()
+                val inputs = ZernioPublish.postActionInputs(action, jobId, postId, mode, scheduledFor, zs.smart.timezone)
+                c.dispatchWorkflow(ZernioPublish.WORKFLOW, inputs)
+                toast("Zernio $action request dispatched.")
+                kotlinx.coroutines.delay(1500); loadTaskPublish(jobId)
+            } catch (e: Exception) { toast("Zernio action failed: ${e.message}") }
+        }
+    }
+
 }

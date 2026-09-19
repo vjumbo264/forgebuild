@@ -9,6 +9,10 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Dns
+import java.net.InetAddress
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import okio.BufferedSink
 import org.json.JSONArray
 import org.json.JSONObject
@@ -27,9 +31,24 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
     private fun requestLog(method: String, path: String, code: Int, body: String) {
         DiagLog.log(appCtx, "GitHubAPI", "$method $path -> HTTP $code :: ${body.take(280)}")
     }
+    /** IPv4-first DNS with an IPv6 Happy-Eyeballs fallback (operator fix #6 —
+     *  ETIMEDOUT on mobile data). Mobile networks frequently have a broken/slow
+     *  IPv6 route to api.github.com:443; ordering IPv4 first avoids the stall
+     *  while still returning every address so OkHttp can race the rest. */
+    private val ipv4FirstDns = Dns { hostname ->
+        val all = runCatching { Dns.SYSTEM.lookup(hostname) }.getOrDefault(emptyList())
+        all.sortedBy { if (it is java.net.Inet4Address) 0 else 1 }
+    }
+
     val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
+        // fix #6: the operator's clone-creation failure was a 20s CONNECT timeout on
+        // mobile data, not auth/logic. Raise connect to 45s and let OkHttp retry
+        // silently-failed connections.
+        .connectTimeout(45, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .dns(ipv4FirstDns)
         .build()
 
     private val api = "https://api.github.com"
@@ -410,5 +429,113 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
         val resp = client.newCall(req).execute()
         if (resp.code !in 200..299) { resp.close(); throw GhException(resp.code, "asset download failed") }
         return resp
+    }
+
+    // ---- network-resilience helpers (operator fix #6) -----------------------------
+
+    /** True for the transient network faults worth an automatic retry. */
+    fun isTransientNetworkError(t: Throwable): Boolean = when (t) {
+        is SocketTimeoutException -> true
+        is UnknownHostException -> true
+        else -> {
+            val m = (t.message ?: "").lowercase()
+            m.contains("etimedout") || m.contains("connection reset") ||
+                m.contains("failed to connect") || m.contains("timeout") ||
+                m.contains("network is unreachable") || m.contains("econnreset")
+        }
+    }
+
+    /**
+     * Retry [block] up to [attempts] times with exponential backoff (2s,4s,8s,16s)
+     * on transient network faults only. [onRetry] gets (nextAttempt, waitSeconds, cause).
+     */
+    suspend fun <T> withNetworkRetry(
+        attempts: Int = 4,
+        onRetry: (Int, Int, Throwable) -> Unit = { _, _, _ -> },
+        block: suspend () -> T
+    ): T {
+        var last: Throwable? = null
+        var wait = 2
+        for (attempt in 1..attempts) {
+            try {
+                return block()
+            } catch (t: Throwable) {
+                last = t
+                if (attempt >= attempts || !isTransientNetworkError(t)) throw t
+                onRetry(attempt + 1, wait, t)
+                kotlinx.coroutines.delay(wait * 1000L)
+                wait = (wait * 2).coerceAtMost(16)
+            }
+        }
+        throw last ?: IOException("network retry exhausted")
+    }
+
+    /** Lightweight connectivity pre-check: HEAD api.github.com, true when reachable. */
+    suspend fun connectivityOk(): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            client.newCall(Request.Builder().url(api).head().build()).execute().use { it.code in 200..599 }
+        }.getOrDefault(false)
+    }
+
+    // ---- Actions: paginated jobs + per-job logs (logger rebuild, instruction #3) ----
+
+    /**
+     * Fetch EVERY job of a run across pages (per_page=100). Returns (jobArray,
+     * jobIdByIndex) — the caller needs each job's numeric id to fetch its log.
+     */
+    suspend fun runJobsAll(runId: Long): Pair<JSONArray, List<Long>> = withContext(Dispatchers.IO) {
+        val merged = JSONArray()
+        val ids = mutableListOf<Long>()
+        var page = 1
+        while (true) {
+            val body = execute(
+                base("$api/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100&page=$page").get()
+            ).second
+            val jobs = JSONObject(body).optJSONArray("jobs") ?: break
+            if (jobs.length() == 0) break
+            for (i in 0 until jobs.length()) {
+                val j = jobs.getJSONObject(i)
+                merged.put(j)
+                ids.add(j.optLong("id", -1L))
+            }
+            if (jobs.length() < 100) break
+            page++
+        }
+        merged to ids
+    }
+
+    /** Raw text of a single job's log (GET /actions/jobs/{job_id}/logs, follows redirect). */
+    suspend fun jobLog(jobId: Long): String = withContext(Dispatchers.IO) {
+        client.newCall(
+            base("$api/repos/$owner/$repo/actions/jobs/$jobId/logs").get().build()
+        ).execute().use { resp ->
+            if (resp.code in 200..299) resp.body?.string().orEmpty() else ""
+        }
+    }
+
+    /**
+     * Split a raw Actions job log into per-step content. GitHub marks each step's
+     * block with ##[group] / ##[endgroup]; step lines also carry the
+     * "##[group]Run <command>" header. Timestamps (ISO prefix) and ANSI colour
+     * codes are stripped so the result is clean, copyable plain text.
+     */
+    fun splitLogByStep(raw: String): Map<String, List<String>> {
+        val out = linkedMapOf<String, MutableList<String>>()
+        val ansi = Regex("\u001B\[[;\d]*m")
+        val ts = Regex("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s*")
+        var current = "Setup"
+        fun clean(line: String): String = ansi.replace(ts.replace(line, ""), "").trimEnd()
+        for (line in raw.lines()) {
+            val c = clean(line)
+            when {
+                c.startsWith("##[group]") -> {
+                    current = c.removePrefix("##[group]").removePrefix("Run ").trim().ifBlank { "Step" }
+                    out.getOrPut(current) { mutableListOf() }
+                }
+                c.startsWith("##[endgroup]") -> { /* close group */ }
+                c.isNotBlank() -> out.getOrPut(current) { mutableListOf() }.add(c)
+            }
+        }
+        return out
     }
 }
