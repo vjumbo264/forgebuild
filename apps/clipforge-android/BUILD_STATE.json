@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-19 (v24 routing fix)",
-  "current_task": "task-139",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-19 (v24 live, build complete)",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -362,8 +362,8 @@
     {
       "id": "task-139",
       "title": "V23-R9 Bump versionCode/versionName 23, About shows v23, dispatch release.yml (app_path=apps/clipforge-android), verify clipforge-android-v23 + APK asset live via Releases API, never touch v1..v22, set build_complete=true LAST",
-      "status": "in_progress",
-      "notes": "v23 released (6a81dc8, verified live, v22 intact) but shipped WITHOUT the plan-routing fix; v24 carries it. Done when v24 is verified live on the Releases API."
+      "status": "done",
+      "notes": "DONE (2026-09-19): clipforge-android-v24 verified LIVE on the Releases API (APK + forgebuild-manifest.json present, not draft). Prior releases v1..v23 all intact. Note: the first v24 workflow run failed at the manifest step because the release-notes input contained backticks which bash executed as command substitution (exit 127, 'cuts: command not found') \u2014 the Kotlin build itself compiled clean both times. Redispatched with sanitized notes. FUTURE SESSIONS: never put backticks/$/quotes in release_notes."
     },
     {
       "id": "task-140",
@@ -428,6 +428,11 @@
       "date": "2026-09-19",
       "event": "correction",
       "detail": "v23 released without routing fix (assert miscount aborted the write before it landed); fixed, re-checkpointed, releasing v24."
+    },
+    {
+      "date": "2026-09-19",
+      "event": "release-verified",
+      "detail": "clipforge-android-v24 verified live on Releases API (2 assets); v22/v23 intact; build_complete=true."
     }
   ]
 }
