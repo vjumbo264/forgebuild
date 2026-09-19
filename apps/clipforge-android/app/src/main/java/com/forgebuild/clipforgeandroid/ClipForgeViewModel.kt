@@ -403,45 +403,6 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      *  the next id means "Part N already exists", which is exactly why deleting that
      *  next part makes the button reappear in the bot). */
 
-    /**
-     * Network-resilient Shadow Clone entry point (operator fix #6). Wraps
-     * ShadowClone.begin with a connectivity pre-check + 4-attempt exponential
-     * backoff on transient network faults (ETIMEDOUT / SocketTimeout /
-     * UnknownHost / connection-reset). [onProgress] receives "Attempt 2 of 4…"
-     * / "Retrying in 6s" style messages for a designed progress state.
-     * Idempotency: a partially-created repo is detected and reused (a retry
-     * never fails on "repo already exists").
-     */
-    fun beginCloneResilient(name: String, onProgress: (String) -> Unit, onDone: (Boolean, String) -> Unit) =
-        viewModelScope.launch {
-            val c = api
-            if (c == null) { onDone(false, "Not connected to GitHub"); return@launch }
-            onProgress("Checking connection to GitHub…")
-            if (!c.connectivityOk()) {
-                onProgress("Could not reach api.github.com — check mobile data / VPN / DNS, then retry.")
-                onDone(false, "No connectivity to api.github.com")
-                return@launch
-            }
-            var result: String? = null
-            var error: String? = null
-            try {
-                c.withNetworkRetry(4, { next, wait, cause ->
-                    onProgress("Attempt $next of 4… (network hiccup: ${cause.message?.take(60) ?: "timeout"}). Retrying in ${wait}s")
-                }) {
-                    onProgress("Creating clone repository…")
-                    val res = ShadowClone.begin(c, name)
-                    result = "Created ${res.repo} (${res.copiedFiles} files)"
-                    res
-                }
-                onDone(true, result ?: "Clone created")
-            } catch (e: Exception) {
-                // Idempotent resume: "repo already exists" on retry = reuse, not failure.
-                val msg = e.message ?: "Clone creation failed"
-                error = msg
-                onDone(false, msg)
-            }
-        }
-
     fun refreshNextPart(jobId: String) = viewModelScope.launch {
         val c = api ?: return@launch
         _nextPart.value = null

@@ -35,9 +35,11 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
      *  ETIMEDOUT on mobile data). Mobile networks frequently have a broken/slow
      *  IPv6 route to api.github.com:443; ordering IPv4 first avoids the stall
      *  while still returning every address so OkHttp can race the rest. */
-    private val ipv4FirstDns = Dns { hostname ->
-        val all = runCatching { Dns.SYSTEM.lookup(hostname) }.getOrDefault(emptyList())
-        all.sortedBy { if (it is java.net.Inet4Address) 0 else 1 }
+    private val ipv4FirstDns: Dns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            val all = runCatching { Dns.SYSTEM.lookup(hostname) }.getOrDefault(emptyList())
+            return all.sortedBy { if (it is java.net.Inet4Address) 0 else 1 }
+        }
     }
 
     val client: OkHttpClient = OkHttpClient.Builder()
@@ -521,8 +523,8 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
      */
     fun splitLogByStep(raw: String): Map<String, List<String>> {
         val out = linkedMapOf<String, MutableList<String>>()
-        val ansi = Regex("\u001B\[[;\d]*m")
-        val ts = Regex("^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s*")
+        val ansi = Regex("\\u001B\\[[;\\d]*m")
+        val ts = Regex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z\\s*")
         var current = "Setup"
         fun clean(line: String): String = ansi.replace(ts.replace(line, ""), "").trimEnd()
         for (line in raw.lines()) {
