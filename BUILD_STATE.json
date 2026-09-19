@@ -1087,6 +1087,15 @@
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/ElevationTokens.kt"
     ],
     "note": "ElevationTokens.kt: official levels 0/1/3/6/8/12dp + tonalContainerColor() mapping levels to surfaceContainer* roles (deprecated surface-tint path avoided)."
+   },
+   {
+    "step": "step-06-type-scale",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:20Z",
+    "files_touched": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/TypographyTokens.kt"
+    ],
+    "note": "TypographyTokens.kt: full official 15-role type scale (display/headline/title/body/label x L/M/S) applied by role, explicitly pinned for auditability."
    }
   ]
  }
