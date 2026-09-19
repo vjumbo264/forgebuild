@@ -3,8 +3,8 @@
  "app_name": "ForgeBuild",
  "description": "An android version of the forge build site: a native Android client for the ForgeBuild dashboard \u2014 browse apps in apps/, view per-app releases/APK downloads, BUILD_STATE.json and PROMPT_HISTORY, and generate type-1 new-app contract prompts, all against the GitHub API of vjumbo264/forgebuild.",
  "package": "com.forgebuild.forgeandroid",
- "build_complete": false,
- "current_task": "task-06",
+ "build_complete": true,
+ "current_task": "task-07",
  "updated_by": "forge-android-build session-1",
  "tasks": [
   {
@@ -40,14 +40,14 @@
   {
    "id": "task-06",
    "title": "Validate build configuration, dispatch release.yml with app_path=apps/forge-android, verify forge-android-v1 release + APK asset via GitHub Releases API.",
-   "status": "pending",
-   "notes": ""
+   "status": "done",
+   "notes": "Build config validated (namespace/applicationId com.forgebuild.forgeandroid, R8+shrinkResources on, INTERNET only permission, adaptive-icon mipmaps present). Release attempt 1 (run 35417234142) failed at compileReleaseKotlin due to an Engine-level defect (engine/ EngineExpressive.kt referenced material3 SplitButton/overflowIndicator APIs absent from pinned 1.5.0-alpha28); fixed engine-level by replacing with the CI-verified expressive component source from apps/forgehouse50 (package adjusted), propagated into this app. Release attempt 2 (run 35417484567) completed success."
   },
   {
    "id": "task-07",
    "title": "Set build_complete: true only after forge-android-v1 verified live.",
-   "status": "pending",
-   "notes": ""
+   "status": "done",
+   "notes": "forge-android-v1 VERIFIED LIVE via the GitHub Releases API on vjumbo264/forgebuild (published 2026-09-19T03:06:13Z, draft=false): app-forge-android-v1.apk (1,413,531 bytes, HTTP 200 download) + forgebuild-manifest.json. Signed APK built by release.yml from apps/forge-android. build_complete set true."
   }
  ],
  "history": [
@@ -62,6 +62,10 @@
   {
    "session": "session-1",
    "event": "Release attempt 1 (run 35417234142) FAILED at compileReleaseKotlin: engine/'s EngineExpressive.kt referenced SplitButton/SplitButtonLeadingContentScope/SplitButtonTrailingContentScope/ButtonGroup(overflowIndicator) \u2014 absent from pinned material3 1.5.0-alpha28 (engine/ never CI-compiled after the real-expressive fix). Engine-level fix: replaced with the CI-green expressive component source from apps/forgehouse50/ui/Expressive.kt (package adjusted), applied in engine/ AND propagated into apps/forge-android/."
+  },
+  {
+   "session": "session-1",
+   "event": "Release attempt 2 (run 35417484567) SUCCESS. forge-android-v1 verified live via Releases API with APK + manifest; APK download returns HTTP 200. build_complete=true. App build complete."
   }
  ],
  "substitutions": [],
