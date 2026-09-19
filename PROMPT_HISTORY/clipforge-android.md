@@ -966,3 +966,50 @@ Investigate the current app and repository yourself, decide how to do this, and 
 ---
 
 **Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
+
+---
+
+## 2026-09-19 — EXTEND/UPDATE: clipforge-android (complete UI redesign + logger fix)
+
+Operator instruction 2026-09-19 (fourth round). Follow the standard extend contract: append this instruction verbatim to `PROMPT_HISTORY/clipforge-android.md`, seed tasks, checkpoint `BUILD_STATE.json` after every task, cut `clipforge-android-v24`, never touch prior releases, never delete the repository, never commit tokens/PATs.
+
+**AUTONOMY:** Run fully autonomously. Ask no clarifying questions. Where something is ambiguous, pick the most sensible option, record the decision in BUILD_STATE notes, and continue.
+
+**NO DEVICE TESTING:** You cannot install or run the APK. Do NOT screenshot, do NOT attempt emulator or on-device testing, and do NOT put screenshot or run-the-app steps in any prompt, task or workflow. Verification = successful compile, unit tests, `release.yml` run success, and the Releases API asset check only.
+
+**TAKE YOUR TIME:** Do not rush this. The last round looked rushed. Design every screen deliberately and finish the whole job properly.
+
+---
+
+## THE TASK
+
+**Redesign the entire UI of the app.** This is a design job, not a port. Design every screen fresh, the way a top Google design team would, so the result looks like a premium first-party Google app built on Material 3 Expressive.
+
+## WHAT THE OPERATOR WANTS KEPT AND WHAT NOT
+
+- **Keep:** all settings, saved data, and every feature. Nothing functional may be lost.
+- **Do NOT keep:** the current UI design or the current layout. Do not adapt, recreate, or imitate the existing screen arrangements. The operator asked for a redesign, and the last version instead re-created the old layout on new components, which came out worse than the original. Rearrange every screen however it needs to look best. Change navigation structure, grouping, hierarchy, and screen composition freely.
+
+## THE PROBLEMS TO FIX
+
+1. **The UI looks bad and does not feel premium.** Things are not properly arranged or aligned, spacing and hierarchy are poor, and it does not look like one of Google's premium apps. Every screen needs proper alignment, consistent spacing, clear hierarchy, and a polished, professional finish. This applies to the whole app: main screens, tasks, task detail, new-task flow, source selection, completed videos, music, series, settings, dialogs, empty states, the logger, and everything else.
+
+2. **The floating bottom bar looks ugly.** It is disgusting. There is a black band across the bottom where the tabs used to be, as if the old bar area was painted black and a floating bar was placed on top of it. That looks worse than before. Content must flow cleanly behind and around a genuinely floating navigation bar, with no black strip, no leftover bar area, and no visual seam. The floating bar itself must look premium and native to Material 3 Expressive. Keep horizontal swiping between tabs, with the floating bar staying in sync.
+
+3. **The squiggly, expressive interactions are not there.** The operator does not see the Material 3 Expressive button behaviour that Google apps have: buttons that visibly react and morph or squish when tapped, and the squiggly/wavy loading animations. These must be clearly visible throughout the app. Every button reacts on tap with expressive motion and shows a loading state during work, and cannot be double-fired.
+
+4. **The logger still shows only status and result** ("status in progress", "status completed", "result success/skipped/failed") instead of the complete information. The operator has asked for this repeatedly across rounds and it is still not fixed. The logger must show the actual log details of every step of every run, with a running task showing live steps and a loading state, and completed tasks keeping the full step-by-step log. The clone has GitHub access, so the real logs are available. The logger's design must also be fully redesigned to match the new UI. Find out why previous attempts did not produce the real log content and fix the cause for good.
+
+## REQUIREMENTS
+
+- Premium, aligned, consistent, professional Material 3 Expressive design across every screen.
+- Floating tabs with horizontal swiping, done cleanly with no black area.
+- Visible expressive button animations and squiggly loaders everywhere.
+- Full real-log logger.
+- All settings and features preserved, including the Zernio publishing settings and per-task publishing.
+
+Investigate the current app and repository yourself, decide how to do this, and do it.
+
+---
+
+**Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
