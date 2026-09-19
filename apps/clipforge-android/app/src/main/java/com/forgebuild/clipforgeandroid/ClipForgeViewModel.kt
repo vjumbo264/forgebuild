@@ -2274,7 +2274,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      * cannot be read+parsed after retries, dispatch is aborted and the operator gets the
      * explicit Retry / continue-without-music choice — never a silent music-less render.
      */
-    fun freezeMusicRefForCreation(jobId: String, selectedMusicPath: String?, retry: () -> Unit): String? {
+    suspend fun freezeMusicRefForCreation(jobId: String, selectedMusicPath: String?, retry: () -> Unit): String? {
         val c = api ?: return null
         val wanted = selectedMusicPath?.takeIf { it.isNotBlank() }
         if (wanted == null) {
@@ -2302,7 +2302,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     }
 
     /** Concrete default ref (path:...) from branding/music_default.json, or "" when unset. */
-    private fun readDefaultMusicRef(c: GitHubClient): String {
+    private suspend fun readDefaultMusicRef(c: GitHubClient): String {
         val file = c.readFile("branding/music_default.json")
             ?: throw java.io.IOException("branding/music_default.json not found")
         val p = JSONObject(file.first).optString("library_track_path", "")
