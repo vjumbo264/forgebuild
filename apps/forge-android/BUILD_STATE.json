@@ -4,7 +4,7 @@
  "description": "An android version of the forge build site: a native Android client for the ForgeBuild dashboard \u2014 browse apps in apps/, view per-app releases/APK downloads, BUILD_STATE.json and PROMPT_HISTORY, and generate type-1 new-app contract prompts, all against the GitHub API of vjumbo264/forgebuild.",
  "package": "com.forgebuild.forgeandroid",
  "build_complete": false,
- "current_task": "task-03",
+ "current_task": "task-04",
  "updated_by": "forge-android-build session-1",
  "tasks": [
   {
@@ -22,8 +22,8 @@
   {
    "id": "task-03",
    "title": "Adaptive icon via tools/make_adaptive_icon.py with created foreground artwork.",
-   "status": "pending",
-   "notes": ""
+   "status": "done",
+   "notes": "Created simple hammer foreground artwork (tools/icon_fg.png, transparent, white silhouette), ran tools/make_adaptive_icon.py --background-color #6750A4 --out app/src/main/res: foreground scaled into the 72dp safe zone, solid background, monochrome layer for themed icons; mipmap densities mdpi-xxxhdpi generated; existing anydpi-v26 XML now points at the generated layers."
   },
   {
    "id": "task-04",
