@@ -123,7 +123,11 @@ fun cfStatusColor(level: ClipForgeViewModel.LogLevel): Color = when (level) {
     ClipForgeViewModel.LogLevel.RUNNING -> MaterialTheme.colorScheme.primary
     ClipForgeViewModel.LogLevel.PENDING -> MaterialTheme.colorScheme.outline
     ClipForgeViewModel.LogLevel.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
 }
+
+@Composable
+fun cfStateColor(state: String): Color = cfStatusColor(state)
 
 /** Status chip using Material 3 Expressive pill shapes and soft tonal containers. */
 @Composable
@@ -241,7 +245,7 @@ fun CfEmptyState(title: String, body: String, modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = com.forgebuild.engine.ui.icons.EngineIcons.Info,
+                imageVector = com.forgebuild.engine.ui.icons.EngineIcons.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(32.dp),
