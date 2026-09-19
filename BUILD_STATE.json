@@ -1096,6 +1096,15 @@
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/TypographyTokens.kt"
     ],
     "note": "TypographyTokens.kt: full official 15-role type scale (display/headline/title/body/label x L/M/S) applied by role, explicitly pinned for auditability."
+   },
+   {
+    "step": "step-07-spacing-layout",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:21Z",
+    "files_touched": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/SpacingTokens.kt"
+    ],
+    "note": "SpacingTokens.kt: 4dp baseline scale + canonical margins (16dp compact / 24dp medium+); StarterScreen rerouted to tokens."
    }
   ]
  }
