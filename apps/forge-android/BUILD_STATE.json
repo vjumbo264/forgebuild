@@ -1,0 +1,23 @@
+{
+ "slug": "forge-android",
+ "app_name": "ForgeBuild",
+ "description": "An android version of the forge build site: a native Android client for the ForgeBuild dashboard — browse apps in apps/, view per-app releases/APK downloads, BUILD_STATE.json and PROMPT_HISTORY, and generate type-1 new-app contract prompts, all against the GitHub API of vjumbo264/forgebuild.",
+ "package": "com.forgebuild.forgeandroid",
+ "build_complete": false,
+ "current_task": "task-01",
+ "updated_by": "forge-android-build session-1",
+ "tasks": [
+  { "id": "task-01", "title": "Choose slug (forge-android), create apps/forge-android/ as a copy of engine/, seed BUILD_STATE.json + PROMPT_HISTORY/forge-android.md, commit+push as push-access proof.", "status": "done", "notes": "Slug forge-android chosen by building AI (no collision in apps/: calcom, clipforge-android, forgehouse50, tapcounter, theme-showcase). engine/ copied verbatim as starting point. Slug recorded as FIRST field of this file and is permanent: folder apps/forge-android/, tags forge-android-vN, PROMPT_HISTORY/forge-android.md." },
+  { "id": "task-02", "title": "Set identity: namespace/applicationId com.forgebuild.forgeandroid in app/build.gradle.kts, app_name in res/values/strings.xml, move MainActivity to matching package.", "status": "pending", "notes": "" },
+  { "id": "task-03", "title": "Adaptive icon via tools/make_adaptive_icon.py with created foreground artwork.", "status": "pending", "notes": "" },
+  { "id": "task-04", "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) via GitHub API; do not regenerate.", "status": "pending", "notes": "" },
+  { "id": "task-05", "title": "Implement the app (one feature per commit): GitHub API data layer + INTERNET permission; apps list screen (cache-first); app detail screen (releases/APK/build state/prompt history); type-1 new-app prompt generator screen; navigation + M3 Expressive polish.", "status": "pending", "notes": "" },
+  { "id": "task-06", "title": "Validate build configuration, dispatch release.yml with app_path=apps/forge-android, verify forge-android-v1 release + APK asset via GitHub Releases API.", "status": "pending", "notes": "" },
+  { "id": "task-07", "title": "Set build_complete: true only after forge-android-v1 verified live.", "status": "pending", "notes": "" }
+ ],
+ "history": [
+  { "session": "session-1", "event": "New-app build started 2026-09-19. Operator description: \"An android version of the forge build site\". Slug forge-android chosen (not predetermined; no apps/ collision). Folder seeded from engine/." }
+ ],
+ "substitutions": [],
+ "dependency_justifications": []
+}
