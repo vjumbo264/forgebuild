@@ -1114,6 +1114,18 @@
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/MotionTokens.kt"
     ],
     "note": "MotionTokens.kt: MotionScheme.expressive() global + accessors for the six official specs (default/fast/slow x spatial/effects) so custom app animations match system spring physics; expressive component motion is automatic."
+   },
+   {
+    "step": "step-09-discipline-closure",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:23Z",
+    "files_touched": [
+     "engine/ARCHITECTURE_MATERIAL_DISCIPLINE.md",
+     "engine/app/src/main/java/com/forgebuild/engine/ui/components/EngineExpressive.kt",
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/Theme.kt",
+     "engine/app/src/main/java/com/forgebuild/engine/StarterScreen.kt"
+    ],
+    "note": "Remaining gaps closed: ARCHITECTURE_MATERIAL_DISCIPLINE.md (permanent contract), EngineExpressive.kt (official ButtonGroup/SplitButton/FloatingActionButtonMenu wrappers), Theme.kt rewired to all tokens, StarterScreen on spacing tokens. Reconciled with prior expressive-fix (no duplication)."
    }
   ]
  }
