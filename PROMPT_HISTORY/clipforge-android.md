@@ -1013,3 +1013,60 @@ Investigate the current app and repository yourself, decide how to do this, and 
 ---
 
 **Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
+
+---
+
+## Operator instruction 2026-09-19 (round 5: remove youtube_tags verification, fix publish HTTP 422, logger skipped-step cause)
+
+# EXTEND/UPDATE: clipforge-android and the clipforge pipeline (remove tag verification, fix publish 422, logger)
+
+Operator instruction 2026-09-19. Follow the standard extend contract: append this instruction verbatim to `PROMPT_HISTORY/clipforge-android.md`, seed tasks, checkpoint `BUILD_STATE.json` after every task, cut the next release, never touch prior releases, never delete the repository, never commit tokens/PATs.
+
+**AUTONOMY:** Run fully autonomously. Ask no clarifying questions. Where something is ambiguous, pick the most sensible option, record the decision in BUILD_STATE notes, and continue.
+
+**NO DEVICE TESTING:** You cannot install or run the APK. Do NOT screenshot, do NOT attempt emulator or on-device testing, and do NOT put screenshot or run-the-app steps in any prompt, task or workflow. Verification = successful compile, unit tests, `release.yml` run success, and the Releases API asset check only.
+
+---
+
+## ISSUE 1: Remove the YouTube tag verification completely
+
+Job `Rick-S04E08-p3` (a Super Series part) failed in Stage B at "Resolve production.json". Workflow run: https://github.com/motionssalt/clipforge/actions/runs/35470535308
+
+What the operator saw in the logger for the failed step:
+
+```
+Invalid production.json:
+- `youtube_tags` must contain between 10 and 20 entries.
+##[error]Process completed with exit code 1.
+```
+
+Everything before that step succeeded. The source video was re-downloaded (about 7 minutes) and only then was the plan rejected, so the run wasted about 11 minutes and produced no video.
+
+**The operator does not want any verification of YouTube tags.** No minimum, no maximum, no count check, no format check. A production plan must never be rejected, delayed or failed because of its YouTube tags, whether it has none, a few, or many.
+
+Remove this verification everywhere it exists, in every place a plan is checked (pipeline, workflows, app, tests, docs, prompts given to the plan-generating AI), so the requirement is gone and cannot fail a job. Update or remove any tests and documentation that mention it. Anything that consumes the tags must still work when they are missing or short.
+
+Also investigate why plan problems only surface after a long source download, and make sure no remaining plan check can waste a long download and lose a finished video over a cosmetic metadata field.
+
+## ISSUE 2: Publishing fails with HTTP 422
+
+When the operator tries to publish from the app, this error appears:
+
+```
+Publish dispatch failed: HTTP 422: {"message":"Unexpected inputs provi...
+```
+
+The message is cut off on screen. This is GitHub rejecting the publish workflow dispatch because it received inputs the workflow does not accept. Investigate the mismatch between what the app sends and what the publish workflow expects, and fix it so publishing works from every place in the app that can publish (completed task, completed list, post actions, automatic publish). Also make the app show the full, untruncated error text (and copy it) when a dispatch fails, so the cause is always visible.
+
+## ISSUE 3: The logger for skipped steps
+
+In the logger, steps that never ran because an earlier step failed show only `status: completed · result: skipped`. It must be obvious that they were skipped because an earlier step failed, and which step caused it, instead of looking like empty or broken entries.
+
+---
+
+Investigate the app and both repositories yourself, decide how to do this, and do it.
+
+---
+
+**Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
+
