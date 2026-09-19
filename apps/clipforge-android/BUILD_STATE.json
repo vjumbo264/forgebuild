@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "session-31",
-  "current_task": "release-v21",
+  "current_task": null,
   "tasks": [
     {
       "id": "task-80",
@@ -250,7 +250,7 @@
       "id": "task-120",
       "title": "Release v21",
       "status": "done",
-      "notes": "DONE (session-31, 2026-09-19): versionCode/versionName 20->21; release.yml dispatched for app_path=apps/clipforge-android; tag auto-increments to clipforge-android-v21; verification via Releases API pending at checkpoint time (see session_log)."
+      "notes": "DONE (session-31, 2026-09-19): versionCode/versionName 20->21. First release run 35454654429 FAILED on 3 compile errors in the new code (beginCloneResilient stub passing a GitHubClient to ShadowClone.begin(pat:String); OkHttp Dns used as a lambda-constructor; heredoc single-escaped regex in splitLogByStep). Fixed in commit 58b1f08 (stub removed \u2014 createClone is the resilient path; object:Dns; double-escaped regex), pushed + verified on origin/main. Re-dispatched: run 35454844441 SUCCESS. Release clipforge-android-v21 verified LIVE via Releases API: draft=False, assets app-clipforge-android-v21.apk (5,456,774 B) + forgebuild-manifest.json (554 B). Prior releases v1..v20 untouched."
     }
   ],
   "notes": "SESSION-24 (2026-09-13): EXTEND/UPDATE contract fully executed. (1) PROMPT_HISTORY appended (7db753b4). (2) Task-97: slow scene-detect run EXPLAINED \u2014 stage-a run 34783277244's source was a clear outlier (4K 3840x2160 HEVC-10bit 14507kbps 1422s/2.58GB vs typical 1080p 1732kbps 1315s); scene-detect 13m09s is ~7.7x the typical 103s, fully consistent with ~4x pixels x 8.4x bitrate; scenes.py untouched since its original commit -> no code regression, detection logic deliberately NOT altered. (3) Tasks 98/99: live ffmpeg progress visibility landed in motionssalt/clipforge f1515653 (run_ffmpeg_streaming; detect_shots + extract_baseline_composites; NO timeout/kill switch; validated behavior-identical on synthetic video \u2014 identical cuts, byte-identical outputs, same failure path). (4) Task-100: ForgeBuild Dashboard stuck-'ongoing' v9 bug FIXED in site/app.js (7386146e) \u2014 root cause was releases-API ordering (v9 listed first) + BUILD_STATE-derived status; now sorted newest-first + status from the real release.yml run via Actions API; live-validated; deployed by pages-deploy run 34786413758. (5) Task-101: clipforge-android-v16 RELEASED + verified live (run 34786479775 success; APK + manifest assets; v1..v15 untouched). build_complete=true. STILL OPEN (pre-existing, untouched by this instruction): task-90 Telegram-bot-removal migration remains parked pending the interactive Pages parity pass (per its own ordering rule); stage_b/reframe.py detect_shots copy noted in task-98 for future visibility parity if ever symptomatic.",
