@@ -709,7 +709,6 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
 
 /* ------------------------------ live logger ----------------------------- */
 @Composable
-@Composable
 private fun PublishErrorDialog(err: ClipForgeViewModel.ZernioDispatchError, onDismiss: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     AlertDialog(

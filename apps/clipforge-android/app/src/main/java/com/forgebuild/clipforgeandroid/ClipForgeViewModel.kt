@@ -786,7 +786,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         val name: String,
         val level: LogLevel,
         val durationText: String,
-        val details: List<LogDetail>
+        val details: List<LogDetail>,
         /** Issue 3 (2026-09-19): name of the earlier failed step that caused the skip. */
         val skippedBecauseOf: String? = null
     )
