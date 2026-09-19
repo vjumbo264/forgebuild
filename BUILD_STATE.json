@@ -1060,6 +1060,15 @@
      ],
      "reconciliation_note": "Do NOT duplicate the prior forgebuild-real-expressive-fix work: MaterialExpressiveTheme/Motion/Shapes/wavy indicators remain the single source. This build ADDS tokens+helpers+docs+starter cleanup+prompt-rule around them."
     }
+   },
+   {
+    "step": "step-03-dynamic-color",
+    "status": "done",
+    "timestamp": "2026-09-19T02:18:16Z",
+    "files_touched": [
+     "engine/app/src/main/java/com/forgebuild/engine/ui/theme/ColorTokens.kt"
+    ],
+    "note": "ColorTokens.kt: official HCT dynamic-color resolution chain (wallpaper-derived on API31+, expressiveLightColorScheme/darkColorScheme fallback). Full role set documented; no hand-picked colors."
    }
   ]
  }

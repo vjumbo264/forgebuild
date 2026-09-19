@@ -1,72 +1,44 @@
 package com.forgebuild.engine.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.expressiveLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * Shared ForgeBuild Material 3 Expressive theme (the DEFAULT Engine theme).
  *
- * Upgraded from plain Material 3 to **Material 3 Expressive**: spring-based
- * expressive motion ([MotionScheme.expressive]) and the expressive shape system
- * ([Shapes] defaults, incl. LargeIncreased / ExtraLargeIncreased /
- * ExtraExtraLarge) are now applied on top of the existing dynamic-color +
- * light/dark behavior. Expressive progress/loading indicators live in
- * [com.forgebuild.engine.ui.components.EngineProgress].
+ * Full official Material 3 / M3 Expressive discipline, baked in once here so
+ * EVERY generated app inherits it automatically. See
+ * engine/ARCHITECTURE_MATERIAL_DISCIPLINE.md and the per-area token files:
  *
- * Colors: dynamic color (Android 12+) is preserved unchanged. For the
- * non-dynamic path, the expressive light scheme is used; dark mode uses the
- * standard dark scheme (the library intentionally ships no separate
- * "expressiveDark" scheme — expressive-ness for dark comes from motion+shape,
- * matching Google's own MaterialExpressiveTheme sample which toggles
- * expressiveLight + darkTheme).
+ * - Color      → [ColorTokens]  (dynamic color / Material You + official fallback)
+ * - Shape      → [ShapeTokens]  (official scale 4/8/12/16/20/28/32/48dp by role)
+ * - Elevation  → [ElevationTokens] (tonal elevation levels, surfaceContainer roles)
+ * - Type       → [TypographyTokens]  (full official 15-role scale)
+ * - Spacing    → [SpacingTokens]  (4dp baseline grid + canonical margins)
+ * - Motion     → [MotionScheme.expressive] + [MotionTokens] (six official spring specs)
+ * - Expressive components → [com.forgebuild.engine.ui.components.EngineProgress]
+ *                            and [com.forgebuild.engine.ui.components.EngineExpressive]
  *
  * Backward compatibility: generated apps keep calling ForgeBuildTheme exactly
  * as before — same signature, same dynamic-color + dark-mode behavior. The
- * expressive upgrade is purely additive (motion + shape), so existing
+ * discipline upgrade is additive (tokens + motion + shape), so existing
  * generated UIs do not visually break.
  *
- * Never a raw unstyled UI, never hardcoded colors.
+ * Never a raw unstyled UI, never hardcoded colors, never ad-hoc radii/sizes.
  */
-private val LightColors = lightColorScheme()
-private val ExpressiveLightColors = expressiveLightColorScheme()
-private val DarkColors = darkColorScheme()
-
-/** Expressive shape system (morphing-capable corner shapes with the increased tiers). */
-private val ExpressiveShapes = Shapes()
-
-/** Expressive motion scheme (spring-based spatial + effects specs). */
-private val ExpressiveMotion: MotionScheme = MotionScheme.expressive()
-
 @Composable
 fun ForgeBuildTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val ctx = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
-        }
-        darkTheme -> DarkColors
-        else -> ExpressiveLightColors
-    }
     MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = ExpressiveMotion,
-        shapes = ExpressiveShapes,
-        typography = Typography(),
+        colorScheme = ColorTokens.resolveColorScheme(darkTheme = darkTheme, dynamicColor = dynamicColor),
+        motionScheme = MotionScheme.expressive(),
+        shapes = ShapeTokens.expressive,
+        typography = TypographyTokens.scale,
         content = content
     )
 }
