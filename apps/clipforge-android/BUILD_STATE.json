@@ -3,8 +3,8 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-19 (v22, session boundary checkpoint)",
-  "current_task": "task-122",
+  "updated_by": "forgebuild-ai-session 2026-09-19 (v22 resume: task-122 engine rebase done)",
+  "current_task": "task-123",
   "tasks": [
     {
       "id": "task-80",
@@ -259,8 +259,9 @@
     },
     {
       "id": "task-122",
-      "status": "pending",
-      "title": "P1.1 Re-base app on engine M3 Expressive stack: drop compose BOM, pin material3:1.5.0-alpha28 / compose 1.13.0-alpha01 train, AGP 9.4.0, Kotlin 2.4.20, activity-compose 1.13.0; copy engine ui/theme + EngineExpressive/EngineProgress into app; fix compile without falling back to BOM"
+      "status": "done",
+      "title": "P1.1 Re-base app on engine M3 Expressive stack: drop compose BOM, pin material3:1.5.0-alpha28 / compose 1.13.0-alpha01 train, AGP 9.4.0, Kotlin 2.4.20, activity-compose 1.13.0; copy engine ui/theme + EngineExpressive/EngineProgress into app; fix compile without falling back to BOM",
+      "notes": "DONE (session v22, 2026-09-19): re-based app on the engine M3 Expressive stack. Root build.gradle.kts now AGP 9.4.0 + compose plugin 2.4.20 (legacy org.jetbrains.kotlin.android REMOVED — AGP 9 built-in Kotlin). app/build.gradle.kts: compileSdk 34->37, targetSdk 34->37 (minSdk 26 kept); compose-bom 2024.09.00 REMOVED; pinned material3:1.5.0-alpha28 + ui/foundation 1.13.0-alpha01 (engine train), core-ktx 1.19.0, activity-compose 1.13.0, lifecycle 2.11.0, coroutines 1.11.0; ADDED androidx.graphics:graphics-shapes:1.1.0 (justification: official MaterialShapes/Morph RoundedPolygon library the v22 P1.2 instruction mandates for decorative shapes — never hand-rolled polygons). Kept app applicationId/signing/versionCode 21 + app deps (navigation, okhttp, security-crypto, lazysodium+jna, media3). Wrapper gradle 8.9->9.6.0-bin (AGP 9.4 requires Gradle 9.x). Copied engine UI layer VERBATIM into the app (byte-identical cmp for all 9): ui/theme/{Theme,ColorTokens,ShapeTokens,TypographyTokens,MotionTokens,ElevationTokens,SpacingTokens}.kt + ui/components/{EngineExpressive,EngineProgress}.kt + ui/icons — the REAL ForgeBuildTheme->MaterialExpressiveTheme + EngineProgress/EngineExpressive now exist in-app. No fork/approximation (permanent rule). Compile-risk sweep on the 1.5 train: no SmallTopAppBar/Divider()/surfaceColorAtElevation/RippleConfiguration usage in app screens. Static validation only (no device/emulator per contract); full compile lands via release.yml at task-129."
     },
     {
       "id": "task-123",
