@@ -1070,3 +1070,69 @@ Investigate the app and both repositories yourself, decide how to do this, and d
 
 **Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
 
+
+---
+
+## 2026-09-20 — Stage B "Resolve production.json" ordering bug (motionssalt/clipforge)
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = <REDACTED — never commit tokens/PATs; operator-provided session credential>
+
+# Bug: Stage B fails at "Resolve production.json" with `cp: cannot create
+regular file 'work/production.json': No such file or directory`, for job
+`100_girlfriends_S01E01-p1` (run
+https://github.com/motionssalt/clipforge/actions/runs/35496843177)
+
+**Root cause, confirmed directly from this run's actual executed step
+order via the Actions API (not inferred from the workflow file's line
+order, which does not necessarily match execution order/conditionals):**
+
+The real step sequence and outcomes for the failed job were:
+
+```
+#11  Resolve production.json                              — failure
+#12  Load release metadata (find source video asset)       — skipped
+#13  Download source video from release                    — skipped
+#14  Re-fetch omitted source from its original reference    — skipped
+```
+
+"Resolve production.json" ran BEFORE "Load release metadata" in this
+run's actual execution — not after it. Steps 12–14 show as skipped simply
+because GitHub Actions skips all subsequent steps once a prior step fails
+(none of them use `if: always()`) — `source_found` was never even
+evaluated in this run. There is no race condition or malformed-output
+scenario to chase here: "Resolve production.json" runs before anything
+that creates `work/`, so its `cp ... work/production.json` fails exactly
+as observed, every time, given this step ordering.
+
+**What is NOT yet confirmed:** whether the CURRENT `stage-b.yml` on the
+default branch still has this ordering, or whether it was already
+reordered by a later commit and this run reflects an older pinned
+revision. Check this first — read the live `stage-b.yml` and confirm
+whether "Resolve production.json" currently comes before or after "Load
+release metadata"/"Download source video"/"Re-fetch omitted source."
+
+**Fix, once current ordering is confirmed:**
+
+- If "Resolve production.json" still runs before the metadata/download/
+  re-fetch steps in the live workflow: reorder the steps so that
+  metadata-loading, download, and re-fetch (whichever applies) all run
+  BEFORE "Resolve production.json" — this is the correct fix, since
+  "Resolve production.json" logically depends on the source video already
+  being staged in `work/` in some pipelines, and depends on `work/`
+  existing at minimum, regardless of ordering conventions elsewhere in
+  the file.
+- Regardless of what the reordering fix looks like, also add a defensive
+  `mkdir -p work` as the very first thing "Resolve production.json" does,
+  before its `cp`/`curl`/`gh api` logic — this makes the step
+  self-sufficient and immune to `work/` not existing yet no matter what
+  runs before it, as a belt-and-suspenders measure on top of the real
+  ordering fix, not a substitute for it.
+- Confirm the specific failed job, `100_girlfriends_S01E01-p1`, can be
+  successfully restarted from Stage A or Stage B after this fix lands
+  (check its `status.json` and `stage-a-request.json` first to determine
+  which is appropriate) and completes normally.
+- Verify by checking a subsequent real run's actual executed step order
+  via the Actions API (not just re-reading the workflow file) to confirm
+  the fix produces the intended order in practice.
+
+**Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
