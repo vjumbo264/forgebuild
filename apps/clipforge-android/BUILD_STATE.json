@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 10: always-on publishing — toggles removed)",
-  "current_task": "task-165",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 10 COMPLETE: v32 live — always-on publishing, toggles removed)",
+  "current_task": "task-166",
   "tasks": [
     {
       "id": "task-80",
@@ -524,8 +524,8 @@
     {
       "id": "task-166",
       "title": "Release clipforge-android-v32 via release.yml app_path=apps/clipforge-android + verify live on Releases API",
-      "status": "in_progress",
-      "notes": "IN PROGRESS (session 2026-09-20 round 10). versionCode/versionName bumped 31->32 in app/build.gradle.kts (v31 tag exists; next auto-increment is v32). release.yml dispatched with app_path=apps/clipforge-android; awaiting run completion + Releases API verification, then build_complete=true. Prior releases v1..v31 untouched."
+      "status": "done",
+      "notes": "DONE (session 2026-09-20 round 10): release.yml run 35528787666 completed success; clipforge-android-v32 VERIFIED LIVE via the GitHub Releases API (draft=false; assets app-clipforge-android-v32.apk 5577077 bytes + forgebuild-manifest.json). versionCode/versionName 32 in the tag source. Prior release clipforge-android-v31 intact (HTTP 200) — no prior release touched. build_complete=true."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
