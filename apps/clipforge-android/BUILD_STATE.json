@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 6: Stage B Resolve production.json ordering fix)",
-  "current_task": "task-156",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 6: Stage B Resolve production.json ordering fix + v27 release)",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -464,8 +464,8 @@
     {
       "id": "task-156",
       "title": "Release clipforge-android-v27 via release.yml, verify live on GitHub Releases API, set build_complete",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (2026-09-20): versionCode/versionName bumped 26 -> 27 in app/build.gradle.kts (commit 4a3f02f, pushed + verified). release.yml dispatched with app_path=apps/clipforge-android; run 35499190171 completed success. Release clipforge-android-v27 verified LIVE on the GitHub Releases API: tag clipforge-android-v27 (draft=false), assets app-clipforge-android-v27.apk (5,577,077 bytes, state=uploaded) + forgebuild-manifest.json, release notes describing the bug-71 fix. Prior releases (v25, v26, forge-android-v1, ...) all intact — none overwritten or deleted. App code itself unchanged this round (the fix was entirely in motionssalt/clipforge stage-b.yml); the v27 APK ships the same app with a bumped version so the update is distributable as a release artifact."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
