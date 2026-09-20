@@ -1136,3 +1136,95 @@ release metadata"/"Download source video"/"Re-fetch omitted source."
   the fix produces the intended order in practice.
 
 **Rules:** `BUILD_STATE.json` is the source of truth; persistent session; per-step commit + push; never commit tokens/PATs; never delete the repository; never touch prior releases.
+
+---
+
+## 2026-09-20 — Super Series Part 1 missing background audio
+
+> Security note (this session): the operator's original instruction contained live GitHub PATs in
+> plaintext. Per the ForgeBuild contract rule "never commit tokens/PATs", both tokens are redacted
+> here as `[REDACTED-GITHUB-PAT]`. The original text is otherwise preserved verbatim.
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = [REDACTED-GITHUB-PAT]
+
+# Bug: in a Super Series, Part 1 never has background audio; Part 2 onward
+always does
+
+**What's already confirmed, so this doesn't need to be re-investigated
+from zero:** Part 1 and Part 2+ dispatch through the exact same code —
+`submitSuperPlan` (in `site/js/supertick.js`) writes the anchor's durable
+state and then calls `superQueueTick` directly to dispatch Part 1; every
+later part is dispatched by that same `superQueueTick` function via the
+completion-chain. Both paths call the same `resolveMusicRef(credentials,
+repo, requestBody)` right before `dispatchWorkflow`, where `requestBody`
+comes from `superPartRequestBody(anchorRequest, state, outcome.part,
+summaries)`. Since Part 1 and Part 2+ share identical dispatch code, this
+is not "Part 1 skips music resolution" via a separate code path — the
+`requestBody` (or something it depends on) must genuinely differ for
+Part 1 specifically at the moment `resolveMusicRef` reads
+`request.music.source` from it.
+
+**What to actually check, in order, to find the real difference:**
+
+1. `resolveMusicRef` returns `''` (no music) whenever `request.music` is
+   missing or `request.music.source` is `'none'`. Trace exactly what
+   `superPartRequestBody` → `nextPartRequestBody` produces for `.music` on
+   Part 1 versus Part 2, using a real anchor's actual
+   `stage-a-request.json` and its real `super-plan.json` — dump/log the
+   actual constructed request body for both part numbers from a real
+   anchor and diff them directly, don't reason about this only in the
+   abstract.
+2. Pay particular attention to whether the ANCHOR's own
+   `stage-a-request.json` (which both parts' synthesis reads via
+   `anchorRequest`) has its `.music` field populated correctly at the
+   exact point Part 1 is dispatched. Part 1 dispatches immediately inside
+   `submitSuperPlan`, in the same operation that just finished writing the
+   anchor's plan state, whereas Part 2+ dispatch later, after Part 1 has
+   already completed and more state has had time to settle. If there is
+   any timing/ordering dependency where the anchor's music field isn't
+   fully written/committed/readable yet at the moment Part 1's request
+   body is synthesized (a read racing a still-in-flight write earlier in
+   the same submission flow, or the anchor's `stage-a-request.json` being
+   read before a music-default fetch that only succeeds on a later,
+   separate call), that timing gap is the most likely explanation —
+   confirm or rule this out directly against the real repo I/O ordering in
+   `submitSuperPlan`.
+3. Separately check whether `superPartRequestBody`/`nextPartRequestBody`
+   treat `partNumber === 1` differently anywhere (an explicit or
+   accidental special case) — rule this out explicitly rather than
+   assuming it isn't there.
+
+**Fix requirement:** Part 1 must resolve and apply background music
+exactly the same way every other part does — whatever the real
+discrepancy turns out to be (timing, a missing field at read time, or
+logic), fix it at its actual source so `resolveMusicRef` receives a
+correctly populated `request.music` for Part 1 just as reliably as it does
+for Part 2+.
+
+**Critical constraint — do not introduce any new Stage B blocking
+failure while fixing this.** Stage B has recently been fragile (a prior
+incident where "Resolve production.json" failed outright because `work/`
+didn't exist yet due to a step-ordering issue). Whatever change fixes this
+music bug must not alter step ordering, add a new hard dependency, or
+introduce any new way for Stage B or the Part 1 dispatch path
+(`submitSuperPlan`/`superQueueTick`) to fail outright if music resolution
+has trouble (e.g. a network hiccup fetching `branding/music_default.json`,
+or a missing default). Preserve the existing fail-safe behavior: if music
+cannot be resolved for any reason, the part must still dispatch and render
+successfully WITHOUT background music, exactly as `resolveMusicRef`
+already does today by returning `''` in its uncertain/absent cases — do
+not turn this into something that raises or blocks dispatch. The fix
+should make Part 1 correctly GET music when it's genuinely configured, not
+make music-resolution failures newly fatal for any part.
+
+**Verify** by running a real Super Series with a default background track
+configured, confirming Part 1's rendered video has the background music
+correctly present (not just that its `music_ref` field looks non-empty —
+confirm the actual rendered output), and confirming Part 2 continues to
+have it as before, with the full chain (Part 1 through completion,
+including the automatic dispatch of Part 2) still completing successfully
+end to end with no new failures introduced anywhere in Stage B.
+
+**Rules (session):** `BUILD_STATE.json` is the source of truth; persistent
+session; per-step commit + push; never commit tokens/PATs; never delete the
+repository; never touch prior releases.
