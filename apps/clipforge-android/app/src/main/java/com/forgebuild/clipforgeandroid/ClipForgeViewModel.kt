@@ -1951,13 +1951,28 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 zKeyConfigured = c.actionsSecretExists("ZERNIO_API_KEY")
             } catch (_: Exception) {}
 
+            // Operator 2026-09-20: publishing is ALWAYS-ON — the app never stores
+            // enabled/auto_publish=false. Self-heal a stale "off" doc once per load
+            // so stage-b.yml's automatic-publish gate (enabled && auto_publish &&
+            // mode && targets && ZERNIO_API_KEY secret) passes whenever a key exists.
+            if (zKeyConfigured && (!zEnabled || !zAutoPublish)) {
+                try {
+                    val doc = c.readFile("branding/zernio_settings.json")?.let { JSONObject(it.first) }
+                        ?: defaultZernioSettings()
+                    doc.put("enabled", true).put("auto_publish", true).put("updated_at_epoch", nowEpoch())
+                    c.putFile("branding/zernio_settings.json", doc.toString(2).toByteArray(), "clipforge: arm always-on Zernio publishing")
+                } catch (_: Exception) {}
+            }
+
             _settings.value = AppSettings(
                 isPrivate = isPriv,
                 narratorVoice = voice,
                 seriesDefault = seriesDef,
                 watermarkText = wm,
-                zernioEnabled = zEnabled,
-                zernioAutoPublish = zAutoPublish,
+                // Always-on: the publish surface is gated on the API key (and
+                // account availability), never on a stored on/off flag.
+                zernioEnabled = zKeyConfigured,
+                zernioAutoPublish = zKeyConfigured,
                 zernioAutomaticMode = zMode,
                 zernioKeyConfigured = zKeyConfigured,
                 zernioAccounts = zAccounts,
@@ -2006,18 +2021,14 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 c.readFile("branding/zernio_accounts.json")?.let {
                     list = parseZernioAccounts(JSONObject(it.first))
                 }
-                // Also re-check the sealed key + settings so the whole section is fresh.
-                var enabled = _settings.value.zernioEnabled
+                // Also re-check the sealed key so the whole section is fresh.
+                // Always-on: the publish surface is gated on the key, never on a
+                // stored on/off flag (operator 2026-09-20).
                 var keyConfigured = _settings.value.zernioKeyConfigured
-                try {
-                    c.readFile("branding/zernio_settings.json")?.let {
-                        enabled = JSONObject(it.first).optBoolean("enabled", enabled)
-                    }
-                } catch (_: Exception) {}
                 try { keyConfigured = c.actionsSecretExists("ZERNIO_API_KEY") } catch (_: Exception) {}
                 _settings.value = _settings.value.copy(
                     zernioAccounts = list,
-                    zernioEnabled = enabled,
+                    zernioEnabled = keyConfigured,
                     zernioKeyConfigured = keyConfigured
                 )
                 toast(if (list.isEmpty()) "No connected accounts found" else "Loaded ${list.size} connected account(s)")
@@ -2140,12 +2151,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun clearWatermark() = setWatermark("")
 
     /**
-     * Save Zernio settings. Bot parity: the enabled/auto_publish/mode flags live in
+     * Save Zernio settings. ALWAYS-ON (operator 2026-09-20): stores enabled=true and
+     * auto_publish=true unconditionally — publishing has no off switch; the only
+     * blockers are a missing key/accounts, which the pipeline itself gates on.
+     * Bot parity: the enabled/auto_publish/mode flags live in
      * branding/zernio_settings.json (full canonical doc via zernioSettingsOrDefault),
      * while the API key — when the caller supplies a new one — is sealed and stored as
      * the GitHub Actions secret ZERNIO_API_KEY, NEVER as plaintext in the settings file.
      */
-    fun saveZernioSettings(apiKey: String, enabled: Boolean) = viewModelScope.launch {
+    fun saveZernioSettings(apiKey: String) = viewModelScope.launch {
         val c = api ?: return@launch
         withBusy("save_zernio") {
             try {
@@ -2155,7 +2169,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 } catch (_: Exception) { null }
                 val doc = existing ?: defaultZernioSettings()
                 doc.put("version", 1)
-                    .put("enabled", enabled)
+                    .put("enabled", true)
+                    .put("auto_publish", true)
                     .put("updated_at_epoch", nowEpoch())
                 c.putFile("branding/zernio_settings.json", doc.toString(2).toByteArray(), "clipforge: update Zernio publishing settings")
 
@@ -2166,7 +2181,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     c.setZernioSecret(newKey)
                     keyConfigured = true
                 }
-                _settings.value = _settings.value.copy(zernioEnabled = enabled, zernioKeyConfigured = keyConfigured)
+                _settings.value = _settings.value.copy(zernioEnabled = keyConfigured, zernioAutoPublish = keyConfigured, zernioKeyConfigured = keyConfigured)
                 toast("Zernio settings saved")
             } catch (e: Exception) {
                 toast("Zernio save error: ${e.message}")
@@ -2177,8 +2192,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     /** Canonical empty Zernio settings doc — matches bot zernioSettingsOrDefault(). */
     private fun defaultZernioSettings(): JSONObject = JSONObject()
         .put("version", 1)
-        .put("enabled", false)
-        .put("auto_publish", false)
+        .put("enabled", true)
+        .put("auto_publish", true)
         .put("automatic_mode", "smart_schedule")
         .put("target_accounts", JSONObject()
             .put("tiktok", JSONArray())
@@ -2227,16 +2242,19 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
      */
     suspend fun saveZernioFull(settings: ZernioSettings.Settings): String? {
         val c = api ?: return "Not connected"
-        ZernioSettings.validate(settings)?.let { return it }
+        // Always-on (operator 2026-09-20): force the armed state regardless of what
+        // the (now toggle-free) editor carries, so a stored "off" can never be written.
+        val armed = settings.copy(enabled = true, autoPublish = true)
+        ZernioSettings.validate(armed)?.let { return it }
         return try {
-            val doc = JSONObject(ZernioSettings.toJson(settings))
+            val doc = JSONObject(ZernioSettings.toJson(armed))
                 .put("updated_at_epoch", nowEpoch())
             c.putFile(ZernioSettings.SETTINGS_PATH, doc.toString(2).toByteArray(),
                 "clipforge: update Zernio publishing settings")
             _settings.value = _settings.value.copy(
-                zernioEnabled = settings.enabled,
-                zernioAutoPublish = settings.autoPublish,
-                zernioAutomaticMode = settings.automaticMode
+                zernioEnabled = _settings.value.zernioKeyConfigured,
+                zernioAutoPublish = true,
+                zernioAutomaticMode = armed.automaticMode
             )
             null
         } catch (e: Exception) { e.message ?: "Save failed" }

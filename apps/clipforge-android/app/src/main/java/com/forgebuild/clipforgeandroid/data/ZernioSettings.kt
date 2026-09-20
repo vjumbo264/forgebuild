@@ -47,8 +47,8 @@ object ZernioSettings {
 
     data class Settings(
         val version: Int = 1,
-        val enabled: Boolean = false,
-        val autoPublish: Boolean = false,
+        val enabled: Boolean = true,    // always-on (operator 2026-09-20): no off switch exists
+        val autoPublish: Boolean = true, // always-on: every finished video auto-publishes
         val automaticMode: String = "smart_schedule", // publish_now | smart_schedule
         val targetAccounts: Map<String, List<String>> = emptyMap(),
         val smart: SmartSchedule = SmartSchedule()
@@ -75,8 +75,8 @@ object ZernioSettings {
         }
         return Settings(
             version = j.optInt("version", 1),
-            enabled = j.optBoolean("enabled", false),
-            autoPublish = j.optBoolean("auto_publish", false),
+            enabled = j.optBoolean("enabled", true),
+            autoPublish = j.optBoolean("auto_publish", true),
             automaticMode = j.optString("automatic_mode", "smart_schedule"),
             targetAccounts = targets,
             smart = SmartSchedule(
@@ -139,8 +139,8 @@ object ZernioSettings {
 
     /** One-line live summary, e.g. "every 6h at 05:00 UTC, queue depth 100, next available". */
     fun summary(s: Settings): String {
-        if (!s.enabled) return "Zernio publishing is off."
-        if (!s.autoPublish) return "Automatic publishing off — publish per task."
+        // Always-on (operator 2026-09-20): there are no "off" states to summarise —
+        // publishing is the constant state whenever a key + account are set up.
         val sm = s.smart
         return if (s.automaticMode == "publish_now") {
             "Publish immediately on completion."

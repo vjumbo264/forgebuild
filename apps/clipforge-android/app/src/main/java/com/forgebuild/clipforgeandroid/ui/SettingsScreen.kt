@@ -258,26 +258,21 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
 
             // ---- ZERNIO PUBLISHING (full surface, v23-R6) ----
             CfSection(title = "Zernio publishing", subtitle = "Publish rendered clips to your connected social accounts.") {
-                val zStatusText = when {
-                    !settings.zernioKeyConfigured -> "No API key saved yet"
-                    settings.zernioEnabled -> "Active — publishing enabled"
-                    else -> "Key saved — publishing paused"
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    CfChip(
-                        label = zStatusText,
-                        color = when {
-                            !settings.zernioKeyConfigured -> MaterialTheme.colorScheme.onSurfaceVariant
-                            settings.zernioEnabled -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.secondary
-                        },
-                    )
-                    Switch(
-                        checked = settings.zernioEnabled,
-                        enabled = !busyOf(vm, "save_zernio"),
-                        onCheckedChange = { vm.saveZernioSettings(zernioKeyInput, it) },
-                    )
-                }
+                // Operator 2026-09-20: publishing is ALWAYS ON — the enable toggle is
+                // removed entirely. The only blockers are a missing API key or no
+                // connected account; the pipeline itself gates on those.
+                val zStatusText = if (settings.zernioKeyConfigured)
+                    "Always on — publishes automatically" else "No API key saved yet"
+                CfChip(
+                    label = zStatusText,
+                    color = if (settings.zernioKeyConfigured) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    "Publishing is the constant state — every finished video publishes automatically once an API key and at least one connected account are set up. There is no off switch.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 OutlinedTextField(
                     value = zernioKeyInput, onValueChange = { zernioKeyInput = it },
                     label = { Text(if (settings.zernioKeyConfigured) "Replace Zernio API key" else "Zernio API key") },
@@ -289,7 +284,7 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
                         label = "Save key",
                         busy = busyOf(vm, "save_zernio"),
                         enabled = zernioKeyInput.isNotBlank(),
-                        onClick = { vm.saveZernioSettings(zernioKeyInput, settings.zernioEnabled); zernioKeyInput = "" },
+                        onClick = { vm.saveZernioSettings(zernioKeyInput); zernioKeyInput = "" },
                         modifier = Modifier.weight(1f),
                     )
                     if (settings.zernioKeyConfigured) {
@@ -308,13 +303,9 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
 
                 // Full schedule editor.
                 zFull?.let { z ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Automatic publishing", style = MaterialTheme.typography.bodyMedium)
-                            Text("Publish each finished video without manual action", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = z.autoPublish, onCheckedChange = { zFull = z.copy(autoPublish = it) })
-                    }
+                    // Operator 2026-09-20: the auto-publish toggle is removed — it is
+                    // the constant state, saved as auto_publish=true unconditionally.
+                    Text("Automatic publishing is always on — every finished video publishes without manual action.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     Text("Automatic mode", style = MaterialTheme.typography.bodyMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
@@ -542,7 +533,7 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
 
             // ---- About + diagnostics ----
             CfSection(title = "About ClipForge Android") {
-                Text("Version v31", style = MaterialTheme.typography.bodyMedium)
+                Text("Version v32", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "A ForgeBuild client for the ClipForge pipeline. It drives your GitHub clone: video tasks, production plans, music, narrator voices, series and Zernio publishing.",
                     style = MaterialTheme.typography.bodySmall,
@@ -596,7 +587,7 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showClearZernioDialog = false },
             title = { Text("Remove Zernio key") },
-            text = { Text("Remove the stored Zernio API key and disable publishing? Connected accounts are kept.") },
+            text = { Text("Remove the stored Zernio API key? Publishing is always on, but it stops until a new key is saved. Connected accounts are kept.") },
             confirmButton = {
                 TextActionButton(label = "Remove", destructive = true, busy = busyOf(vm, "clear_zernio"), onClick = {
                     showClearZernioDialog = false
