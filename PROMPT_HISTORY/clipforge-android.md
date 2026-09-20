@@ -1356,3 +1356,33 @@ just that the stored value now reads `Africa/Lagos`.
 Also remove publishing settings from finished jobs, only leave publish now for them and fix this error: HTTP 422: {"message":"Unexpected inputs provided: [\"idempotency_key\"]","documentation_url":"https://docs.github.com/rest/actions/workflows#create-a-workflow-dispatch-event","status":"422"}
 
 Also fix error that stops me from being able to start job from uploading torrent when my network is slow. It shows me a 4xx error when I have slow network and I'm trying to upload torrent.
+
+---
+
+## 2026-09-20 — Operator instruction (publishing always-on; remove publishing toggles)
+
+(Verbatim operator instruction, lightly cleaned for readability:)
+
+"Okay, everything has been fixed. The only issue I am facing is that the
+publishing settings is always showing turned off. Like, when I go to the
+app, I always have to turn it on. I don't like that. The default is off,
+I want it that the default should be on. In fact, I want the publishing
+toggle to be removed entirely. For both automat[ic] — to set up the
+automatic and enable publishing — I need those toggles removed. Normally,
+you should always automatically publish. The only thing that stopped you
+from publishing is either if there's no API key or there is no account
+setup. But if API key and account have been set up for the very new
+publishing, then automatic publishing should be enabled by default. There
+should be no toggle for it, since that is the constant state it should be
+in. So that the only thing I need to do is change settings knowing that
+it is always turned on. That is how I want it to behave in the app."
+
+Interpretation (recorded for future sessions):
+- REMOVE the `enabled` (publishing on/off) toggle and the `auto_publish`
+  toggle from the app's UI entirely — publishing is the constant ON state.
+- Publishing is gated ONLY by: (1) Zernio API key configured (ZERNIO_API_KEY
+  Actions secret) and (2) at least one connected/selected account. No
+  on/off switches anywhere.
+- All writes of branding/zernio_settings.json must store enabled=true and
+  auto_publish=true unconditionally (schema fields kept for parity with the
+  site + pipeline, but never written false by the app).
