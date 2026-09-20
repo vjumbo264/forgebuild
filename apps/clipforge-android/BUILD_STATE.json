@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 7c: E2E music fix VERIFIED end-to-end; releasing v29)",
-  "current_task": "task-158",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 7d: v29 live-verified; build_complete)",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -482,8 +482,8 @@
     {
       "id": "task-159",
       "title": "Release next version (expected clipforge-android-v29) via release.yml app_path=apps/clipforge-android, verify live on GitHub Releases API, set build_complete",
-      "status": "in_progress",
-      "notes": "PENDING (2026-09-20). Depends on task-158 E2E green. NOTE: tag clipforge-android-v28 already exists (prior no-op duplicate from concurrent sessions), so the next release auto-increments to clipforge-android-v29. App versionCode/versionName currently bumped to 28 \u2014 reconcile to 29 before/within the release commit so the manifest matches the tag. Dispatch release.yml app_path=apps/clipforge-android, verify live on the GitHub Releases API, then set build_complete=true. | IN PROGRESS (session 2026-09-20 #2): versionCode/versionName reconciled 28 -> 29 to match the next auto-incremented tag (v28 exists as no-op duplicate). Dispatching release.yml app_path=apps/clipforge-android; verify clipforge-android-v29 live on Releases API, then set build_complete=true."
+      "status": "done",
+      "notes": "PENDING (2026-09-20). Depends on task-158 E2E green. NOTE: tag clipforge-android-v28 already exists (prior no-op duplicate from concurrent sessions), so the next release auto-increments to clipforge-android-v29. App versionCode/versionName currently bumped to 28 \u2014 reconcile to 29 before/within the release commit so the manifest matches the tag. Dispatch release.yml app_path=apps/clipforge-android, verify live on the GitHub Releases API, then set build_complete=true. | IN PROGRESS (session 2026-09-20 #2): versionCode/versionName reconciled 28 -> 29 to match the next auto-incremented tag (v28 exists as no-op duplicate). Dispatching release.yml app_path=apps/clipforge-android; verify clipforge-android-v29 live on Releases API, then set build_complete=true. | DONE (session 2026-09-20 #2): release.yml run 35515086580 completed SUCCESS on HEAD 0c2c3d7. Release clipforge-android-v29 VERIFIED LIVE via the GitHub Releases API: draft=false, assets app-clipforge-android-v29.apk (5,577,077 bytes, state=uploaded) + forgebuild-manifest.json (537 bytes). Prior releases intact \u2014 v25/v27/v28 all HTTP 200, none overwritten or deleted."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
@@ -554,7 +554,7 @@
       "detail": "Operator instruction 2026-09-19 round 4 appended verbatim to PROMPT_HISTORY; tasks task-141..task-147 seeded; build_complete=false until v25 verified live."
     }
   ],
-  "latest_release_tag": "clipforge-android-v25",
-  "current_version": "v25",
+  "latest_release_tag": "clipforge-android-v29",
+  "current_version": "v29",
   "notes_concurrency": "2026-09-20 session-collision note: TWO forgebuild-ai sessions executed the 2026-09-20 Stage B bug-71 instruction concurrently (sequential-session assumption violated this once). Both did: prompt-history append (commits 92c62e3 + the other session's), stage-b.yml reorder in motionssalt/clipforge (6e33d1d), restart of job 100_girlfriends_S01E01-p1 (run 35498315342 SUCCESS, API-verified step order), and a release dispatch. This session's dispatch (run 35499432945) raced the other session's dispatch (run 35499190171, sha 4a3f02f8). Result: release clipforge-android-v27 carries the versionCode 27 bump commit 4a3f02f8 and its notes name the bug-71 fix; this session's later run auto-incremented to clipforge-android-v28, a NO-OP DUPLICATE of v27 (same app source tree; no code delta between them). Per the never-delete-any-release rule both releases remain live (v27 200, v28 200, both with APK + forgebuild-manifest.json) \u2014 same precedent as the v13/v14 duplicate pair. NEXT FUTURE RELEASE WILL BE v29. All tasks task-152..task-156 done; build_complete=true; current_task=none."
 }
