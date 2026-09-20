@@ -1386,3 +1386,67 @@ Interpretation (recorded for future sessions):
 - All writes of branding/zernio_settings.json must store enabled=true and
   auto_publish=true unconditionally (schema fields kept for parity with the
   site + pipeline, but never written false by the app).
+
+## 2026-09-20 — Operator instruction (round 11): three fixes
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = <GITHUB_PAT — operator fills, never committed>
+
+Three fixes to the Android app. Do not spend time re-investigating the
+root cause pattern described below — it's the same underlying issue in
+two places (settings and task views loading asynchronously and
+overwriting state the operator is actively using or has already seen);
+fix both occurrences directly.
+
+**1. New Video settings get silently reset to defaults mid-setup because
+settings are still loading in the background.**
+
+Currently, opening the New Video screen shows default parameter values
+first, then settings load asynchronously and can overwrite whatever the
+operator has already selected (e.g. picking a 30s duration, then having it
+silently revert to a stale/default value like 120s once the slow-loading
+settings finish arriving) — this has caused real videos to render with
+completely wrong parameters (a 30s target coming out as 120s) with no
+warning. Fix this properly:
+- Cache settings locally on-device so the New Video screen can render with
+  the operator's actual last-known settings INSTANTLY on open, with no
+  loading gap where defaults are shown and then swapped out.
+- Once the operator has made an explicit choice on the New Video screen
+  for a given field (duration, or any other setting exposed there), that
+  choice must never be silently overwritten by a settings fetch completing
+  late — an explicit in-session user choice always wins over a background
+  settings refresh for the remainder of that video-creation flow.
+- A background settings refresh may still update the CACHE for next time,
+  but must never retroactively alter values already showing on an
+  in-progress New Video screen.
+
+**2. Reopening a task/screen that's already loaded causes a full reload
+instead of showing what's already there and merging in updates.**
+
+Currently, navigating away from an open task (or any screen that's already
+fetched its data once) and back again causes it to reload from scratch,
+showing a loading state again even though the data was already available.
+Fix so that reopening any previously-loaded task or screen shows the
+already-cached content immediately, then a background fetch merges in
+whatever is new (updated status, new log lines, etc.) without a jarring
+full reload/loading-state flash. Apply this pattern consistently across
+task detail, task lists, and any other view that currently reloads fully
+on reopen.
+
+**3. Zernio's timezone list needs correcting to real, valid IANA timezone
+identifiers.** A previous incident already surfaced one bad entry
+(`Europe/Lagos`, which is not a real timezone — the correct one is
+`Africa/Lagos`) that caused every scheduled publish depending on it to
+fail. Audit the full timezone list/picker used in Zernio settings and
+correct any other invalid entries the same way — cross-check the whole
+list against the real IANA timezone database (the same one Python's
+`zoneinfo` module ships and `pipeline/publish/zernio.py`'s
+`validate_timezone` already validates against) rather than spot-checking
+only the one already-known bad entry, since if one entry was wrong there
+may be others. Also confirm save-time validation (from the prior fix) is
+actually in place so an invalid entry can't be reintroduced.
+
+Verify all three: create a video with a specific non-default duration
+immediately after a cold app open and confirm it renders at exactly that
+duration; reopen an already-loaded task and confirm it shows instantly
+with no reload flash, then updates in place; and confirm every timezone in
+the Zernio picker is a real, valid IANA identifier.
