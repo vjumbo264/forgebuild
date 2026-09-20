@@ -369,10 +369,7 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
                             if (q.isEmpty() || q == "utc") allZones.take(60)
                             else allZones.filter { it.lowercase().contains(q) }.take(60)
                         }
-                        androidx.compose.material3.ExposedDropdownMenuBox(
-                            expanded = tzExpanded,
-                            onExpandedChange = { tzExpanded = it },
-                        ) {
+                        androidx.compose.foundation.layout.Box {
                             OutlinedTextField(
                                 value = tzQuery,
                                 onValueChange = { v ->
@@ -390,12 +387,9 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
                                 },
                                 isError = tzQuery.isNotBlank() && !ZernioSettings.isValidIanaZone(tzQuery),
                                 singleLine = true,
-                                trailingIcon = {
-                                    androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = tzExpanded)
-                                },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryEditable, true),
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            androidx.compose.material3.ExposedDropdownMenu(
+                            androidx.compose.material3.DropdownMenu(
                                 expanded = tzExpanded && tzMatches.isNotEmpty(),
                                 onDismissRequest = { tzExpanded = false },
                             ) {
