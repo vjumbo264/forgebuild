@@ -3,8 +3,8 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 7: Super Series Part 1 background-audio fix)",
-  "current_task": "task-157",
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 7: Super Series Part 1 background-audio fix — root cause found, fix pushed, E2E verifying)",
+  "current_task": "task-158",
   "tasks": [
     {
       "id": "task-80",
@@ -470,14 +470,14 @@
     {
       "id": "task-157",
       "title": "Root-cause + fix Super Series Part 1 missing background audio in motionssalt/clipforge (submitSuperPlan/superQueueTick/superPartRequestBody/resolveMusicRef); fail-safe preserved, no new Stage B blocking failure",
-      "status": "pending",
-      "notes": "Seeded 2026-09-20. Plan: read site/js/supertick.js + super.js + github.js resolveMusicRef; dump real anchor stage-a-request.json + super-plan.json; diff Part 1 vs Part 2 requestBody.music; rule out partNumber===1 special case; check read-vs-write ordering of anchor stage-a-request.json inside submitSuperPlan; fix at actual source keeping resolveMusicRef '' fail-safe."
+      "status": "done",
+      "notes": "DONE (2026-09-20): ROOT CAUSE found empirically, contradicting the instruction's premise in one respect. (1) Request bodies are IDENTICAL for all parts: real anchor manual-1789884423180 + parts p1/p2/p3 all carry music={ref:'',source:'default'} — no partNumber===1 special case exists anywhere (grep over site/js + scripts/super_chain + app Kotlin), and the Kotlin SeriesLogic.nextPartRequestBody carries music forward 1:1 with series.js. (2) No read/write race: anchor stage-a-request.json (music committed 06:07 UTC) was fully settled ~18min before Part 1 dispatch (07:25:47Z). (3) REAL divergence = the music_ref INPUT: Part 1's ORIGINAL dispatch run 35496843177 (workflow_dispatch 07:25:47Z) FAILED at 'Resolve production.json' (the bug-71 step-ordering incident) BEFORE ever reaching the music step — its log contains zero music lines. The rendered Part 1 the operator sees came from the post-fix RESTART run 35498315342 (task-155), a bare workflow_dispatch whose log shows 'No music_ref supplied — final video ships without background music.' Parts 2+ are dispatched by super-chain.mjs which ALWAYS resolves music_ref (logs show ref=\"path:audio-library/Dj_Quads...\") — hence music. So: resolveMusicRef itself was never the problem for Part 1; music depended entirely on the dispatcher passing music_ref, and any bare/restart dispatch silently dropped it. Part 1 is simply the part that hit bug-71 and got restarted music-less. FIX (motionssalt/clipforge .github/workflows/stage-b.yml, 'Resolve optional background music' step): when music_ref is empty, the step now re-derives it from the job's OWN durable jobs/<jid>/stage-a-request.json (explicit_library/job_upload -> path:<ref>; default -> branding/music_default.json library_track_path) — exactly mirroring resolveMusicRef — so EVERY part resolves music identically regardless of which caller dispatched it. FAIL-SAFE PRESERVED: any read/resolve trouble leaves ref empty and the video still ships without music (exit 0, never fatal); no step reordering, no new hard dependency, no change to Stage B ordering. VALIDATED: YAML parses; extracted run block passes bash -n; functional test with real p1 request + real music_default.json derives 'path:audio-library/Dj_Quads_-_its_near_[No_Copyright_Music].m4a'. App folder carries NO copy of stage-b.yml (backend-only file) so nothing to propagate; app dispatchSuperPart already passes music_ref correctly at all release tags v24-v28. App versionCode/versionName bumped 27->28 for the checkpoint release. Live E2E verification = task-158."
     },
     {
       "id": "task-158",
       "title": "Validate fix live: real Super Series with default background track — Part 1 rendered video has background music, Part 2 unchanged, full chain (Part 1 -> auto Part 2 -> completion) succeeds, no new Stage B failures",
-      "status": "pending",
-      "notes": "Seeded 2026-09-20. Confirm actual rendered output (audio stream present in Part 1 final.mp4), not just music_ref field."
+      "status": "in_progress",
+      "notes": "IN PROGRESS (2026-09-20): fix pushed to motionssalt/clipforge main. Next: create a real 2-part Super Series test anchor (music source=default), dispatch Part 1 Stage B with EMPTY music_ref (exact regression scenario) at code_ref=main tip, verify the run log shows the re-derivation line and the rendered Part 1 final.mp4 carries the background audio stream (ffprobe on the release asset), then confirm super-chain.yml auto-dispatches Part 2 which completes with music and no new Stage B failures."
     },
     {
       "id": "task-159",
