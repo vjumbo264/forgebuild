@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "forgebuild-ai-session 2026-09-20 (round 6: Stage B Resolve production.json ordering fix)",
-  "current_task": "task-153",
+  "current_task": "task-155",
   "tasks": [
     {
       "id": "task-80",
@@ -446,14 +446,14 @@
     {
       "id": "task-153",
       "title": "Confirm live stage-b.yml ordering in motionssalt/clipforge: does 'Resolve production.json' still run before metadata/download/re-fetch steps",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (2026-09-20): live stage-b.yml on motionssalt/clipforge main CONFIRMED to still have the broken ordering — 'Resolve production.json' at step #13 (line 223) ran BEFORE 'Load release metadata' (line 390) / 'Download source video' (line 494) / 'Re-fetch omitted source' (line 542), and its cp/curl/gh-api writes to work/production.json had no mkdir -p work. The failed run 35496843177 (job 100_girlfriends_S01E01-p1, head_sha 606efd9475, branch main, workflow_dispatch) therefore failed exactly as observed. NOT an older pinned revision: the default-branch file itself carries the broken order. Failed-run job state: status.json state=error (mode=manual, series 100_girlfriends_S01E01 part 1, release_tag clipforge-100_girlfriends_S01E01-p1), stage-a-request.json present (magnet source, torrent_file_index=1), production.json present ('The 100th Rejection — Part 1')."
     },
     {
       "id": "task-154",
       "title": "Fix stage-b.yml: reorder so source-staging steps precede 'Resolve production.json' + defensive mkdir -p work at step start",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (2026-09-20): motionssalt/clipforge commit 6e33d1db7f pushed + verified on origin/main via API. stage-b.yml step order is now: ... Write stage_b_running status → Load release metadata → Download source video from release → Re-fetch omitted source → Resolve production.json → Resolve optional background music → Run the Stage B pipeline. 'Resolve production.json' also begins with a defensive 'mkdir -p work' as its very first command (belt-and-suspenders). The stale 'Plan validation runs BEFORE the source download (operator 2026-09-19)' comment was replaced with a bug-71 note recording that the new operator instruction supersedes that rationale (plan still validates in seconds, just after staging). YAML validated with yaml.safe_load; all 21 steps accounted for; no step bodies altered except the added mkdir -p and the comment rewrite."
     },
     {
       "id": "task-155",
