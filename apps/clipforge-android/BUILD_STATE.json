@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "forgebuild-ai-session 2026-09-20 (round 6: Stage B Resolve production.json ordering fix)",
-  "current_task": "task-155",
+  "current_task": "task-156",
   "tasks": [
     {
       "id": "task-80",
@@ -458,13 +458,13 @@
     {
       "id": "task-155",
       "title": "Restart failed job 100_girlfriends_S01E01-p1 (check status.json + stage-a-request.json first) and verify the real run's executed step order via Actions API",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (2026-09-20): failed job 100_girlfriends_S01E01-p1 restarted from Stage B (correct choice per its status.json state=error with stage-a-request.json + production.json both durable in repo — no Stage A redo needed). Dispatched stage-b.yml via the API with ref=main, job_id=100_girlfriends_S01E01-p1, production_ref=path:jobs/100_girlfriends_S01E01-p1/production.json, code_ref=6e33d1db7f (the fix commit — same dispatch shape as the repo's shared scripts/super_chain/dispatch.mjs). Restart run 35498315342 completed SUCCESS. Actual executed step order verified via the Actions API (not the workflow file): #11 Load release metadata — success; #12 Download source video — skipped (source_found=false as expected, release lacked the source asset); #13 Re-fetch omitted source from original magnet — success; #14 Resolve production.json — SUCCESS (previously the #11 failure; mkdir -p + reorder both effective); #15 music — success; #16 Run Stage B pipeline — success; #17-21 upload/URLs/complete-status/publish/super-chain — all success; #22 error-status step skipped (no failure). Final state: status.json state=complete with final_mp4 + final_zip URLs; release clipforge-100_girlfriends_S01E01-p1 carries final.mp4 (17.8MB), final.zip, metadata.txt; Super Series part 2 chained by step #21."
     },
     {
       "id": "task-156",
       "title": "Release clipforge-android-v27 via release.yml, verify live on GitHub Releases API, set build_complete",
-      "status": "pending",
+      "status": "in_progress",
       "notes": ""
     }
   ],
