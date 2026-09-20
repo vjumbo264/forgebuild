@@ -537,5 +537,6 @@
     }
   ],
   "latest_release_tag": "clipforge-android-v25",
-  "current_version": "v25"
+  "current_version": "v25",
+  "notes_concurrency": "2026-09-20 session-collision note: TWO forgebuild-ai sessions executed the 2026-09-20 Stage B bug-71 instruction concurrently (sequential-session assumption violated this once). Both did: prompt-history append (commits 92c62e3 + the other session's), stage-b.yml reorder in motionssalt/clipforge (6e33d1d), restart of job 100_girlfriends_S01E01-p1 (run 35498315342 SUCCESS, API-verified step order), and a release dispatch. This session's dispatch (run 35499432945) raced the other session's dispatch (run 35499190171, sha 4a3f02f8). Result: release clipforge-android-v27 carries the versionCode 27 bump commit 4a3f02f8 and its notes name the bug-71 fix; this session's later run auto-incremented to clipforge-android-v28, a NO-OP DUPLICATE of v27 (same app source tree; no code delta between them). Per the never-delete-any-release rule both releases remain live (v27 200, v28 200, both with APK + forgebuild-manifest.json) — same precedent as the v13/v14 duplicate pair. NEXT FUTURE RELEASE WILL BE v29. All tasks task-152..task-156 done; build_complete=true; current_task=none."
 }
