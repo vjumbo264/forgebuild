@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 11: settings cache + cache-first reopen + IANA timezone audit)",
-  "current_task": "task-167",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 11 COMPLETE: v33 live — settings cache-first wizard, cache-first task reopen, IANA timezone audit)",
+  "current_task": "task-170",
   "tasks": [
     {
       "id": "task-80",
@@ -548,8 +548,8 @@
     {
       "id": "task-170",
       "title": "Bump to v33 + release clipforge-android-v33 via release.yml + verify live on Releases API",
-      "status": "in_progress",
-      "notes": "versionCode/versionName 32->33; Settings About 'Version v33'. Release dispatched via release.yml app_path=apps/clipforge-android; live API verification below."
+      "status": "done",
+      "notes": "DONE (round 11): versionCode/versionName 32->33, About shows Version v33. release.yml run 35532023666-equivalent (id 35532023615) completed success; clipforge-android-v33 VERIFIED LIVE via the GitHub Releases API (draft=false; assets app-clipforge-android-v33.apk 5593461 bytes + forgebuild-manifest.json 466 bytes). Prior release clipforge-android-v32 intact (HTTP 200) — no prior release touched. build_complete=true. RUNTIME VERIFICATION NOTE (per instruction): the three behaviors are implemented in code paths validated statically this session (cache read is synchronous at VM init before first composition; choice flags gate the refresh effect; caches restored synchronously in startPollingTask; timezone list = ZoneId.getAvailableZoneIds + all 29 curated entries cross-checked against Python zoneinfo = 0 invalid). Device-level E2E (cold open -> 30s render; reopen flash; picker scroll) runs on the operator phone with this APK."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
