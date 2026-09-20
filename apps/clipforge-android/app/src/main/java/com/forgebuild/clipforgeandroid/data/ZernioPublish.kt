@@ -64,15 +64,18 @@ object ZernioPublish {
         scheduledFor: String,         // YYYY-MM-DDTHH:MM (manual_schedule only)
         timezone: String,
         targetsJson: String,
-        idempotencyKey: String
+        requestId: String
     ): Map<String, String> {
+        // publish.yml declares the idempotency input as `request_id`; sending the
+        // undeclared `idempotency_key` made the dispatches API reject every publish
+        // from the app with HTTP 422 "Unexpected inputs provided".
         val m = linkedMapOf(
             "job_id" to jobId,
             "mode" to mode,
             "scheduled_for" to scheduledFor,
             "timezone" to timezone,
             "targets_json" to targetsJson,
-            "idempotency_key" to idempotencyKey
+            "request_id" to requestId
         )
         if (scheduledFor.isNotBlank()) m["scheduled_at"] = scheduledFor
         return m
@@ -102,7 +105,7 @@ object ZernioPublish {
     fun validPostId(v: String): Boolean =
         Regex("^[A-Za-z0-9._:\\-]{1,200}$").matches(v)
 
-    fun idempotencyKey(jobId: String, action: String): String =
+    fun requestId(jobId: String, action: String): String =
         "android-$jobId-$action-${System.currentTimeMillis()}".take(200)
 
     /** Friendly label for a publishing status chip. */

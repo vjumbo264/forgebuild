@@ -285,8 +285,6 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
     var showCancelConfirm by remember { mutableStateOf(false) }
-    var showScheduleDialog by remember { mutableStateOf(false) }
-    var scheduleInput by remember { mutableStateOf("") }
     var reschedulePost by remember { mutableStateOf<ZernioPublish.Post?>(null) }
     var rescheduleInput by remember { mutableStateOf("") }
     var cancelPost by remember { mutableStateOf<ZernioPublish.Post?>(null) }
@@ -506,21 +504,13 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                     )
+                    // Finished jobs: immediate publish only — scheduling settings
+                    // (smart schedule / manual schedule) are intentionally not shown.
                     Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                         ActionButton(
                             label = if (pub.status == "published") "Publish again" else "Publish now",
                             busy = busyOf(vm, "publish_task"),
                             onClick = { vm.publishTask(jobId, "publish_now") },
-                        )
-                        TonalActionButton(
-                            label = "Smart schedule",
-                            busy = busyOf(vm, "publish_task"),
-                            onClick = { vm.publishTask(jobId, "smart_schedule") },
-                        )
-                        OutlinedActionButton(
-                            label = "Schedule for…",
-                            busy = busyOf(vm, "publish_task"),
-                            onClick = { scheduleInput = ""; showScheduleDialog = true },
                         )
                     }
                     pub.posts.forEach { post ->
@@ -645,29 +635,6 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
                 })
             },
             dismissButton = { TextActionButton(label = "Back", onClick = { showCancelConfirm = false }) },
-        )
-    }
-    if (showScheduleDialog) {
-        AlertDialog(
-            onDismissRequest = { showScheduleDialog = false },
-            title = { Text("Schedule this video") },
-            text = {
-                OutlinedTextField(
-                    value = scheduleInput, onValueChange = { scheduleInput = it },
-                    label = { Text("Local time") },
-                    placeholder = { Text("2026-09-20T17:30") },
-                    supportingText = { Text("YYYY-MM-DDTHH:MM, in your publishing timezone (Settings → Publishing).") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            },
-            confirmButton = {
-                TextActionButton(label = "Schedule", enabled = ZernioPublish.validDateTime(scheduleInput), onClick = {
-                    showScheduleDialog = false
-                    vm.publishTask(jobId, "manual_schedule", scheduleInput)
-                })
-            },
-            dismissButton = { TextActionButton(label = "Cancel", onClick = { showScheduleDialog = false }) },
         )
     }
     reschedulePost?.let { post ->

@@ -2296,7 +2296,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 val inputs = ZernioPublish.taskDispatchInputs(
                     mode, jobId, scheduledFor, zs.smart.timezone,
                     ZernioSettings.targetsJson(zs, accounts),
-                    ZernioPublish.idempotencyKey(jobId, mode.ifBlank { "auto" })
+                    ZernioPublish.requestId(jobId, mode.ifBlank { "auto" })
                 )
                 c.dispatchWorkflow(ZernioPublish.WORKFLOW, inputs)
                 toast(if (mode == "manual_schedule") "Zernio schedule request dispatched." else "Zernio publish request dispatched.")

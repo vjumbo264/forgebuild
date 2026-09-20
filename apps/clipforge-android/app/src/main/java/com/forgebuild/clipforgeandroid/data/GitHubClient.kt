@@ -47,8 +47,15 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
         // mobile data, not auth/logic. Raise connect to 45s and let OkHttp retry
         // silently-failed connections.
         .connectTimeout(45, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        // Slow-network fix (2026-09-20, operator report: starting a job from a
+        // .torrent upload failed with a 4xx on a slow link): the body is base64
+        // (~1.33x inflation); at 60s write/read caps a trickling mobile link gets
+        // cut mid-upload, and GitHub can then answer 408 Request Timeout (a 4xx).
+        // Give writes/reads 5 min and drop the overall call cap — the per-request
+        // progress UI is the real bound for the operator.
+        .readTimeout(300, TimeUnit.SECONDS)
+        .writeTimeout(300, TimeUnit.SECONDS)
+        .callTimeout(0, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .dns(ipv4FirstDns)
         .build()
@@ -282,7 +289,37 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
         // Return the response BODY (the Contents-API create/update response carries
         // content + commit — the Shadow Clone bootstrap needs commit.sha). Every
         // pre-existing caller ignores the return value, so this is additive.
-        val (_, body) = execute(req)
+        //
+        // Slow-network resilience (operator report 2026-09-20): retry the transient
+        // slow-link failure modes — GitHub 408 (upload trickled too slowly) and
+        // mid-upload socket stalls — up to 2 extra attempts with backoff. The PUT
+        // is idempotent for identical content+sha, so repeating a write that had
+        // silently succeeded server-side is a harmless no-op update.
+        var attempt = 0
+        var body = ""
+        while (true) {
+            try {
+                val (_, b) = execute(req)
+                body = b
+                break
+            } catch (e: GhException) {
+                if (e.code == 408 && attempt < 2) {
+                    attempt++
+                    DiagLog.log(appCtx, "GitHubAPI", "PUT contents/$path -> HTTP 408 (slow upload), retry $attempt/2")
+                    kotlinx.coroutines.delay(2000L * attempt)
+                    continue
+                }
+                throw e
+            } catch (e: SocketTimeoutException) {
+                if (attempt < 2) {
+                    attempt++
+                    DiagLog.log(appCtx, "GitHubAPI", "PUT contents/$path timed out mid-upload, retry $attempt/2")
+                    kotlinx.coroutines.delay(2000L * attempt)
+                    continue
+                }
+                throw e
+            }
+        }
         onProgress?.invoke(totalLength, totalLength)
         body
     }
