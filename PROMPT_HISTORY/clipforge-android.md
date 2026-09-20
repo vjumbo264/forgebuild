@@ -1228,3 +1228,64 @@ end to end with no new failures introduced anywhere in Stage B.
 **Rules (session):** `BUILD_STATE.json` is the source of truth; persistent
 session; per-step commit + push; never commit tokens/PATs; never delete the
 repository; never touch prior releases.
+
+## 2026-09-20 — EXTEND/UPDATE (session: Zernio timezone bug)
+
+Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = [REDACTED-BY-PUSH-PROTECTION — operator-provided motionssalt PAT, see operator message]
+
+# Bug: Zernio publish fails for every video with `ZoneInfoNotFoundError: No
+time zone found with key Europe/Lagos` — this is an invalid IANA timezone
+
+Root cause is fully explained by the traceback: `Europe/Lagos` is not a
+real IANA timezone identifier — Nigeria's real zone is `Africa/Lagos`.
+Somewhere the app is storing `Europe/Lagos` as the operator's configured
+publish timezone, and nothing validated it against the real IANA timezone
+list before saving it, so it passed straight through to
+`pipeline/publish/zernio.py`'s `validate_timezone`, which correctly
+rejects it at publish time — but only then, after the value was already
+saved and every scheduled publish depending on it had already been queued
+to fail.
+
+**Fix, in order:**
+
+1. Find wherever the operator's timezone is set in the app/site (Zernio
+   settings, or wherever "smart schedule" timezone is configured) and
+   correct the currently-stored value from `Europe/Lagos` to the correct
+   `Africa/Lagos`.
+2. Fix the timezone SELECTION UI itself so this can't happen again: it
+   must offer a genuine, searchable list of real IANA timezone names (not
+   free text, and not a hand-maintained list that can contain a mistake
+   like this one) — if a full IANA list isn't already available/bundled
+   somewhere in the app, use a standard source for it (e.g. the same list
+   Python's `zoneinfo` module already ships, which the pipeline itself
+   already depends on and validates against) so the picker and the
+   pipeline's own validation are guaranteed to agree. If a picker
+   component already exists and just isn't validating selections
+   correctly, fix that instead of replacing it.
+3. Add validation at the point the timezone is SAVED (not just at publish
+   time) — reject/flag an invalid IANA identifier immediately when the
+   operator sets it, using the same `validate_timezone` logic (or an
+   equivalent check) the pipeline already uses, so a bad value can never
+   be stored in the first place. This is the actual fix — item 2 makes a
+   mistake unlikely, this makes it impossible.
+4. **Find and reschedule every publish that failed specifically because of
+   this timezone error.** Search the repo for jobs/publish records with a
+   Zernio failure matching this exact `ZoneInfoNotFoundError`/`Unknown IANA
+   timezone: Europe/Lagos` signature (check whatever status/log fields
+   Zernio publish failures are recorded in — likely per-job status files
+   or a Zernio-specific record referenced by `pipeline/publish/zernio.py`).
+   For every one found: once the timezone value has been corrected per
+   step 1, re-trigger its publish/schedule exactly as if the operator had
+   pressed retry on it — reuse the existing "Retry an existing Zernio
+   post" mechanism visible in the workflow (`Retry an existing Zernio
+   post`) rather than inventing new republish logic, since that path
+   already exists and is the correct one to reuse.
+5. Produce a clear final accounting in `BUILD_STATE.json`'s notes: how many
+   affected videos were found, and confirmation each one was successfully
+   re-queued/republished after the fix (or, for any that still fail for a
+   different reason, note that specifically rather than silently leaving
+   it out of the count).
+
+Verify by confirming a fresh publish attempt (or one of the just-retried
+ones) actually succeeds through Zernio with the corrected timezone, not
+just that the stored value now reads `Africa/Lagos`.
