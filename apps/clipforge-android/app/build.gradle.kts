@@ -15,8 +15,8 @@ android {
         applicationId = "com.forgebuild.clipforgeandroid"
         minSdk = 26
         targetSdk = 37
-        versionCode = 29
-        versionName = "29"
+        versionCode = 30
+        versionName = "30"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -51,6 +51,8 @@ android {
 
     buildFeatures { compose = true }
     compileOptions {
+        // java.time (IANA tz db) on minSdk 26 for ZernioSettings real-timezone validation.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -62,6 +64,8 @@ android {
 }
 
 dependencies {
+    // Core library desugaring: java.time.ZoneId (full IANA tz database) below API 26+.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // === Compose stack — EXACT engine parity (v22 task-122) ===
     // The M3 Expressive PUBLIC APIs (MaterialExpressiveTheme, MotionScheme.expressive(),
     // LinearWavy/CircularWavyProgressIndicator, LoadingIndicator, ButtonGroup,

@@ -126,7 +126,7 @@ object ZernioSettings {
             return "Posting interval must be between 1 and 8760 hours."
         if (!TIME_RE.matches(sm.preferredTime))
             return "Preferred posting time must use HH:MM (24-hour) format."
-        if (!IANA_RE.matches(sm.timezone))
+        if (!isValidIanaZone(sm.timezone))
             return "Unknown IANA timezone: ${sm.timezone}"
         if (sm.startMode != "next_available" && sm.startMode != "custom")
             return "Start mode must be next_available or custom."
@@ -175,10 +175,28 @@ object ZernioSettings {
         val available: Boolean
     }
 
-    /** A curated set of IANA zones for the searchable picker (validated server-side too). */
+    /**
+     * Real IANA validation + picker source: java.time.ZoneId ships the SAME IANA tz
+     * database family the pipeline's Python zoneinfo validates against (both ship the
+     * system tz database), so the picker and publish-time validation can never
+     * disagree. Requires coreLibraryDesugaring (declared in app/build.gradle.kts) for
+     * minSdk 26. NEVER a regex-only or hand-maintained-list check: a regex accepted
+     * the bogus "Europe/Lagos" and broke every smart-schedule publish.
+     */
+    fun isValidIanaZone(value: String): Boolean {
+        val v = value.trim()
+        if (v.isEmpty()) return false
+        return try { java.time.ZoneId.of(v); true } catch (_: Exception) { false }
+    }
+
+    /** Full genuine IANA zone list for the searchable picker (sorted, UTC pinned first). */
+    fun ianaZones(): List<String> =
+        listOf("UTC") + java.time.ZoneId.getAvailableZoneIds().filter { it != "UTC" }.sorted()
+
+    /** Back-compat curated suggestions row (chips); the authoritative list is ianaZones(). */
     val COMMON_TIMEZONES = listOf(
         "UTC", "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Madrid",
-        "Europe/Rome", "Europe/Amsterdam", "Europe/Lagos", "Europe/Johannesburg",
+        "Europe/Rome", "Europe/Amsterdam",
         "Africa/Lagos", "Africa/Johannesburg", "Africa/Nairobi", "Africa/Cairo",
         "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
         "America/Sao_Paulo", "America/Toronto", "America/Mexico_City",

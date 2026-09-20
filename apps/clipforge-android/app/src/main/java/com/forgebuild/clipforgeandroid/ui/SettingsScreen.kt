@@ -358,19 +358,67 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        OutlinedTextField(
-                            value = z.smart.timezone,
-                            onValueChange = { v -> zFull = z.copy(smart = z.smart.copy(timezone = v)) },
-                            label = { Text("Timezone (IANA)") },
-                            placeholder = { Text("UTC") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        // Searchable picker over the FULL genuine IANA list (java.time
+                        // tz database — the same family the pipeline's zoneinfo uses).
+                        // Free text is rejected at save time by ZernioSettings.validate.
+                        val allZones = remember { ZernioSettings.ianaZones() }
+                        var tzQuery by remember { mutableStateOf(z.smart.timezone) }
+                        var tzExpanded by remember { mutableStateOf(false) }
+                        val tzMatches = remember(tzQuery) {
+                            val q = tzQuery.trim().lowercase()
+                            if (q.isEmpty() || q == "utc") allZones.take(60)
+                            else allZones.filter { it.lowercase().contains(q) }.take(60)
+                        }
+                        androidx.compose.material3.ExposedDropdownMenuBox(
+                            expanded = tzExpanded,
+                            onExpandedChange = { tzExpanded = it },
+                        ) {
+                            OutlinedTextField(
+                                value = tzQuery,
+                                onValueChange = { v ->
+                                    tzQuery = v
+                                    tzExpanded = true
+                                    zFull = z.copy(smart = z.smart.copy(timezone = v.trim()))
+                                },
+                                label = { Text("Timezone (IANA)") },
+                                placeholder = { Text("Type to search, e.g. Africa/Lagos") },
+                                supportingText = {
+                                    if (tzQuery.isNotBlank() && !ZernioSettings.isValidIanaZone(tzQuery)) {
+                                        Text("Unknown IANA timezone: ${tzQuery.trim()}",
+                                            color = MaterialTheme.colorScheme.error)
+                                    }
+                                },
+                                isError = tzQuery.isNotBlank() && !ZernioSettings.isValidIanaZone(tzQuery),
+                                singleLine = true,
+                                trailingIcon = {
+                                    androidx.compose.material3.ExposedDropdownMenuDefaults.TrailingIcon(expanded = tzExpanded)
+                                },
+                                modifier = Modifier.fillMaxWidth().menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryEditable, true),
+                            )
+                            androidx.compose.material3.ExposedDropdownMenu(
+                                expanded = tzExpanded && tzMatches.isNotEmpty(),
+                                onDismissRequest = { tzExpanded = false },
+                            ) {
+                                tzMatches.forEach { zone ->
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text(zone) },
+                                        onClick = {
+                                            tzQuery = zone
+                                            tzExpanded = false
+                                            zFull = z.copy(smart = z.smart.copy(timezone = zone))
+                                        },
+                                    )
+                                }
+                            }
+                        }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                             ZernioSettings.COMMON_TIMEZONES.take(8).forEach { zone ->
                                 FilterChip(
                                     selected = z.smart.timezone == zone,
-                                    onClick = { zFull = z.copy(smart = z.smart.copy(timezone = zone)) },
+                                    onClick = {
+                                        tzQuery = zone
+                                        zFull = z.copy(smart = z.smart.copy(timezone = zone))
+                                    },
                                     label = { Text(zone, style = MaterialTheme.typography.labelSmall) },
                                 )
                             }
