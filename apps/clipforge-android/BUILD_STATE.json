@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": true,
-  "updated_by": "forgebuild-ai-session 2026-09-20 (round 10 COMPLETE: v32 live — always-on publishing, toggles removed)",
-  "current_task": "task-166",
+  "build_complete": false,
+  "updated_by": "forgebuild-ai-session 2026-09-20 (round 11: settings cache + cache-first reopen + IANA timezone audit)",
+  "current_task": "task-167",
   "tasks": [
     {
       "id": "task-80",
@@ -526,6 +526,30 @@
       "title": "Release clipforge-android-v32 via release.yml app_path=apps/clipforge-android + verify live on Releases API",
       "status": "done",
       "notes": "DONE (session 2026-09-20 round 10): release.yml run 35528787666 completed success; clipforge-android-v32 VERIFIED LIVE via the GitHub Releases API (draft=false; assets app-clipforge-android-v32.apk 5577077 bytes + forgebuild-manifest.json). versionCode/versionName 32 in the tag source. Prior release clipforge-android-v31 intact (HTTP 200) — no prior release touched. build_complete=true."
+    },
+    {
+      "id": "task-167",
+      "title": "Fix 1 — New Video wizard seeds from on-device settings cache instantly; explicit in-session choices never overwritten by late settings fetch",
+      "status": "done",
+      "notes": "DONE (round 11): new data/SettingsCache.kt (filesDir/settings_cache.json — last_duration_seconds, series_default, super_series_default, default_music). VM reads it SYNCHRONOUSLY at init into wizardDefaults: StateFlow<WizardDefaults> so the wizard's FIRST composition after a cold open already shows last-known values — no defaults-then-swap gap. Wizard seeds all fields (duration, series, super-series, music) from wizardDefaults and tracks per-field explicit choices (durationChosen/seriesChosen/musicChosen incl. custom-duration dialog); LaunchedEffect(wizardDefaults) applies a late loadSettings() refresh ONLY to untouched fields. loadSettings() persists every successful fetch to the cache for next time; explicit duration choices persist immediately via noteWizardDurationChoice() at submit. signOut() clears the cache + resets defaults. Static: brace/paren balance 0/0 on all touched files; no stale vm.settings refs in NewTaskWizard."
+    },
+    {
+      "id": "task-168",
+      "title": "Fix 2 — cache-first reopen for task detail (and verified for task/music lists): instant last-known content, background poll merges updates, no reload flash",
+      "status": "done",
+      "notes": "DONE (round 11): startPollingTask now restores per-task in-memory caches (detailStatusCache/detailLogsCache/detailRawLogCache) SYNCHRONOUSLY on reopen — the screen renders the last-known status + log steps instantly; the existing 2.5s poll then merges new status/log lines in place (append-only, stable keys) with no loading-state flash. Caches populated after each loadTaskDetail; cleared on signOut. AUDIT: task list + music library already cache-first via engine CacheFirstStore (filesDir tasks.json/music.json, onTasksOpen/onMusicOpen = synchronous loadFromCache + background refresh, never re-flash) — no change needed there."
+    },
+    {
+      "id": "task-169",
+      "title": "Fix 3 — Zernio timezone audit: whole picker = real IANA ids, save-time validation confirmed in place",
+      "status": "done",
+      "notes": "DONE (round 11): picker source is ZernioSettings.ianaZones() = java.time.ZoneId.getAvailableZoneIds() (the SAME IANA tz database family Python zoneinfo / pipeline/publish/zernio.py validate against — not a hand-maintained list). isValidIanaZone uses real ZoneId.of(), not a regex. Curated COMMON_TIMEZONES (29 entries) cross-checked against Python zoneinfo.available_timezones() in this session: ZERO invalid (Africa/Lagos present, Europe/Lagos absent everywhere in app + engine). Save-time validation CONFIRMED in place: saveZernioFull() runs ZernioSettings.validate (mirrors zernio.py bounds+messages) BEFORE writing branding/zernio_settings.json, so an invalid entry cannot be reintroduced; the timezone field also validates live on type in SettingsScreen."
+    },
+    {
+      "id": "task-170",
+      "title": "Bump to v33 + release clipforge-android-v33 via release.yml + verify live on Releases API",
+      "status": "in_progress",
+      "notes": "versionCode/versionName 32->33; Settings About 'Version v33'. Release dispatched via release.yml app_path=apps/clipforge-android; live API verification below."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",

@@ -15,8 +15,8 @@ android {
         applicationId = "com.forgebuild.clipforgeandroid"
         minSdk = 26
         targetSdk = 37
-        versionCode = 32
-        versionName = "32"
+        versionCode = 33
+        versionName = "33"
         vectorDrawables { useSupportLibrary = true }
     }
 

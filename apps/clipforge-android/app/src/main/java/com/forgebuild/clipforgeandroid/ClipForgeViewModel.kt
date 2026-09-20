@@ -289,6 +289,11 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         // stale data, then reload (empty) state from the now-absent cache files.
         try { java.io.File(app.filesDir, "tasks.json").delete() } catch (_: Exception) {}
         try { java.io.File(app.filesDir, "music.json").delete() } catch (_: Exception) {}
+        settingsCache.clear()
+        _wizardDefaults.value = com.forgebuild.clipforgeandroid.data.SettingsCache.WizardDefaults()
+        detailStatusCache.clear()
+        detailLogsCache.clear()
+        detailRawLogCache.clear()
         taskStore.loadFromCache()
         musicStore.loadFromCache()
         toast("Signed out")
@@ -798,6 +803,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _detailLogs = MutableStateFlow<List<LogStep>>(emptyList())
     val detailLogs: StateFlow<List<LogStep>> = _detailLogs
 
+    // Fix 2 (operator 2026-09-20): per-task last-known detail content. Reopening
+    // an already-loaded task shows this INSTANTLY while the poll merges updates
+    // in place — no blank screen, no loading-state flash.
+    private val detailStatusCache = mutableMapOf<String, TaskStatus>()
+    private val detailLogsCache = mutableMapOf<String, List<LogStep>>()
+    private val detailRawLogCache = mutableMapOf<String, String>()
+
     /** A single video candidate discovered inside a torrent by Stage A. */
     data class TorrentFileOption(val index: Int, val name: String, val sizeBytes: Long)
 
@@ -811,13 +823,18 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     fun startPollingTask(jobId: String) {
         pollJob?.cancel()
-        // Fresh log buffer + expansion state for a fresh task view.
-        _detailLogs.value = emptyList()
+        // Fix 2: cache-first reopen — restore the last-known content synchronously,
+        // then the 2.5 s poll merges in whatever is new (status, new log lines).
+        _detailStatus.value = detailStatusCache[jobId]
+        _detailLogs.value = detailLogsCache[jobId].orEmpty()
+        _detailRawLog.value = detailRawLogCache[jobId].orEmpty()
         _expandedStepKeys.value = emptySet()
-        _detailRawLog.value = ""
         pollJob = viewModelScope.launch {
             while (isActive) {
                 loadTaskDetail(jobId)
+                _detailStatus.value?.let { detailStatusCache[jobId] = it }
+                if (_detailLogs.value.isNotEmpty()) detailLogsCache[jobId] = _detailLogs.value
+                if (_detailRawLog.value.isNotBlank()) detailRawLogCache[jobId] = _detailRawLog.value
                 delay(2500)
             }
         }
@@ -1853,6 +1870,24 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings
 
+    // Fix 1 (operator 2026-09-20): on-device settings cache, read SYNCHRONOUSLY
+    // here so the New Video wizard's first composition already shows the
+    // operator's actual last-known settings — no gap where code defaults are
+    // shown and then swapped out by the slow clone fetch. A background
+    // loadSettings() refresh updates the cache for next time and the flow below;
+    // the wizard's per-field explicit-choice flags ensure a late refresh never
+    // overwrites an in-progress choice.
+    private val settingsCache = com.forgebuild.clipforgeandroid.data.SettingsCache(app)
+    private val _wizardDefaults = MutableStateFlow(settingsCache.loadWizardDefaults())
+    val wizardDefaults: StateFlow<com.forgebuild.clipforgeandroid.data.SettingsCache.WizardDefaults> = _wizardDefaults
+
+    /** An explicit wizard duration choice becomes the last-known value instantly. */
+    fun noteWizardDurationChoice(seconds: Int) {
+        if (seconds !in 1..36000) return
+        _wizardDefaults.value = _wizardDefaults.value.copy(durationSeconds = seconds)
+        settingsCache.saveDurationChoice(seconds)
+    }
+
     // True while loadSettings() is in flight — lets the Settings screen show a skeleton
     // instead of empty defaults that read as "nothing was ever saved".
     private val _settingsLoading = MutableStateFlow(false)
@@ -1979,6 +2014,15 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                 superSeriesDefault = superDef
             )
             _settingsLoaded.value = true
+            // Fix 1: background refresh updates the on-device cache + defaults flow
+            // for the NEXT wizard open; the wizard protects in-progress explicit
+            // choices from being overwritten by this update.
+            settingsCache.saveFromLoadedSettings(seriesDef, superDef, _defaultMusic.value)
+            _wizardDefaults.value = _wizardDefaults.value.copy(
+                series = seriesDef,
+                superSeries = seriesDef && superDef,
+                musicPath = _defaultMusic.value,
+            )
         } catch (e: Exception) {
             toast("Failed to load settings: ${e.message}")
         } finally {
