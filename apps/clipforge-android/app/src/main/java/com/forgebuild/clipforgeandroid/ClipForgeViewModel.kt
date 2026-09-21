@@ -291,9 +291,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         try { java.io.File(app.filesDir, "music.json").delete() } catch (_: Exception) {}
         settingsCache.clear()
         _wizardDefaults.value = com.forgebuild.clipforgeandroid.data.SettingsCache.WizardDefaults()
+        _wizardForm.value = WizardForm()
         detailStatusCache.clear()
         detailLogsCache.clear()
         detailRawLogCache.clear()
+        detailJobId = null
+        try { detailDir.listFiles()?.forEach { it.delete() } } catch (_: Exception) {}
         taskStore.loadFromCache()
         musicStore.loadFromCache()
         toast("Signed out")
@@ -810,6 +813,80 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val detailLogsCache = mutableMapOf<String, List<LogStep>>()
     private val detailRawLogCache = mutableMapOf<String, String>()
 
+    // Round-12 fix 2: the detail caches are ALSO persisted to disk
+    // (filesDir/task_detail/) so even a cold app restart reopens a previously-viewed
+    // task INSTANTLY — reopening never flashes a full loading state when anything
+    // was shown before, in-session or not.
+    private val detailDir: File by lazy { File(app.filesDir, "task_detail").apply { mkdirs() } }
+    private var detailJobId: String? = null
+
+    private fun detailDiskFile(jobId: String): File =
+        File(detailDir, jobId.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".json")
+
+    private fun serializeSteps(steps: List<LogStep>): String {
+        val arr = JSONArray()
+        for (s in steps) {
+            val det = JSONArray()
+            for (line in s.details) det.put(JSONObject().put("t", line.text).put("l", line.level.name))
+            arr.put(JSONObject()
+                .put("k", s.key).put("n", s.name).put("l", s.level.name)
+                .put("d", s.durationText).put("det", det)
+                .put("skip", s.skippedBecauseOf ?: JSONObject.NULL))
+        }
+        return arr.toString()
+    }
+
+    private fun deserializeSteps(text: String): List<LogStep> {
+        val out = mutableListOf<LogStep>()
+        val arr = JSONArray(text)
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val det = mutableListOf<LogDetail>()
+            val da = o.optJSONArray("det") ?: JSONArray()
+            for (j in 0 until da.length()) {
+                val dl = da.getJSONObject(j)
+                det.add(LogDetail(dl.optString("t"),
+                    runCatching { LogLevel.valueOf(dl.optString("l")) }.getOrDefault(LogLevel.INFO)))
+            }
+            out.add(LogStep(
+                key = o.optString("k"), name = o.optString("n"),
+                level = runCatching { LogLevel.valueOf(o.optString("l")) }.getOrDefault(LogLevel.INFO),
+                durationText = o.optString("d"), details = det,
+                skippedBecauseOf = if (o.isNull("skip")) null else o.optString("skip"),
+            ))
+        }
+        return out
+    }
+
+    /** Persist the current detail view for [jobId] to disk (best-effort). */
+    private fun persistDetailCache(jobId: String) {
+        try {
+            val status = detailStatusCache[jobId] ?: return
+            val raw = detailRawLogCache[jobId].orEmpty()
+            val doc = JSONObject()
+                .put("status", status.toJson())
+                .put("logs", serializeSteps(detailLogsCache[jobId].orEmpty()))
+                // Raw runner logs can be megabytes — cap what we persist.
+                .put("raw", if (raw.length <= 400_000) raw else "")
+            detailDiskFile(jobId).writeText(doc.toString())
+        } catch (_: Exception) {}
+    }
+
+    /** Restore one task's last-known detail from disk into the in-memory caches. */
+    private fun restoreDetailCacheFromDisk(jobId: String) {
+        if (detailStatusCache.containsKey(jobId)) return
+        try {
+            val f = detailDiskFile(jobId)
+            if (!f.exists()) return
+            val doc = JSONObject(f.readText())
+            doc.optJSONObject("status")?.let { detailStatusCache[jobId] = TaskStatus.fromJson(it) }
+            val logsText = doc.optString("logs")
+            if (logsText.isNotBlank()) detailLogsCache[jobId] = deserializeSteps(logsText)
+            val raw = doc.optString("raw")
+            if (raw.isNotBlank()) detailRawLogCache[jobId] = raw
+        } catch (_: Exception) {}
+    }
+
     /** A single video candidate discovered inside a torrent by Stage A. */
     data class TorrentFileOption(val index: Int, val name: String, val sizeBytes: Long)
 
@@ -821,20 +898,41 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
     private var pollJob: Job? = null
 
-    fun startPollingTask(jobId: String) {
-        pollJob?.cancel()
-        // Fix 2: cache-first reopen — restore the last-known content synchronously,
-        // then the 2.5 s poll merges in whatever is new (status, new log lines).
-        _detailStatus.value = detailStatusCache[jobId]
+    /**
+     * Round-12 fix 2 — called SYNCHRONOUSLY from the detail screen's remember{}
+     * (i.e. during composition, before the first frame): swaps in the task's
+     * last-known content from the in-memory/disk caches so a reopened task NEVER
+     * renders a blank loading state. Returns true when cached content exists. The
+     * 2.5 s poll then merges in whatever is new (status, log lines) in place.
+     */
+    fun prepareTaskDetail(jobId: String): Boolean {
+        if (detailJobId == jobId) return _detailStatus.value != null
+        detailJobId = jobId
+        restoreDetailCacheFromDisk(jobId)
+        val cached = detailStatusCache[jobId]
+        _detailStatus.value = cached
         _detailLogs.value = detailLogsCache[jobId].orEmpty()
         _detailRawLog.value = detailRawLogCache[jobId].orEmpty()
         _expandedStepKeys.value = emptySet()
+        _detailRequest.value = null
+        _detailPlan.value = null
+        _detailSuperState.value = null
+        _nextPart.value = null
+        _downloadedVideoFor.value = null
+        _playVideoUri.value = null
+        return cached != null
+    }
+
+    fun startPollingTask(jobId: String) {
+        prepareTaskDetail(jobId)
+        pollJob?.cancel()
         pollJob = viewModelScope.launch {
             while (isActive) {
                 loadTaskDetail(jobId)
                 _detailStatus.value?.let { detailStatusCache[jobId] = it }
                 if (_detailLogs.value.isNotEmpty()) detailLogsCache[jobId] = _detailLogs.value
                 if (_detailRawLog.value.isNotBlank()) detailRawLogCache[jobId] = _detailRawLog.value
+                withContext(Dispatchers.IO) { persistDetailCache(jobId) }
                 delay(2500)
             }
         }
@@ -843,13 +941,10 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     fun stopPollingTask() {
         pollJob?.cancel()
         pollJob = null
-        _detailStatus.value = null
-        _detailLogs.value = emptyList()
-        _expandedStepKeys.value = emptySet()
-        _detailRawLog.value = ""
-        _nextPart.value = null
-        _downloadedVideoFor.value = null
-        _playVideoUri.value = null
+        // Round-12 fix 2: do NOT blank the detail flows here — blanking on dispose
+        // is exactly what produced the reload flash on reopen in v33. The content
+        // stays put and is swapped synchronously by prepareTaskDetail() the next
+        // time any task opens, before its first frame is drawn.
     }
 
     /** Human-readable step duration, GitHub Actions style ("34s", "1m 12s"). */
@@ -1881,12 +1976,66 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _wizardDefaults = MutableStateFlow(settingsCache.loadWizardDefaults())
     val wizardDefaults: StateFlow<com.forgebuild.clipforgeandroid.data.SettingsCache.WizardDefaults> = _wizardDefaults
 
-    /** An explicit wizard duration choice becomes the last-known value instantly. */
-    fun noteWizardDurationChoice(seconds: Int) {
+    /**
+     * Round-12 fix 1 (operator 2026-09-21 — the v33 composition-local fix did NOT
+     * hold): the New Video wizard now binds DIRECTLY to this session-level form
+     * state as its single source of truth, seeded once from the on-device cache at
+     * ViewModel init. loadSettings() NEVER writes into this state (only into the
+     * cache, for next time), so a late-arriving settings fetch cannot retroactively
+     * alter ANY value already showing on an in-progress New Video screen — chosen
+     * or not. Every explicit choice is persisted to the cache the instant it is
+     * made, so the next open (even a cold start) shows the real last-known values.
+     */
+    data class WizardForm(
+        val durationSeconds: Int = 120,
+        val durationChosen: Boolean = false,
+        val series: Boolean = false,
+        val seriesChosen: Boolean = false,
+        val superSeries: Boolean = false,
+        val musicPath: String? = null,
+        val musicChosen: Boolean = false,
+    )
+
+    private val _wizardForm = MutableStateFlow(
+        settingsCache.loadWizardDefaults().let {
+            WizardForm(durationSeconds = it.durationSeconds, series = it.series,
+                superSeries = it.superSeries, musicPath = it.musicPath)
+        }
+    )
+    val wizardForm: StateFlow<WizardForm> = _wizardForm
+
+    fun wizardSetDuration(seconds: Int) {
         if (seconds !in 1..36000) return
-        _wizardDefaults.value = _wizardDefaults.value.copy(durationSeconds = seconds)
+        _wizardForm.value = _wizardForm.value.copy(durationSeconds = seconds, durationChosen = true)
         settingsCache.saveDurationChoice(seconds)
     }
+
+    fun wizardSetSeries(series: Boolean) {
+        // Backend dependency: Series OFF forces Super OFF (wizard.js).
+        val superNow = if (series) _wizardForm.value.superSeries else false
+        _wizardForm.value = _wizardForm.value.copy(series = series, seriesChosen = true, superSeries = superNow)
+        settingsCache.saveSeriesChoice(series, superNow)
+    }
+
+    fun wizardSetSuperSeries(superSeries: Boolean) {
+        _wizardForm.value = _wizardForm.value.copy(seriesChosen = true, superSeries = superSeries)
+        settingsCache.saveSeriesChoice(_wizardForm.value.series, superSeries)
+    }
+
+    fun wizardSetMusic(path: String?) {
+        _wizardForm.value = _wizardForm.value.copy(musicPath = path, musicChosen = true)
+        settingsCache.saveMusicChoice(path)
+    }
+
+    /** After a successful submit the next flow reseeds from last-known cache values. */
+    fun resetWizardForm() {
+        val d = settingsCache.loadWizardDefaults()
+        _wizardForm.value = WizardForm(durationSeconds = d.durationSeconds, series = d.series,
+            superSeries = d.superSeries, musicPath = d.musicPath)
+    }
+
+    /** Back-compat shim for older callers; wizardSetDuration is the real path. */
+    fun noteWizardDurationChoice(seconds: Int) = wizardSetDuration(seconds)
 
     // True while loadSettings() is in flight — lets the Settings screen show a skeleton
     // instead of empty defaults that read as "nothing was ever saved".
@@ -2017,11 +2166,20 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             // Fix 1: background refresh updates the on-device cache + defaults flow
             // for the NEXT wizard open; the wizard protects in-progress explicit
             // choices from being overwritten by this update.
-            settingsCache.saveFromLoadedSettings(seriesDef, superDef, _defaultMusic.value)
+            // Round-12 fix 1: a background refresh updates the CACHE for next time
+            // ONLY — it must never touch the live wizard form. Fields the operator
+            // explicitly chose during this session stay chosen even in the cache: an
+            // in-session explicit choice always wins over a settings refresh.
+            val form = _wizardForm.value
+            settingsCache.saveFromLoadedSettings(
+                if (form.seriesChosen) form.series else seriesDef,
+                if (form.seriesChosen) form.superSeries else (seriesDef && superDef),
+                if (form.musicChosen) form.musicPath else _defaultMusic.value,
+            )
             _wizardDefaults.value = _wizardDefaults.value.copy(
-                series = seriesDef,
-                superSeries = seriesDef && superDef,
-                musicPath = _defaultMusic.value,
+                series = if (form.seriesChosen) form.series else seriesDef,
+                superSeries = if (form.seriesChosen) form.superSeries else (seriesDef && superDef),
+                musicPath = if (form.musicChosen) form.musicPath else _defaultMusic.value,
             )
         } catch (e: Exception) {
             toast("Failed to load settings: ${e.message}")
@@ -2212,6 +2370,18 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
                     c.readFile("branding/zernio_settings.json")?.let { JSONObject(it.first) }
                 } catch (_: Exception) { null }
                 val doc = existing ?: defaultZernioSettings()
+                // Round-12 fix 3: never re-persist a stored-but-INVALID timezone
+                // (the Europe/Lagos incident). This read-modify-write path carries
+                // the existing smart_schedule forward — validate its timezone
+                // against the real IANA database and repair to UTC with a visible
+                // warning instead of silently saving the broken value again.
+                doc.optJSONObject("smart_schedule")?.let { sm ->
+                    val tz = sm.optString("timezone", "UTC")
+                    if (!ZernioSettings.isValidIanaZone(tz)) {
+                        sm.put("timezone", "UTC")
+                        toast("Stored timezone \"$tz\" is not a real IANA timezone — reset to UTC. Pick a valid one in the Zernio schedule settings.")
+                    }
+                }
                 doc.put("version", 1)
                     .put("enabled", true)
                     .put("auto_publish", true)
@@ -2307,7 +2477,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     /** Read the current full Zernio settings doc (for the editor + summary line). */
     suspend fun readZernioFull(): ZernioSettings.Settings {
         val c = api ?: return ZernioSettings.Settings()
-        return ZernioSettings.parse(try { c.readFile(ZernioSettings.SETTINGS_PATH)?.first } catch (_: Exception) { null })
+        val parsed = ZernioSettings.parse(try { c.readFile(ZernioSettings.SETTINGS_PATH)?.first } catch (_: Exception) { null })
+        // Round-12 fix 3: an invalid stored timezone must never reach publish.yml —
+        // scheduled publishes previously died on Europe/Lagos. Coerce to UTC at read
+        // time; save paths validate (saveZernioFull) and repair (saveZernioSettings).
+        return if (ZernioSettings.isValidIanaZone(parsed.smart.timezone)) parsed
+        else parsed.copy(smart = parsed.smart.copy(timezone = "UTC"))
     }
 
     /** The task's current publishing state (instruction #5) — jobs/<id>/publish_state.json. */

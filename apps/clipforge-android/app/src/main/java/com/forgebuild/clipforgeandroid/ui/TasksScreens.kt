@@ -304,6 +304,12 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
         }
     }
 
+    // Round-12 fix 2: swap in this task's last-known content SYNCHRONOUSLY during
+    // composition (before the first frame is drawn) — reopening an already-loaded
+    // task shows it instantly with no loading flash; the poll below then merges in
+    // whatever is new (updated status, new log lines) in place.
+    val hadCachedDetail = remember(jobId) { vm.prepareTaskDetail(jobId) }
+
     DisposableEffect(jobId) {
         vm.startPollingTask(jobId)
         vm.refreshNextPart(jobId)
@@ -334,7 +340,10 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
         ) {
             val currentStatus = status
             if (currentStatus == null) {
-                CfLoading("Loading task…")
+                // Reachable only on the very first open of a task never loaded before
+                // (no in-memory or on-disk cache) — a REOPEN always has
+                // prepareTaskDetail()'s synchronous restore above, so no flash.
+                CfLoading(if (hadCachedDetail) "Restoring task…" else "Loading task…")
                 return@Column
             }
 

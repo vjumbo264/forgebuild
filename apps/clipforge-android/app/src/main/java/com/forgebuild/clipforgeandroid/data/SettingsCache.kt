@@ -65,6 +65,25 @@ class SettingsCache(context: Context) {
         write(j)
     }
 
+    /**
+     * An explicit in-wizard series/super-series choice (round-12 fix 1): persisted
+     * the INSTANT it is made — not at submit time — so a recreated screen or cold
+     * start reseeds from the operator's real choice, never a stale default.
+     */
+    fun saveSeriesChoice(series: Boolean, superSeries: Boolean) {
+        val j = read() ?: JSONObject()
+        j.put(KEY_SERIES, series)
+        j.put(KEY_SUPER, series && superSeries)
+        write(j)
+    }
+
+    /** An explicit in-wizard music choice, persisted the instant it is made. */
+    fun saveMusicChoice(path: String?) {
+        val j = read() ?: JSONObject()
+        if (path != null) j.put(KEY_MUSIC, path) else j.remove(KEY_MUSIC)
+        write(j)
+    }
+
     fun clear() {
         try { file.delete() } catch (_: Exception) {}
     }

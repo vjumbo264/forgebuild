@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,43 +47,56 @@ import com.forgebuild.engine.ui.theme.ElevationTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 
 /* ============================================================================
- *  V23 NEW-TASK WIZARD — rebuilt from scratch.
+ *  NEW-TASK WIZARD — round-12 fix 1 (operator 2026-09-21).
+ *
+ *  The wizard binds DIRECTLY to the ViewModel's session-level wizardForm state
+ *  (single source of truth, seeded once from the on-device settings cache at
+ *  ViewModel init). There is NO local seed copy and NO effect that re-applies
+ *  settings onto the form — so a background loadSettings() refresh can NEVER
+ *  retroactively alter anything already showing on this screen, whether the
+ *  field was explicitly chosen or not. Every explicit choice is persisted to
+ *  the on-device cache the instant it is made, so the next open (even after a
+ *  cold start) renders with the operator's actual last-known values, with no
+ *  defaults-shown-then-swapped gap (the bug that rendered a chosen 30s target
+ *  as a 120s video).
+ *
  *  Paste-anything source auto-detection (magnet checked before the generic URL
  *  fallback, exactly like the backend wizard), torrent upload, duration presets
  *  + custom dialog, background-music pick, Series + Super Series toggles, and a
  *  busy-aware submit that gives immediate visible feedback and cannot
- *  double-fire.
+ *  double-fire. Free-text fields use rememberSaveable so tab switches and
+ *  navigation away/back never lose mid-setup input.
  * ============================================================================ */
 
 @Composable
 fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
     val context = LocalContext.current
     val upload by vm.upload.collectAsState()
-    val wizardDefaults by vm.wizardDefaults.collectAsState()
+    val form by vm.wizardForm.collectAsState()
     val musicTracks by vm.music.collectAsState()
     val defaultMusic by vm.defaultMusic.collectAsState()
     val isOriginal = vm.api?.isOriginalRepo() == true
 
-    var detectedSourceKind by remember { mutableStateOf<String?>(null) }
-    var sourceValue by remember { mutableStateOf("") }
-    var torrentBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var torrentFileName by remember { mutableStateOf("") }
+    // Single source of truth: the ViewModel session form (cache-seeded).
+    val durationSeconds = form.durationSeconds
+    val isSeries = form.series
+    val isSuperSeries = form.superSeries
+    val selectedMusicPath = form.musicPath
 
-    var focus by remember { mutableStateOf("") }
-    // Fix 1 (operator 2026-09-20): seed INSTANTLY from the on-device settings
-    // cache (last-known values — no defaults-shown-then-swapped gap), and track
-    // per-field explicit choices so a late background settings refresh can never
-    // silently overwrite anything the operator already picked in this flow.
-    var durationSeconds by remember { mutableStateOf(wizardDefaults.durationSeconds) }
-    var durationChosen by remember { mutableStateOf(false) }
-    var customDurationText by remember { mutableStateOf("") }
-    var showCustomDialog by remember { mutableStateOf(false) }
-    var isSeries by remember { mutableStateOf(wizardDefaults.series) }
-    var seriesChosen by remember { mutableStateOf(false) }
-    var seriesId by remember { mutableStateOf("") }
-    var isSuperSeries by remember { mutableStateOf(wizardDefaults.superSeries) }
-    var musicChosen by remember { mutableStateOf(false) }
-    var selectedMusicPath by remember { mutableStateOf(wizardDefaults.musicPath) }
+    var sourceValue by rememberSaveable { mutableStateOf("") }
+    val detectedSourceKind = remember(sourceValue) {
+        if (sourceValue.isBlank()) null
+        else when (val verdict = SourceClassifier.classify(sourceValue)) {
+            is SourceClassifier.Result.Kind -> verdict.kind
+            is SourceClassifier.Result.Invalid -> null
+        }
+    }
+    var torrentBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var torrentFileName by rememberSaveable { mutableStateOf("") }
+    var focus by rememberSaveable { mutableStateOf("") }
+    var seriesId by rememberSaveable { mutableStateOf("") }
+    var customDurationText by rememberSaveable { mutableStateOf("") }
+    var showCustomDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { vm.onNewTaskOpen() }
 
@@ -101,18 +115,6 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
         } catch (e: Exception) {
             vm.toast("Failed to read torrent file: ${e.message}")
         }
-    }
-
-    // A background settings refresh may still land while this screen is open:
-    // it updates ONLY fields the operator has not explicitly chosen — an explicit
-    // in-session choice always wins for the remainder of this flow.
-    LaunchedEffect(wizardDefaults) {
-        if (!durationChosen) durationSeconds = wizardDefaults.durationSeconds
-        if (!seriesChosen) {
-            isSeries = wizardDefaults.series
-            isSuperSeries = wizardDefaults.superSeries
-        } else if (!isSeries) isSuperSeries = false
-        if (!musicChosen) selectedMusicPath = wizardDefaults.musicPath
     }
 
     Scaffold(
@@ -139,13 +141,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
             ) {
                 OutlinedTextField(
                     value = sourceValue,
-                    onValueChange = { raw ->
-                        sourceValue = raw
-                        detectedSourceKind = when (val verdict = SourceClassifier.classify(raw)) {
-                            is SourceClassifier.Result.Kind -> verdict.kind
-                            is SourceClassifier.Result.Invalid -> null
-                        }
-                    },
+                    onValueChange = { sourceValue = it },
                     label = { Text("Link") },
                     placeholder = { Text("https://… | Google Drive | magnet:?xt=… | t.me/channel/123") },
                     modifier = Modifier.fillMaxWidth(),
@@ -193,7 +189,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 val customSelected = durationSeconds !in presets
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                     presets.forEach { dur ->
-                        FilterChip(selected = durationSeconds == dur, onClick = { durationChosen = true; durationSeconds = dur }, label = { Text("${dur}s") })
+                        FilterChip(selected = durationSeconds == dur, onClick = { vm.wizardSetDuration(dur) }, label = { Text("${dur}s") })
                     }
                     FilterChip(
                         selected = customSelected,
@@ -208,7 +204,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
 
             CfSection(title = "Background music", subtitle = "The saved default is used unless you pick a track here.") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = selectedMusicPath == null, onClick = { musicChosen = true; selectedMusicPath = null })
+                    RadioButton(selected = selectedMusicPath == null, onClick = { vm.wizardSetMusic(null) })
                     Text(
                         if (defaultMusic != null) "Saved default ($defaultMusic)" else "No music",
                         style = MaterialTheme.typography.bodyMedium,
@@ -224,7 +220,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 }
                 musicTracks.forEach { track ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = selectedMusicPath == track.path, onClick = { musicChosen = true; selectedMusicPath = track.path })
+                        RadioButton(selected = selectedMusicPath == track.path, onClick = { vm.wizardSetMusic(track.path) })
                         Text(track.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = SpacingTokens.Spacing.xs))
                     }
                 }
@@ -239,11 +235,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                     Text("Series Mode", style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = isSeries,
-                        onCheckedChange = { on ->
-                            seriesChosen = true
-                            isSeries = on
-                            if (!on) isSuperSeries = false // dependency: Series OFF forces Super OFF
-                        },
+                        onCheckedChange = { vm.wizardSetSeries(it) }, // Series OFF forces Super OFF inside the VM
                     )
                 }
                 if (isSeries) {
@@ -266,7 +258,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Switch(checked = isSuperSeries, onCheckedChange = { seriesChosen = true; isSuperSeries = it })
+                        Switch(checked = isSuperSeries, onCheckedChange = { vm.wizardSetSuperSeries(it) })
                     }
                 }
             }
@@ -295,7 +287,6 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         if (submitValue.isBlank()) { vm.toast("Please enter a valid source URL"); return@ActionButton }
                     }
                     if (durationSeconds !in 1..36000) { vm.toast("Enter a valid duration (1–36000 seconds)"); return@ActionButton }
-                    vm.noteWizardDurationChoice(durationSeconds)
                     vm.createStageATask(
                         sourceKind = submitKind,
                         sourceValue = submitValue,
@@ -306,7 +297,14 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                         seriesId = seriesId.ifBlank { null },
                         isSuperSeries = isSuperSeries && isSeries,
                         torrentBytes = torrentBytes,
-                        onCreated = { onDone() },
+                        onCreated = {
+                            // Successful submit: reseed the form from last-known cache
+                            // values and clear the free-text inputs for the next video.
+                            vm.resetWizardForm()
+                            sourceValue = ""; focus = ""; seriesId = ""
+                            torrentBytes = null; torrentFileName = ""
+                            onDone()
+                        },
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -334,7 +332,7 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextActionButton(label = "Apply", enabled = valid, onClick = { typed?.let { durationChosen = true; durationSeconds = it }; showCustomDialog = false })
+                TextActionButton(label = "Apply", enabled = valid, onClick = { typed?.let { vm.wizardSetDuration(it) }; showCustomDialog = false })
             },
             dismissButton = { TextActionButton(label = "Cancel", onClick = { showCustomDialog = false }) },
         )
