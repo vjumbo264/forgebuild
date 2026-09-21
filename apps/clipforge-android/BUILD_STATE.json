@@ -2,8 +2,8 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-21 (round 12 \u2014 REPEAT of round-11 fixes; v33 was ineffective, root causes re-investigated in actual code)",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-21 (round 12 COMPLETE: v34 live \u2014 round-11 fixes redone at the real root causes)",
   "current_task": "task-174",
   "tasks": [
     {
@@ -572,8 +572,8 @@
     {
       "id": "task-174",
       "title": "Bump to v34 + release clipforge-android-v34 via release.yml + verify live on Releases API",
-      "status": "in_progress",
-      "notes": "versionCode/versionName 33->34. Static validation: brace/paren balance 0/0 on all 5 touched files; no stale references to old wizard APIs; all new VM functions present. Real-testing note: device-level E2E (cold open -> 30s submit -> rendered duration; reopen flash check) runs on the operator phone with this APK \u2014 the code-level guarantees are: wizardForm seeded synchronously at VM init from disk cache, loadSettings never writes wizardForm, choices persisted instantly; detail restore synchronous in composition from memory+disk; timezone picker = ZoneId.getAvailableZoneIds + validate/repair/coerce on all save/read paths. Release dispatching via release.yml app_path=apps/clipforge-android; verification next."
+      "status": "done",
+      "notes": "versionCode/versionName 33->34. Static validation: brace/paren balance 0/0 on all 5 touched files; no stale references to old wizard APIs; all new VM functions present. Real-testing note: device-level E2E (cold open -> 30s submit -> rendered duration; reopen flash check) runs on the operator phone with this APK \u2014 the code-level guarantees are: wizardForm seeded synchronously at VM init from disk cache, loadSettings never writes wizardForm, choices persisted instantly; detail restore synchronous in composition from memory+disk; timezone picker = ZoneId.getAvailableZoneIds + validate/repair/coerce on all save/read paths. Release dispatching via release.yml app_path=apps/clipforge-android; verification next. DONE: release.yml run 35549961882 completed success on commit bfa7255; clipforge-android-v34 VERIFIED LIVE via the GitHub Releases API (draft=false; APK + forgebuild-manifest.json assets). Prior releases untouched (v33 spot-checked HTTP 200). build_complete=true."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
