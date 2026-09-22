@@ -9,3 +9,8 @@
 -keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
+
+# TaskFlow R8 missing-class fixes (security-crypto -> Tink annotations, slf4j binder):
+# annotation/logging-only references, safe to ignore in release minification.
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn org.slf4j.**
