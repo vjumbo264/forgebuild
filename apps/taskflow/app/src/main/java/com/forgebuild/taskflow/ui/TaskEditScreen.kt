@@ -18,11 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuBoxScope
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,7 +66,6 @@ fun TaskEditScreen(vm: TaskViewModel, taskId: Long, onClose: () -> Unit) {
     var fixedTime by remember(current.id) { mutableStateOf(current.fixedTime) }
     var recurrence by remember(current.id) { mutableStateOf(current.recurrence) }
     var weekdaysMask by remember(current.id) { mutableIntStateOf(current.weekdaysMask) }
-    var recurrenceMenuOpen by remember { mutableStateOf(false) }
     val fmt = remember { SimpleDateFormat("EEE, MMM d yyyy · HH:mm", Locale.getDefault()) }
 
     Scaffold(topBar = {
@@ -117,21 +112,11 @@ fun TaskEditScreen(vm: TaskViewModel, taskId: Long, onClose: () -> Unit) {
 
             // Recurrence
             Text("Repeat", style = MaterialTheme.typography.titleSmall)
-            ExposedDropdownMenuBox(expanded = recurrenceMenuOpen,
-                onExpandedChange = { recurrenceMenuOpen = it }) {
-                val menuScope: ExposedDropdownMenuBoxScope = this
-                OutlinedTextField(
-                    value = recurrence.name.lowercase().replaceFirstChar { it.uppercase() },
-                    onValueChange = {}, readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(recurrenceMenuOpen) },
-                    modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(), shape = MaterialTheme.shapes.medium)
-                menuScope.ExposedDropdownMenu(expanded = recurrenceMenuOpen,
-                    onDismissRequest = { recurrenceMenuOpen = false }) {
-                    Recurrence.entries.forEach { r ->
-                        DropdownMenuItem(
-                            text = { Text(r.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                            onClick = { recurrence = r; recurrenceMenuOpen = false })
-                    }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                Recurrence.entries.forEach { r ->
+                    FilterChip(selected = recurrence == r,
+                        onClick = { recurrence = r },
+                        label = { Text(r.name.lowercase().replaceFirstChar { it.uppercase() }) })
                 }
             }
             if (recurrence == Recurrence.WEEKLY) {
