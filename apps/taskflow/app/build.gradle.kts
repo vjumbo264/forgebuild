@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
     // No org.jetbrains.kotlin.android: AGP 9 built-in Kotlin (see root build file).
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -77,4 +79,20 @@ dependencies {
     // dependency, do not remove even though the starter UI itself is coroutine-free.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     debugImplementation("androidx.compose.ui:ui-tooling:$composeTrain")
+
+    // --- TaskFlow feature dependencies (each justified in BUILD_STATE.json) ---
+    // Room: mandated local persistence (SQLite) for the task graph.
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
+    // DataStore: settings (notification toggles, theme, onboarding state).
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    // ViewModel-Compose integration for screen state.
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    // kotlinx-serialization: Gemini request/response payloads + tool args.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    // OkHttp: direct HTTPS calls to the Gemini API (keys never go anywhere else).
+    implementation("io.ktor:ktor-client-okhttp:2.3.12") // Ktor on OkHttp: direct HTTPS to Gemini only
+    // security-crypto: EncryptedSharedPreferences for on-device Gemini API keys.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }

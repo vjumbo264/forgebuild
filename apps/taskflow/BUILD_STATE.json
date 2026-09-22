@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-build-session",
-  "current_task": "step-5",
+  "current_task": "step-6",
   "substitutions": [],
   "tasks": [
     {
@@ -35,8 +35,8 @@
     {
       "id": "step-5",
       "title": "Implement app per APP_DESCRIPTION, one feature per commit/push",
-      "status": "pending",
-      "notes": "Sub-steps: (a) Room data model + repository + priority rank helpers; (b) main task list UI (sorted, drag-reorder, add/edit, sub-task navigation); (c) fixed-time tasks + exact alarms + foreground service + due-now pinning; (d) recurrence engine + rollover; (e) notifications per-type + settings toggles + daily agenda; (f) settings + onboarding/permissions flow; (g) Gemini AI agent (key mgmt + failover, chat/voice panel, function calling); (h) final M3 Expressive polish."
+      "status": "done",
+      "notes": "Implemented per APP_DESCRIPTION: Room Task model (fractional rank, fixed time, recurrence none/daily/weekly(monthly,yearly incl. weekday mask), info, nullable parent for unlimited nesting, completion, timestamps); PriorityRank fractional/lexo insertion + background rebalance; Repository as single op entry point; RecurrenceEngine regenerates instances on completion/rollover; ReminderScheduler (exact AlarmManager alarms) + ReminderReceiver (due-now pin+notify, deadline lead, daily agenda, rollover) + DueForegroundService (persistent low-priority notification with plain-language explanation) + BootReceiver (re-arm after reboot); NotificationHub with 5 channels and 7 per-type toggles (defaults per spec); AppSettings via DataStore (toggles, theme, lead time, onboarding, agenda hour); GeminiKeyStore via EncryptedSharedPreferences (keys local-only, failover order editable); GeminiClient (gemini-flash-lite-latest, generateContent w/ function calling, key failover); TaskAgentTools (7 function schemas mirroring all task ops incl. insert-between reorder, reparent, vague-input parsing) + AgentOrchestrator (multi-turn function-calling loop, open-ended instruction system prompt, in-chat confirmations + system notification, all-keys-failed alert); UI: TaskListScreen (priority-sorted, due-now error-container highlight + DUE NOW label, drag-reorder via long-press handle, quick-add, recursive breadcrumb navigation, eye-icon info quick-peek bottom sheet), TaskEditScreen (all fields incl. weekday chips), ChatPanel (mic FAB bottom sheet, SpeechRecognizer voice-to-text, conversation history), SettingsScreen (key mgmt, per-type notification toggles, lead-time slider, exact-alarm/battery-exemption setup, theme), OnboardingScreen (plain-language permission flow). All UI under ForgeBuildTheme with MaterialTheme tokens + EngineIcons only, zero hardcoded colors. Deps justified: Room/KSP (persistence), DataStore (settings), ktor-client-okhttp (Gemini HTTPS), security-crypto (key storage), serialization (payloads), lifecycle-viewmodel-compose (screen state) \u2014 versions mirrored from sibling forgehouse50 proven on the same toolchain."
     },
     {
       "id": "step-6",

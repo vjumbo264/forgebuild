@@ -16,4 +16,24 @@ object EngineIcons {
     val Home: ImageVector get() = EngineIconsGenerated.Home
     val Search: ImageVector get() = EngineIconsGenerated.Search
     val ArrowBack: ImageVector get() = EngineIconsGenerated.ArrowBack
+    val Mic: ImageVector get() = EngineIconsGenerated.Mic
+    val Visibility: ImageVector get() = EngineIconsGenerated.Visibility
+    val Delete: ImageVector get() = EngineIconsGenerated.Delete
+    val DragHandle: ImageVector get() = EngineIconsGenerated.DragHandle
+    val Alarm: ImageVector get() = EngineIconsGenerated.Alarm
+    val Check: ImageVector get() = EngineIconsGenerated.Check
+    val CheckCircle: ImageVector get() = EngineIconsGenerated.CheckCircle
+    val Repeat: ImageVector get() = EngineIconsGenerated.Repeat
+    val KeyboardArrowRight: ImageVector get() = EngineIconsGenerated.KeyboardArrowRight
+    val Send: ImageVector get() = EngineIconsGenerated.Send
+    val SmartToy: ImageVector get() = EngineIconsGenerated.SmartToy
+    val CalendarToday: ImageVector get() = EngineIconsGenerated.CalendarToday
+    val PriorityHigh: ImageVector get() = EngineIconsGenerated.PriorityHigh
+    val RadioButtonUnchecked: ImageVector get() = EngineIconsGenerated.RadioButtonUnchecked
+    val SubdirectoryArrowRight: ImageVector get() = EngineIconsGenerated.SubdirectoryArrowRight
+    val Close: ImageVector get() = EngineIconsGenerated.Close
+    val Key: ImageVector get() = EngineIconsGenerated.Key
+    val Error: ImageVector get() = EngineIconsGenerated.Error
+    val Info: ImageVector get() = EngineIconsGenerated.Info
+    val MoreVert: ImageVector get() = EngineIconsGenerated.MoreVert
 }
