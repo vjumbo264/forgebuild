@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuBoxScope
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -116,12 +117,13 @@ fun TaskEditScreen(vm: TaskViewModel, taskId: Long, onClose: () -> Unit) {
             Text("Repeat", style = MaterialTheme.typography.titleSmall)
             ExposedDropdownMenuBox(expanded = recurrenceMenuOpen,
                 onExpandedChange = { recurrenceMenuOpen = it }) {
+                val menuScope: ExposedDropdownMenuBoxScope = this
                 OutlinedTextField(
                     value = recurrence.name.lowercase().replaceFirstChar { it.uppercase() },
                     onValueChange = {}, readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(recurrenceMenuOpen) },
                     modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(), shape = MaterialTheme.shapes.medium)
-                ExposedDropdownMenu(expanded = recurrenceMenuOpen,
+                menuScope.ExposedDropdownMenu(expanded = recurrenceMenuOpen,
                     onDismissRequest = { recurrenceMenuOpen = false }) {
                     Recurrence.entries.forEach { r ->
                         DropdownMenuItem(
