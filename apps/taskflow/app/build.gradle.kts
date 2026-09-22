@@ -6,14 +6,14 @@ plugins {
 
 android {
     // FORGEBUILD: the generating AI replaces the namespace/applicationId per app.
-    namespace = "com.forgebuild.app"
+    namespace = "com.forgebuild.taskflow"
     // compileSdk 37 is REQUIRED by the Engine's Material 3 Expressive library:
     // androidx.compose.material3:material3:1.5.0-alpha28 publishes with
     // minCompileSdk=37. Do not lower.
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.forgebuild.app"
+        applicationId = "com.forgebuild.taskflow"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
