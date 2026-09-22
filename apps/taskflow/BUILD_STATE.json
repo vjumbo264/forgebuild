@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": true,
-  "updated_by": "taskflow-pass3-session",
-  "current_task": null,
+  "build_complete": false,
+  "updated_by": "taskflow-pass4-session",
+  "current_task": "step-21",
   "substitutions": [],
   "tasks": [
     {
@@ -127,6 +127,48 @@
       "title": "Validate sources, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v3, verify release + assets live via API, set build_complete: true",
       "status": "done",
       "notes": "release.yml run 35796343309 completed success. Verified live via Releases API: tag taskflow-v3 (not draft/prerelease) with assets app-taskflow-v3.apk (2,175,817 bytes, R8-minified, repo-keystore signed) + forgebuild-manifest.json. Prior releases taskflow-v1/v2 untouched. build_complete set true."
+    },
+    {
+      "id": "step-21",
+      "title": "Pass 4: append Revision Pass 4 instruction to PROMPT_HISTORY/taskflow.md; seed BUILD_STATE tasks",
+      "status": "in_progress",
+      "notes": "Operator instruction appended verbatim under 2026-09-22 heading (append-only). Pass-4 task list seeded."
+    },
+    {
+      "id": "step-22",
+      "title": "FIX time-remaining-today: count recurring instances and carried-over tasks against the day, plus overnight segment accounting",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-23",
+      "title": "NEW overnight/cross-midnight tasks: single logical task split into two linked per-day segments (one-off + recurring fixed-time); day accounting, due-now pinning, day/week/month/year views safe",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-24",
+      "title": "FIX Unfinished view retention: auto-delete recurring (and all) unfinished entries after configurable retention period, same as Completed",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-25",
+      "title": "FIX voice waveform: true WhatsApp-style scrolling bars (right-to-left), per-bar live amplitude, uniform width/spacing/rounding",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-26",
+      "title": "CRITICAL full UI reimagining from scratch: Material 3 Expressive throughout \u2014 official wavy/animated progress + loading indicators, expressive press/state animations, new layouts/navigation, premium Google first-party feel",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-27",
+      "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v4, verify release + assets live on GitHub Releases API, set build_complete: true",
+      "status": "pending",
+      "notes": ""
     }
   ]
 }

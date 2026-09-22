@@ -142,3 +142,34 @@ This is a follow-up pass on the existing app (previous revision already implemen
 
 ### Screens — Addition
 - **Unfinished tasks view** — new screen/section, separate from Completed; holds fixed-time tasks whose time passed without completion.
+
+## 2026-09-22 — TaskFlow — Revision Pass 4 (Fixes)
+
+This is a follow-up pass on the existing app (previous revisions already implemented). These are new fixes/requirements only.
+
+### Time-Remaining-Today Not Reducing Correctly (FIX)
+- Time remaining today is not being reduced by tasks that should count against it — specifically confirmed broken for recurring tasks and for tasks that carried over into the next day.
+- Any task with a duration scheduled/active for a given day must count against that day's remaining time, regardless of whether it's a one-off, recurring instance, or a carried-over task. Fix the calculation so all of these are included, not just plain newly-created tasks.
+
+### Overnight/Cross-Midnight Tasks (NEW)
+- Support tasks whose time span crosses midnight — e.g. 8 PM to 3 AM.
+- Model this as a single logical task that spans two calendar days, split into two linked segments for day-based views/accounting: the portion before midnight counts against "today," and the portion after midnight counts against "tomorrow" — but it's still one task to the user (one entry, one completion state, one edit), not two separate tasks they have to manage.
+- This must work whether the task is a one-off fixed-time task or a recurring fixed-time task.
+- The linked segments should not cause bugs in the time-remaining calculation, the "due now" pinning logic, or the day/week/month/year views — each day's view shows the relevant segment of the task, but completing or editing it applies to the task as a whole.
+
+### Unfinished Recurring Tasks Must Also Expire (FIX)
+- Recurring tasks that end up in the Unfinished view currently stay there indefinitely. They need the same expiration/auto-delete behavior as the Completed view — remove them after a configurable retention period so the list doesn't grow forever.
+
+### Voice Recording Waveform Animation (FIX — still wrong)
+- The current waveform animation does not match the intended reference (WhatsApp voice note recording) and looks non-uniform/unpolished.
+- Required behavior: bars should scroll in from one side (right to left) continuously while recording, with each bar's height reflecting the live audio amplitude at the moment it's captured — not a shape that just passively follows/wobbles under the current input. The waveform should look uniform and clean (consistent bar width/spacing/rounding), matching the polish of a real chat app's voice-note recording UI.
+
+### Full UI Reimagining — Previous Attempt Did Not Do This (FIX — critical, redo)
+The previous pass did not actually change the UI — it kept the existing look almost entirely, which was not the instruction. This needs to be corrected properly this time:
+- Treat this as if only the backend/logic is being kept, and the entire front end is being rebuilt from scratch with no reference to the current UI at all — new layouts, new navigation patterns, new component styles, new screen structure where it improves the app. Nothing about the current visual design should be assumed to carry over.
+- Fully adopt Google's latest Material 3 Expressive design system — research and use its actual current components and patterns rather than approximating them: expressive shapes, spring-based motion, and signature interaction details (e.g. buttons/components with organic "squiggly" shape-morphing on press/state-change, satisfying tactile animation on every interactive element).
+- Specifically calling out things still missing/wrong that must be corrected in this redo:
+  - Buttons and interactive elements must show real expressive press/state animations, not static or default styling.
+  - The "time remaining today" indicator must use Material 3's current expressive animated progress indicator component (the newer wavy/animated style), not a plain static progress bar.
+  - General loading states throughout the app should use expressive/animated indicators consistent with this design language, not generic spinners.
+- The end result should look and feel like a premium, modern Google first-party app — comparable to current Google Calendar/Tasks/Keep — not an incremental reskin of what exists now.
