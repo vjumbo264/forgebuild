@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "taskflow-build-session",
-  "current_task": "step-6",
+  "current_task": "done",
   "substitutions": [],
   "tasks": [
     {
@@ -41,14 +41,14 @@
     {
       "id": "step-6",
       "title": "Validate build config, dispatch release.yml (app_path=apps/taskflow), verify taskflow-v1 release + APK asset live",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "release.yml dispatched with app_path=apps/taskflow; run 35784760950 succeeded. Verified via GitHub Releases API: tag taskflow-v1 live with assets app-taskflow-v1.apk (2,087,085 bytes, R8-minified, signed with repo keystore) + forgebuild-manifest.json. Build iterations fixed: Ktor ContentNegotiation removed (raw-string JSON), Calendar.MILLISECOND qualified, ExposedDropdownMenu replaced with stable FilterChip row after its experimental extension API proved unresolvable in material3 1.5.0-alpha28 toolchain (recorded here as a deliberate UI simplification, not a capability substitution), R8 dontwarn rules added for Tink/errorprone annotations + slf4j from security-crypto."
     },
     {
       "id": "step-7",
       "title": "Set build_complete: true after taskflow-v1 verified",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "build_complete set true only after taskflow-v1 verified live on the Releases API with both assets present."
     }
   ]
 }
