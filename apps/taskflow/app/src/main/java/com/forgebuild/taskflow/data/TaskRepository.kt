@@ -165,7 +165,7 @@ class TaskRepository private constructor(private val dao: TaskDao) {
     fun dayStart(millis: Long): Long {
         val c = java.util.Calendar.getInstance().apply { timeInMillis = millis }
         c.set(java.util.Calendar.HOUR_OF_DAY, 0); c.set(java.util.Calendar.MINUTE, 0)
-        c.set(java.util.Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+        c.set(java.util.Calendar.SECOND, 0); c.set(java.util.Calendar.MILLISECOND, 0)
         return c.timeInMillis
     }
 
