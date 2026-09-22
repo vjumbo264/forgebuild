@@ -25,6 +25,7 @@ class AppSettings private constructor(private val context: Context) {
     private val keyOnboarded = booleanPreferencesKey("onboarding_done")
     private val keyForegroundActive = booleanPreferencesKey("foreground_service_active")
     private val keyAgendaHour = intPreferencesKey("agenda_hour")
+    private val keyRetentionDays = intPreferencesKey("completed_retention_days")
 
     fun notifEnabled(type: NotifType): Flow<Boolean> =
         context.dataStore.data.map { it[keyEnabled(type)] ?: type.defaultOn }
@@ -32,22 +33,28 @@ class AppSettings private constructor(private val context: Context) {
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map {
         ThemeMode.entries.getOrElse(it[keyTheme] ?: 0) { ThemeMode.SYSTEM }
     }
+
     val deadlineLeadMinutes: Flow<Int> = context.dataStore.data.map { it[keyLeadMinutes] ?: 15 }
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[keyOnboarded] ?: false }
     val foregroundActive: Flow<Boolean> = context.dataStore.data.map { it[keyForegroundActive] ?: true }
     val agendaHour: Flow<Int> = context.dataStore.data.map { it[keyAgendaHour] ?: 8 }
+    /** Auto-delete retention period for completed tasks in days (default 14 days). */
+    val retentionDays: Flow<Int> = context.dataStore.data.map { it[keyRetentionDays] ?: 14 }
 
     suspend fun setNotifEnabled(type: NotifType, enabled: Boolean) {
         context.dataStore.edit { it[keyEnabled(type)] = enabled }
     }
+
     suspend fun setThemeMode(mode: ThemeMode) { context.dataStore.edit { it[keyTheme] = mode.ordinal } }
     suspend fun setDeadlineLeadMinutes(m: Int) { context.dataStore.edit { it[keyLeadMinutes] = m.coerceIn(1, 120) } }
     suspend fun setOnboardingDone() { context.dataStore.edit { it[keyOnboarded] = true } }
     suspend fun setForegroundActive(active: Boolean) { context.dataStore.edit { it[keyForegroundActive] = active } }
     suspend fun setAgendaHour(h: Int) { context.dataStore.edit { it[keyAgendaHour] = h.coerceIn(0, 23) } }
+    suspend fun setRetentionDays(days: Int) { context.dataStore.edit { it[keyRetentionDays] = days.coerceAtLeast(1) } }
 
     companion object {
         @Volatile private var instance: AppSettings? = null
+
         fun get(context: Context): AppSettings =
             instance ?: synchronized(this) {
                 instance ?: AppSettings(context.applicationContext).also { instance = it }

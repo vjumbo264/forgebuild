@@ -24,12 +24,39 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id")
     fun observeById(id: Long): Flow<Task?>
 
-    /** One level of the tree: due-now pinned first, then priority rank (highest first). */
+    /** Active tasks at one level: due-now pinned first, then priority rank (highest first). */
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 ORDER BY dueNow DESC, rank DESC")
+    fun observeActiveChildren(parentId: Long?): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 ORDER BY dueNow DESC, rank DESC")
+    suspend fun activeChildren(parentId: Long?): List<Task>
+
+    /** All tasks at one level regardless of completion (for reordering / nesting). */
     @Query("SELECT * FROM tasks WHERE parentId IS :parentId ORDER BY dueNow DESC, rank DESC")
     fun observeChildren(parentId: Long?): Flow<List<Task>>
 
     @Query("SELECT * FROM tasks WHERE parentId IS :parentId ORDER BY dueNow DESC, rank DESC")
     suspend fun children(parentId: Long?): List<Task>
+
+    /** Completed tasks area: sorted newest completion first. */
+    @Query("SELECT * FROM tasks WHERE completed = 1 ORDER BY completedAt DESC, updatedAt DESC")
+    fun observeCompleted(): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE completed = 1 ORDER BY completedAt DESC, updatedAt DESC")
+    suspend fun completedTasks(): List<Task>
+
+    /** Auto-delete completed tasks older than retention cutoff. */
+    @Query("DELETE FROM tasks WHERE completed = 1 AND completedAt IS NOT NULL AND completedAt < :cutoffMillis")
+    suspend fun deleteCompletedBefore(cutoffMillis: Long): Int
+
+    @Query("DELETE FROM tasks WHERE completed = 1")
+    suspend fun clearCompleted(): Int
+
+    @Query("SELECT * FROM tasks WHERE completed = 0")
+    fun observeAllActive(): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE completed = 0")
+    suspend fun allActive(): List<Task>
 
     @Query("SELECT * FROM tasks")
     fun observeAll(): Flow<List<Task>>
@@ -42,6 +69,9 @@ interface TaskDao {
 
     @Query("SELECT * FROM tasks WHERE fixedTime IS NOT NULL AND completed = 0 AND dueNow = 0")
     suspend fun pendingTimedTasks(): List<Task>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE parentId IS :parentId AND completed = 0")
+    suspend fun activeChildCount(parentId: Long?): Int
 
     @Query("SELECT COUNT(*) FROM tasks WHERE parentId IS :parentId")
     suspend fun childCount(parentId: Long?): Int

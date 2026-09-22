@@ -4,41 +4,71 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
-/** Single entry point for all task operations — manual UI and AI agent share this. */
-class TaskRepository private constructor(private val dao: TaskDao) {
-    /** Invoked after any change that can affect scheduled alarms. */
+/**
+ * Single source of truth for the task graph.
+ * Handles priority rank generation, recursive deletion, recurrence spawning,
+ * due-now pinning, and daily duration allocation tracking.
+ */
+class TaskRepository(private val dao: TaskDao) {
+    /** Hook wired to ReminderScheduler.rescheduleAll. */
     var onTimedTasksChanged: (suspend () -> Unit)? = null
     /** Low-priority ping hook when a recurring instance is generated. */
     var onRecurringInstance: (suspend (Task) -> Unit)? = null
     /** Invoked at day rollover for tasks that were due but never completed. */
     var onOverdue: (suspend (Task) -> Unit)? = null
 
+    fun activeChildren(parentId: Long?): Flow<List<Task>> = dao.observeActiveChildren(parentId)
     fun children(parentId: Long?): Flow<List<Task>> = dao.observeChildren(parentId)
+    fun completedTasks(): Flow<List<Task>> = dao.observeCompleted()
     fun byId(id: Long): Flow<Task?> = dao.observeById(id)
     fun all(): Flow<List<Task>> = dao.observeAll()
+    fun allActive(): Flow<List<Task>> = dao.observeAllActive()
+
     suspend fun get(id: Long): Task? = dao.getById(id)
     suspend fun childCount(parentId: Long?): Int = dao.childCount(parentId)
+    suspend fun activeChildCount(parentId: Long?): Int = dao.activeChildCount(parentId)
     suspend fun siblingsOf(parentId: Long?): List<Task> = withContext(Dispatchers.IO) { dao.children(parentId) }
+    suspend fun activeSiblingsOf(parentId: Long?): List<Task> = withContext(Dispatchers.IO) { dao.activeChildren(parentId) }
 
-    suspend fun create(title: String, parentId: Long? = null, rank: Double? = null,
-                       fixedTime: Long? = null, recurrence: Recurrence = Recurrence.NONE,
-                       weekdaysMask: Int = 0, info: String = ""): Task = withContext(Dispatchers.IO) {
+    suspend fun create(
+        title: String,
+        parentId: Long? = null,
+        rank: Double? = null,
+        durationMinutes: Long = 30L,
+        fixedTime: Long? = null,
+        recurrence: Recurrence = Recurrence.NONE,
+        weekdaysMask: Int = 0,
+        info: String = ""
+    ): Task = withContext(Dispatchers.IO) {
         val siblings = dao.children(parentId)
         val r = rank ?: PriorityRank.between(null, siblings.lastOrNull()?.rank)
         val template = recurrence != Recurrence.NONE
-        val t = Task(title = title, rank = r, fixedTime = fixedTime, recurrence = recurrence,
-            weekdaysMask = weekdaysMask, info = info, parentId = parentId, isRecurringTemplate = template)
+        val dur = durationMinutes.coerceAtLeast(1L)
+        val t = Task(
+            title = title,
+            rank = r,
+            durationMinutes = dur,
+            fixedTime = fixedTime,
+            recurrence = recurrence,
+            weekdaysMask = weekdaysMask,
+            info = info,
+            parentId = parentId,
+            isRecurringTemplate = template
+        )
         val id = dao.insert(t)
         val saved = t.copy(id = id, seriesId = if (template) id else null)
         if (template) dao.update(saved)
-        dao.children(parentId).size.let { }
         reschedule()
         saved
     }
 
     suspend fun update(task: Task): Task = withContext(Dispatchers.IO) {
-        val saved = task.copy(updatedAt = System.currentTimeMillis())
+        val saved = task.copy(
+            durationMinutes = task.durationMinutes.coerceAtLeast(1L),
+            updatedAt = System.currentTimeMillis()
+        )
         dao.update(saved)
         reschedule()
         saved
@@ -56,18 +86,37 @@ class TaskRepository private constructor(private val dao: TaskDao) {
 
     suspend fun setCompleted(id: Long, done: Boolean) = withContext(Dispatchers.IO) {
         val t = dao.getById(id) ?: return@withContext
-        dao.update(t.copy(completed = done, dueNow = false, updatedAt = System.currentTimeMillis()))
+        val completedAt = if (done) System.currentTimeMillis() else null
+        dao.update(t.copy(completed = done, completedAt = completedAt, dueNow = false, updatedAt = System.currentTimeMillis()))
         if (done && t.recurrence != Recurrence.NONE) spawnNextInstance(t)
         reschedule()
+    }
+
+    suspend fun clearCompleted() = withContext(Dispatchers.IO) {
+        dao.clearCompleted()
+    }
+
+    suspend fun purgeExpiredCompleted(retentionDays: Int): Int = withContext(Dispatchers.IO) {
+        if (retentionDays <= 0) return@withContext 0
+        val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 86_400_000L)
+        dao.deleteCompletedBefore(cutoff)
     }
 
     private suspend fun spawnNextInstance(template: Task) {
         val tpl = dao.getById(template.seriesId ?: template.id) ?: template
         val next = RecurrenceEngine.nextAfter(tpl, System.currentTimeMillis()) ?: return
         val siblings = dao.children(tpl.parentId)
-        val inst = Task(title = tpl.title, rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
-            fixedTime = next, recurrence = Recurrence.NONE, weekdaysMask = tpl.weekdaysMask,
-            info = tpl.info, parentId = tpl.parentId, seriesId = tpl.seriesId ?: tpl.id)
+        val inst = Task(
+            title = tpl.title,
+            rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
+            durationMinutes = tpl.durationMinutes,
+            fixedTime = next,
+            recurrence = Recurrence.NONE,
+            weekdaysMask = tpl.weekdaysMask,
+            info = tpl.info,
+            parentId = tpl.parentId,
+            seriesId = tpl.seriesId ?: tpl.id
+        )
         val id = dao.insert(inst)
         onRecurringInstance?.invoke(inst.copy(id = id))
     }
@@ -149,9 +198,17 @@ class TaskRepository private constructor(private val dao: TaskDao) {
             if (!hasPending) {
                 RecurrenceEngine.nextAfter(tpl, System.currentTimeMillis())?.let { next ->
                     val siblings = dao.children(tpl.parentId)
-                    val inst = Task(title = tpl.title, rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
-                        fixedTime = next, recurrence = Recurrence.NONE, weekdaysMask = tpl.weekdaysMask,
-                        info = tpl.info, parentId = tpl.parentId, seriesId = tpl.id)
+                    val inst = Task(
+                        title = tpl.title,
+                        rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
+                        durationMinutes = tpl.durationMinutes,
+                        fixedTime = next,
+                        recurrence = Recurrence.NONE,
+                        weekdaysMask = tpl.weekdaysMask,
+                        info = tpl.info,
+                        parentId = tpl.parentId,
+                        seriesId = tpl.id
+                    )
                     val id = dao.insert(inst)
                     onRecurringInstance?.invoke(inst.copy(id = id))
                 }
@@ -162,10 +219,41 @@ class TaskRepository private constructor(private val dao: TaskDao) {
 
     suspend fun pendingTimed(): List<Task> = withContext(Dispatchers.IO) { dao.pendingTimedTasks() }
 
+    suspend fun getAllocatedMinutesToday(excludeTaskId: Long? = null): Long = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val todayStart = dayStart(now)
+        val todayEnd = dayEnd(now)
+        val active = dao.allActive()
+        active.filter { t ->
+            if (t.id == excludeTaskId) return@filter false
+            if (t.isRecurringTemplate && t.recurrence != Recurrence.NONE) return@filter false
+            if (t.fixedTime != null) {
+                t.fixedTime in todayStart..todayEnd
+            } else {
+                true
+            }
+        }.sumOf { it.durationMinutes.coerceAtLeast(1L) }
+    }
+
+    suspend fun getRemainingMinutesToday(excludeTaskId: Long? = null): Long = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val todayEnd = dayEnd(now)
+        val minutesUntilMidnight = ((todayEnd - now) / 60000L).coerceAtLeast(0L)
+        val allocated = getAllocatedMinutesToday(excludeTaskId)
+        (minutesUntilMidnight - allocated).coerceAtLeast(0L)
+    }
+
     fun dayStart(millis: Long): Long {
-        val c = java.util.Calendar.getInstance().apply { timeInMillis = millis }
-        c.set(java.util.Calendar.HOUR_OF_DAY, 0); c.set(java.util.Calendar.MINUTE, 0)
-        c.set(java.util.Calendar.SECOND, 0); c.set(java.util.Calendar.MILLISECOND, 0)
+        val c = Calendar.getInstance().apply { timeInMillis = millis }
+        c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0)
+        c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
+        return c.timeInMillis
+    }
+
+    fun dayEnd(millis: Long): Long {
+        val c = Calendar.getInstance().apply { timeInMillis = millis }
+        c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+        c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
         return c.timeInMillis
     }
 
@@ -173,6 +261,7 @@ class TaskRepository private constructor(private val dao: TaskDao) {
 
     companion object {
         @Volatile private var instance: TaskRepository? = null
+
         fun get(context: Context): TaskRepository =
             instance ?: synchronized(this) {
                 instance ?: TaskRepository(TaskFlowDb.get(context).taskDao()).also { instance = it }

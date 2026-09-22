@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass2-session",
-  "current_task": "step-8",
+  "current_task": "step-9",
   "substitutions": [],
   "tasks": [
     {
@@ -53,13 +53,13 @@
     {
       "id": "step-8",
       "title": "Update Core Data Model & Storage: durationMinutes (mandatory), completedAt, Room DB v2 migration, retention auto-purge, remaining time calculation",
-      "status": "in_progress",
-      "notes": "Adding durationMinutes (mandatory > 0) and completedAt to Task entity, bumping Room DB to v2 with fallbackToDestructiveMigration, adding completed queries and retention purge, day time allocation calculation."
+      "status": "done",
+      "notes": "Added durationMinutes: Long (mandatory > 0, default 30L) and completedAt: Long? to Task entity; TaskType enum for 4 distinct task categories; bumped Room DB to v2 with fallbackToDestructiveMigration; updated TaskDao with observeActiveChildren, observeCompleted, deleteCompletedBefore, clearCompleted; updated TaskRepository with mandatory duration support, completed timestamp handling, auto-purge expired completed tasks, and getAllocatedMinutesToday/getRemainingMinutesToday; added retentionDays (default 14) to AppSettings."
     },
     {
       "id": "step-9",
       "title": "Background Service & Permissions Fix: real OS battery exemption prompt (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), persistent background notification running service",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Add REQUEST_IGNORE_BATTERY_OPTIMIZATIONS and USE_EXACT_ALARM to manifest, fix battery exemption intent to trigger real OS prompt with fallback, auto-start DueForegroundService on app start/boot with persistent ongoing notification."
     },
     {

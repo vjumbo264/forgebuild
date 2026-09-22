@@ -6,12 +6,28 @@ import androidx.room.PrimaryKey
 /** Recurrence rules; WEEKLY carries [weekdaysMask] (bit 0=Monday … bit 6=Sunday). */
 enum class Recurrence { NONE, DAILY, WEEKLY, MONTHLY, YEARLY }
 
+/**
+ * Task visual/behavioral type for color-coding and identification:
+ * 1. NORMAL: No fixed time, not recurring
+ * 2. FIXED_TIME: Has fixed time, not recurring
+ * 3. RECURRING_FIXED: Recurring with fixed time
+ * 4. RECURRING_NO_TIME: Recurring without fixed time
+ */
+enum class TaskType {
+    NORMAL,
+    FIXED_TIME,
+    RECURRING_FIXED,
+    RECURRING_NO_TIME
+}
+
 @Entity(tableName = "tasks")
 data class Task(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
     /** Fractional priority rank (lexo-style). Higher = closer to top. Never shown raw to user. */
     val rank: Double,
+    /** Mandatory duration in minutes (e.g. 15, 30, 60 min). Required for all tasks. */
+    val durationMinutes: Long = 30L,
     /** Optional fixed due time, epoch millis. */
     val fixedTime: Long? = null,
     val recurrence: Recurrence = Recurrence.NONE,
@@ -22,6 +38,8 @@ data class Task(
     /** Nullable parent for infinitely nestable sub-tasks. */
     val parentId: Long? = null,
     val completed: Boolean = false,
+    /** Timestamp when completed (epoch millis); used for configurable auto-purge retention. */
+    val completedAt: Long? = null,
     /** For recurring series: template stays true; generated occurrences are clones. */
     val isRecurringTemplate: Boolean = false,
     /** Link from a generated occurrence back to its template. */
@@ -32,4 +50,11 @@ data class Task(
     val dueNowDay: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-)
+) {
+    val taskType: TaskType get() = when {
+        recurrence != Recurrence.NONE && fixedTime != null -> TaskType.RECURRING_FIXED
+        recurrence != Recurrence.NONE -> TaskType.RECURRING_NO_TIME
+        fixedTime != null -> TaskType.FIXED_TIME
+        else -> TaskType.NORMAL
+    }
+}
