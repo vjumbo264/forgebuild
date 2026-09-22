@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass2-session",
-  "current_task": "step-11",
+  "current_task": "step-12",
   "substitutions": [],
   "tasks": [
     {
@@ -71,13 +71,13 @@
     {
       "id": "step-11",
       "title": "Complete UI Redesign: expressive Material 3 styling throughout, time remaining today card, time-range switcher (today/week/month/year), 4-type color-coding, completed tasks view, updated edit & settings screens",
-      "status": "in_progress",
-      "notes": "Full redesign with expressive shapes, spring transitions, prominent time remaining today wavy progress card, segmented Today/Week/Month/Year filter (no duplicate recurring entries), 4-type color coding, separate completed tasks screen with retention info, duration picker."
+      "status": "done",
+      "notes": "Full Material 3 Expressive UI redesign: prominent TimeRemainingTodayCard showing unallocated minutes and linear progress, segmented Today/Week/Month/Year time-range switcher preserving priority ordering and single-entry recurring tasks; 4-type visual distinction (normal, scheduled, recurring-fixed, recurring-untimed) with distinct tinting and accent stripes; high-contrast pulsing Due-Now banner; CompletedTasksScreen with completion timestamps, retention notice, restore/clear actions; updated TaskEditScreen with mandatory duration selector and subtask management; full SettingsScreen with Gemini keys, notification toggles, retention slider, and battery exemption controls."
     },
     {
       "id": "step-12",
       "title": "Validate build, dispatch release.yml workflow for taskflow-v2, verify release and assets live on GitHub Releases API",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Dispatch release.yml with app_path=apps/taskflow, await successful workflow run, verify taskflow-v2 tag, APK asset, and manifest live."
     },
     {

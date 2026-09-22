@@ -1,14 +1,14 @@
 package com.forgebuild.taskflow.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.activity.compose.BackHandler
 
-private enum class Screen { LIST, SETTINGS, ONBOARDING }
+private enum class Screen { LIST, SETTINGS, COMPLETED }
 
 /** Lightweight in-app navigation (back-stack of parent ids lives in the ViewModel). */
 @Composable
@@ -17,10 +17,14 @@ fun TaskFlowNav(vm: TaskViewModel) {
     var screen by remember { mutableStateOf(Screen.LIST) }
     var editingTaskId by remember { mutableStateOf<Long?>(null) }
     var chatOpen by remember { mutableStateOf(false) }
+    var chatInitialMic by remember { mutableStateOf(false) }
     val path by vm.path.collectAsState()
 
     if (!onboardingDone) {
-        OnboardingScreen(onFinish = { vm.completeOnboarding(); screen = Screen.LIST })
+        OnboardingScreen(onFinish = {
+            vm.completeOnboarding()
+            screen = Screen.LIST
+        })
         return
     }
 
@@ -34,15 +38,34 @@ fun TaskFlowNav(vm: TaskViewModel) {
 
     when {
         editingTaskId != null -> TaskEditScreen(
-            vm = vm, taskId = editingTaskId!!,
-            onClose = { editingTaskId = null })
-        screen == Screen.SETTINGS -> SettingsScreen(vm = vm, onBack = { screen = Screen.LIST })
+            vm = vm,
+            taskId = editingTaskId!!,
+            onClose = { editingTaskId = null }
+        )
+        screen == Screen.SETTINGS -> SettingsScreen(
+            vm = vm,
+            onBack = { screen = Screen.LIST }
+        )
+        screen == Screen.COMPLETED -> CompletedTasksScreen(
+            vm = vm,
+            onBack = { screen = Screen.LIST }
+        )
         else -> TaskListScreen(
             vm = vm,
             onEditTask = { editingTaskId = it },
+            onOpenCompleted = { screen = Screen.COMPLETED },
             onOpenSettings = { screen = Screen.SETTINGS },
-            onOpenChat = { chatOpen = true })
+            onOpenChat = { startListening ->
+                chatInitialMic = startListening
+                chatOpen = true
+            }
+        )
     }
 
-    if (chatOpen) ChatPanel(onClose = { chatOpen = false })
+    if (chatOpen) {
+        ChatPanel(
+            initialStartListening = chatInitialMic,
+            onClose = { chatOpen = false }
+        )
+    }
 }

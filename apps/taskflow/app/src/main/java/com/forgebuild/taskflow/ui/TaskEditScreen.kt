@@ -1,9 +1,8 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-
 package com.forgebuild.taskflow.ui
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -26,19 +33,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.forgebuild.engine.ui.components.ExpressiveLoading
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.SpacingTokens
@@ -50,94 +63,296 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/** Full edit screen: every task property editable, at any nesting depth. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun TaskEditScreen(vm: TaskViewModel, taskId: Long, onClose: () -> Unit) {
+fun TaskEditScreen(
+    vm: TaskViewModel,
+    taskId: Long,
+    onClose: () -> Unit
+) {
     val task by produceState<Task?>(null, taskId) { value = vm.repo.get(taskId) }
+    val subtasks by produceState<List<Task>>(emptyList(), taskId) { value = vm.repo.siblingsOf(taskId) }
     val context = LocalContext.current
+
     val current = task
     if (current == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ExpressiveLoading() }
         return
     }
+
     var title by remember(current.id) { mutableStateOf(current.title) }
+    var durationMinutes by remember(current.id) { mutableLongStateOf(current.durationMinutes) }
     var info by remember(current.id) { mutableStateOf(current.info) }
     var fixedTime by remember(current.id) { mutableStateOf(current.fixedTime) }
     var recurrence by remember(current.id) { mutableStateOf(current.recurrence) }
     var weekdaysMask by remember(current.id) { mutableIntStateOf(current.weekdaysMask) }
+
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    var newSubtaskTitle by remember { mutableStateOf("") }
+    var newSubtaskDuration by remember { mutableLongStateOf(15L) }
+
     val fmt = remember { SimpleDateFormat("EEE, MMM d yyyy · HH:mm", Locale.getDefault()) }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("Edit task", style = MaterialTheme.typography.titleLarge) },
-            navigationIcon = {
-                IconButton(onClick = onClose) { Icon(EngineIcons.ArrowBack, contentDescription = "Back") }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer))
-    }) { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Edit Task", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = onClose) { Icon(EngineIcons.ArrowBack, contentDescription = "Back") }
+                },
+                actions = {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(EngineIcons.Delete, contentDescription = "Delete task", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            )
+        }
+    ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(SpacingTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md)) {
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md)
+        ) {
+            if (errorMessage != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(SpacingTokens.Spacing.md)
+                    )
+                }
+            }
 
-            OutlinedTextField(value = title, onValueChange = { title = it },
-                label = { Text("Title") }, modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium)
+            // Title
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
+            )
 
-            OutlinedTextField(value = info, onValueChange = { info = it },
-                label = { Text("Info — how this task should be done") },
-                supportingText = { Text("Shown via the eye icon on the list row; never inline.") },
-                modifier = Modifier.fillMaxWidth(), minLines = 3, shape = MaterialTheme.shapes.medium)
+            // Duration (mandatory)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Duration (mandatory)", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(onClick = { durationMinutes = (durationMinutes - 15L).coerceAtLeast(5L) }) {
+                        Text("-15m")
+                    }
+                    Text(
+                        "${durationMinutes} min",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    OutlinedButton(onClick = { durationMinutes = durationMinutes + 15L }) {
+                        Text("+15m")
+                    }
+                }
+
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(15L, 30L, 45L, 60L, 90L, 120L).forEach { d ->
+                        val sel = durationMinutes == d
+                        AssistChip(
+                            onClick = { durationMinutes = d },
+                            label = { Text("${d}m") },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (sel) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Notes / Info
+            OutlinedTextField(
+                value = info,
+                onValueChange = { info = it },
+                label = { Text("Info & notes (hidden on list, peek with eye icon)") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                shape = MaterialTheme.shapes.medium
+            )
 
             // Fixed time
-            Text("Fixed time", style = MaterialTheme.typography.titleSmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically) {
+            Text("Scheduled time (optional)", style = MaterialTheme.typography.titleSmall)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 OutlinedButton(onClick = {
                     val cal = Calendar.getInstance()
                     fixedTime?.let { cal.timeInMillis = it }
                     DatePickerDialog(context, { _, y, m, d ->
                         TimePickerDialog(context, { _, h, min ->
                             val c = Calendar.getInstance()
-                            c.set(y, m, d, h, min, 0); c.set(Calendar.MILLISECOND, 0)
+                            c.set(y, m, d, h, min, 0)
+                            c.set(Calendar.MILLISECOND, 0)
                             fixedTime = c.timeInMillis
                         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), true).show()
                     }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
-                }) { Text(if (fixedTime == null) "Set time" else fmt.format(Date(fixedTime!!))) }
+                }) {
+                    Icon(EngineIcons.Alarm, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(if (fixedTime == null) "Set time" else fmt.format(Date(fixedTime!!)))
+                }
+
                 if (fixedTime != null) {
                     OutlinedButton(onClick = { fixedTime = null }) { Text("Clear") }
                 }
             }
 
             // Recurrence
-            Text("Repeat", style = MaterialTheme.typography.titleSmall)
+            Text("Repeat rule", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                 Recurrence.entries.forEach { r ->
-                    FilterChip(selected = recurrence == r,
+                    FilterChip(
+                        selected = recurrence == r,
                         onClick = { recurrence = r },
-                        label = { Text(r.name.lowercase().replaceFirstChar { it.uppercase() }) })
+                        label = { Text(r.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    )
                 }
             }
+
             if (recurrence == Recurrence.WEEKLY) {
+                Text("Select active days:", style = MaterialTheme.typography.labelMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                     RecurrenceEngine.WEEKDAY_LABELS.forEachIndexed { i, label ->
                         val bit = 1 shl i
-                        FilterChip(selected = (weekdaysMask and bit) != 0,
+                        FilterChip(
+                            selected = (weekdaysMask and bit) != 0,
                             onClick = { weekdaysMask = weekdaysMask xor bit },
-                            label = { Text(label) })
+                            label = { Text(label) }
+                        )
                     }
                 }
             }
 
-            Spacer(Modifier.height(SpacingTokens.Spacing.md))
-            Button(onClick = {
-                vm.saveEdit(current.copy(title = title.trim(), info = info.trim(),
-                    fixedTime = fixedTime, recurrence = recurrence, weekdaysMask = weekdaysMask))
-                onClose()
-            }, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
-                Text("Save")
+            // Sub-tasks section
+            Spacer(Modifier.height(SpacingTokens.Spacing.xs))
+            Text("Sub-tasks (${subtasks.size})", style = MaterialTheme.typography.titleSmall)
+
+            if (subtasks.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(SpacingTokens.Spacing.sm), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        subtasks.forEach { st ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(EngineIcons.SubdirectoryArrowRight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.size(6.dp))
+                                Text(st.title, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                Text("${st.durationMinutes}m", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
+                    }
+                }
             }
+
+            // Add sub-task
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
+            ) {
+                OutlinedTextField(
+                    value = newSubtaskTitle,
+                    onValueChange = { newSubtaskTitle = it },
+                    placeholder = { Text("Add a subtask…") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
+                IconButton(
+                    onClick = {
+                        if (newSubtaskTitle.isNotBlank()) {
+                            vm.addTask(
+                                title = newSubtaskTitle,
+                                durationMinutes = newSubtaskDuration
+                            )
+                            newSubtaskTitle = ""
+                        }
+                    },
+                    enabled = newSubtaskTitle.isNotBlank()
+                ) {
+                    Icon(EngineIcons.Add, "Add subtask", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            Spacer(Modifier.height(SpacingTokens.Spacing.md))
+
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        errorMessage = "Title cannot be empty."
+                        return@Button
+                    }
+                    errorMessage = null
+                    vm.saveEdit(
+                        current.copy(
+                            title = title.trim(),
+                            durationMinutes = durationMinutes.coerceAtLeast(1L),
+                            info = info.trim(),
+                            fixedTime = fixedTime,
+                            recurrence = recurrence,
+                            weekdaysMask = weekdaysMask
+                        )
+                    ) { success, err ->
+                        if (success) {
+                            onClose()
+                        } else {
+                            errorMessage = err
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Save Changes")
+            }
+
+            Spacer(Modifier.height(SpacingTokens.Spacing.lg))
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete task?") },
+            text = { Text("This will permanently delete \"${current.title}\" and all of its sub-tasks.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        vm.delete(current)
+                        showDeleteConfirm = false
+                        onClose()
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
