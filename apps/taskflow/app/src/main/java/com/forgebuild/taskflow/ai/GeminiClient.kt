@@ -42,12 +42,12 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
         val keys = keyStore.keys.value
         if (keys.isEmpty()) throw NoKeysException()
         val body = buildJsonObject {
-            putJsonObject("system_instruction") {
+            putJsonObject("systemInstruction") {
                 putJsonArray("parts") { add(buildJsonObject { put("text", systemInstruction) }) }
             }
             put("contents", contents)
             if (tools != null) put("tools", tools)
-            putJsonObject("generation_config") { put("temperature", 0.4); put("max_output_tokens", 2048) }
+            putJsonObject("generationConfig") { put("temperature", 0.4); put("maxOutputTokens", 2048) }
         }
         var lastError: Exception? = null
         for (key in keys) {
@@ -72,11 +72,18 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
 
     companion object {
         fun textPart(t: String): JsonObject = buildJsonObject { put("text", t) }
+        /** Raw audio clip for Gemini's native audio understanding (no local transcription). */
+        fun inlineDataPart(mimeType: String, base64Data: String): JsonObject = buildJsonObject {
+            putJsonObject("inlineData") {
+                put("mimeType", mimeType)
+                put("data", base64Data)
+            }
+        }
         fun functionCallPart(name: String, args: JsonObject): JsonObject = buildJsonObject {
-            putJsonObject("function_call") { put("name", name); put("args", args) }
+            putJsonObject("functionCall") { put("name", name); put("args", args) }
         }
         fun functionResponsePart(name: String, result: String): JsonObject = buildJsonObject {
-            putJsonObject("function_response") { put("name", name); putJsonObject("response") { put("result", JsonPrimitive(result)) } }
+            putJsonObject("functionResponse") { put("name", name); putJsonObject("response") { put("result", JsonPrimitive(result)) } }
         }
         fun content(role: String, parts: List<JsonObject>): JsonObject = buildJsonObject {
             put("role", role); put("parts", JsonArray(parts))

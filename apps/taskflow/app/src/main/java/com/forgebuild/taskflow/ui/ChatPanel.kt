@@ -1,15 +1,10 @@
 package com.forgebuild.taskflow.ui
 
 import android.Manifest
-import android.app.Activity
-import android.content.Intent
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
+import android.media.MediaRecorder
+import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -34,7 +29,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -69,13 +63,22 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.SpacingTokens
 import com.forgebuild.taskflow.ai.AgentOrchestrator
 import com.forgebuild.taskflow.ai.ChatMessage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.math.sin
 
+private enum class VoiceStage { IDLE, RECORDING, SENDING }
+
 /**
- * AI chat & voice panel:
- * Supports interactive natural language commands, full function calling,
- * and live WhatsApp-style audio waveform voice input animation.
+ * AI chat & voice panel.
+ * Voice input records the RAW audio clip (MediaRecorder) and sends it straight to Gemini,
+ * which natively transcribes/understands the audio itself — no on-device speech-to-text.
+ * While recording: live WhatsApp-style audio-spectrum waveform driven by real mic amplitude.
+ * After recording stops: a distinct "sending voice note" state while the audio uploads.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,118 +93,105 @@ fun ChatPanel(
     val scope = rememberCoroutineScope()
 
     var input by remember { mutableStateOf("") }
-    var listening by remember { mutableStateOf(false) }
-    var rmsdB by remember { mutableFloatStateOf(0f) }
-    var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
+    var voiceStage by remember { mutableStateOf(VoiceStage.IDLE) }
+    var micLevel by remember { mutableFloatStateOf(0f) }
+    var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var audioFile by remember { mutableStateOf<File?>(null) }
     val listState = rememberLazyListState()
 
-    // Intent fallback launcher for devices without SpeechRecognizer service
-    val speechIntentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        listening = false
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!spoken.isNullOrBlank()) {
-                input = spoken
-                scope.launch { orchestrator.send(spoken) }
-            }
-        }
+    fun stopRecorder(): File? {
+        val f = audioFile
+        runCatching { recorder?.stop() }
+        runCatching { recorder?.release() }
+        recorder = null
+        micLevel = 0f
+        audioFile = null
+        return f?.takeIf { it.exists() && it.length() > 0 }
     }
 
-    fun stopListening() {
-        listening = false
-        rmsdB = 0f
-        runCatching {
-            recognizer?.stopListening()
-            recognizer?.destroy()
-        }
-        recognizer = null
-    }
-
-    fun startListening() {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            // Launch standard Android voice dialog fallback
+    fun sendRecording() {
+        val f = stopRecorder()
+        voiceStage = VoiceStage.IDLE
+        if (f == null) return
+        // Distinct "sending voice note" state while the audio uploads to Gemini.
+        voiceStage = VoiceStage.SENDING
+        scope.launch {
             try {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak a task or command…")
+                val base64 = withContext(Dispatchers.IO) {
+                    Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
                 }
-                speechIntentLauncher.launch(intent)
-            } catch (_: Exception) {}
-            return
+                orchestrator.sendAudio("audio/mp4", base64)
+            } catch (_: Exception) {
+            } finally {
+                voiceStage = VoiceStage.IDLE
+                runCatching { f.delete() }
+            }
         }
+    }
 
-        stopListening()
-        val sr = SpeechRecognizer.createSpeechRecognizer(context)
-        recognizer = sr
-        sr.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { listening = true }
-            override fun onBeginningOfSpeech() { listening = true }
-            override fun onRmsChanged(rmsdBValue: Float) {
-                // Normalize rmsdB (typically -2 to 10) to 0.0 .. 1.0 range
-                val norm = ((rmsdBValue + 2f) / 12f).coerceIn(0f, 1f)
-                rmsdB = norm
-            }
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { listening = false; rmsdB = 0f }
-            override fun onError(error: Int) {
-                listening = false
-                rmsdB = 0f
-                runCatching { sr.destroy() }
-                recognizer = null
-            }
-            override fun onResults(results: Bundle?) {
-                listening = false
-                rmsdB = 0f
-                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (!text.isNullOrBlank()) {
-                    input = text
-                    scope.launch { orchestrator.send(text) }
-                }
-                runCatching { sr.destroy() }
-                recognizer = null
-            }
-            override fun onPartialResults(partialResults: Bundle?) {
-                val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-                if (!partial.isNullOrBlank()) {
-                    input = partial
-                }
-            }
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
+    fun cancelRecording() {
+        val f = stopRecorder()
+        voiceStage = VoiceStage.IDLE
+        runCatching { f?.delete() }
+    }
 
-        listening = true
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        }
-        try {
-            sr.startListening(intent)
-        } catch (_: Exception) {
-            listening = false
-            sr.destroy()
-            recognizer = null
+    fun startRecording() {
+        runCatching {
+            val f = File(context.cacheDir, "voice_${System.currentTimeMillis()}.m4a")
+            val r = MediaRecorder()
+            r.setAudioSource(MediaRecorder.AudioSource.MIC)
+            r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            r.setAudioSamplingRate(44100)
+            r.setAudioEncodingBitRate(96_000)
+            r.setOutputFile(f.absolutePath)
+            r.prepare()
+            r.start()
+            recorder = r
+            audioFile = f
+            voiceStage = VoiceStage.RECORDING
+        }.onFailure {
+            recorder = null
+            audioFile = null
+            voiceStage = VoiceStage.IDLE
         }
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startListening()
+        if (granted) startRecording()
+    }
+
+    fun requestMic() {
+        if (PermissionWiring.missing(context, EnginePermission.MICROPHONE).isEmpty()) {
+            startRecording()
+        } else {
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     LaunchedEffect(initialStartListening) {
-        if (initialStartListening) {
-            if (PermissionWiring.missing(context, EnginePermission.MICROPHONE).isEmpty()) {
-                startListening()
-            } else {
-                micPermission.launch(Manifest.permission.RECORD_AUDIO)
-            }
+        if (initialStartListening) requestMic()
+    }
+
+    // Live mic-amplitude sampling drives the WhatsApp-style waveform while recording.
+    LaunchedEffect(voiceStage) {
+        while (voiceStage == VoiceStage.RECORDING && isActive) {
+            val maxAmp = runCatching { recorder?.maxAmplitude ?: 0 }.getOrDefault(0)
+            micLevel = (maxAmp / 32767f).coerceIn(0f, 1f)
+            delay(80)
         }
     }
 
     DisposableEffect(Unit) {
-        onDispose { stopListening() }
+        onDispose {
+            val f = runCatching {
+                runCatching { recorder?.stop() }
+                runCatching { recorder?.release() }
+                recorder = null
+                audioFile
+            }.getOrNull()
+            runCatching { f?.delete() }
+        }
     }
 
     LaunchedEffect(messages.size) {
@@ -210,7 +200,7 @@ fun ChatPanel(
 
     ModalBottomSheet(
         onDismissRequest = {
-            stopListening()
+            cancelRecording()
             onClose()
         },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -230,7 +220,10 @@ fun ChatPanel(
                     Spacer(Modifier.width(SpacingTokens.Spacing.xs))
                     Text("TaskFlow AI Assistant", style = MaterialTheme.typography.titleMedium)
                 }
-                TextButton(onClick = onClose) { Text("Done") }
+                TextButton(onClick = {
+                    cancelRecording()
+                    onClose()
+                }) { Text("Done") }
             }
 
             Spacer(Modifier.height(SpacingTokens.Spacing.xs))
@@ -260,8 +253,8 @@ fun ChatPanel(
                                 Spacer(Modifier.height(4.dp))
                                 Text("• \"Create three tasks to do this week and scatter them\"", style = MaterialTheme.typography.bodySmall)
                                 Text("• \"Set weekly groceries only on Tuesdays\"", style = MaterialTheme.typography.bodySmall)
+                                Text("• \"Repeat every day until next Friday: water the plants\"", style = MaterialTheme.typography.bodySmall)
                                 Text("• \"How much time do I have left today?\"", style = MaterialTheme.typography.bodySmall)
-                                Text("• \"Mark morning workout as completed\"", style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -285,14 +278,14 @@ fun ChatPanel(
 
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
-            // LIVE AUDIO WAVEFORM RECORDING STATE (WhatsApp voice note style)
-            if (listening) {
-                LiveWaveformBanner(
-                    rmsLevel = rmsdB,
-                    onStop = { stopListening() }
+            when (voiceStage) {
+                VoiceStage.RECORDING -> LiveWaveformBanner(
+                    rmsLevel = micLevel,
+                    onSend = { sendRecording() },
+                    onCancel = { cancelRecording() }
                 )
-            } else {
-                Row(
+                VoiceStage.SENDING -> SendingVoiceBanner()
+                VoiceStage.IDLE -> Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
                 ) {
@@ -300,24 +293,18 @@ fun ChatPanel(
                         value = input,
                         onValueChange = { input = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Ask AI or speak a task…") },
+                        placeholder = { Text("Ask AI or record a voice note…") },
                         shape = MaterialTheme.shapes.large,
                         maxLines = 3
                     )
                     IconButton(
-                        onClick = {
-                            if (PermissionWiring.missing(context, EnginePermission.MICROPHONE).isEmpty()) {
-                                startListening()
-                            } else {
-                                micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        },
+                        onClick = { requestMic() },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     ) {
-                        Icon(EngineIcons.Mic, contentDescription = "Voice input")
+                        Icon(EngineIcons.Mic, contentDescription = "Record voice note")
                     }
                     IconButton(
                         onClick = {
@@ -344,12 +331,14 @@ fun ChatPanel(
 }
 
 /**
- * Live audio spectrum / waveform animation matching WhatsApp-style voice-note recording.
+ * Live audio spectrum / waveform animation matching WhatsApp-style voice-note recording,
+ * driven by the real microphone amplitude while the raw clip is captured.
  */
 @Composable
 private fun LiveWaveformBanner(
     rmsLevel: Float,
-    onStop: () -> Unit
+    onSend: () -> Unit,
+    onCancel: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -390,27 +379,26 @@ private fun LiveWaveformBanner(
                             .background(MaterialTheme.colorScheme.error.copy(alpha = pulseAlpha))
                     )
                     Text(
-                        "Listening… Speak your command",
+                        "Recording… tap Send to finish",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
 
-                FilledTonalButton(
-                    onClick = onStop,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Text("Done")
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = onCancel) { Text("Cancel") }
+                    FilledTonalButton(
+                        onClick = onSend,
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text("Send")
+                    }
                 }
             }
 
             Spacer(Modifier.height(10.dp))
 
-            // Spectrum bars (24 animated bars)
+            // Spectrum bars (24 animated bars, real mic amplitude)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -438,6 +426,66 @@ private fun LiveWaveformBanner(
                                 if (i % 2 == 0) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.tertiary
                             )
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Distinct "sending voice note" state shown after recording ends,
+ * while the raw audio clip uploads to Gemini and before its response comes back.
+ */
+@Composable
+private fun SendingVoiceBanner() {
+    val infiniteTransition = rememberInfiniteTransition(label = "sendPulse")
+    val wave by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sendWave"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            Modifier
+                .padding(horizontal = SpacingTokens.Spacing.md, vertical = SpacingTokens.Spacing.sm)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)
+        ) {
+            ExpressiveLoading(size = SpacingTokens.Spacing.lg)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Sending voice note to Gemini…",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    "Gemini is listening to your audio — no on-device transcription.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                for (i in 0 until 4) {
+                    val h = (8f + wave * 14f * (1f - kotlin.math.abs(i - 1.5f) / 2f)).coerceIn(6f, 22f)
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp)
+                            .height(h.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.onPrimaryContainer)
                     )
                 }
             }

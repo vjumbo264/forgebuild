@@ -136,6 +136,10 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     val completedTasks: StateFlow<List<Task>> = repo.completedTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Unfinished (missed fixed-time) tasks list. */
+    val unfinishedTasks: StateFlow<List<Task>> = repo.unfinishedTasks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     /** Breadcrumb titles along the current path. */
     val breadcrumbs: StateFlow<List<Pair<Long, String>>> = _path.map { ids ->
         ids.mapNotNull { id -> repo.get(id)?.let { id to it.title } }
@@ -183,6 +187,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             scheduler.rescheduleAll()
+            // Day-rollover rules on every open: expired fixed-time tasks -> Unfinished view.
+            repo.sweepMissed()
             // Auto-purge expired completed tasks based on retention setting
             val days = settings.retentionDays.first()
             repo.purgeExpiredCompleted(days)
@@ -208,7 +214,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         fixedTime: Long? = null,
         recurrence: Recurrence = Recurrence.NONE,
         weekdaysMask: Int = 0,
-        info: String = ""
+        info: String = "",
+        recurrenceEndDate: Long? = null
     ) = viewModelScope.launch {
         if (title.isBlank()) return@launch
         val dur = durationMinutes.coerceAtLeast(1L)
@@ -230,11 +237,14 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             fixedTime = fixedTime,
             recurrence = recurrence,
             weekdaysMask = weekdaysMask,
-            info = info.trim()
+            info = info.trim(),
+            recurrenceEndDate = if (recurrence != Recurrence.NONE) recurrenceEndDate else null
         )
     }
 
     fun toggleComplete(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, !task.completed) }
+    fun restoreMissed(task: Task) = viewModelScope.launch { repo.restoreMissed(task.id) }
+    fun clearMissed() = viewModelScope.launch { repo.clearMissed() }
     fun restoreTask(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, false) }
     fun delete(task: Task) = viewModelScope.launch { repo.deleteTree(task.id) }
     fun clearCompleted() = viewModelScope.launch { repo.clearCompleted() }

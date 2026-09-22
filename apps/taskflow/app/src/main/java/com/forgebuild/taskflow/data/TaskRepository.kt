@@ -40,7 +40,8 @@ class TaskRepository(private val dao: TaskDao) {
         fixedTime: Long? = null,
         recurrence: Recurrence = Recurrence.NONE,
         weekdaysMask: Int = 0,
-        info: String = ""
+        info: String = "",
+        recurrenceEndDate: Long? = null
     ): Task = withContext(Dispatchers.IO) {
         val siblings = dao.children(parentId)
         val r = rank ?: PriorityRank.between(null, siblings.lastOrNull()?.rank)
@@ -55,7 +56,8 @@ class TaskRepository(private val dao: TaskDao) {
             weekdaysMask = weekdaysMask,
             info = info,
             parentId = parentId,
-            isRecurringTemplate = template
+            isRecurringTemplate = template,
+            recurrenceEndDate = if (template) recurrenceEndDate else null
         )
         val id = dao.insert(t)
         val saved = t.copy(id = id, seriesId = if (template) id else null)
@@ -96,6 +98,37 @@ class TaskRepository(private val dao: TaskDao) {
         dao.clearCompleted()
     }
 
+    /** Missed fixed-time tasks feed for the Unfinished view. */
+    fun unfinishedTasks(): Flow<List<Task>> = dao.observeMissed()
+
+    /**
+     * Move fixed-time tasks whose day has passed unfinished into the Unfinished view
+     * (they disappear from the active list; they do NOT carry over and do NOT stay pinned).
+     * Normal tasks carry over automatically (no action needed); recurring instances
+     * follow their own schedule.
+     */
+    suspend fun sweepMissed() = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val expired = dao.expiredFixedTime(dayStart(now))
+        expired.forEach { t ->
+            dao.update(t.copy(missed = true, missedAt = now, dueNow = false, updatedAt = now))
+            onOverdue?.invoke(t)
+        }
+        if (expired.isNotEmpty()) reschedule()
+    }
+
+    /** Restore a missed task to the active list as an untimed (normal) task so it is not re-missed. */
+    suspend fun restoreMissed(id: Long) = withContext(Dispatchers.IO) {
+        val t = dao.getById(id) ?: return@withContext
+        dao.update(t.copy(missed = false, missedAt = null, fixedTime = null, dueNow = false,
+            updatedAt = System.currentTimeMillis()))
+        reschedule()
+    }
+
+    suspend fun clearMissed() = withContext(Dispatchers.IO) {
+        dao.clearMissed()
+    }
+
     suspend fun purgeExpiredCompleted(retentionDays: Int): Int = withContext(Dispatchers.IO) {
         if (retentionDays <= 0) return@withContext 0
         val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 86_400_000L)
@@ -105,6 +138,7 @@ class TaskRepository(private val dao: TaskDao) {
     private suspend fun spawnNextInstance(template: Task) {
         val tpl = dao.getById(template.seriesId ?: template.id) ?: template
         val next = RecurrenceEngine.nextAfter(tpl, System.currentTimeMillis()) ?: return
+        if (tpl.recurrenceEndDate != null && next > tpl.recurrenceEndDate) return // recurrence expired
         val siblings = dao.children(tpl.parentId)
         val inst = Task(
             title = tpl.title,
@@ -189,14 +223,19 @@ class TaskRepository(private val dao: TaskDao) {
 
     /** Day rollover: overdue notifications, clear stale due-now pins, regen recurring instances. */
     suspend fun rollover() = withContext(Dispatchers.IO) {
-        val today = dayStart(System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val today = dayStart(now)
         val stale = dao.all().filter { it.dueNow && it.dueNowDay != null && it.dueNowDay!! < today }
-        stale.filter { !it.completed }.forEach { onOverdue?.invoke(it) }
         stale.forEach { dao.update(it.copy(dueNow = false)) }
+        // Fixed-time tasks whose day passed unfinished -> Unfinished view (no carry-over, no pin).
+        // Normal tasks carry over automatically (no action); recurring instances follow their own schedule.
+        sweepMissed()
         dao.recurringTemplates().forEach { tpl ->
-            val hasPending = dao.children(tpl.parentId).any { it.seriesId == tpl.id && !it.completed }
+            val hasPending = dao.children(tpl.parentId).any { it.seriesId == tpl.id && !it.completed && !it.missed }
             if (!hasPending) {
-                RecurrenceEngine.nextAfter(tpl, System.currentTimeMillis())?.let { next ->
+                RecurrenceEngine.nextAfter(tpl, now)
+                    ?.takeIf { tpl.recurrenceEndDate == null || it <= tpl.recurrenceEndDate } // recurrence expiration
+                    ?.let { next ->
                     val siblings = dao.children(tpl.parentId)
                     val inst = Task(
                         title = tpl.title,

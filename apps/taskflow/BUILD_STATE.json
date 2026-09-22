@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass3-session",
-  "current_task": "step-16",
+  "current_task": "step-20",
   "substitutions": [],
   "tasks": [
     {
@@ -95,37 +95,37 @@
     {
       "id": "step-15",
       "title": "Data model: recurrenceEndDate (optional recurrence expiration), missed/missedAt flags, Room DB v3, rollover rules (normal carry-over / recurring no-carry-over / fixed-time->missed), Unfinished DAO queries",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Task.kt: +recurrenceEndDate (optional recurrence expiration, end-of-day millis, null=indefinite), +missed/+missedAt. TaskDao: active/pending-timed queries now exclude missed; +observeMissed/clearMissed/expiredFixedTime(dayStart). Room DB bumped to v3 (fallbackToDestructiveMigration kept). TaskRepository: sweepMissed() moves expired fixed-time tasks to Unfinished (dueNow unpinned, no carry-over, overdue notification), restoreMissed() returns them active as untimed, rollover() calls sweepMissed + skips recurrence generation past recurrenceEndDate (completion-spawn path also guarded). Normal tasks carry over unchanged; recurring instances keep their own schedule (no unfinished roll)."
     },
     {
       "id": "step-16",
       "title": "AI task creation FIX: correct Gemini v1beta REST payload key casing (functionDeclarations/systemInstruction/generationConfig/functionCall/functionResponse were snake_case -> function calling never engaged, so create_task never ran); add recurrence_end tool param",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "ROOT CAUSE of AI create-task failure: Gemini v1beta REST payload used snake_case keys (system_instruction/generation_config/function_declarations/function_call/function_response) \u2014 the API expects camelCase (systemInstruction/generationConfig/functionDeclarations/functionCall/functionResponse), so tool declarations were silently ignored and function calls never parsed; create_task never ran. All keys corrected in GeminiClient/TaskAgentTools and the response parser now reads functionCall. Added recurrence_end tool param to create_task/update_task. Mandatory-duration inference already in system prompt; remaining-time validation retained."
     },
     {
       "id": "step-17",
       "title": "Voice input FIX: replace on-device SpeechRecognizer with MediaRecorder raw-audio capture -> Gemini inline audio; keep live WhatsApp-style waveform (real mic amplitude); add distinct 'sending voice note' state",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "ChatPanel fully rewritten: on-device SpeechRecognizer removed. MediaRecorder captures a raw AAC/M4A clip; on stop the audio is Base64-encoded and sent to Gemini as an inlineData audio/mp4 part via new AgentOrchestrator.sendAudio() with an instruction telling Gemini to transcribe/understand the audio natively. Live WhatsApp-style spectrum waveform now driven by real MediaRecorder.maxAmplitude at 80ms; distinct 'Sending voice note to Gemini' banner (primary-container, animated bars + expressive loader) shown while the clip uploads. RECORD_AUDIO permission flow retained."
     },
     {
       "id": "step-18",
       "title": "Task creation flow FIX: '+' add icon opens full creation sheet up front (title, mandatory duration, fixed time, recurrence + expiration, info, type preview, parent=current level); task written only on confirm; edit screen unchanged",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Creation flow fixed: removed the bare quick-add bar from TaskListScreen. New primary '+' FAB opens TaskCreationSheet (new file): title, mandatory duration (stepper + presets), optional fixed time, recurrence (+weekly day chips) with optional until-date, info, live type/color preview, parent = current level; the task is written only on 'Create task'. Edit screen keeps every field editable as before."
     },
     {
       "id": "step-19",
       "title": "Unfinished tasks view: new screen separate from Completed listing missed fixed-time tasks; nav + top-bar entry",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "New UnfinishedTasksScreen (separate from Completed): lists missed fixed-time tasks with was-due timestamp, error-tinted cards, Restore (to active, untimed) and per-item/permanent delete + clear-all dialog. Entry added to TaskListScreen top bar (alarm icon, error tint); Screen.UNFINISHED + creation-sheet wiring added to TaskFlowNav. Edit screen also gained the recurrence until-date picker."
     },
     {
       "id": "step-20",
       "title": "Validate sources, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v3, verify release + assets live via API, set build_complete: true",
-      "status": "pending",
+      "status": "in_progress",
       "notes": ""
     }
   ]

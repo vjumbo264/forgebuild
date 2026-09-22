@@ -25,10 +25,10 @@ interface TaskDao {
     fun observeById(id: Long): Flow<Task?>
 
     /** Active tasks at one level: due-now pinned first, then priority rank (highest first). */
-    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 ORDER BY dueNow DESC, rank DESC")
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 AND missed = 0 ORDER BY dueNow DESC, rank DESC")
     fun observeActiveChildren(parentId: Long?): Flow<List<Task>>
 
-    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 ORDER BY dueNow DESC, rank DESC")
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 AND missed = 0 ORDER BY dueNow DESC, rank DESC")
     suspend fun activeChildren(parentId: Long?): List<Task>
 
     /** All tasks at one level regardless of completion (for reordering / nesting). */
@@ -52,10 +52,10 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE completed = 1")
     suspend fun clearCompleted(): Int
 
-    @Query("SELECT * FROM tasks WHERE completed = 0")
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0")
     fun observeAllActive(): Flow<List<Task>>
 
-    @Query("SELECT * FROM tasks WHERE completed = 0")
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0")
     suspend fun allActive(): List<Task>
 
     @Query("SELECT * FROM tasks")
@@ -67,8 +67,19 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE isRecurringTemplate = 1")
     suspend fun recurringTemplates(): List<Task>
 
-    @Query("SELECT * FROM tasks WHERE fixedTime IS NOT NULL AND completed = 0 AND dueNow = 0")
+    @Query("SELECT * FROM tasks WHERE fixedTime IS NOT NULL AND completed = 0 AND dueNow = 0 AND missed = 0")
     suspend fun pendingTimedTasks(): List<Task>
+
+    /** Unfinished view: fixed-time tasks whose time passed without completion, newest first. */
+    @Query("SELECT * FROM tasks WHERE missed = 1 ORDER BY missedAt DESC")
+    fun observeMissed(): Flow<List<Task>>
+
+    @Query("DELETE FROM tasks WHERE missed = 1")
+    suspend fun clearMissed(): Int
+
+    /** Uncompleted, non-template tasks whose fixed time has already passed (candidates for the Unfinished view). */
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0 AND isRecurringTemplate = 0 AND fixedTime IS NOT NULL AND fixedTime < :nowMillis")
+    suspend fun expiredFixedTime(nowMillis: Long): List<Task>
 
     @Query("SELECT COUNT(*) FROM tasks WHERE parentId IS :parentId AND completed = 0")
     suspend fun activeChildCount(parentId: Long?): Int

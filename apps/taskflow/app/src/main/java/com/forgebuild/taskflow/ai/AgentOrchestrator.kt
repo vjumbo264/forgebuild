@@ -54,24 +54,47 @@ class AgentOrchestrator(context: Context) {
             append("MANDATORY DURATION: Every task MUST have a duration in minutes (e.g. 15, 30, 45, 60). If the user does not specify a duration, you MUST estimate and assign a sensible duration yourself. Never leave duration blank. ")
             append("REMAINING TIME: If a task's duration exceeds today's remaining unallocated time (${remainingToday}m), suggest scheduling it for tomorrow or a future date, or adjust duration. ")
             append("OPEN-ENDED INSTRUCTIONS: Understand vague requests like 'Set this to only happen on Tuesdays' (weekly, tue), or 'scatter three tasks across the week' (create 3 tasks on different days with reasonable durations). ")
+            append("RECURRING TASKS may have an optional end date ('repeat every day until 2026-12-31'); set recurrence_end when the user gives an end condition, otherwise leave it unset (indefinite). ")
+            append("VOICE INPUT: The user may send a raw audio voice note. Listen to the audio directly, transcribe it yourself, and act on the spoken request exactly as if it were typed. ")
             append("Use list_tasks or get_day_status whenever needed. ")
             append("After completing actions, reply with one concise natural-language sentence summarizing exactly what you did.")
         }
     }
 
-    /** Send one user instruction; runs the function-calling loop to completion. */
-    suspend fun send(userText: String) {
-        if (_busy.value) return
-        _busy.value = true
-        _messages.value = _messages.value + ChatMessage(ChatMessage.Role.USER, userText)
-
+    private fun historyContents(): MutableList<JsonObject> {
         val contents = mutableListOf<JsonObject>()
-        // replay brief history (user/model text only)
         _messages.value.takeLast(12).filter { it.role != ChatMessage.Role.ACTION }.forEach { m ->
             contents.add(GeminiClient.content(if (m.role == ChatMessage.Role.USER) "user" else "model",
                 listOf(GeminiClient.textPart(m.text))))
         }
+        return contents
+    }
 
+    /** Send one typed user instruction; runs the function-calling loop to completion. */
+    suspend fun send(userText: String) {
+        if (_busy.value) return
+        _busy.value = true
+        _messages.value = _messages.value + ChatMessage(ChatMessage.Role.USER, userText)
+        runLoop(historyContents())
+    }
+
+    /**
+     * Send a RAW recorded voice note straight to Gemini (no on-device speech-to-text):
+     * Gemini natively transcribes and understands the audio clip itself.
+     */
+    suspend fun sendAudio(mimeType: String, base64Audio: String) {
+        if (_busy.value) return
+        _busy.value = true
+        val contents = historyContents()
+        _messages.value = _messages.value + ChatMessage(ChatMessage.Role.USER, "Voice note (audio)")
+        contents.add(GeminiClient.content("user", listOf(
+            GeminiClient.inlineDataPart(mimeType, base64Audio),
+            GeminiClient.textPart("This is a voice note the user just recorded. Listen to the audio, transcribe it yourself, then act on the spoken request (create/update/complete/list tasks as asked) exactly as if it were typed text.")
+        )))
+        runLoop(contents)
+    }
+
+    private suspend fun runLoop(contents: MutableList<JsonObject>) {
         val actions = mutableListOf<String>()
         try {
             val systemInstruction = buildSystemInstruction()
@@ -82,9 +105,9 @@ class AgentOrchestrator(context: Context) {
                 val candidate = resp["candidates"]?.jsonArray?.firstOrNull()?.jsonObject ?: break
                 val parts = candidate["content"]?.jsonObject?.get("parts")?.jsonArray ?: break
 
-                // Check for function calls
+                // Gemini REST v1beta responds with camelCase "functionCall" parts.
                 val fnCalls = parts.mapNotNull { p ->
-                    p.jsonObject["function_call"]?.jsonObject?.let { fc ->
+                    p.jsonObject["functionCall"]?.jsonObject?.let { fc ->
                         fc["name"]?.jsonPrimitive?.content to fc["args"]?.jsonObject
                     }
                 }

@@ -48,6 +48,12 @@ data class Task(
     val dueNow: Boolean = false,
     /** Epoch millis of the day this due-now state belongs to (cleared on rollover). */
     val dueNowDay: Long? = null,
+    /** Optional recurrence expiration (epoch millis, end of that day). After it, no new instances are generated. Null = repeat indefinitely. */
+    val recurrenceEndDate: Long? = null,
+    /** True when a fixed-time task's time passed without completion; shown in the Unfinished view, hidden from active lists. */
+    val missed: Boolean = false,
+    /** When the task was marked missed (epoch millis). */
+    val missedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {

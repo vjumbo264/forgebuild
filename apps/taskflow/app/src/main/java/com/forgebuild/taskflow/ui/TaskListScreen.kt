@@ -99,8 +99,10 @@ import kotlin.math.roundToInt
 fun TaskListScreen(
     vm: TaskViewModel,
     onEditTask: (Long) -> Unit,
+    onOpenUnfinished: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenSettings: () -> Unit,
+    onCreateTask: () -> Unit,
     onOpenChat: (startListening: Boolean) -> Unit
 ) {
     val tasks by vm.tasks.collectAsState()
@@ -109,8 +111,6 @@ fun TaskListScreen(
     val allocatedMinutes by vm.allocatedMinutesToday.collectAsState()
     val remainingMinutes by vm.remainingMinutesToday.collectAsState()
 
-    var quickAddTitle by remember { mutableStateOf("") }
-    var quickAddDuration by remember { mutableLongStateOf(30L) }
     var peekInfo by remember { mutableStateOf<Task?>(null) }
 
     val listState = rememberLazyListState()
@@ -161,6 +161,9 @@ fun TaskListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenUnfinished) {
+                        Icon(EngineIcons.Alarm, contentDescription = "Unfinished tasks", tint = MaterialTheme.colorScheme.error)
+                    }
                     IconButton(onClick = onOpenCompleted) {
                         Icon(EngineIcons.CheckCircle, contentDescription = "Completed tasks")
                     }
@@ -178,6 +181,15 @@ fun TaskListScreen(
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // "+" add-task: opens the FULL creation sheet up front (nothing is created until confirmed there)
+                FloatingActionButton(
+                    onClick = onCreateTask,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(EngineIcons.Add, contentDescription = "New task")
+                }
+
                 // Persistent Voice AI FAB with microphone
                 FloatingActionButton(
                     onClick = { onOpenChat(true) },
@@ -229,71 +241,7 @@ fun TaskListScreen(
 
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
-            // QUICK ADD BAR with duration selection
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(SpacingTokens.Spacing.sm)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
-                    ) {
-                        OutlinedTextField(
-                            value = quickAddTitle,
-                            onValueChange = { quickAddTitle = it },
-                            placeholder = { Text("Add a task…") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                if (quickAddTitle.isNotBlank()) {
-                                    vm.addTask(quickAddTitle, durationMinutes = quickAddDuration)
-                                    quickAddTitle = ""
-                                }
-                            }),
-                            shape = MaterialTheme.shapes.medium
-                        )
-
-                        IconButton(
-                            onClick = {
-                                if (quickAddTitle.isNotBlank()) {
-                                    vm.addTask(quickAddTitle, durationMinutes = quickAddDuration)
-                                    quickAddTitle = ""
-                                }
-                            },
-                            enabled = quickAddTitle.isNotBlank()
-                        ) {
-                            Icon(EngineIcons.Add, contentDescription = "Add task", tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-
-                    // Duration presets
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Duration:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
-                        listOf(15L, 30L, 45L, 60L).forEach { dur ->
-                            val selected = quickAddDuration == dur
-                            AssistChip(
-                                onClick = { quickAddDuration = dur },
-                                label = { Text("${dur}m") },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                    labelColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                ),
-                                modifier = Modifier.height(28.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
+            // Creation happens only through the "+" full creation sheet — no bare quick-add.
             Spacer(Modifier.height(SpacingTokens.Spacing.xs))
 
             if (tasks.isEmpty()) {
@@ -311,7 +259,7 @@ fun TaskListScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Add a task above, or tap the mic to speak to AI.",
+                            "Tap + to create a task, or the mic to speak to AI.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

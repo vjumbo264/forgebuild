@@ -55,6 +55,7 @@ class TaskAgentTools(private val repo: TaskRepository) {
             "fixed_time" to prop("string", "Local datetime 'yyyy-MM-dd HH:mm' if a specific due time applies."),
             "recurrence" to prop("string", "none, daily, weekly, monthly, yearly."),
             "weekdays" to prop("string", "For weekly: comma list like tue or mon,wed,fri."),
+            "recurrence_end" to prop("string", "Optional last day of a recurrence as 'yyyy-MM-dd' (repeat until that date, then stop). Omit for indefinite."),
             "info" to prop("string", "Free-text notes on how to do the task.")), listOf("title"))
 
         d("update_task", "Update any task field.", mapOf(
@@ -64,6 +65,7 @@ class TaskAgentTools(private val repo: TaskRepository) {
             "fixed_time" to prop("string", "Local datetime 'yyyy-MM-dd HH:mm', or 'clear' to remove."),
             "recurrence" to prop("string", "none, daily, weekly, monthly, yearly."),
             "weekdays" to prop("string", "For weekly: comma list."),
+            "recurrence_end" to prop("string", "Recurrence end date 'yyyy-MM-dd', or 'clear' to make it indefinite."),
             "info" to prop("string", "New info text.")), listOf("task_id"))
 
         d("delete_task", "Delete a task and all its sub-tasks.", mapOf(
@@ -82,7 +84,7 @@ class TaskAgentTools(private val repo: TaskRepository) {
             "task_id" to prop("integer", "Task to move (required)."),
             "new_parent_id" to prop("integer", "New parent task id; omit for top level.")), listOf("task_id"))
 
-        return JsonArray(listOf(buildJsonObject { putJsonArray("function_declarations") { decls.forEach { add(it) } } }))
+        return JsonArray(listOf(buildJsonObject { putJsonArray("functionDeclarations") { decls.forEach { add(it) } } }))
     }
 
     private fun parseTime(s: String?): Long? {
@@ -115,6 +117,19 @@ class TaskAgentTools(private val repo: TaskRepository) {
             }
         }
         return mask
+    }
+
+    /** Parse 'yyyy-MM-dd' into end-of-day millis; 'clear'/blank -> null. */
+    private fun parseEndDate(s: String?): Long? {
+        if (s.isNullOrBlank() || s.equals("clear", true)) return null
+        return runCatching {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(s.trim())?.let { d ->
+                val c = Calendar.getInstance().apply { time = d }
+                c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
+                c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
+                c.timeInMillis
+            }
+        }.getOrNull()
     }
 
     private fun JsonObject.str(k: String): String? = this[k]?.let { if (it is JsonPrimitive) it.content else null }
@@ -151,6 +166,7 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val fixedTime = parseTime(args.str("fixed_time"))
                 val recurrence = parseRecurrence(args.str("recurrence"))
                 val weekdaysMask = parseWeekdays(args.str("weekdays"))
+                val recurrenceEnd = if (recurrence != Recurrence.NONE) parseEndDate(args.str("recurrence_end")) else null
                 val info = args.str("info") ?: ""
 
                 // Validate if task fits today's remaining time
@@ -170,7 +186,8 @@ class TaskAgentTools(private val repo: TaskRepository) {
                     fixedTime = fixedTime,
                     recurrence = recurrence,
                     weekdaysMask = weekdaysMask,
-                    info = info
+                    info = info,
+                    recurrenceEndDate = recurrenceEnd
                 )
                 "Created task #${t.id}: \"${t.title}\" (${t.durationMinutes} min)."
             }
@@ -191,12 +208,19 @@ class TaskAgentTools(private val repo: TaskRepository) {
                     }
                 }
 
+                val newRecurrence = if (args.str("recurrence") != null) parseRecurrence(args.str("recurrence")) else t.recurrence
+                val newRecurrenceEnd = when {
+                    newRecurrence == Recurrence.NONE -> null
+                    args.str("recurrence_end") != null -> parseEndDate(args.str("recurrence_end"))
+                    else -> t.recurrenceEndDate
+                }
                 val updated = t.copy(
                     title = args.str("title") ?: t.title,
                     durationMinutes = newDuration.coerceAtLeast(1L),
                     fixedTime = newFixed,
-                    recurrence = if (args.str("recurrence") != null) parseRecurrence(args.str("recurrence")) else t.recurrence,
+                    recurrence = newRecurrence,
                     weekdaysMask = if (args.str("weekdays") != null) parseWeekdays(args.str("weekdays")) else t.weekdaysMask,
+                    recurrenceEndDate = newRecurrenceEnd,
                     info = args.str("info") ?: t.info
                 )
                 repo.update(updated)

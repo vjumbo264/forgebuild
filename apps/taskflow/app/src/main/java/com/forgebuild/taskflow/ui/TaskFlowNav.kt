@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-private enum class Screen { LIST, SETTINGS, COMPLETED }
+private enum class Screen { LIST, SETTINGS, COMPLETED, UNFINISHED }
 
 /** Lightweight in-app navigation (back-stack of parent ids lives in the ViewModel). */
 @Composable
@@ -17,6 +17,7 @@ fun TaskFlowNav(vm: TaskViewModel) {
     var screen by remember { mutableStateOf(Screen.LIST) }
     var editingTaskId by remember { mutableStateOf<Long?>(null) }
     var chatOpen by remember { mutableStateOf(false) }
+    var creationOpen by remember { mutableStateOf(false) }
     var chatInitialMic by remember { mutableStateOf(false) }
     val path by vm.path.collectAsState()
 
@@ -50,15 +51,29 @@ fun TaskFlowNav(vm: TaskViewModel) {
             vm = vm,
             onBack = { screen = Screen.LIST }
         )
+        screen == Screen.UNFINISHED -> UnfinishedTasksScreen(
+            vm = vm,
+            onBack = { screen = Screen.LIST }
+        )
         else -> TaskListScreen(
             vm = vm,
             onEditTask = { editingTaskId = it },
+            onOpenUnfinished = { screen = Screen.UNFINISHED },
             onOpenCompleted = { screen = Screen.COMPLETED },
             onOpenSettings = { screen = Screen.SETTINGS },
+            onCreateTask = { creationOpen = true },
             onOpenChat = { startListening ->
                 chatInitialMic = startListening
                 chatOpen = true
             }
+        )
+    }
+
+    if (creationOpen) {
+        TaskCreationSheet(
+            vm = vm,
+            parentId = path.lastOrNull(),
+            onClose = { creationOpen = false }
         )
     }
 
