@@ -74,7 +74,7 @@ fun CompletedTasksScreen(
                 actions = {
                     if (completedList.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
-                            Icon(EngineIcons.DeleteSweep, contentDescription = "Clear all", tint = MaterialTheme.colorScheme.error)
+                            Icon(EngineIcons.Delete, contentDescription = "Clear all", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 },

@@ -415,7 +415,7 @@ private fun TimeRemainingTodayCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        EngineIcons.Schedule,
+                        EngineIcons.Alarm,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
@@ -518,13 +518,13 @@ private fun TaskRow(
             MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
             MaterialTheme.colorScheme.tertiary,
             "Recurring • ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}",
-            EngineIcons.Refresh
+            EngineIcons.Repeat
         )
         task.taskType == TaskType.RECURRING_NO_TIME -> Quadruple(
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
             MaterialTheme.colorScheme.primary,
             "Recurring • ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}",
-            EngineIcons.Refresh
+            EngineIcons.Repeat
         )
         task.taskType == TaskType.FIXED_TIME -> Quadruple(
             MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
