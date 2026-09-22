@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": true,
-  "updated_by": "taskflow-build-session",
-  "current_task": "done",
+  "build_complete": false,
+  "updated_by": "taskflow-pass2-session",
+  "current_task": "step-8",
   "substitutions": [],
   "tasks": [
     {
@@ -49,6 +49,42 @@
       "title": "Set build_complete: true after taskflow-v1 verified",
       "status": "done",
       "notes": "build_complete set true only after taskflow-v1 verified live on the Releases API with both assets present."
+    },
+    {
+      "id": "step-8",
+      "title": "Update Core Data Model & Storage: durationMinutes (mandatory), completedAt, Room DB v2 migration, retention auto-purge, remaining time calculation",
+      "status": "in_progress",
+      "notes": "Adding durationMinutes (mandatory > 0) and completedAt to Task entity, bumping Room DB to v2 with fallbackToDestructiveMigration, adding completed queries and retention purge, day time allocation calculation."
+    },
+    {
+      "id": "step-9",
+      "title": "Background Service & Permissions Fix: real OS battery exemption prompt (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), persistent background notification running service",
+      "status": "pending",
+      "notes": "Add REQUEST_IGNORE_BATTERY_OPTIMIZATIONS and USE_EXACT_ALARM to manifest, fix battery exemption intent to trigger real OS prompt with fallback, auto-start DueForegroundService on app start/boot with persistent ongoing notification."
+    },
+    {
+      "id": "step-10",
+      "title": "AI Agent & Voice Input Fix: microphone voice flow with live audio waveform animation, time zone & clock awareness, duration inference, full CRUD & relational tools",
+      "status": "pending",
+      "notes": "Fix mic button with speech recognition + live RMS audio waveform animation (WhatsApp-style), inject current device datetime/timezone/remaining minutes into Gemini agent prompt, enforce duration inference and daily allocation validation."
+    },
+    {
+      "id": "step-11",
+      "title": "Complete UI Redesign: expressive Material 3 styling throughout, time remaining today card, time-range switcher (today/week/month/year), 4-type color-coding, completed tasks view, updated edit & settings screens",
+      "status": "pending",
+      "notes": "Full redesign with expressive shapes, spring transitions, prominent time remaining today wavy progress card, segmented Today/Week/Month/Year filter (no duplicate recurring entries), 4-type color coding, separate completed tasks screen with retention info, duration picker."
+    },
+    {
+      "id": "step-12",
+      "title": "Validate build, dispatch release.yml workflow for taskflow-v2, verify release and assets live on GitHub Releases API",
+      "status": "pending",
+      "notes": "Dispatch release.yml with app_path=apps/taskflow, await successful workflow run, verify taskflow-v2 tag, APK asset, and manifest live."
+    },
+    {
+      "id": "step-13",
+      "title": "Finalize build_complete: true after taskflow-v2 verified",
+      "status": "pending",
+      "notes": "Set build_complete: true and current_task: done after release verification."
     }
   ]
 }
