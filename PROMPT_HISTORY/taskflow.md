@@ -109,3 +109,36 @@ The current UI is not acceptable and needs to be fully reimagined, not increment
 4. **Completed tasks view** — separate from the active list, shows retention/auto-delete behavior.
 5. **Settings** — Gemini API key management, notification toggles, completed-task retention period, background/battery permission setup, theme.
 6. **Onboarding/permissions flow** — requests notification, exact-alarm/reminder, and background-run permissions with plain-language explanations, and must actually trigger the real OS prompts (currently broken for background permission).
+
+---
+
+## 2026-09-22 — TaskFlow — Revision Pass 3 (Fixes)
+
+This is a follow-up pass on the existing app (previous revision already implemented). These are new fixes only.
+
+### Voice Input — Send Raw Audio to Gemini (FIX)
+- Voice input currently uses the device's on-device text-to-speech/speech-to-text. This is wrong.
+- Instead: record the raw audio and send the audio clip directly to Gemini, which natively handles audio transcription/understanding itself — Gemini receives and interprets the audio, not a locally-transcribed text string.
+- While recording, show the live waveform/audio-spectrum animation (WhatsApp-voice-note style).
+- Once recording ends, show a distinct "sending voice note" state/animation while the audio uploads, before Gemini's response comes back.
+
+### Task Creation Flow (FIX)
+- Currently the user must type a task name and create the task before they can set duration, info, or anything else. This is wrong.
+- Correct flow: a "+" / add-task icon opens the full task creation sheet/screen up front — title, duration (mandatory), fixed time, recurrence, info, color/type, parent — all set in this one creation step, before the task is actually saved.
+- The task is only written/created once the user confirms from this creation screen, with everything already configured — not created bare and edited afterward.
+- All fields remain editable later from the task's edit screen as before — this only changes the *creation* flow.
+
+### AI Task Creation Failing (FIX)
+- The AI agent is currently failing to create tasks when asked via chat/voice. Diagnose and fix so create-task commands reliably succeed, respecting the mandatory-duration rule (agent infers a duration if the user didn't give one).
+
+### Recurrence Expiration (NEW)
+- Recurring tasks need an optional end condition: "repeat every day/week/etc. until <date>." After that date, the recurrence stops generating new instances.
+- If no expiration is set, recurrence continues indefinitely as before.
+
+### Unfinished & Expired Task Handling (NEW)
+- **Normal (non-recurring, non-fixed-time) task left unfinished at day rollover** → carries over to the next day automatically, staying active.
+- **Recurring task** → does not carry over as "unfinished"; it simply follows its own recurrence schedule (today's instance doesn't roll into tomorrow — tomorrow's instance is generated per the recurrence rule as normal).
+- **Fixed-time task whose time has passed unfinished** → does not carry over and does not stay pinned. It disappears from the active list and moves to a distinct "Unfinished" view (separate from Completed), where the user can review missed tasks.
+
+### Screens — Addition
+- **Unfinished tasks view** — new screen/section, separate from Completed; holds fixed-time tasks whose time passed without completion.

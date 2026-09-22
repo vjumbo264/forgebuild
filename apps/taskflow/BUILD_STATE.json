@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": true,
-  "updated_by": "taskflow-pass2-session",
-  "current_task": null,
+  "build_complete": false,
+  "updated_by": "taskflow-pass3-session",
+  "current_task": "step-16",
   "substitutions": [],
   "tasks": [
     {
@@ -85,6 +85,48 @@
       "title": "Finalize build_complete: true after taskflow-v2 verified",
       "status": "done",
       "notes": "All 13 tasks verified complete. build_complete marked true."
+    },
+    {
+      "id": "step-14",
+      "title": "Pass 3: append Revision Pass 3 instruction to PROMPT_HISTORY/taskflow.md; seed BUILD_STATE tasks",
+      "status": "done",
+      "notes": "Operator instruction appended verbatim under 2026-09-22 heading (append-only). Pass-3 task list seeded."
+    },
+    {
+      "id": "step-15",
+      "title": "Data model: recurrenceEndDate (optional recurrence expiration), missed/missedAt flags, Room DB v3, rollover rules (normal carry-over / recurring no-carry-over / fixed-time->missed), Unfinished DAO queries",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-16",
+      "title": "AI task creation FIX: correct Gemini v1beta REST payload key casing (functionDeclarations/systemInstruction/generationConfig/functionCall/functionResponse were snake_case -> function calling never engaged, so create_task never ran); add recurrence_end tool param",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-17",
+      "title": "Voice input FIX: replace on-device SpeechRecognizer with MediaRecorder raw-audio capture -> Gemini inline audio; keep live WhatsApp-style waveform (real mic amplitude); add distinct 'sending voice note' state",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-18",
+      "title": "Task creation flow FIX: '+' add icon opens full creation sheet up front (title, mandatory duration, fixed time, recurrence + expiration, info, type preview, parent=current level); task written only on confirm; edit screen unchanged",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-19",
+      "title": "Unfinished tasks view: new screen separate from Completed listing missed fixed-time tasks; nav + top-bar entry",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-20",
+      "title": "Validate sources, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v3, verify release + assets live via API, set build_complete: true",
+      "status": "pending",
+      "notes": ""
     }
   ]
 }
