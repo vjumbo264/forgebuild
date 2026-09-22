@@ -154,13 +154,9 @@ fun SettingsScreen(vm: TaskViewModel, onBack: () -> Unit) {
                 OutlinedButton(onClick = { PermissionWiring.requestExactAlarm(context as Activity) }) {
                     Text("Allow exact alarms")
                 }
-                OutlinedButton(onClick = {
-                    val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-                    if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
-                        context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                            .setData(Uri.parse("package:${context.packageName}")))
-                    }
-                }) { Text("Battery exemption") }
+                OutlinedButton(onClick = { PermissionWiring.requestBatteryExemption(context) }) {
+                    Text("Battery exemption")
+                }
             }
 
             // ---- Theme ----

@@ -1,16 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <!-- TaskFlow permission model: ONLY what the feature set uses.
-         INTERNET            — Gemini API calls (only network use in the app).
-         POST_NOTIFICATIONS  — due/overdue/agenda/agent alerts (requested in onboarding).
-         RECORD_AUDIO        — mic button in the AI chat panel (requested on first use).
-         SCHEDULE_EXACT_ALARM— fixed-time task reminders (explained settings flow).
-         RECEIVE_BOOT_COMPLETED — reschedule exact alarms after reboot.
-         FOREGROUND_SERVICE(+_SPECIAL_USE) — persistent low-priority "reminders active" notification. -->
+         INTERNET                         — Gemini API calls (only network use in the app).
+         POST_NOTIFICATIONS             — due/overdue/agenda/agent alerts (requested in onboarding).
+         RECORD_AUDIO                   — mic button in the AI chat panel (requested on first use).
+         SCHEDULE_EXACT_ALARM           — fixed-time task reminders (Android 12).
+         USE_EXACT_ALARM                — exact alarm reminders without user friction (Android 13+).
+         REQUEST_IGNORE_BATTERY_OPTIMIZATIONS — triggers OS-level background battery exemption prompt.
+         RECEIVE_BOOT_COMPLETED         — reschedule exact alarms after reboot.
+         FOREGROUND_SERVICE(+_SPECIAL_USE)— persistent low-priority "reminders active" notification. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -23,6 +28,7 @@
         android:theme="@style/Theme.ForgeBuild"
         android:supportsRtl="true"
         tools:targetApi="34">
+
         <activity android:name=".MainActivity" android:exported="true"
             android:configChanges="orientation|screenSize|uiMode">
             <intent-filter>
@@ -30,6 +36,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <service
             android:name=".reminder.DueForegroundService"
             android:foregroundServiceType="specialUse"
@@ -38,11 +45,13 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps a persistent low-priority notification so fixed-time task reminders stay reliable; Android does not permit unrestricted background execution, and this is the compliant mechanism." />
         </service>
+
         <receiver android:name=".reminder.ReminderReceiver" android:exported="false" />
         <receiver android:name=".reminder.BootReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
     </application>
 </manifest>

@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass2-session",
-  "current_task": "step-9",
+  "current_task": "step-10",
   "substitutions": [],
   "tasks": [
     {
@@ -59,13 +59,13 @@
     {
       "id": "step-9",
       "title": "Background Service & Permissions Fix: real OS battery exemption prompt (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), persistent background notification running service",
-      "status": "in_progress",
-      "notes": "Add REQUEST_IGNORE_BATTERY_OPTIMIZATIONS and USE_EXACT_ALARM to manifest, fix battery exemption intent to trigger real OS prompt with fallback, auto-start DueForegroundService on app start/boot with persistent ongoing notification."
+      "status": "done",
+      "notes": "Added REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, USE_EXACT_ALARM, and FOREGROUND_SERVICE_SPECIAL_USE to AndroidManifest.xml; added PermissionWiring.requestBatteryExemption triggering the real OS-level battery exemption prompt with fallback; ensured persistent low-priority foreground notification starts on application create, main activity onStart, and device boot with non-togglable reliability."
     },
     {
       "id": "step-10",
       "title": "AI Agent & Voice Input Fix: microphone voice flow with live audio waveform animation, time zone & clock awareness, duration inference, full CRUD & relational tools",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Fix mic button with speech recognition + live RMS audio waveform animation (WhatsApp-style), inject current device datetime/timezone/remaining minutes into Gemini agent prompt, enforce duration inference and daily allocation validation."
     },
     {

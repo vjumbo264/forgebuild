@@ -28,8 +28,8 @@ object NotificationHub {
                 .apply { description = "Confirmations of actions the AI agent performed" },
             NotificationChannel(CHANNEL_SYSTEM, "System status", NotificationManager.IMPORTANCE_HIGH)
                 .apply { description = "Alerts such as all Gemini API keys failing" },
-            NotificationChannel(CHANNEL_FOREGROUND, "Reminder service", NotificationManager.IMPORTANCE_MIN)
-                .apply { description = "Persistent low-priority indicator that keeps reminders reliable" },
+            NotificationChannel(CHANNEL_FOREGROUND, "TaskFlow background service", NotificationManager.IMPORTANCE_LOW)
+                .apply { description = "Persistent indicator that keeps reminders reliable in background" },
         ).forEach { nm.createNotificationChannel(it) }
     }
 
@@ -61,14 +61,14 @@ object NotificationHub {
     suspend fun dueNow(context: Context, taskId: Long, title: String) {
         if (!enabled(context, NotifType.DUE)) return
         post(context, 1000 + taskId.hashCode().mod(10000), CHANNEL_REMINDERS,
-            "Due now: $title", "This task's time has arrived. It's pinned at the top of your list.",
+            "Due now: $title", "This task's scheduled time has arrived. It is pinned at the top of your list.",
             taskId, priority = NotificationCompat.PRIORITY_HIGH)
     }
 
     suspend fun overdue(context: Context, taskId: Long, title: String) {
         if (!enabled(context, NotifType.OVERDUE)) return
         post(context, 20000 + taskId.hashCode().mod(10000), CHANNEL_REMINDERS,
-            "Overdue: $title", "You didn't complete this at its scheduled time.",
+            "Overdue: $title", "Task was not completed at its scheduled time.",
             taskId, priority = NotificationCompat.PRIORITY_HIGH)
     }
 
@@ -106,10 +106,12 @@ object NotificationHub {
         ensureChannels(context)
         return NotificationCompat.Builder(context, CHANNEL_FOREGROUND)
             .setSmallIcon(com.forgebuild.taskflow.R.drawable.ic_launcher_foreground)
-            .setContentTitle("TaskFlow reminders active")
-            .setContentText("Keeping fixed-time reminders reliable. Android blocks always-on background work; this low-priority indicator is the compliant alternative.")
+            .setContentTitle("TaskFlow running in background")
+            .setContentText("Keeping reminders and scheduled tasks active & reliable.")
             .setContentIntent(launchPi(context, null))
-            .setOngoing(true).setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
     }
 }
