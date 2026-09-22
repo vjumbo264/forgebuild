@@ -120,8 +120,8 @@ fun TaskEditScreen(vm: TaskViewModel, taskId: Long, onClose: () -> Unit) {
                     value = recurrence.name.lowercase().replaceFirstChar { it.uppercase() },
                     onValueChange = {}, readOnly = true,
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(recurrenceMenuOpen) },
-                    modifier = Modifier.menuAnchor(androidx.compose.material3.ExposedDropdownMenuBoxScope.MenuAnchorType.PrimaryNotEditable).fillMaxWidth(), shape = MaterialTheme.shapes.medium)
-                this.ExposedDropdownMenu(expanded = recurrenceMenuOpen,
+                    modifier = Modifier.menuAnchor(androidx.compose.material3.MenuAnchorType.PrimaryNotEditable).fillMaxWidth(), shape = MaterialTheme.shapes.medium)
+                ExposedDropdownMenu(expanded = recurrenceMenuOpen,
                     onDismissRequest = { recurrenceMenuOpen = false }) {
                     Recurrence.entries.forEach { r ->
                         DropdownMenuItem(
