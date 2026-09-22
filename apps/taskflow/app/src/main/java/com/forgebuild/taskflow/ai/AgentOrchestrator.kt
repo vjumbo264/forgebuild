@@ -11,8 +11,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 data class ChatMessage(val role: Role, val text: String) {
     enum class Role { USER, MODEL, ACTION }
@@ -21,22 +23,40 @@ data class ChatMessage(val role: Role, val text: String) {
 /** Runs the multi-turn Gemini function-calling loop and records the chat transcript. */
 class AgentOrchestrator(context: Context) {
     private val appContext = context.applicationContext
+    private val repo = com.forgebuild.taskflow.data.TaskRepository.get(context)
     private val client = GeminiClient(GeminiKeyStore.get(context))
-    private val tools = TaskAgentTools(com.forgebuild.taskflow.data.TaskRepository.get(context))
+    private val tools = TaskAgentTools(repo)
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
+
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy
 
-    private val systemInstruction = buildString {
-        append("You are TaskFlow's built-in task assistant. Current local time: ")
-        append(SimpleDateFormat("yyyy-MM-dd HH:mm (EEEE)", Locale.getDefault()).format(Date()))
-        append(". You manage the user's to-do list by calling the provided functions. ")
-        append("Tasks are priority-sorted and support: optional fixed due time, recurrence (none/daily/weekly/monthly/yearly), free-text info, and unlimited nested sub-tasks. ")
-        append("When the user's instruction is vague, infer sensible defaults and act WITHOUT asking for every detail — e.g. for 'scatter three tasks across the week', create three tasks on different days with reasonable priorities. ")
-        append("Use list_tasks first when you need to resolve which task the user means or to place something between two named tasks. ")
-        append("You may chain multiple calls. After finishing, reply with one concise natural-language sentence summarizing exactly what you did.")
+    private suspend fun buildSystemInstruction(): String {
+        val now = System.currentTimeMillis()
+        val cal = Calendar.getInstance().apply { timeInMillis = now }
+        val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss (EEEE)", Locale.getDefault())
+        val tz = TimeZone.getDefault()
+        val tzName = tz.getDisplayName(tz.inDaylightTime(Date(now)), TimeZone.LONG)
+        val tzId = tz.id
+        val remainingToday = repo.getRemainingMinutesToday()
+        val allocatedToday = repo.getAllocatedMinutesToday()
+
+        return buildString {
+            append("You are TaskFlow's built-in intelligent task assistant. ")
+            append("CURRENT DEVICE CLOCK & TIME ZONE: ")
+            append(fmt.format(Date(now)))
+            append(", Time zone: ").append(tzName).append(" (").append(tzId).append("). ")
+            append("Today's schedule: ").append(allocatedToday).append(" minutes allocated, ")
+            append(remainingToday).append(" minutes remaining unallocated before midnight. ")
+            append("You manage the user's to-do list by calling the provided tools. ")
+            append("MANDATORY DURATION: Every task MUST have a duration in minutes (e.g. 15, 30, 45, 60). If the user does not specify a duration, you MUST estimate and assign a sensible duration yourself. Never leave duration blank. ")
+            append("REMAINING TIME: If a task's duration exceeds today's remaining unallocated time (${remainingToday}m), suggest scheduling it for tomorrow or a future date, or adjust duration. ")
+            append("OPEN-ENDED INSTRUCTIONS: Understand vague requests like 'Set this to only happen on Tuesdays' (weekly, tue), or 'scatter three tasks across the week' (create 3 tasks on different days with reasonable durations). ")
+            append("Use list_tasks or get_day_status whenever needed. ")
+            append("After completing actions, reply with one concise natural-language sentence summarizing exactly what you did.")
+        }
     }
 
     /** Send one user instruction; runs the function-calling loop to completion. */
@@ -44,36 +64,52 @@ class AgentOrchestrator(context: Context) {
         if (_busy.value) return
         _busy.value = true
         _messages.value = _messages.value + ChatMessage(ChatMessage.Role.USER, userText)
+
         val contents = mutableListOf<JsonObject>()
         // replay brief history (user/model text only)
         _messages.value.takeLast(12).filter { it.role != ChatMessage.Role.ACTION }.forEach { m ->
             contents.add(GeminiClient.content(if (m.role == ChatMessage.Role.USER) "user" else "model",
                 listOf(GeminiClient.textPart(m.text))))
         }
+
         val actions = mutableListOf<String>()
         try {
+            val systemInstruction = buildSystemInstruction()
             var rounds = 0
             while (rounds < 10) {
                 rounds++
                 val resp = client.generate(JsonArray(contents), tools.apiTools(), systemInstruction)
                 val candidate = resp["candidates"]?.jsonArray?.firstOrNull()?.jsonObject ?: break
                 val parts = candidate["content"]?.jsonObject?.get("parts")?.jsonArray ?: break
-                val calls = parts.mapNotNull { it.jsonObject["functionCall"]?.jsonObject }
-                val texts = parts.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.content }
-                if (calls.isEmpty()) {
-                    val reply = texts.joinToString("\n").ifBlank { "Done." }
-                    _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL, reply)
-                    if (actions.isNotEmpty()) NotificationHub.agentConfirmation(appContext, actions.joinToString(" · "))
+
+                // Check for function calls
+                val fnCalls = parts.mapNotNull { p ->
+                    p.jsonObject["function_call"]?.jsonObject?.let { fc ->
+                        fc["name"]?.jsonPrimitive?.content to fc["args"]?.jsonObject
+                    }
+                }
+
+                if (fnCalls.isEmpty()) {
+                    // Final text response from model
+                    val text = parts.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.content }.joinToString("\n").trim()
+                    if (text.isNotEmpty()) {
+                        _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL, text)
+                        if (actions.isNotEmpty()) {
+                            NotificationHub.agentConfirmation(appContext, text)
+                        }
+                    }
                     break
                 }
-                // record model's content turn then execute every call
-                contents.add(GeminiClient.content("model", parts.map { it.jsonObject }))
+
+                // Add model response containing function calls to contents history
+                contents.add(candidate["content"]!!.jsonObject)
+
+                // Execute each function call and add function responses
                 val responseParts = mutableListOf<JsonObject>()
-                for (call in calls) {
-                    val name = call["name"]?.jsonPrimitive?.content ?: continue
-                    val args = call["args"]?.jsonObject ?: JsonObject(emptyMap())
-                    val result = runCatching { tools.execute(name, args) }.getOrElse { "Error: ${it.message}" }
-                    actions += result
+                for ((name, args) in fnCalls) {
+                    if (name == null || args == null) continue
+                    val result = tools.execute(name, args)
+                    actions.add(result)
                     _messages.value = _messages.value + ChatMessage(ChatMessage.Role.ACTION, result)
                     responseParts.add(GeminiClient.functionResponsePart(name, result))
                 }
@@ -81,14 +117,16 @@ class AgentOrchestrator(context: Context) {
             }
         } catch (e: GeminiClient.NoKeysException) {
             _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL,
-                "No Gemini API key is set. Add one in Settings > Gemini API keys.")
+                "No Gemini API key configured. Open Settings to add your key.")
         } catch (e: GeminiClient.AllKeysFailedException) {
-            _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL,
-                "Every Gemini API key failed. Please check your keys in Settings.")
             NotificationHub.apiKeysFailed(appContext)
+            _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL,
+                "All configured Gemini API keys failed (quota/invalid). Check Settings.")
         } catch (e: Exception) {
             _messages.value = _messages.value + ChatMessage(ChatMessage.Role.MODEL,
-                "Something went wrong: ${e.message ?: "unknown error"}")
-        } finally { _busy.value = false }
+                "Error: ${e.message ?: "Could not complete request."}")
+        } finally {
+            _busy.value = false
+        }
     }
 }
