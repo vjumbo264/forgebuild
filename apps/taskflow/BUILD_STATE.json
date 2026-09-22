@@ -1,0 +1,54 @@
+{
+  "slug": "taskflow",
+  "project": "forgebuild-taskflow",
+  "app_name": "TaskFlow",
+  "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
+  "build_complete": false,
+  "updated_by": "taskflow-build-session",
+  "current_task": "step-2",
+  "substitutions": [],
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Choose slug (taskflow), copy engine into apps/taskflow, seed BUILD_STATE.json + PROMPT_HISTORY/taskflow.md, push-access proof",
+      "status": "done",
+      "notes": "Slug 'taskflow' chosen (no collision in apps/). Engine copied verbatim as starting point. First field of this file is slug."
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity: applicationId/namespace com.forgebuild.taskflow, app_name TaskFlow",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Adaptive icon via tools/make_adaptive_icon.py (create artwork)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement app per APP_DESCRIPTION, one feature per commit/push",
+      "status": "pending",
+      "notes": "Sub-steps: (a) Room data model + repository + priority rank helpers; (b) main task list UI (sorted, drag-reorder, add/edit, sub-task navigation); (c) fixed-time tasks + exact alarms + foreground service + due-now pinning; (d) recurrence engine + rollover; (e) notifications per-type + settings toggles + daily agenda; (f) settings + onboarding/permissions flow; (g) Gemini AI agent (key mgmt + failover, chat/voice panel, function calling); (h) final M3 Expressive polish."
+    },
+    {
+      "id": "step-6",
+      "title": "Validate build config, dispatch release.yml (app_path=apps/taskflow), verify taskflow-v1 release + APK asset live",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Set build_complete: true after taskflow-v1 verified",
+      "status": "pending",
+      "notes": ""
+    }
+  ]
+}
