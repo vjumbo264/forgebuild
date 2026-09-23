@@ -88,11 +88,89 @@ class TaskRepository(private val dao: TaskDao) {
 
     suspend fun setCompleted(id: Long, done: Boolean) = withContext(Dispatchers.IO) {
         val t = dao.getById(id) ?: return@withContext
-        val completedAt = if (done) System.currentTimeMillis() else null
-        dao.update(t.copy(completed = done, completedAt = completedAt, dueNow = false, updatedAt = System.currentTimeMillis()))
-        if (done && t.recurrence != Recurrence.NONE) spawnNextInstance(t)
+        val now = System.currentTimeMillis()
+        if (done && t.isRecurringTemplate) {
+            // Completing a recurring task = completing the occurrence the template
+            // currently represents. The template keeps its recurrence, children and
+            // identity; its fixedTime simply advances to the next occurrence. A
+            // separate completed record is written for the Completed view/history.
+            // This replaces the old behaviour that spawned a duplicate non-recurring,
+            // children-less copy next to a completed template (Pass 5 critical fix).
+            val history = Task(
+                title = t.title,
+                rank = t.rank,
+                durationMinutes = t.durationMinutes,
+                fixedTime = t.fixedTime,
+                recurrence = Recurrence.NONE,
+                weekdaysMask = t.weekdaysMask,
+                info = t.info,
+                parentId = t.parentId,
+                completed = true,
+                completedAt = now,
+                updatedAt = now,
+                seriesId = t.seriesId ?: t.id
+            )
+            dao.insert(history)
+            val next = RecurrenceEngine.nextAfter(t, now)
+            if (next != null && (t.recurrenceEndDate == null || next <= t.recurrenceEndDate)) {
+                dao.update(t.copy(fixedTime = next, dueNow = false, missed = false, missedAt = null, updatedAt = now))
+            } else {
+                // Recurrence expired (or uncomputable): retire the template itself.
+                dao.update(t.copy(completed = true, completedAt = now, dueNow = false, updatedAt = now))
+            }
+            reschedule()
+            return@withContext
+        }
+        dao.update(t.copy(completed = done, completedAt = if (done) now else null, dueNow = false, updatedAt = now))
+        if (done && t.recurrence != Recurrence.NONE) {
+            // Legacy generated instances carry their own recurrence; advance them in
+            // place too (same rule as templates) instead of spawning duplicates.
+            dao.getById(t.id)?.let { cur ->
+                val next = RecurrenceEngine.nextAfter(cur, now)
+                if (next != null && (cur.recurrenceEndDate == null || next <= cur.recurrenceEndDate)) {
+                    dao.update(cur.copy(completed = false, completedAt = null, fixedTime = next,
+                        dueNow = false, missed = false, missedAt = null, updatedAt = now))
+                }
+            }
+        }
         reschedule()
     }
+
+    /**
+     * Parent/child duration constraint (applies at every nesting level):
+     * the sum of a task's immediate children's durations may never exceed the
+     * parent's own duration (for overnight parents, durationMinutes already IS
+     * the full cross-midnight span, e.g. 20:00->02:00 = 360m). Returns an error
+     * message when the proposed child duration would break the rule, else null.
+     */
+    suspend fun childDurationError(parentId: Long?, durationMinutes: Long, excludeChildId: Long? = null): String? =
+        withContext(Dispatchers.IO) {
+            if (parentId == null) return@withContext null
+            val parent = dao.getById(parentId) ?: return@withContext null
+            val used = dao.children(parentId)
+                .filter { it.id != excludeChildId }
+                .sumOf { it.durationMinutes.coerceAtLeast(1L) }
+            val total = used + durationMinutes.coerceAtLeast(1L)
+            val cap = parent.durationMinutes.coerceAtLeast(1L)
+            if (total > cap)
+                "Sub-task durations would total ${total}m, exceeding parent \"${parent.title}\" duration (${cap}m)."
+            else null
+        }
+
+    /**
+     * Mirror of [childDurationError] for shrinking a parent: the parent's new
+     * duration may not drop below the sum of its direct children's durations.
+     */
+    suspend fun parentShrinkError(taskId: Long, newDurationMinutes: Long): String? =
+        withContext(Dispatchers.IO) {
+            val kids = dao.children(taskId)
+            if (kids.isEmpty()) return@withContext null
+            val used = kids.sumOf { it.durationMinutes.coerceAtLeast(1L) }
+            val cap = newDurationMinutes.coerceAtLeast(1L)
+            if (used > cap)
+                "Duration (${cap}m) is below the ${used}m already allocated to this task's sub-tasks."
+            else null
+        }
 
     suspend fun clearCompleted() = withContext(Dispatchers.IO) {
         dao.clearCompleted()
@@ -146,26 +224,6 @@ class TaskRepository(private val dao: TaskDao) {
         if (retentionDays <= 0) return@withContext 0
         val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 86_400_000L)
         dao.deleteCompletedBefore(cutoff)
-    }
-
-    private suspend fun spawnNextInstance(template: Task) {
-        val tpl = dao.getById(template.seriesId ?: template.id) ?: template
-        val next = RecurrenceEngine.nextAfter(tpl, System.currentTimeMillis()) ?: return
-        if (tpl.recurrenceEndDate != null && next > tpl.recurrenceEndDate) return // recurrence expired
-        val siblings = dao.children(tpl.parentId)
-        val inst = Task(
-            title = tpl.title,
-            rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
-            durationMinutes = tpl.durationMinutes,
-            fixedTime = next,
-            recurrence = Recurrence.NONE,
-            weekdaysMask = tpl.weekdaysMask,
-            info = tpl.info,
-            parentId = tpl.parentId,
-            seriesId = tpl.seriesId ?: tpl.id
-        )
-        val id = dao.insert(inst)
-        onRecurringInstance?.invoke(inst.copy(id = id))
     }
 
     suspend fun move(id: Long, newParentId: Long?) = withContext(Dispatchers.IO) {
@@ -249,27 +307,19 @@ class TaskRepository(private val dao: TaskDao) {
         // Fixed-time tasks whose day passed unfinished -> Unfinished view (no carry-over, no pin).
         // Normal tasks carry over automatically (no action); recurring instances follow their own schedule.
         sweepMissed()
+        // Recurring templates advance IN PLACE — no separate child-less non-recurring
+        // instances are ever generated (Pass 5 duplication fix). At rollover, any
+        // template whose occurrence anchor fell behind simply rolls forward to its
+        // next occurrence (respecting recurrence expiration).
         dao.recurringTemplates().forEach { tpl ->
-            val hasPending = dao.children(tpl.parentId).any { it.seriesId == tpl.id && !it.completed && !it.missed }
-            if (!hasPending) {
+            val anchor = tpl.fixedTime
+            if (anchor != null && anchor < today && !tpl.completed && !tpl.missed) {
                 RecurrenceEngine.nextAfter(tpl, now)
-                    ?.takeIf { tpl.recurrenceEndDate == null || it <= tpl.recurrenceEndDate } // recurrence expiration
+                    ?.takeIf { tpl.recurrenceEndDate == null || it <= tpl.recurrenceEndDate }
                     ?.let { next ->
-                    val siblings = dao.children(tpl.parentId)
-                    val inst = Task(
-                        title = tpl.title,
-                        rank = PriorityRank.between(null, siblings.lastOrNull()?.rank),
-                        durationMinutes = tpl.durationMinutes,
-                        fixedTime = next,
-                        recurrence = Recurrence.NONE,
-                        weekdaysMask = tpl.weekdaysMask,
-                        info = tpl.info,
-                        parentId = tpl.parentId,
-                        seriesId = tpl.id
-                    )
-                    val id = dao.insert(inst)
-                    onRecurringInstance?.invoke(inst.copy(id = id))
-                }
+                        dao.update(tpl.copy(fixedTime = next, dueNow = false, updatedAt = now))
+                        onRecurringInstance?.invoke(tpl.copy(fixedTime = next))
+                    }
             }
         }
         reschedule()

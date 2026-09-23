@@ -195,6 +195,20 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
+        // Overnight rule: a task may only span past midnight when it has a fixed time
+        // (with duration). An untimed task is confined to a single day by construction
+        // (its whole duration is charged to today and blocked above when it overflows).
+        if (fixedTime == null && dur > repo.getRemainingMinutesToday()) {
+            _userMessage.emit("Cannot add \"$title\": tasks without a fixed time cannot run overnight — ${dur}m does not fit in today.")
+            return@launch
+        }
+
+        // Parent/child constraint: cumulative direct sub-task durations ≤ parent duration.
+        repo.childDurationError(_path.value.lastOrNull(), dur)?.let {
+            _userMessage.emit(it)
+            return@launch
+        }
+
         repo.create(
             title = title.trim(),
             parentId = _path.value.lastOrNull(),
@@ -227,6 +241,24 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
                 onResult(false, "Duration (${dur}m) puts ${todaySegment}m on today, exceeding remaining time left today (${remainingWithOld}m available).")
                 return@launch
             }
+        }
+
+        // Overnight rule: without a fixed time a task must never span into the next day.
+        if (task.fixedTime == null && dur > repo.getRemainingMinutesToday(excludeTaskId = task.id)) {
+            onResult(false, "Tasks without a fixed time cannot run overnight — ${dur}m does not fit in today.")
+            return@launch
+        }
+
+        // Parent/child constraints, both directions: as a child it may not push its
+        // siblings' cumulative duration over the parent; as a parent it may not shrink
+        // below the sum of its own children's durations.
+        repo.childDurationError(task.parentId, dur, excludeChildId = task.id)?.let {
+            onResult(false, it)
+            return@launch
+        }
+        repo.parentShrinkError(task.id, dur)?.let {
+            onResult(false, it)
+            return@launch
         }
 
         repo.update(task)

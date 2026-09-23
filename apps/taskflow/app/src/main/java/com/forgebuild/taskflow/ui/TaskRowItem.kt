@@ -143,9 +143,14 @@ fun TaskRowItem(
         label = "rowContainer"
     )
     val badgeText = when (task.taskType) {
-        TaskType.RECURRING_FIXED ->
-            "Recurring · ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}" +
+        TaskType.RECURRING_FIXED -> {
+            // Pass 5 fix: recurring fixed-time tasks must ALWAYS show their time,
+            // exactly like non-recurring fixed-time tasks (template fixedTime carries it).
+            val base = "Recurring · ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}"
+            val time = task.fixedTime?.let { timeFmt.format(Date(it)) }
+            base + (time?.let { " · $it" } ?: "") +
                 (overnightLabel?.let { " · $it" } ?: "")
+        }
         TaskType.RECURRING_NO_TIME ->
             "Recurring · ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}"
         TaskType.FIXED_TIME ->

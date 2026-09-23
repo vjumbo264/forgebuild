@@ -1,3 +1,8 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.material3.ExperimentalMaterial3Api::class
+)
+
 package com.forgebuild.taskflow.ui
 
 import android.Manifest
@@ -5,6 +10,9 @@ import android.media.MediaRecorder
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -12,15 +20,22 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,18 +44,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -55,12 +69,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.forgebuild.engine.permissions.EnginePermission
 import com.forgebuild.engine.permissions.PermissionWiring
+import com.forgebuild.engine.ui.components.EngineLoadingIndicator
 import com.forgebuild.engine.ui.components.ExpressiveLoading
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.MotionTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 import com.forgebuild.taskflow.ai.AgentOrchestrator
 import com.forgebuild.taskflow.ai.ChatMessage
@@ -74,13 +92,21 @@ import java.io.File
 private enum class VoiceStage { IDLE, RECORDING, SENDING }
 
 /**
- * AI chat & voice panel.
- * Voice input records the RAW audio clip (MediaRecorder) and sends it straight to Gemini,
- * which natively transcribes/understands the audio itself — no on-device speech-to-text.
- * While recording: live WhatsApp-style audio-spectrum waveform driven by real mic amplitude.
- * After recording stops: a distinct "sending voice note" state while the audio uploads.
+ * Pass 5 full redesign of the AI chat / voice surface (Material 3 Expressive).
+ *
+ * Everything on this screen is reconsidered, not patched:
+ *  - Header: gradient-toned title bar with an AI avatar orb on the extraLarge shape tier.
+ *  - Messages: asymmetric chat bubbles (user bubbles rounded on the trailing corner,
+ *    AI replies anchored to an avatar rail), each message springing in via the official
+ *    expressive MotionScheme as it appears.
+ *  - Input bar: a floating tonal capsule — borderless text field plus expressive-shape
+ *    mic and send buttons whose containers colour-shift between idle/ready states.
+ *  - Voice: recording replaces the input bar with a full-width expressive capture pill
+ *    (live scrolling WhatsApp-style waveform, real mic amplitude), with uncropped
+ *    Cancel / Send controls riding the official expressive button shape-morphing.
+ *  - States idle → recording → sending → responded animate through AnimatedContent
+ *    with MotionTokens specs so every transition feels spring-physical, never cut.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatPanel(
     initialStartListening: Boolean = false,
@@ -95,7 +121,7 @@ fun ChatPanel(
     var input by remember { mutableStateOf("") }
     var voiceStage by remember { mutableStateOf(VoiceStage.IDLE) }
     var micLevel by remember { mutableFloatStateOf(0f) }
-    /** Rolling history of live amplitude samples — one entry per bar, newest last (scrolls right→left). */
+    /** Rolling history of live amplitude samples — one entry per bar, newest last. */
     var waveformSamples by remember { mutableStateOf<List<Float>>(emptyList()) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var audioFile by remember { mutableStateOf<File?>(null) }
@@ -115,7 +141,6 @@ fun ChatPanel(
         val f = stopRecorder()
         voiceStage = VoiceStage.IDLE
         if (f == null) return
-        // Distinct "sending voice note" state while the audio uploads to Gemini.
         voiceStage = VoiceStage.SENDING
         scope.launch {
             try {
@@ -176,14 +201,12 @@ fun ChatPanel(
         if (initialStartListening) requestMic()
     }
 
-    // Live mic-amplitude sampling: every tick captures ONE new bar that scrolls in from
-    // the right while older bars shift left — the WhatsApp voice-note recording behaviour.
+    // Live mic sampling → scrolling waveform bars (WhatsApp voice-note behaviour).
     LaunchedEffect(voiceStage) {
         while (voiceStage == VoiceStage.RECORDING && isActive) {
             val maxAmp = runCatching { recorder?.maxAmplitude ?: 0 }.getOrDefault(0)
             val level = (maxAmp / 32767f).coerceIn(0f, 1f)
             micLevel = level
-            // sqrt-scaling gives a perceptually even response across quiet/loud speech.
             val shaped = kotlin.math.sqrt(level).coerceIn(0.06f, 1f)
             waveformSamples = (waveformSamples + shaped).takeLast(MAX_WAVEFORM_BARS)
             delay(90)
@@ -211,54 +234,82 @@ fun ChatPanel(
             cancelRecording()
             onClose()
         },
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = SpacingTokens.Spacing.md)
         ) {
+            // ── Expressive header: avatar orb + title + Done ─────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(EngineIcons.SmartToy, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(SpacingTokens.Spacing.xs))
-                    Text("TaskFlow AI Assistant", style = MaterialTheme.typography.titleMedium)
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Icon(
+                            EngineIcons.SmartToy,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(10.dp).size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(SpacingTokens.Spacing.sm))
+                    Column {
+                        Text("TaskFlow AI", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            when (voiceStage) {
+                                VoiceStage.RECORDING -> "Listening…"
+                                VoiceStage.SENDING -> "Sending voice note…"
+                                VoiceStage.IDLE -> if (busy) "Working on your tasks…" else "Ready to help"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                TextButton(onClick = {
-                    cancelRecording()
-                    onClose()
-                }) { Text("Done") }
+                TextButton(
+                    onClick = {
+                        cancelRecording()
+                        onClose()
+                    },
+                    shapes = ButtonDefaults.shapes()
+                ) { Text("Done") }
             }
 
-            Spacer(Modifier.height(SpacingTokens.Spacing.xs))
+            Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
+            // ── Message list: bubbles spring in as they appear ───────────────
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 180.dp, max = 360.dp),
+                    .heightIn(min = 180.dp, max = 380.dp),
                 verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
             ) {
                 if (messages.isEmpty()) {
                     item {
                         Surface(
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            shape = MaterialTheme.shapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = MaterialTheme.shapes.largeIncreased,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = SpacingTokens.Spacing.sm)
                         ) {
                             Column(Modifier.padding(SpacingTokens.Spacing.md)) {
                                 Text(
-                                    "Try saying or typing commands like:",
-                                    style = MaterialTheme.typography.labelMedium,
+                                    "Ask me to plan, schedule or reorganise:",
+                                    style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(SpacingTokens.Spacing.xs))
                                 Text("• \"Create three tasks to do this week and scatter them\"", style = MaterialTheme.typography.bodySmall)
                                 Text("• \"Set weekly groceries only on Tuesdays\"", style = MaterialTheme.typography.bodySmall)
                                 Text("• \"Repeat every day until next Friday: water the plants\"", style = MaterialTheme.typography.bodySmall)
@@ -268,7 +319,27 @@ fun ChatPanel(
                     }
                 }
 
-                items(messages) { m -> ChatBubble(m) }
+                items(messages, key = { it.hashCode() }) { m ->
+                    // Spring-based entrance per message (official expressive motion spec).
+                    @Suppress("UNCHECKED_CAST")
+                    val spatial = MotionTokens.defaultSpatial as
+                        androidx.compose.animation.core.FiniteAnimationSpec<Float>
+                    var visible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { visible = true }
+                    val progress by animateFloatAsState(
+                        targetValue = if (visible) 1f else 0f,
+                        animationSpec = spatial,
+                        label = "bubbleIn"
+                    )
+                    Box(
+                        Modifier.graphicsLayer {
+                            alpha = progress
+                            translationY = (1f - progress) * 48f
+                            scaleX = 0.92f + 0.08f * progress
+                            scaleY = 0.92f + 0.08f * progress
+                        }
+                    ) { ChatBubble(m) }
+                }
 
                 if (busy) {
                     item {
@@ -277,8 +348,12 @@ fun ChatPanel(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
                         ) {
-                            ExpressiveLoading(size = SpacingTokens.Spacing.lg)
-                            Text("Thinking & updating tasks…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            EngineLoadingIndicator()
+                            Text(
+                                "Thinking & updating tasks…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -286,52 +361,38 @@ fun ChatPanel(
 
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
-            when (voiceStage) {
-                VoiceStage.RECORDING -> LiveWaveformBanner(
-                    samples = waveformSamples,
-                    onSend = { sendRecording() },
-                    onCancel = { cancelRecording() }
-                )
-                VoiceStage.SENDING -> SendingVoiceBanner()
-                VoiceStage.IDLE -> Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
-                ) {
-                    OutlinedTextField(
-                        value = input,
-                        onValueChange = { input = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Ask AI or record a voice note…") },
-                        shape = MaterialTheme.shapes.large,
-                        maxLines = 3
+            // ── Composer: AnimatedContent swaps idle ↔ recording ↔ sending ───
+            @Suppress("UNCHECKED_CAST")
+            val swapSpatial = MotionTokens.fastSpatial as
+                androidx.compose.animation.core.FiniteAnimationSpec<androidx.compose.ui.unit.IntOffset>
+            AnimatedContent(
+                targetState = voiceStage,
+                transitionSpec = {
+                    (fadeIn(tween(160)) + slideInVertically(swapSpatial) { it / 6 })
+                        .togetherWith(fadeOut(tween(120)))
+                },
+                label = "composerSwap"
+            ) { stage ->
+                when (stage) {
+                    VoiceStage.RECORDING -> RecordingPill(
+                        samples = waveformSamples,
+                        onSend = { sendRecording() },
+                        onCancel = { cancelRecording() }
                     )
-                    IconButton(
-                        onClick = { requestMic() },
-                        shapes = IconButtonDefaults.shapes(),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(EngineIcons.Mic, contentDescription = "Record voice note")
-                    }
-                    IconButton(
-                        onClick = {
+                    VoiceStage.SENDING -> SendingVoiceCard()
+                    VoiceStage.IDLE -> ComposerBar(
+                        input = input,
+                        onInputChange = { input = it },
+                        busy = busy,
+                        onMic = { requestMic() },
+                        onSend = {
                             val text = input.trim()
                             if (text.isNotEmpty() && !busy) {
                                 input = ""
                                 scope.launch { orchestrator.send(text) }
                             }
-                        },
-                        enabled = input.isNotBlank() && !busy,
-                        shapes = IconButtonDefaults.shapes(),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Icon(EngineIcons.Send, contentDescription = "Send")
-                    }
+                        }
+                    )
                 }
             }
 
@@ -344,18 +405,89 @@ fun ChatPanel(
 private const val MAX_WAVEFORM_BARS = 48
 
 /**
- * Live waveform matching WhatsApp voice-note recording: bars scroll in from the right
- * and travel left continuously while recording; each bar's height is the live amplitude
- * captured at that moment. Uniform bar width, spacing and fully-rounded caps — drawn on
- * a Canvas so the strip stays clean and consistent no matter how loud the input is.
+ * Floating composer capsule: borderless tonal text field + expressive mic/send
+ * buttons. The send button animates to filled-primary (and morphs its shape on
+ * press) the moment there is text; the mic sits in a tonal container otherwise.
  */
 @Composable
-private fun LiveWaveformBanner(
+private fun ComposerBar(
+    input: String,
+    onInputChange: (String) -> Unit,
+    busy: Boolean,
+    onMic: () -> Unit,
+    onSend: () -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(start = SpacingTokens.Spacing.md, end = 6.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextField(
+                value = input,
+                onValueChange = onInputChange,
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text(
+                        "Message TaskFlow AI…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                maxLines = 4,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
+            )
+            val hasText = input.isNotBlank()
+            // Mic: shown when idle-no-text; send takes over with an expressive colour shift.
+            if (!hasText) {
+                IconButton(
+                    onClick = onMic,
+                    shapes = IconButtonDefaults.shapes(),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(EngineIcons.Mic, contentDescription = "Record voice note")
+                }
+            } else {
+                IconButton(
+                    onClick = onSend,
+                    enabled = !busy,
+                    shapes = IconButtonDefaults.shapes(),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(EngineIcons.Send, contentDescription = "Send message")
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Recording pill — replaces the whole composer while capturing. The waveform
+ * strip gets real vertical room and the Cancel/Send controls sit fully inside
+ * the pill with natural sizing, so the Send button is never cropped (Pass 5 fix).
+ */
+@Composable
+private fun RecordingPill(
     samples: List<Float>,
     onSend: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val infiniteTransition = rememberInfiniteTransition(label = "recPulse")
     val pulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
         targetValue = 1f,
@@ -363,15 +495,13 @@ private fun LiveWaveformBanner(
             animation = tween(650, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulseAlpha"
+        label = "recPulseAlpha"
     )
 
     Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.28f),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.32f),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             Modifier
@@ -379,49 +509,43 @@ private fun LiveWaveformBanner(
                 .fillMaxWidth()
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.error.copy(alpha = pulseAlpha))
-                    )
-                    Text(
-                        "Recording… tap Send to finish",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = pulseAlpha))
+                )
+                Text(
+                    "Recording…",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onCancel, shapes = ButtonDefaults.shapes()) {
+                    Text("Cancel")
                 }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextButton(onClick = onCancel) { Text("Cancel") }
-                    FilledTonalButton(
-                        onClick = onSend,
-                        modifier = Modifier.height(34.dp),
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Text("Send")
-                    }
+                // Uncropped: natural button sizing (no height cap), expressive press morph.
+                androidx.compose.material3.Button(
+                    onClick = onSend,
+                    shapes = ButtonDefaults.shapes()
+                ) {
+                    Icon(EngineIcons.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Send")
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
-            // Scrolling waveform strip: newest bar at the right edge, history sliding left.
-            // Uniform 4dp bars / 3dp gaps / fully rounded caps, single accent colour with a
-            // subtle age fade toward the left (older bars) — the chat-app voice-note look.
+            // Scrolling waveform: newest bar at the right edge, history sliding left.
             val barColor = MaterialTheme.colorScheme.primary
             androidx.compose.foundation.Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .height(48.dp)
             ) {
                 val barWidth = 4.dp.toPx()
                 val gap = 3.dp.toPx()
@@ -432,7 +556,6 @@ private fun LiveWaveformBanner(
                 val capacity = (size.width / step).toInt().coerceAtLeast(1)
                 val visible = samples.takeLast(capacity)
                 visible.forEachIndexed { index, amp ->
-                    // index 0 = oldest (leftmost); last = newest, flush to the right edge.
                     val fromRight = visible.size - 1 - index
                     val x = size.width - step * (fromRight + 1) + gap / 2f
                     val h = (minBarH + (maxBarH - minBarH) * amp).coerceIn(minBarH, maxBarH)
@@ -449,38 +572,22 @@ private fun LiveWaveformBanner(
     }
 }
 
-/**
- * Distinct "sending voice note" state shown after recording ends,
- * while the raw audio clip uploads to Gemini and before its response comes back.
- */
+/** Distinct sending state: official expressive loading indicator + status copy. */
 @Composable
-private fun SendingVoiceBanner() {
-    val infiniteTransition = rememberInfiniteTransition(label = "sendPulse")
-    val wave by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sendWave"
-    )
-
+private fun SendingVoiceCard() {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.extraLargeIncreased,
         color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             Modifier
-                .padding(horizontal = SpacingTokens.Spacing.md, vertical = SpacingTokens.Spacing.sm)
+                .padding(horizontal = SpacingTokens.Spacing.md, vertical = SpacingTokens.Spacing.md)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)
         ) {
-            ExpressiveLoading(size = SpacingTokens.Spacing.lg)
+            EngineLoadingIndicator()
             Column(Modifier.weight(1f)) {
                 Text(
                     "Sending voice note to Gemini…",
@@ -493,25 +600,27 @@ private fun SendingVoiceBanner() {
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
-                for (i in 0 until 4) {
-                    val h = (8f + wave * 14f * (1f - kotlin.math.abs(i - 1.5f) / 2f)).coerceIn(6f, 22f)
-                    Box(
-                        modifier = Modifier
-                            .width(4.dp)
-                            .height(h.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(MaterialTheme.colorScheme.onPrimaryContainer)
-                    )
-                }
-            }
         }
     }
 }
 
+/**
+ * Expressive asymmetric chat bubble: user messages hug the trailing edge with a
+ * softened trailing corner; AI replies sit on an avatar rail; action cards use
+ * the tertiary palette with a check badge.
+ */
 @Composable
 private fun ChatBubble(m: ChatMessage) {
     val alignEnd = m.role == ChatMessage.Role.USER
+    val shape = when (m.role) {
+        ChatMessage.Role.USER -> RoundedCornerShape(
+            topStart = 24.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 6.dp
+        )
+        ChatMessage.Role.MODEL -> RoundedCornerShape(
+            topStart = 24.dp, topEnd = 24.dp, bottomStart = 6.dp, bottomEnd = 24.dp
+        )
+        ChatMessage.Role.ACTION -> MaterialTheme.shapes.largeIncreased
+    }
     val color = when (m.role) {
         ChatMessage.Role.USER -> MaterialTheme.colorScheme.primaryContainer
         ChatMessage.Role.MODEL -> MaterialTheme.colorScheme.surfaceContainerHigh
@@ -519,12 +628,30 @@ private fun ChatBubble(m: ChatMessage) {
     }
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start,
+        verticalAlignment = Alignment.Bottom
     ) {
+        if (!alignEnd && m.role == ChatMessage.Role.MODEL) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        EngineIcons.SmartToy,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.width(6.dp))
+        }
         Surface(
-            shape = MaterialTheme.shapes.large,
+            shape = shape,
             color = color,
-            modifier = Modifier.fillMaxWidth(0.88f)
+            modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             Column(Modifier.padding(SpacingTokens.Spacing.sm)) {
                 if (m.role == ChatMessage.Role.ACTION) {

@@ -181,6 +181,15 @@ class TaskAgentTools(private val repo: TaskRepository) {
                     }
                 }
 
+                // Overnight rule: a task may only span past midnight when it has a fixed
+                // time (with duration). Untimed tasks are confined to a single day.
+                if (fixedTime == null && duration > repo.getRemainingMinutesToday()) {
+                    return "Cannot create task \"$title\": tasks without a fixed time cannot run overnight — ${duration}m does not fit in today. Give it a fixed time or reduce the duration."
+                }
+
+                // Parent/child constraint: cumulative direct sub-task durations ≤ parent duration.
+                repo.childDurationError(args.longOrNull("parent_id"), duration)?.let { return it }
+
                 val t = repo.create(
                     title = title,
                     parentId = args.longOrNull("parent_id"),
@@ -212,6 +221,15 @@ class TaskAgentTools(private val repo: TaskRepository) {
                         return "Cannot update task #$id to ${newDuration}m: today's portion (${todaySegment}m) exceeds remaining time today (${remainingWithOld}m available)."
                     }
                 }
+
+                // Overnight rule: without a fixed time a task must never span into the next day.
+                if (newFixed == null && newDuration.coerceAtLeast(1L) > repo.getRemainingMinutesToday(excludeTaskId = t.id)) {
+                    return "Cannot update task #$id: tasks without a fixed time cannot run overnight — ${newDuration}m does not fit in today."
+                }
+
+                // Parent/child constraints (both directions).
+                repo.childDurationError(t.parentId, newDuration.coerceAtLeast(1L), excludeChildId = t.id)?.let { return it }
+                repo.parentShrinkError(t.id, newDuration.coerceAtLeast(1L))?.let { return it }
 
                 val newRecurrence = if (args.str("recurrence") != null) parseRecurrence(args.str("recurrence")) else t.recurrence
                 val newRecurrenceEnd = when {

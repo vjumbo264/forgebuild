@@ -72,6 +72,10 @@ fun TaskEditScreen(
 ) {
     val task by produceState<Task?>(null, taskId) { value = vm.repo.get(taskId) }
     val subtasks by produceState<List<Task>>(emptyList(), taskId) { value = vm.repo.siblingsOf(taskId) }
+    // Parent duration-cap error (live): cumulative direct children must stay ≤ parent duration.
+    val childCapError by produceState<String?>(null, taskId, subtasks.size) {
+        value = vm.repo.childDurationError(taskId, 0L)
+    }
     val context = LocalContext.current
 
     val current = task
@@ -272,6 +276,14 @@ fun TaskEditScreen(
             // Sub-tasks section
             Spacer(Modifier.height(SpacingTokens.Spacing.xs))
             Text("Sub-tasks (${subtasks.size})", style = MaterialTheme.typography.titleSmall)
+            // Live budget: Σ direct children durations ≤ this task's duration (incl. overnight spans).
+            val subUsed = subtasks.sumOf { it.durationMinutes.coerceAtLeast(1L) }
+            Text(
+                "Sub-task budget: ${subUsed}m of ${current.durationMinutes}m used",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (subUsed > current.durationMinutes) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             if (subtasks.isNotEmpty()) {
                 Card(
