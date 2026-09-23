@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": true,
-  "updated_by": "taskflow-pass5-session",
-  "current_task": "complete",
+  "build_complete": false,
+  "updated_by": "taskflow-pass6-session",
+  "current_task": "step-34",
   "substitutions": [],
   "tasks": [
     {
@@ -205,6 +205,60 @@
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v5, verify release + assets live via GitHub Releases API, set build_complete: true",
       "status": "done",
       "notes": "release.yml run 35804583600 completed success. Verified live via GitHub Releases API: tag taskflow-v5 (not draft/prerelease) with assets app-taskflow-v5.apk (2,224,969 bytes, R8-minified, repo-keystore signed) + forgebuild-manifest.json (721 bytes). Prior releases taskflow-v1..v4 untouched. build_complete set true. All Pass 5 fixes done: recurring fixed-time shows time; sub-task durations capped at parent (every nesting level, incl. overnight spans); recurring completion advances template in place with a history record (no duplicates); voice send button uncropped; overnight requires fixed time; AI chat screen fully redesigned on Material 3 Expressive. No engine/ changes, no substitutions."
+    },
+    {
+      "id": "step-34",
+      "title": "Main screen header spacing fix: breathing room between app bar header and content below",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-35",
+      "title": "AI must not auto-assign fixed times: fixed_time only when user explicitly states/implies a time; system instruction + tool description hardened",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-36",
+      "title": "Due-now alert persists for full task duration (start..start+duration); after elapsed & uncompleted, transition to subtle 'time passed' visual state distinct from due-now and normal",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-37",
+      "title": "Recurring task card shading too bright in dark mode: tone down recurring container colors for dark theme consistent with other task types",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-38",
+      "title": "Task timer: play/pause countdown per task, unique kitchen-timer ding on finish, extend-or-complete choice after ding, AI control for start/pause/resume/extend incl. mid-countdown",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-39",
+      "title": "Voice recording waveform must travel full width (right edge to left edge) symmetrically",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-40",
+      "title": "Settings screen full M3-Expressive redesign: new layout/grouping, expressive shapes, spring motion, animated toggles/inputs (API keys, notifications)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-41",
+      "title": "Validate build config, dispatch release.yml (app_path=apps/taskflow) for taskflow-v6",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-42",
+      "title": "Verify taskflow-v6 release + assets live via GitHub Releases API, then set build_complete: true",
+      "status": "pending",
+      "notes": ""
     }
   ]
 }

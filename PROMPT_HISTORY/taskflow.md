@@ -206,3 +206,40 @@ This is a fix to how UI-redo requests have been scoped: rather than a global ins
 - Treat this screen as a full redesign, not a patch — layout, message bubble/list style, input bar, mic button, and any surrounding chrome should all be reconsidered.
 - Fully adopt Material 3 Expressive for this screen: expressive shapes, spring-based motion, satisfying press/state-change animations on the mic button, send button, and message elements; smooth animated transitions for new messages appearing and for state changes (idle → recording → sending → responded).
 - Should feel as premium and polished as the rest of the app is intended to be — comparable to a well-designed first-party Google chat-style surface.
+
+# TaskFlow — Revision Pass 6 (Fixes) — 2026-09-23
+
+This is a follow-up pass on the existing app (previous revisions already implemented). These are new fixes/requirements only.
+
+## Main Screen Header Layout (FIX)
+- The app name/short description header at the top of the main screen sits too close to the content below it. Fix the spacing/arrangement so the header has proper breathing room and the layout doesn't feel cramped — push content down appropriately rather than crowding it under the header.
+
+## AI Should Not Auto-Assign Fixed Times (FIX)
+- The AI agent is currently giving newly created tasks a fixed time automatically, even when the user didn't ask for one. This must stop.
+- A task should only get a fixed time if the user explicitly specifies one (directly, or clearly implies one — e.g. "remind me at 3pm"). Otherwise, tasks the AI creates should have no fixed time, same as if the user created it manually without setting one.
+
+## Due-Task Alert State Should Persist Through the Task's Duration (NEW)
+- Currently a fixed-time task's "due now" alert state presumably triggers only at the exact start time. Instead: the prominent "due now" alert state should persist for the full duration of the task (from its fixed start time until start time + duration).
+- Once that duration has elapsed and the task still isn't completed, it should transition to a different, more subtle "time's passed but not done" visual state — distinct from both the active "due now" alert state and a normal task state — rather than staying in the loud alert treatment indefinitely.
+
+## Recurring Task Card Shading in Dark Mode (FIX)
+- Recurring task cards currently use a shade of blue that's too bright/harsh specifically in dark mode (light mode looks fine). Other task-type shadings already look correct in dark mode.
+- Fix the recurring task color so it's toned down appropriately for dark mode, consistent with how the other task-type colors are already handled there.
+
+## Task Timer / Play Button (NEW feature)
+- Add a play button to tasks that starts a countdown based on the task's duration.
+- When the countdown finishes, play a distinct, unique completion sound (like a kitchen timer/oven "ding," not a generic notification tone) to alert the user.
+- After the sound plays, present the user two choices: **extend** the task (add more time — minutes/hours, same units used elsewhere in the app) or **complete** the task.
+- Extending must also be doable via the AI agent — the user should be able to tell the AI to extend a running/finished-countdown task.
+- The user must also be able to ask the AI to extend a task's timer while its countdown is still running (mid-countdown), not only after it finishes.
+
+## Voice Recording Waveform Not Reaching Full Width (FIX)
+- The waveform animation that scrolls right-to-left while recording currently stops short of the left edge instead of traveling all the way across. It starts flush at the right edge but doesn't reach the left edge — fix so it travels the full width symmetrically, same as it starts.
+
+## Settings Screen — Reimagine This Screen Specifically (NEW — targeted UI redo)
+- Same approach as previous per-screen redesign requests: this pass targets the Settings screen specifically for a full redesign, not a patch.
+- Rethink layout, structure/grouping of settings, and visual presentation entirely — the arrangement doesn't need to resemble the current settings screen at all.
+- Fully adopt Material 3 Expressive for this screen: expressive shapes, spring-based motion, and satisfying interaction animations on toggles, list items, and any inputs (e.g. API key management, notification toggles).
+- Should feel as premium and polished as the rest of the app is intended to be.
+
+### Operator addendum (same session, 2026-09-23): the task timer must also support PAUSE, not just play — the user can pause a running countdown and resume it. Play and pause must also be controllable via the AI agent ("pause the timer on X", "resume/start the timer on X"), same as extend.
