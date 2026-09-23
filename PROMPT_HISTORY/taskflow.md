@@ -243,3 +243,37 @@ This is a follow-up pass on the existing app (previous revisions already impleme
 - Should feel as premium and polished as the rest of the app is intended to be.
 
 ### Operator addendum (same session, 2026-09-23): the task timer must also support PAUSE, not just play — the user can pause a running countdown and resume it. Play and pause must also be controllable via the AI agent ("pause the timer on X", "resume/start the timer on X"), same as extend.
+
+---
+
+# TaskFlow — Revision Pass 7 (Fixes) — 2026-09-23
+
+This is a follow-up pass on the existing app (previous revisions already implemented). These are new fixes/requirements only.
+
+## Sub-task Added From Edit Screen Creates a New Root Task Instead (FIX — critical bug)
+- When editing a task and adding a sub-task from within that edit screen, the sub-task is being created as a brand-new standalone root task instead of being nested inside the task being edited.
+- Fix so sub-tasks added from a task's edit screen are correctly attached as children of that task.
+
+## Pomodoro Feature (NEW)
+- Add Pomodoro settings (work-interval length and break-interval length, user-configurable) in Settings.
+- When Pomodoro is enabled and the user presses play on a task, the task's countdown runs using the Pomodoro pattern instead of one continuous countdown:
+  - Split the task's total duration into work intervals and breaks per the configured lengths, in sequence, fitting as many complete work+break cycles as the task's total duration allows.
+    - Example: 25 min work / 5 min break settings on a 30-minute task → exactly one work interval (25 min) fits, followed by its break (5 min); the task is then complete — a second work interval doesn't fit in what's left, so Pomodoro only cycles once for that task.
+    - Example: 10 min work / 5 min break settings on a 30-minute task → three full work intervals fit exactly (10+10+10 = 30 min of work), with breaks between them (not after the final one, since the task is done at that point).
+  - If the task's total duration is shorter than one full work interval, Pomodoro does not apply to that task at all — it just runs as a normal single countdown.
+  - If, after fitting as many full work/break cycles as possible, a remaining leftover portion of the task is too short for another full work interval, that leftover portion just runs as a normal (non-Pomodoro) countdown to finish out the task — no partial/broken Pomodoro segment.
+- During a work interval: the task is "running" as normal. During a break interval: the task's own countdown pauses, and resumes automatically when the break ends.
+- While a task is playing (whether Pomodoro is enabled for it or not), show a persistent notification with the live countdown.
+  - If Pomodoro is enabled for that task, the notification also shows a wavy/animated progress bar (Material 3 expressive style) indicating progress toward the next transition — progress toward the upcoming break while in a work interval, and progress toward resuming work while in a break.
+
+## Alarm/Background Permission Not Actually Granting (FIX)
+- The exact-alarm/background-related permission request is not properly working — the app is not correctly obtaining this permission, which is one of the things needed to keep the app reliably active in the background. Diagnose and fix so this permission flow actually completes successfully.
+
+## Main Screen Progress Bars Are Duplicating the Same Metric (FIX)
+- There are two time-tracking indicators on the main screen: a circular one and a horizontal/straight one. Currently both show the exact same thing (time left today / percent booked), which is redundant.
+- Fix so each shows something distinct:
+  - **Circular indicator** → keep as-is: how much of today's time is left, and what percentage of that remaining time is already booked by tasks (this part is already correct — don't change its behavior).
+  - **Horizontal/straight indicator** → change to show total daily time (24h) vs. how much of it has been used. "Used" here includes both time that has already elapsed in the day AND time still held by tasks that haven't happened yet (i.e. booked/allocated time counts as "used" on this bar too, not just elapsed time) — so if 3 hours of the day have passed and tasks still hold 4–5 more hours somewhere in the day, the horizontal bar reflects all of that combined against the full 24-hour total.
+
+## Task Time-Extension UI Is Messed Up (FIX)
+- The icon used for extending an active task's time, and the extension UI/flow itself, currently look broken/off. Fix the layout and visual presentation of the extend-time icon and its associated UI so it displays correctly and cleanly.
