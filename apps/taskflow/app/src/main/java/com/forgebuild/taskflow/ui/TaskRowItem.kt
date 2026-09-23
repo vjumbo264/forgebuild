@@ -134,9 +134,12 @@ fun TaskRowItem(
         else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
     // Colour changes ride the official expressive effects spring, not a static swap.
+    @Suppress("UNCHECKED_CAST")
+    val effectsSpec = MotionTokens.defaultEffects as
+        androidx.compose.animation.core.AnimationSpec<androidx.compose.ui.graphics.Color>
     val containerColor by animateColorAsState(
         targetValue = targetContainer,
-        animationSpec = MotionTokens.defaultEffects,
+        animationSpec = effectsSpec,
         label = "rowContainer"
     )
     val badgeText = when (task.taskType) {
