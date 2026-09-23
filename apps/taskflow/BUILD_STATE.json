@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "taskflow-pass6-session",
-  "current_task": "step-41",
+  "current_task": "complete",
   "substitutions": [],
   "tasks": [
     {
@@ -251,14 +251,14 @@
     {
       "id": "step-41",
       "title": "Validate build config, dispatch release.yml (app_path=apps/taskflow) for taskflow-v6",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "release.yml dispatched (app_path=apps/taskflow). First two runs failed on compile errors and were fixed in follow-up commits (TimerSounds AudioTrack stop/reload cycle replaced with a fresh static track per ding; SettingsScreen shapes.mediumIncreased -> shapes.large, a tier that exists in this Shapes set). Final run 35808032891 succeeded; tag auto-incremented to taskflow-v6. No prior release touched."
     },
     {
       "id": "step-42",
       "title": "Verify taskflow-v6 release + assets live via GitHub Releases API, then set build_complete: true",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified via GitHub Releases API: tag taskflow-v6 live with signed R8-minified APK asset + forgebuild-manifest.json. Prior releases taskflow-v1..v5 untouched. build_complete set true only after this verification."
     }
   ]
 }
