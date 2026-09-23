@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass4-session",
-  "current_task": "step-21",
+  "current_task": "step-23",
   "substitutions": [],
   "tasks": [
     {
@@ -131,14 +131,14 @@
     {
       "id": "step-21",
       "title": "Pass 4: append Revision Pass 4 instruction to PROMPT_HISTORY/taskflow.md; seed BUILD_STATE tasks",
-      "status": "in_progress",
+      "status": "done",
       "notes": "Operator instruction appended verbatim under 2026-09-22 heading (append-only). Pass-4 task list seeded."
     },
     {
       "id": "step-22",
       "title": "FIX time-remaining-today: count recurring instances and carried-over tasks against the day, plus overnight segment accounting",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "New DayAccounting engine (data/DayAccounting.kt) is the single source of truth for per-day minute occupancy. TaskRepository.getAllocatedMinutesToday + getRemainingMinutesToday now delegate to it, and TaskViewModel.allocatedMinutesToday + remainingMinutesToday do too. All task categories now count: one-off timed, recurring templates occurring today, generated recurring instances (even with stale past fixedTime), carried-over unfinished tasks, and pre-midnight segments of overnight tasks. TaskViewModel.tasks TODAY/WEEK/MONTH/YEAR filters + addTask/saveEdit + TaskAgentTools create/update also use DayAccounting.touchesDay/occursOnDay so overnight and carried-over tasks show on the correct day."
     },
     {
       "id": "step-23",

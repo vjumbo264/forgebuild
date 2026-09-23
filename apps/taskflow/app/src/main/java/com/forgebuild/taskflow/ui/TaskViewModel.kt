@@ -3,6 +3,7 @@ package com.forgebuild.taskflow.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.forgebuild.taskflow.data.DayAccounting
 import com.forgebuild.taskflow.data.PriorityRank
 import com.forgebuild.taskflow.data.Recurrence
 import com.forgebuild.taskflow.data.Task
@@ -50,84 +51,52 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { repo.activeChildren(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Filtered tasks according to the selected TimeRangeView. */
+    /** Filtered tasks according to the selected TimeRangeView, using shared [DayAccounting] day-occupancy rules. */
     val tasks: StateFlow<List<Task>> = combine(rawActiveTasks, _timeRange) { list, range ->
         val now = System.currentTimeMillis()
-        val c = Calendar.getInstance().apply { timeInMillis = now }
-        val startOfToday = c.apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        val endOfToday = c.apply {
-            set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
-        }.timeInMillis
 
-        when (range) {
-            TimeRangeView.TODAY -> {
-                list.filter { t ->
-                    if (t.dueNow) return@filter true
-                    if (t.fixedTime != null) {
-                        t.fixedTime in startOfToday..endOfToday
-                    } else {
-                        true // un-timed tasks belong to today
-                    }
+        /** Day-start millis for every calendar day covered by the selected range. */
+        fun daysInRange(): List<Long> {
+            val todayStart = DayAccounting.dayStart(now)
+            return when (range) {
+                TimeRangeView.TODAY -> listOf(todayStart)
+                TimeRangeView.WEEK -> {
+                    val weekCal = Calendar.getInstance().apply { timeInMillis = now }
+                    weekCal.set(Calendar.DAY_OF_WEEK, weekCal.firstDayOfWeek)
+                    weekCal.set(Calendar.HOUR_OF_DAY, 0); weekCal.set(Calendar.MINUTE, 0)
+                    weekCal.set(Calendar.SECOND, 0); weekCal.set(Calendar.MILLISECOND, 0)
+                    (0 until 7).map { weekCal.timeInMillis + it * DayAccounting.DAY_MILLIS }
+                }
+                TimeRangeView.MONTH -> {
+                    val m = Calendar.getInstance().apply { timeInMillis = now }
+                    val dim = m.getActualMaximum(Calendar.DAY_OF_MONTH)
+                    m.set(Calendar.DAY_OF_MONTH, 1); m.set(Calendar.HOUR_OF_DAY, 0); m.set(Calendar.MINUTE, 0)
+                    m.set(Calendar.SECOND, 0); m.set(Calendar.MILLISECOND, 0)
+                    (0 until dim).map { m.timeInMillis + it * DayAccounting.DAY_MILLIS }
+                }
+                TimeRangeView.YEAR -> {
+                    val y = Calendar.getInstance().apply { timeInMillis = now }
+                    val diy = y.getActualMaximum(Calendar.DAY_OF_YEAR)
+                    y.set(Calendar.DAY_OF_YEAR, 1); y.set(Calendar.HOUR_OF_DAY, 0); y.set(Calendar.MINUTE, 0)
+                    y.set(Calendar.SECOND, 0); y.set(Calendar.MILLISECOND, 0)
+                    (0 until diy).map { y.timeInMillis + it * DayAccounting.DAY_MILLIS }
                 }
             }
-            TimeRangeView.WEEK -> {
-                val weekCal = Calendar.getInstance().apply { timeInMillis = now }
-                weekCal.set(Calendar.DAY_OF_WEEK, weekCal.firstDayOfWeek)
-                weekCal.set(Calendar.HOUR_OF_DAY, 0); weekCal.set(Calendar.MINUTE, 0)
-                weekCal.set(Calendar.SECOND, 0); weekCal.set(Calendar.MILLISECOND, 0)
-                val weekStart = weekCal.timeInMillis
-                weekCal.add(Calendar.DAY_OF_YEAR, 7)
-                val weekEnd = weekCal.timeInMillis - 1
+        }
+        val days = daysInRange()
 
-                list.filter { t ->
-                    if (t.dueNow) return@filter true
-                    if (t.recurrence != Recurrence.NONE) return@filter true
-                    if (t.fixedTime != null) {
-                        t.fixedTime in weekStart..weekEnd
-                    } else {
-                        true
-                    }
-                }
-            }
-            TimeRangeView.MONTH -> {
-                val monthCal = Calendar.getInstance().apply { timeInMillis = now }
-                monthCal.set(Calendar.DAY_OF_MONTH, 1)
-                monthCal.set(Calendar.HOUR_OF_DAY, 0); monthCal.set(Calendar.MINUTE, 0)
-                monthCal.set(Calendar.SECOND, 0); monthCal.set(Calendar.MILLISECOND, 0)
-                val monthStart = monthCal.timeInMillis
-                monthCal.add(Calendar.MONTH, 1)
-                val monthEnd = monthCal.timeInMillis - 1
-
-                list.filter { t ->
-                    if (t.dueNow) return@filter true
-                    if (t.recurrence != Recurrence.NONE) return@filter true
-                    if (t.fixedTime != null) {
-                        t.fixedTime in monthStart..monthEnd
-                    } else {
-                        true
-                    }
-                }
-            }
-            TimeRangeView.YEAR -> {
-                val yearCal = Calendar.getInstance().apply { timeInMillis = now }
-                yearCal.set(Calendar.DAY_OF_YEAR, 1)
-                yearCal.set(Calendar.HOUR_OF_DAY, 0); yearCal.set(Calendar.MINUTE, 0)
-                yearCal.set(Calendar.SECOND, 0); yearCal.set(Calendar.MILLISECOND, 0)
-                val yearStart = yearCal.timeInMillis
-                yearCal.add(Calendar.YEAR, 1)
-                val yearEnd = yearCal.timeInMillis - 1
-
-                list.filter { t ->
-                    if (t.dueNow) return@filter true
-                    if (t.recurrence != Recurrence.NONE) return@filter true
-                    if (t.fixedTime != null) {
-                        t.fixedTime in yearStart..yearEnd
-                    } else {
-                        true
-                    }
-                }
+        list.filter { t ->
+            if (t.dueNow) return@filter true
+            when {
+                // Untimed tasks belong to today (and therefore to every range that includes today).
+                t.fixedTime == null && !t.isRecurringTemplate ->
+                    days.any { DayAccounting.touchesDay(t, it, now) }
+                // Recurring template: show if it occurs on any day in range.
+                t.isRecurringTemplate ->
+                    days.any { DayAccounting.occursOnDay(t, it) != null }
+                // Timed one-off / generated instance: show on any day its occupancy
+                // touches (incl. overnight spill into the next day and carry-over).
+                else -> days.any { DayAccounting.touchesDay(t, it, now) }
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -154,22 +123,15 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     val retentionDays: StateFlow<Int> = settings.retentionDays
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 14)
 
-    /** Time tracking for the day. */
+    /** Time tracking for the day — shared [DayAccounting] rules so every task category counts. */
     val allocatedMinutesToday: StateFlow<Long> = repo.allActive().map { all ->
         val now = System.currentTimeMillis()
-        val todayStart = repo.dayStart(now)
-        val todayEnd = repo.dayEnd(now)
-        all.filter { t ->
-            if (t.isRecurringTemplate && t.recurrence != Recurrence.NONE) return@filter false
-            if (t.fixedTime != null) t.fixedTime in todayStart..todayEnd
-            else true
-        }.sumOf { it.durationMinutes.coerceAtLeast(1L) }
+        DayAccounting.allocatedMinutesForDay(all, now, now)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
     val remainingMinutesToday: StateFlow<Long> = allocatedMinutesToday.map { allocated ->
         val now = System.currentTimeMillis()
-        val todayEnd = repo.dayEnd(now)
-        val minutesUntilMidnight = ((todayEnd - now) / 60000L).coerceAtLeast(0L)
+        val minutesUntilMidnight = ((DayAccounting.nextDayStart(now) - now) / 60000L).coerceAtLeast(0L)
         (minutesUntilMidnight - allocated).coerceAtLeast(0L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
@@ -189,9 +151,10 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             scheduler.rescheduleAll()
             // Day-rollover rules on every open: expired fixed-time tasks -> Unfinished view.
             repo.sweepMissed()
-            // Auto-purge expired completed tasks based on retention setting
+            // Auto-purge expired completed AND missed (Unfinished) tasks per retention setting
             val days = settings.retentionDays.first()
             repo.purgeExpiredCompleted(days)
+            repo.purgeExpiredMissed(days)
         }
     }
 
@@ -220,7 +183,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         if (title.isBlank()) return@launch
         val dur = durationMinutes.coerceAtLeast(1L)
         val now = System.currentTimeMillis()
-        val isToday = fixedTime == null || fixedTime in repo.dayStart(now)..repo.dayEnd(now)
+        val isToday = fixedTime == null ||
+            DayAccounting.touchesDay(Task(title = "", rank = 0.0, durationMinutes = dur, fixedTime = fixedTime), now, now)
 
         if (isToday) {
             val remaining = repo.getRemainingMinutesToday()
@@ -251,7 +215,7 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveEdit(task: Task, onResult: (Boolean, String?) -> Unit) = viewModelScope.launch {
         val now = System.currentTimeMillis()
-        val isToday = task.fixedTime == null || task.fixedTime in repo.dayStart(now)..repo.dayEnd(now)
+        val isToday = task.fixedTime == null || DayAccounting.touchesDay(task, now, now)
         val dur = task.durationMinutes.coerceAtLeast(1L)
 
         if (isToday) {
@@ -271,6 +235,7 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     fun setRetentionDays(days: Int) = viewModelScope.launch {
         settings.setRetentionDays(days)
         repo.purgeExpiredCompleted(days)
+        repo.purgeExpiredMissed(days)
     }
     fun completeOnboarding() = viewModelScope.launch { settings.setOnboardingDone() }
     fun setForegroundService(active: Boolean) = viewModelScope.launch {

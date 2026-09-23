@@ -169,9 +169,10 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val recurrenceEnd = if (recurrence != Recurrence.NONE) parseEndDate(args.str("recurrence_end")) else null
                 val info = args.str("info") ?: ""
 
-                // Validate if task fits today's remaining time
+                // Validate if task fits today's remaining time (incl. overnight segment on today)
                 val now = System.currentTimeMillis()
-                val isToday = fixedTime == null || fixedTime in repo.dayStart(now)..repo.dayEnd(now)
+                val isToday = fixedTime == null || com.forgebuild.taskflow.data.DayAccounting.touchesDay(
+                    com.forgebuild.taskflow.data.Task(title = "", rank = 0.0, durationMinutes = duration, fixedTime = fixedTime), now, now)
                 if (isToday) {
                     val remaining = repo.getRemainingMinutesToday()
                     if (duration > remaining) {
@@ -198,9 +199,10 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val newDuration = args.longOrNull("duration_minutes") ?: t.durationMinutes
                 val newFixed = if (args.str("fixed_time") != null) parseTime(args.str("fixed_time")) else t.fixedTime
 
-                // Check remaining time if updating duration for today
+                // Check remaining time if updating duration for today (incl. overnight segment)
                 val now = System.currentTimeMillis()
-                val isToday = newFixed == null || newFixed in repo.dayStart(now)..repo.dayEnd(now)
+                val isToday = newFixed == null || com.forgebuild.taskflow.data.DayAccounting.touchesDay(
+                    t.copy(durationMinutes = newDuration.coerceAtLeast(1L), fixedTime = newFixed), now, now)
                 if (isToday) {
                     val remainingWithOld = repo.getRemainingMinutesToday(excludeTaskId = t.id)
                     if (newDuration > remainingWithOld) {

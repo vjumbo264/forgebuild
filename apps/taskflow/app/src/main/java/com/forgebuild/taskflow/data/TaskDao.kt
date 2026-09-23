@@ -77,6 +77,10 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE missed = 1")
     suspend fun clearMissed(): Int
 
+    /** Auto-delete missed (Unfinished-view) tasks older than retention cutoff — same retention rule as Completed. */
+    @Query("DELETE FROM tasks WHERE missed = 1 AND missedAt IS NOT NULL AND missedAt < :cutoffMillis")
+    suspend fun deleteMissedBefore(cutoffMillis: Long): Int
+
     /** Uncompleted, non-template tasks whose fixed time has already passed (candidates for the Unfinished view). */
     @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0 AND isRecurringTemplate = 0 AND fixedTime IS NOT NULL AND fixedTime < :nowMillis")
     suspend fun expiredFixedTime(nowMillis: Long): List<Task>

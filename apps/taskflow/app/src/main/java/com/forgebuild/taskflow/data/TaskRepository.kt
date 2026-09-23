@@ -109,12 +109,25 @@ class TaskRepository(private val dao: TaskDao) {
      */
     suspend fun sweepMissed() = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val expired = dao.expiredFixedTime(dayStart(now))
+        val todayStart = dayStart(now)
+        // An overnight task whose span still reaches into today (or is still running)
+        // is NOT missed — only sweep tasks whose whole span ended before today.
+        val expired = dao.expiredFixedTime(todayStart).filter { t ->
+            val spanEnd = (t.fixedTime ?: 0L) + t.durationMinutes.coerceAtLeast(1L) * 60_000L
+            spanEnd <= todayStart
+        }
         expired.forEach { t ->
             dao.update(t.copy(missed = true, missedAt = now, dueNow = false, updatedAt = now))
             onOverdue?.invoke(t)
         }
         if (expired.isNotEmpty()) reschedule()
+    }
+
+    /** Auto-delete missed (Unfinished-view) tasks older than the retention cutoff — same retention as Completed. */
+    suspend fun purgeExpiredMissed(retentionDays: Int): Int = withContext(Dispatchers.IO) {
+        if (retentionDays <= 0) return@withContext 0
+        val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 86_400_000L)
+        dao.deleteMissedBefore(cutoff)
     }
 
     /** Restore a missed task to the active list as an untimed (normal) task so it is not re-missed. */
@@ -225,7 +238,13 @@ class TaskRepository(private val dao: TaskDao) {
     suspend fun rollover() = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val today = dayStart(now)
-        val stale = dao.all().filter { it.dueNow && it.dueNowDay != null && it.dueNowDay!! < today }
+        // Clear stale due-now pins — but keep the pin while an overnight task's span
+        // is still running past midnight (until fixedTime + duration has passed).
+        val stale = dao.all().filter { t ->
+            if (!t.dueNow || t.dueNowDay == null || t.dueNowDay!! >= today) return@filter false
+            val spanEnd = (t.fixedTime ?: 0L) + t.durationMinutes.coerceAtLeast(1L) * 60_000L
+            t.fixedTime == null || spanEnd <= now
+        }
         stale.forEach { dao.update(it.copy(dueNow = false)) }
         // Fixed-time tasks whose day passed unfinished -> Unfinished view (no carry-over, no pin).
         // Normal tasks carry over automatically (no action); recurring instances follow their own schedule.
@@ -258,43 +277,27 @@ class TaskRepository(private val dao: TaskDao) {
 
     suspend fun pendingTimed(): List<Task> = withContext(Dispatchers.IO) { dao.pendingTimedTasks() }
 
+    /**
+     * Minutes allocated to today. Delegates to [DayAccounting] so EVERY category counts:
+     * one-off timed tasks, recurring templates occurring today, generated recurring
+     * instances (even with a stale past fixedTime), carried-over unfinished tasks, and
+     * the pre-midnight segment of overnight tasks.
+     */
     suspend fun getAllocatedMinutesToday(excludeTaskId: Long? = null): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val todayStart = dayStart(now)
-        val todayEnd = dayEnd(now)
-        val active = dao.allActive()
-        active.filter { t ->
-            if (t.id == excludeTaskId) return@filter false
-            if (t.isRecurringTemplate && t.recurrence != Recurrence.NONE) return@filter false
-            if (t.fixedTime != null) {
-                t.fixedTime in todayStart..todayEnd
-            } else {
-                true
-            }
-        }.sumOf { it.durationMinutes.coerceAtLeast(1L) }
+        DayAccounting.allocatedMinutesForDay(dao.allActive(), now, now, excludeTaskId)
     }
 
     suspend fun getRemainingMinutesToday(excludeTaskId: Long? = null): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        val todayEnd = dayEnd(now)
-        val minutesUntilMidnight = ((todayEnd - now) / 60000L).coerceAtLeast(0L)
+        val minutesUntilMidnight = ((DayAccounting.nextDayStart(now) - now) / 60000L).coerceAtLeast(0L)
         val allocated = getAllocatedMinutesToday(excludeTaskId)
         (minutesUntilMidnight - allocated).coerceAtLeast(0L)
     }
 
-    fun dayStart(millis: Long): Long {
-        val c = Calendar.getInstance().apply { timeInMillis = millis }
-        c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0)
-        c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
-        return c.timeInMillis
-    }
+    fun dayStart(millis: Long): Long = DayAccounting.dayStart(millis)
 
-    fun dayEnd(millis: Long): Long {
-        val c = Calendar.getInstance().apply { timeInMillis = millis }
-        c.set(Calendar.HOUR_OF_DAY, 23); c.set(Calendar.MINUTE, 59)
-        c.set(Calendar.SECOND, 59); c.set(Calendar.MILLISECOND, 999)
-        return c.timeInMillis
-    }
+    fun dayEnd(millis: Long): Long = DayAccounting.nextDayStart(millis) - 1L
 
     private suspend fun reschedule() { onTimedTasksChanged?.invoke() }
 
