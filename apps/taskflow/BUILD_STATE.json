@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "taskflow-pass7-session",
-  "current_task": "step-49",
+  "current_task": "complete",
   "substitutions": [],
   "tasks": [
     {
@@ -299,14 +299,14 @@
     {
       "id": "step-49",
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v7, verify release + assets live via GitHub Releases API",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "release.yml dispatched (app_path=apps/taskflow); run 35812890072 completed success. Verified live via GitHub Releases API: tag taskflow-v7 (not draft/prerelease) with assets app-taskflow-v7.apk (2,257,737 bytes, R8-minified, repo-keystore signed) + forgebuild-manifest.json (654 bytes). Prior releases taskflow-v1..v6 untouched."
     },
     {
       "id": "step-50",
       "title": "Set build_complete: true after taskflow-v7 verified",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "build_complete set true only after taskflow-v7 verified live on the Releases API with both assets present. All Pass 7 fixes/features done: sub-task-from-edit parenting; Pomodoro timers (settings, free-break plan, short-task/leftover rules, persistent live-countdown notification with transition progress); exact-alarm permission flow; distinct 24h day-used horizontal bar; extend-timer UI. No engine/ changes; no substitutions."
     }
   ]
 }
