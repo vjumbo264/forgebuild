@@ -5,7 +5,6 @@ package com.forgebuild.taskflow.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -13,6 +12,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,9 +30,11 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -54,6 +55,7 @@ import com.forgebuild.engine.ui.theme.SpacingTokens
 import com.forgebuild.taskflow.data.DayAccounting
 import com.forgebuild.taskflow.data.Task
 import com.forgebuild.taskflow.data.TaskType
+import com.forgebuild.taskflow.data.TimerEngine
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -77,20 +79,34 @@ fun DurationPill(minutes: Long) {
     }
 }
 
+/** mm:ss (or h:mm:ss) countdown text. */
+private fun fmtCountdown(ms: Long): String {
+    val totalSec = (ms + 999L) / 1000L
+    val h = totalSec / 3600L
+    val m = (totalSec % 3600L) / 60L
+    val s = totalSec % 60L
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+}
+
 /**
- * Rebuilt expressive task row — full-bleed container on the largeIncreased shape tier,
- * a coloured type-dot, expressive press/drag motion via the global MotionScheme, and a
- * per-row overflow menu instead of a row of trailing icon buttons.
+ * Expressive task row: full-bleed container on the largeIncreased shape tier,
+ * type-dot + per-type container tint, loud pulsing DUE NOW state that persists for
+ * the task's whole span, a subtle "time passed" state once the span elapses
+ * uncompleted, and an inline countdown timer control (play / pause / extend / done).
  */
 @Composable
 fun TaskRowItem(
     task: Task,
     modifier: Modifier = Modifier,
+    nowTick: Long = System.currentTimeMillis(),
     onToggle: () -> Unit,
     onOpen: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onPeekInfo: () -> Unit,
+    onTimerToggle: () -> Unit = {},
+    onTimerExtend: () -> Unit = {},
+    onTimerComplete: () -> Unit = {},
     onDragStart: () -> Unit,
     onDragBy: (Float) -> Unit,
     onDragEnd: () -> Unit
@@ -99,7 +115,15 @@ fun TaskRowItem(
     val dateFmt = remember { SimpleDateFormat("EEE, MMM d · HH:mm", Locale.getDefault()) }
     var rowMenuOpen by remember { mutableStateOf(false) }
 
-    // Overnight/cross-midnight tasks show their linked span; still ONE task.
+    val timerState = TimerEngine.stateOf(task, nowTick)
+    val timerRemaining = TimerEngine.remainingMs(task, nowTick)
+
+    // Pass 6: subtle "time's passed but not done" window — the fixed-time span
+    // (start .. start+duration) fully elapsed, task still active & uncompleted.
+    // Distinct from BOTH the loud due-now alert and the normal state.
+    val overdueWindow = !task.dueNow && !task.completed && task.fixedTime != null &&
+        (task.fixedTime + task.durationMinutes.coerceAtLeast(1L) * 60_000L) <= nowTick
+
     val overnightLabel: String? = remember(task.fixedTime, task.durationMinutes) {
         val ft = task.fixedTime ?: return@remember null
         if (!DayAccounting.crossesMidnight(task)) return@remember null
@@ -119,7 +143,10 @@ fun TaskRowItem(
         label = "dueNowAlpha"
     )
 
-    // 4-type colour language: dot + container tint per type; due-now overrides all.
+    // 4-type colour language; Pass 6 dark-mode fix: recurring containers were too
+    // bright/harsh in dark theme — tone their alpha down there, mirroring how the
+    // other type tints already sit quietly against dark surfaces.
+    val dark = isSystemInDarkTheme()
     val typeColor = when (task.taskType) {
         TaskType.RECURRING_FIXED -> MaterialTheme.colorScheme.tertiary
         TaskType.RECURRING_NO_TIME -> MaterialTheme.colorScheme.primary
@@ -128,12 +155,17 @@ fun TaskRowItem(
     }
     val targetContainer = when {
         task.dueNow -> MaterialTheme.colorScheme.errorContainer
-        task.taskType == TaskType.RECURRING_FIXED -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.40f)
-        task.taskType == TaskType.RECURRING_NO_TIME -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.32f)
-        task.taskType == TaskType.FIXED_TIME -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.40f)
+        timerState == TimerEngine.TimerState.FINISHED ->
+            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (dark) 0.34f else 0.55f)
+        overdueWindow -> MaterialTheme.colorScheme.surfaceContainerHigh
+        task.taskType == TaskType.RECURRING_FIXED ->
+            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (dark) 0.20f else 0.40f)
+        task.taskType == TaskType.RECURRING_NO_TIME ->
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (dark) 0.16f else 0.32f)
+        task.taskType == TaskType.FIXED_TIME ->
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dark) 0.24f else 0.40f)
         else -> MaterialTheme.colorScheme.surfaceContainerLow
     }
-    // Colour changes ride the official expressive effects spring, not a static swap.
     @Suppress("UNCHECKED_CAST")
     val effectsSpec = MotionTokens.defaultEffects as
         androidx.compose.animation.core.AnimationSpec<androidx.compose.ui.graphics.Color>
@@ -142,14 +174,12 @@ fun TaskRowItem(
         animationSpec = effectsSpec,
         label = "rowContainer"
     )
+
     val badgeText = when (task.taskType) {
         TaskType.RECURRING_FIXED -> {
-            // Pass 5 fix: recurring fixed-time tasks must ALWAYS show their time,
-            // exactly like non-recurring fixed-time tasks (template fixedTime carries it).
             val base = "Recurring · ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}"
             val time = task.fixedTime?.let { timeFmt.format(Date(it)) }
-            base + (time?.let { " · $it" } ?: "") +
-                (overnightLabel?.let { " · $it" } ?: "")
+            base + (time?.let { " · $it" } ?: "") + (overnightLabel?.let { " · $it" } ?: "")
         }
         TaskType.RECURRING_NO_TIME ->
             "Recurring · ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}"
@@ -201,7 +231,6 @@ fun TaskRowItem(
                 )
             }
 
-            // Type dot (replaces the old accent stripe).
             Box(
                 modifier = Modifier
                     .size(10.dp)
@@ -230,8 +259,11 @@ fun TaskRowItem(
                             fontWeight = if (task.dueNow) FontWeight.Bold else FontWeight.Normal,
                             textDecoration = if (task.completed) TextDecoration.LineThrough else null
                         ),
-                        color = if (task.dueNow) MaterialTheme.colorScheme.onErrorContainer
-                        else MaterialTheme.colorScheme.onSurface,
+                        color = when {
+                            task.dueNow -> MaterialTheme.colorScheme.onErrorContainer
+                            overdueWindow -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -246,42 +278,120 @@ fun TaskRowItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (task.dueNow) {
-                        Surface(
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = dueNowAlpha)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                    when {
+                        task.dueNow -> {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = dueNowAlpha)
                             ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        EngineIcons.PriorityHigh, null,
+                                        tint = MaterialTheme.colorScheme.onError,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        "DUE NOW",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onError
+                                    )
+                                }
+                            }
+                        }
+                        overdueWindow -> {
+                            // Subtle elapsed-time state: quiet outline-toned chip, no pulse.
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    EngineIcons.PriorityHigh, null,
-                                    tint = MaterialTheme.colorScheme.onError,
+                                    EngineIcons.Timer, null,
+                                    tint = MaterialTheme.colorScheme.outline,
                                     modifier = Modifier.size(12.dp)
                                 )
-                                Spacer(Modifier.width(2.dp))
+                                Spacer(Modifier.width(3.dp))
                                 Text(
-                                    "DUE NOW",
+                                    "Time passed",
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onError
+                                    color = MaterialTheme.colorScheme.outline,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                    } else if (badgeText.isNotBlank()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (badgeIcon != null) {
-                                Icon(badgeIcon, null, tint = typeColor, modifier = Modifier.size(12.dp))
-                                Spacer(Modifier.width(3.dp))
+                        badgeText.isNotBlank() -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (badgeIcon != null) {
+                                    Icon(badgeIcon, null, tint = typeColor, modifier = Modifier.size(12.dp))
+                                    Spacer(Modifier.width(3.dp))
+                                }
+                                Text(
+                                    badgeText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
-                            Text(
-                                badgeText,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        }
+                    }
+                }
+            }
+
+            // ── Countdown timer control (Pass 6) ────────────────────────────
+            when (timerState) {
+                TimerEngine.TimerState.IDLE -> {
+                    IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            EngineIcons.PlayArrow,
+                            contentDescription = "Start timer",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+                TimerEngine.TimerState.RUNNING -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            fmtCountdown(timerRemaining),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                EngineIcons.Pause,
+                                contentDescription = "Pause timer",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
                             )
+                        }
+                    }
+                }
+                TimerEngine.TimerState.PAUSED -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            fmtCountdown(timerRemaining),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                EngineIcons.PlayArrow,
+                                contentDescription = "Resume timer",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+                TimerEngine.TimerState.FINISHED -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = onTimerExtend) { Text("Extend", style = MaterialTheme.typography.labelMedium) }
+                        TextButton(onClick = onTimerComplete) {
+                            Text("Done", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -298,6 +408,13 @@ fun TaskRowItem(
                     )
                 }
                 DropdownMenu(expanded = rowMenuOpen, onDismissRequest = { rowMenuOpen = false }) {
+                    if (timerState != TimerEngine.TimerState.IDLE) {
+                        DropdownMenuItem(
+                            text = { Text("Extend timer") },
+                            leadingIcon = { Icon(EngineIcons.MoreTime, null) },
+                            onClick = { rowMenuOpen = false; onTimerExtend() }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Subtasks") },
                         leadingIcon = { Icon(EngineIcons.SubdirectoryArrowRight, null) },

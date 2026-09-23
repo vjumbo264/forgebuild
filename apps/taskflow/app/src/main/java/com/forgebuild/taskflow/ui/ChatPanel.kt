@@ -555,9 +555,13 @@ private fun RecordingPill(
                 val centerY = size.height / 2f
                 val capacity = (size.width / step).toInt().coerceAtLeast(1)
                 val visible = samples.takeLast(capacity)
+                // Pass 6 fix: place bars from BOTH edges of the canvas (not the sample
+                // count) so the strip starts flush right AND travels the full width
+                // to a flush left edge — symmetrical. `capacity` slots span the width;
+                // the oldest bar lands at x=0 exactly when the strip is full.
                 visible.forEachIndexed { index, amp ->
                     val fromRight = visible.size - 1 - index
-                    val x = size.width - step * (fromRight + 1) + gap / 2f
+                    val x = size.width - barWidth - step * fromRight
                     val h = (minBarH + (maxBarH - minBarH) * amp).coerceIn(minBarH, maxBarH)
                     val ageFade = 0.45f + 0.55f * (index + 1).toFloat() / visible.size
                     drawRoundRect(

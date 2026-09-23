@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.forgebuild.taskflow.data.TimerEngine
 import com.forgebuild.engine.ui.components.EngineCircularWavyProgress
 import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
@@ -98,6 +99,29 @@ fun TaskListScreen(
 
     var peekInfo by remember { mutableStateOf<Task?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
+    var extendTarget by remember { mutableStateOf<Task?>(null) }
+    var dingedIds by remember { mutableStateOf(setOf<Long>()) }
+
+    // 1s ticker: drives live countdown text, the end-of-due-now transition, and
+    // the kitchen-timer ding the moment a foreground countdown finishes.
+    var nowTick by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) { kotlinx.coroutines.delay(1000); nowTick = System.currentTimeMillis() }
+    }
+    LaunchedEffect(tasks, nowTick) {
+        tasks.firstOrNull {
+            TimerEngine.stateOf(it, nowTick) == TimerEngine.TimerState.FINISHED && it.id !in dingedIds
+        }?.let { t ->
+            dingedIds = dingedIds + t.id
+            com.forgebuild.taskflow.notify.TimerSounds.playCompletion()
+        }
+        // Clear ding-memory once a task leaves the finished state (extended/completed).
+        dingedIds = dingedIds.filter { id ->
+            tasks.firstOrNull { it.id == id }?.let {
+                TimerEngine.stateOf(it, nowTick) == TimerEngine.TimerState.FINISHED
+            } == true
+        }.toSet()
+    }
 
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -194,6 +218,10 @@ fun TaskListScreen(
                 .fillMaxSize()
                 .padding(horizontal = SpacingTokens.Spacing.md)
         ) {
+            // Pass 6 fix: real breathing room between the app-bar header and the
+            // content below it — the page no longer reads as cramped under the title.
+            Spacer(Modifier.height(SpacingTokens.Spacing.md))
+
             // Breadcrumb trail (only inside sub-task levels).
             AnimatedVisibility(
                 visible = breadcrumbs.isNotEmpty(),
@@ -281,6 +309,10 @@ fun TaskListScreen(
                         val isDragging = dragIndex == index
                         TaskRowItem(
                             task = task,
+                            nowTick = nowTick,
+                            onTimerToggle = { vm.timerToggle(task) },
+                            onTimerExtend = { extendTarget = task },
+                            onTimerComplete = { vm.timerComplete(task) },
                             modifier = Modifier
                                 .zIndex(if (isDragging) 1f else 0f)
                                 .graphicsLayer {
@@ -309,6 +341,77 @@ fun TaskListScreen(
                 }
             }
         }
+    }
+
+    // Time's-up / extend dialog: add minutes or hours, or mark the task complete.
+    extendTarget?.let { t ->
+        var hoursTxt by remember(t.id) { mutableStateOf("") }
+        var minsTxt by remember(t.id) { mutableStateOf("") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { extendTarget = null },
+            title = {
+                Column {
+                    Text(
+                        if (TimerEngine.stateOf(t, nowTick) == TimerEngine.TimerState.FINISHED) "Time's up"
+                        else "Extend timer",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        t.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        "Add more time — same units used across the app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = hoursTxt, onValueChange = { hoursTxt = it.filter(Char::isDigit).take(2) },
+                            label = { Text("Hours") }, singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        androidx.compose.material3.OutlinedTextField(
+                            value = minsTxt, onValueChange = { minsTxt = it.filter(Char::isDigit).take(3) },
+                            label = { Text("Minutes") }, singleLine = true,
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+                    Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                        listOf(5, 10, 15, 30).forEach { m ->
+                            androidx.compose.material3.FilterChip(
+                                selected = false,
+                                onClick = { vm.timerExtend(t, m.toLong()); extendTarget = null },
+                                label = { Text("+${m}m") }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val total = (hoursTxt.toLongOrNull() ?: 0L) * 60L + (minsTxt.toLongOrNull() ?: 0L)
+                    if (total > 0L) vm.timerExtend(t, total)
+                    extendTarget = null
+                }) { Text("Add time") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    vm.timerComplete(t)
+                    extendTarget = null
+                }) { Text("Mark complete", color = MaterialTheme.colorScheme.primary) }
+            }
+        )
     }
 
     peekInfo?.let { t ->

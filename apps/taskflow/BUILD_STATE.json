@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass6-session",
-  "current_task": "step-34",
+  "current_task": "step-41",
   "substitutions": [],
   "tasks": [
     {
@@ -209,49 +209,49 @@
     {
       "id": "step-34",
       "title": "Main screen header spacing fix: breathing room between app bar header and content below",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Main-screen header breathing room: SpacingTokens.Spacing.md spacer inserted directly under the MediumTopAppBar before breadcrumbs/hero, so content is pushed down and the title block no longer crowds the list."
     },
     {
       "id": "step-35",
       "title": "AI must not auto-assign fixed times: fixed_time only when user explicitly states/implies a time; system instruction + tool description hardened",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "AI no longer auto-assigns fixed times: create_task fixed_time schema description rewritten (ONLY on explicit/implied time, 'NEVER invent or auto-assign') + new FIXED TIMES rule at the top of the AgentOrchestrator system instruction. Untimed remains the default, matching manual creation."
     },
     {
       "id": "step-36",
       "title": "Due-now alert persists for full task duration (start..start+duration); after elapsed & uncompleted, transition to subtle 'time passed' visual state distinct from due-now and normal",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Due-now now persists for the FULL span: ACTION_DUE fires markDue AND scheduleDueEnd(start+duration); new ACTION_DUE_END alarm runs repo.transitionDueNow() (DAO dueNowPinned query) which drops the loud pin exactly when start+duration elapses; ViewModel also sweeps stale pins on open. New subtle 'Time passed' state in TaskRowItem (overdueWindow: !dueNow && !completed && span elapsed): surfaceContainerHigh container, outline-toned timer icon + label, dimmed title \u2014 visually distinct from both the pulsing error DUE NOW alert and the normal state."
     },
     {
       "id": "step-37",
       "title": "Recurring task card shading too bright in dark mode: tone down recurring container colors for dark theme consistent with other task types",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Recurring card shading dark-mode fix: TaskRowItem now reads isSystemInDarkTheme() and halves recurring container alphas in dark theme (tertiary 0.40->0.20, primary 0.32->0.16; fixed-time secondary also eased 0.40->0.24). Light mode alphas unchanged. Dynamic-color roles retained, no hardcoded hex."
     },
     {
       "id": "step-38",
       "title": "Task timer: play/pause countdown per task, unique kitchen-timer ding on finish, extend-or-complete choice after ding, AI control for start/pause/resume/extend incl. mid-countdown",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Per-task countdown timer: Task gains timerEndsAt/timerRemainingMs/timerFinished (Room DB v4). New data/TimerEngine state machine (IDLE/RUNNING/PAUSED/FINISHED; start/pause/resume/extend incl. mid-countdown and post-finish). TaskRowItem shows play button, live mm:ss countdown + pause while running, resume while paused, and Extend/Done actions when finished. Extend dialog offers +5/+10/+15/+30 chips, hours+minutes fields, or Mark complete. Distinct completion sound = notify/TimerSounds synthesized triple 'oven ding' (C7/E7/G7 partials, exponential decay, USAGE_ALARM) \u2014 not a notification tone; plays in foreground via the 1s UI ticker and in background via ACTION_TIMER_END exact alarm (stale-alarm guarded). AI control: new start_timer/pause_timer/extend_timer (amount+unit) tools, timer state surfaced in list_tasks, TASK TIMERS rule in the system prompt. Timer state is cleared on completion."
     },
     {
       "id": "step-39",
       "title": "Voice recording waveform must travel full width (right edge to left edge) symmetrically",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Waveform full-width fix: RecordingPill bar x-position now computed from the canvas edges (x = width - barWidth - step*fromRight) instead of sample-count-relative offset, so the strip starts flush right and the oldest bar reaches x=0 flush left when full \u2014 symmetrical travel."
     },
     {
       "id": "step-40",
       "title": "Settings screen full M3-Expressive redesign: new layout/grouping, expressive shapes, spring motion, animated toggles/inputs (API keys, notifications)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Settings screen fully reimagined (not patched): four intent-grouped expressive section cards (Intelligence / Your rhythm / Alerts / Reliability) on extraLargeIncreased tonal containers with icon header rails; key-ring rows animate container color via MotionTokens.defaultEffects and the primary key is badged; add-key button springs in scale via defaultSpatial; notification rows tint-animate on toggle and the deadline-lead slider springs open via AnimatedVisibility; theme segmented control + retention chips + animated battery-exemption button. Zero hardcoded colors; all spacing from SpacingTokens."
     },
     {
       "id": "step-41",
       "title": "Validate build config, dispatch release.yml (app_path=apps/taskflow) for taskflow-v6",
-      "status": "pending",
+      "status": "in_progress",
       "notes": ""
     },
     {

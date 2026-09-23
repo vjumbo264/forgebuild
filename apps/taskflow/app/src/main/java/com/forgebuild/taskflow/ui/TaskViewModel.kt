@@ -151,6 +151,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             scheduler.rescheduleAll()
             // Day-rollover rules on every open: expired fixed-time tasks -> Unfinished view.
             repo.sweepMissed()
+            // Degrade any stale loud due-now pins whose full span already elapsed.
+            repo.transitionDueNow()
             // Auto-purge expired completed AND missed (Unfinished) tasks per retention setting
             val days = settings.retentionDays.first()
             repo.purgeExpiredCompleted(days)
@@ -222,6 +224,24 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun toggleComplete(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, !task.completed) }
+
+    // ---- Countdown timer controls (play / pause / extend / complete) ----
+    fun timerToggle(task: com.forgebuild.taskflow.data.Task) = viewModelScope.launch {
+        when (com.forgebuild.taskflow.data.TimerEngine.stateOf(task)) {
+            com.forgebuild.taskflow.data.TimerEngine.TimerState.RUNNING -> repo.timerPause(task.id)
+            else -> {
+                repo.timerStart(task.id)
+                repo.get(task.id)?.timerEndsAt?.let { scheduler.scheduleTimerEnd(task.id, it) }
+            }
+        }
+    }
+    fun timerExtend(task: com.forgebuild.taskflow.data.Task, minutes: Long) = viewModelScope.launch {
+        repo.timerExtend(task.id, minutes)
+        repo.get(task.id)?.timerEndsAt?.let { scheduler.scheduleTimerEnd(task.id, it) }
+    }
+    fun timerComplete(task: com.forgebuild.taskflow.data.Task) = viewModelScope.launch {
+        repo.setCompleted(task.id, true)
+    }
     fun restoreMissed(task: Task) = viewModelScope.launch { repo.restoreMissed(task.id) }
     fun clearMissed() = viewModelScope.launch { repo.clearMissed() }
     fun restoreTask(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, false) }

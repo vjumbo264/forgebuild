@@ -1,9 +1,22 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
+)
+
 package com.forgebuild.taskflow.ui
 
 import android.app.Activity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,16 +25,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -43,11 +57,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.forgebuild.engine.permissions.PermissionWiring
 import com.forgebuild.engine.ui.icons.EngineIcons
+import com.forgebuild.engine.ui.theme.MotionTokens
 import com.forgebuild.engine.ui.theme.SpacingTokens
 import com.forgebuild.taskflow.settings.GeminiKeyStore
 import com.forgebuild.taskflow.settings.NotifType
@@ -56,7 +73,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Pass 6 full redesign of Settings — rethought from scratch, not a patch.
+ *
+ * Structure: one continuous scroll of EXPRESSIVE SECTION CARDS, each a large-tier
+ * tonal container with an icon header rail. Settings are grouped by intent rather
+ * than by data type:
+ *   1. "Intelligence" — Gemini API key ring (failover-ordered, encrypted on-device)
+ *   2. "Your rhythm" — theme + retention cadence
+ *   3. "Alerts" — the notification preference matrix with animated sub-controls
+ *   4. "Reliability" — exact alarms, battery exemption, background service status
+ * Every interactive element rides the official expressive MotionScheme: section
+ * cards spring open their detail regions, switches/inputs animate state with the
+ * default effects spec, and destructive/primary actions use expressive shapes.
+ */
 @Composable
 fun SettingsScreen(
     vm: TaskViewModel,
@@ -73,14 +103,27 @@ fun SettingsScreen(
     var newKey by remember { mutableStateOf("") }
     var isBatteryExempt by remember { mutableStateOf(PermissionWiring.isBatteryOptimizationExempt(context)) }
 
+    @Suppress("UNCHECKED_CAST")
+    val effectsSpec = MotionTokens.defaultEffects as
+        androidx.compose.animation.core.AnimationSpec<androidx.compose.ui.graphics.Color>
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
+                title = {
+                    Column {
+                        Text("Settings", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Tune TaskFlow to how you work",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(EngineIcons.ArrowBack, "Back") }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { padding ->
@@ -89,42 +132,73 @@ fun SettingsScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(SpacingTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.lg)
+                .padding(horizontal = SpacingTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.md)
         ) {
-            // ---- GEMINI API KEYS ----
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Gemini API Keys", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Stored encrypted on-device only; sent directly to Google Gemini API. Order equals failover priority.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Spacer(Modifier.height(SpacingTokens.Spacing.xxs))
 
+            // ── 1. INTELLIGENCE — Gemini key ring ────────────────────────────
+            SettingsSection(
+                icon = EngineIcons.SmartToy,
+                title = "Intelligence",
+                subtitle = "Gemini keys are encrypted on-device and sent only to Google. Order = failover priority."
+            ) {
+                if (keys.isEmpty()) {
+                    Text(
+                        "No keys yet — add one below to wake the AI agent.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 keys.forEachIndexed { i, k ->
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                    // Each key chip springs and colour-shifts with selection order changes.
+                    val chipColor by animateColorAsState(
+                        targetValue = if (i == 0) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        animationSpec = effectsSpec,
+                        label = "keyChip$i"
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.largeIncreased,
+                        color = chipColor,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .padding(SpacingTokens.Spacing.xs),
+                                .padding(start = SpacingTokens.Spacing.sm, end = 4.dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(EngineIcons.Key, null, tint = MaterialTheme.colorScheme.primary)
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = if (i == 0) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Text(
+                                    "${i + 1}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (i == 0) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(SpacingTokens.Spacing.sm))
                             Text(
-                                "${i + 1}. ••••${k.takeLast(4)}",
-                                Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = SpacingTokens.Spacing.xs),
+                                "••••${k.takeLast(4)}" + if (i == 0) "  · primary" else "",
+                                Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             IconButton(onClick = { keyStore.moveUp(k) }, enabled = i > 0) {
-                                Icon(EngineIcons.PriorityHigh, "Move up")
+                                Icon(EngineIcons.PriorityHigh, "Move up",
+                                    tint = if (i > 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                             }
                             IconButton(onClick = { keyStore.remove(k) }) {
                                 Icon(EngineIcons.Delete, "Remove", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
+                    Spacer(Modifier.height(SpacingTokens.Spacing.xs))
                 }
 
                 Row(
@@ -137,32 +211,58 @@ fun SettingsScreen(
                         label = { Text("New API key") },
                         modifier = Modifier.weight(1f),
                         visualTransformation = PasswordVisualTransformation(),
-                        shape = MaterialTheme.shapes.medium,
+                        shape = MaterialTheme.shapes.largeIncreased,
                         singleLine = true
+                    )
+                    // Add button springs in scale as soon as input is non-blank.
+                    val ready = newKey.isNotBlank()
+                    val addScale by animateFloatAsState(
+                        targetValue = if (ready) 1f else 0.85f,
+                        animationSpec = MotionTokens.defaultSpatial as
+                            androidx.compose.animation.core.FiniteAnimationSpec<Float>,
+                        label = "addScale"
                     )
                     IconButton(
                         onClick = {
-                            if (newKey.isNotBlank()) {
-                                keyStore.add(newKey.trim())
-                                newKey = ""
-                            }
+                            if (ready) { keyStore.add(newKey.trim()); newKey = "" }
                         },
-                        enabled = newKey.isNotBlank()
-                    ) {
-                        Icon(EngineIcons.Add, "Add key", tint = MaterialTheme.colorScheme.primary)
-                    }
+                        enabled = ready,
+                        modifier = Modifier.scale(addScale),
+                        shapes = IconButtonDefaults.shapes(),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            disabledContentColor = MaterialTheme.colorScheme.outline
+                        )
+                    ) { Icon(EngineIcons.Add, "Add key") }
                 }
             }
 
-            // ---- COMPLETED TASK RETENTION PERIOD ----
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Completed & Unfinished Retention", style = MaterialTheme.typography.titleMedium)
+            // ── 2. YOUR RHYTHM — theme + retention ───────────────────────────
+            SettingsSection(
+                icon = EngineIcons.CalendarToday,
+                title = "Your rhythm",
+                subtitle = "How the app looks and how long history is kept."
+            ) {
+                Text("Theme", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    ThemeMode.entries.forEachIndexed { i, mode ->
+                        SegmentedButton(
+                            selected = theme == mode,
+                            onClick = { vm.setTheme(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index = i, count = ThemeMode.entries.size)
+                        ) { Text(mode.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    }
+                }
+
+                Spacer(Modifier.height(SpacingTokens.Spacing.md))
+
                 Text(
-                    "Completed tasks and missed/unfinished tasks (incl. recurring) auto-delete after this duration so neither list grows indefinitely.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Keep completed & unfinished history for",
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                     listOf(1, 3, 7, 14, 30, 60).forEach { days ->
                         FilterChip(
@@ -174,110 +274,194 @@ fun SettingsScreen(
                 }
             }
 
-            // ---- NOTIFICATIONS ----
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Notifications", style = MaterialTheme.typography.titleMedium)
-
+            // ── 3. ALERTS — notification matrix ──────────────────────────────
+            SettingsSection(
+                icon = EngineIcons.Alarm,
+                title = "Alerts",
+                subtitle = "Exactly which moments TaskFlow may interrupt you for."
+            ) {
                 NotifType.entries.forEach { type ->
                     val label = when (type) {
                         NotifType.DUE -> "Fixed-time task due"
                         NotifType.OVERDUE -> "Overdue task alert"
-                        NotifType.DAILY_AGENDA -> "Daily morning agenda summary"
+                        NotifType.DAILY_AGENDA -> "Daily morning agenda"
                         NotifType.API_KEYS_FAILED -> "All Gemini keys failed"
-                        NotifType.AGENT_CONFIRMATION -> "AI agent action confirmation"
-                        NotifType.APPROACHING_DEADLINE -> "Approaching deadline warning"
-                        NotifType.RECURRING_INSTANCE -> "Recurring instance generated"
+                        NotifType.AGENT_CONFIRMATION -> "AI action confirmations"
+                        NotifType.APPROACHING_DEADLINE -> "Approaching-deadline warning"
+                        NotifType.RECURRING_INSTANCE -> "Recurring instance scheduled"
                     }
                     val enabled = runBlocking { settings.notifEnabled(type).first() }
                     var checked by remember(type) { mutableStateOf(enabled) }
 
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        Switch(checked = checked, onCheckedChange = {
-                            checked = it
-                            scope.launch { settings.setNotifEnabled(type, it) }
-                        })
-                    }
-
-                    if (type == NotifType.APPROACHING_DEADLINE && checked) {
-                        var lead by remember { mutableFloatStateOf(runBlocking { settings.deadlineLeadMinutes.first() }.toFloat()) }
-                        Column(Modifier.padding(start = 16.dp)) {
-                            Text(
-                                "Warn ${lead.toInt()} min before due time",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Slider(
-                                value = lead,
-                                onValueChange = { lead = it },
-                                onValueChangeFinished = { scope.launch { settings.setDeadlineLeadMinutes(lead.toInt()) } },
-                                valueRange = 5f..60f
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ---- BACKGROUND EXECUTION & RELIABILITY ----
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Reminder Reliability & Background Execution", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "TaskFlow uses exact alarms, a persistent foreground notification, and a battery exemption to ensure reminders are never missed by Android Doze.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(SpacingTokens.Spacing.md), verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
+                    // Row tint animates on toggle via the expressive effects spec.
+                    val rowColor by animateColorAsState(
+                        targetValue = if (checked) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                        else MaterialTheme.colorScheme.surfaceContainerLow,
+                        animationSpec = effectsSpec,
+                        label = "notifRow$type"
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.mediumIncreased,
+                        color = rowColor,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Persistent Background Service", style = MaterialTheme.typography.bodyMedium)
-                            Text("Always active", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(start = SpacingTokens.Spacing.sm, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            OutlinedButton(onClick = { (context as? Activity)?.let { PermissionWiring.requestExactAlarm(it) } }) {
-                                Text("Allow exact alarms")
-                            }
-
-                            OutlinedButton(onClick = {
-                                PermissionWiring.requestBatteryExemption(context)
-                                isBatteryExempt = PermissionWiring.isBatteryOptimizationExempt(context)
-                            }) {
-                                Text(if (isBatteryExempt) "Battery exempt ✓" else "Request battery exemption")
-                            }
+                            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Switch(
+                                checked = checked,
+                                onCheckedChange = {
+                                    checked = it
+                                    scope.launch { settings.setNotifEnabled(type, it) }
+                                }
+                            )
                         }
                     }
-                }
-            }
 
-            // ---- THEME ----
-            Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Theme", style = MaterialTheme.typography.titleMedium)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    ThemeMode.entries.forEachIndexed { i, mode ->
-                        SegmentedButton(
-                            selected = theme == mode,
-                            onClick = { vm.setTheme(mode) },
-                            shape = SegmentedButtonDefaults.itemShape(index = i, count = ThemeMode.entries.size)
+                    // Lead-time sub-panel springs open only while its toggle is on.
+                    if (type == NotifType.APPROACHING_DEADLINE) {
+                        AnimatedVisibility(
+                            visible = checked,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
                         ) {
-                            Text(mode.name.lowercase().replaceFirstChar { it.uppercase() })
+                            var lead by remember {
+                                mutableFloatStateOf(runBlocking { settings.deadlineLeadMinutes.first() }.toFloat())
+                            }
+                            Column(Modifier.padding(horizontal = SpacingTokens.Spacing.sm, vertical = SpacingTokens.Spacing.xs)) {
+                                Text(
+                                    "Warn ${lead.toInt()} min before a due time",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Slider(
+                                    value = lead,
+                                    onValueChange = { lead = it },
+                                    onValueChangeFinished = { scope.launch { settings.setDeadlineLeadMinutes(lead.toInt()) } },
+                                    valueRange = 5f..60f
+                                )
+                            }
                         }
+                    }
+                    Spacer(Modifier.height(SpacingTokens.Spacing.xs))
+                }
+            }
+
+            // ── 4. RELIABILITY — alarms, battery, background ─────────────────
+            SettingsSection(
+                icon = EngineIcons.Bolt,
+                title = "Reliability",
+                subtitle = "Exact alarms + a battery exemption keep reminders alive through Doze."
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Background service", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Persistent low-priority notification",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            "Always on",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
+                    FilledTonalButton(
+                        onClick = { (context as? Activity)?.let { PermissionWiring.requestExactAlarm(it) } },
+                        shapes = ButtonDefaults.shapes()
+                    ) { Text("Exact alarms") }
+
+                    val exemptColor by animateColorAsState(
+                        targetValue = if (isBatteryExempt) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.primary,
+                        animationSpec = effectsSpec,
+                        label = "batteryBtn"
+                    )
+                    Button(
+                        onClick = {
+                            PermissionWiring.requestBatteryExemption(context)
+                            isBatteryExempt = PermissionWiring.isBatteryOptimizationExempt(context)
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = exemptColor,
+                            contentColor = if (isBatteryExempt) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        if (isBatteryExempt) {
+                            Icon(EngineIcons.Check, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(if (isBatteryExempt) "Battery exempt" else "Exempt battery")
                     }
                 }
             }
 
-            Spacer(Modifier.height(SpacingTokens.Spacing.xl))
+            Spacer(Modifier.height(SpacingTokens.Spacing.xxl))
+        }
+    }
+}
+
+/** Expressive section card: icon rail header + large-tier tonal body. */
+@Composable
+private fun SettingsSection(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.extraLargeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(SpacingTokens.Spacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Icon(
+                        icon, null,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp)
+                    )
+                }
+                Spacer(Modifier.width(SpacingTokens.Spacing.sm))
+                Column {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+            content()
         }
     }
 }
