@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "taskflow-pass5-session",
-  "current_task": "release taskflow-v5 dispatched",
+  "current_task": "complete",
   "substitutions": [],
   "tasks": [
     {
@@ -203,8 +203,8 @@
     {
       "id": "step-33",
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v5, verify release + assets live via GitHub Releases API, set build_complete: true",
-      "status": "pending",
-      "notes": "Release workflow dispatched 2026-09-23 with app_path=apps/taskflow after implementation commit a3ad2e5 pushed+verified on origin/main. Awaiting run completion + Releases API verification of taskflow-v5."
+      "status": "done",
+      "notes": "release.yml run 35804583600 completed success. Verified live via GitHub Releases API: tag taskflow-v5 (not draft/prerelease) with assets app-taskflow-v5.apk (2,224,969 bytes, R8-minified, repo-keystore signed) + forgebuild-manifest.json (721 bytes). Prior releases taskflow-v1..v4 untouched. build_complete set true. All Pass 5 fixes done: recurring fixed-time shows time; sub-task durations capped at parent (every nesting level, incl. overnight spans); recurring completion advances template in place with a history record (no duplicates); voice send button uncropped; overnight requires fixed time; AI chat screen fully redesigned on Material 3 Expressive. No engine/ changes, no substitutions."
     }
   ]
 }
