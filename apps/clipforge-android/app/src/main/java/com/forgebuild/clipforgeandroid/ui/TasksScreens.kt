@@ -959,8 +959,6 @@ private fun LogStepRow(step: ClipForgeViewModel.LogStep) {
 }
 
 @Composable
-
-@Composable
 private fun RawConsoleTerminal(rawText: String) {
     Surface(
         shape = RoundedCornerShape(10.dp),
