@@ -301,7 +301,7 @@ fun SettingsScreen(
                         label = "notifRow$type"
                     )
                     Surface(
-                        shape = MaterialTheme.shapes.mediumIncreased,
+                        shape = MaterialTheme.shapes.large,
                         color = rowColor,
                         modifier = Modifier.fillMaxWidth()
                     ) {
