@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -151,13 +153,18 @@ fun CompletedTasksScreen(
             title = { Text("Clear completed tasks?") },
             text = { Text("This will permanently delete all ${completedList.size} completed tasks immediately.") },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         vm.clearCompleted()
                         showClearDialog = false
-                    }
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
-                    Text("Clear All", color = MaterialTheme.colorScheme.error)
+                    Text("Clear All")
                 }
             },
             dismissButton = {

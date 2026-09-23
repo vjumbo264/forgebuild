@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -306,6 +307,7 @@ fun ChatPanel(
                     )
                     IconButton(
                         onClick = { requestMic() },
+                        shapes = IconButtonDefaults.shapes(),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -322,6 +324,7 @@ fun ChatPanel(
                             }
                         },
                         enabled = input.isNotBlank() && !busy,
+                        shapes = IconButtonDefaults.shapes(),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -401,7 +404,8 @@ private fun LiveWaveformBanner(
                     TextButton(onClick = onCancel) { Text("Cancel") }
                     FilledTonalButton(
                         onClick = onSend,
-                        modifier = Modifier.height(34.dp)
+                        modifier = Modifier.height(34.dp),
+                        shapes = ButtonDefaults.shapes()
                     ) {
                         Text("Send")
                     }

@@ -353,7 +353,7 @@ fun TaskEditScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
+                shapes = ButtonDefaults.shapes()
             ) {
                 Text("Save Changes")
             }
