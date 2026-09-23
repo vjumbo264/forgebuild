@@ -121,7 +121,7 @@ class TaskRepository(private val dao: TaskDao) {
             reschedule()
             return@withContext
         }
-        dao.update(t.copy(completed = done, completedAt = if (done) now else null, dueNow = false, updatedAt = now))
+        dao.update(TimerEngine.clear(t.copy(completed = done, completedAt = if (done) now else null, dueNow = false, updatedAt = now)))
         if (done && t.recurrence != Recurrence.NONE) {
             // Legacy generated instances carry their own recurrence; advance them in
             // place too (same rule as templates) instead of spawning duplicates.
@@ -323,6 +323,30 @@ class TaskRepository(private val dao: TaskDao) {
             }
         }
         reschedule()
+    }
+
+    /** Degrade the loud due-now pin once a fixed-time task's full span (start + duration) has elapsed. */
+    suspend fun transitionDueNow(): Int = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val expired = dao.dueNowPinned().filter { t ->
+            (t.fixedTime ?: 0L) + t.durationMinutes.coerceAtLeast(1L) * 60_000L <= now
+        }
+        expired.forEach { dao.update(it.copy(dueNow = false, updatedAt = now)) }
+        expired.size
+    }
+
+    // ---- Per-task countdown timer (TimerEngine state machine, persisted on Task) ----
+    suspend fun timerStart(id: Long) = withContext(Dispatchers.IO) {
+        dao.getById(id)?.let { dao.update(TimerEngine.startOrResume(it)) }
+    }
+    suspend fun timerPause(id: Long) = withContext(Dispatchers.IO) {
+        dao.getById(id)?.let { dao.update(TimerEngine.pause(it)) }
+    }
+    suspend fun timerExtend(id: Long, extraMinutes: Long) = withContext(Dispatchers.IO) {
+        dao.getById(id)?.let { dao.update(TimerEngine.extend(it, extraMinutes.coerceAtLeast(1L) * 60_000L)) }
+    }
+    suspend fun timerClear(id: Long) = withContext(Dispatchers.IO) {
+        dao.getById(id)?.let { dao.update(TimerEngine.clear(it)) }
     }
 
     suspend fun pendingTimed(): List<Task> = withContext(Dispatchers.IO) { dao.pendingTimedTasks() }

@@ -54,6 +54,12 @@ data class Task(
     val missed: Boolean = false,
     /** When the task was marked missed (epoch millis). */
     val missedAt: Long? = null,
+    /** Countdown timer: epoch millis at which the timer ends (set while RUNNING). Null when not running. */
+    val timerEndsAt: Long? = null,
+    /** Countdown timer: remaining milliseconds held while PAUSED. Null when not paused. */
+    val timerRemainingMs: Long? = null,
+    /** True after the countdown has fully elapsed, until the user extends or completes the task. */
+    val timerFinished: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {

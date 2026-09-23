@@ -85,6 +85,10 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0 AND isRecurringTemplate = 0 AND fixedTime IS NOT NULL AND fixedTime < :nowMillis")
     suspend fun expiredFixedTime(nowMillis: Long): List<Task>
 
+    /** Fixed-time tasks still carrying the loud due-now pin whose full span has already elapsed. */
+    @Query("SELECT * FROM tasks WHERE dueNow = 1 AND completed = 0 AND missed = 0 AND fixedTime IS NOT NULL")
+    suspend fun dueNowPinned(): List<Task>
+
     @Query("SELECT COUNT(*) FROM tasks WHERE parentId IS :parentId AND completed = 0")
     suspend fun activeChildCount(parentId: Long?): Int
 
