@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-23 (tasks 180-185 done; task-186 release dispatched, verification pending)",
-  "current_task": "task-186",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-23 (tasks 180-186 done; clipforge-android-v36 released and verified live; build complete)",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -644,8 +644,8 @@
     {
       "id": "task-186",
       "title": "Bump app version, release next APK and verify live release",
-      "status": "in_progress",
-      "notes": "Version bumped to 36 (versionCode/versionName). Release.yml dispatched with app_path=apps/clipforge-android ref=main; the CI Android build compiles the task-180/182 Kotlin changes in a real SDK environment. NEXT: watch the Actions run to green, verify clipforge-android-v36 release + APK/manifest assets via the Releases API, then set build_complete=true."
+      "status": "done",
+      "notes": "DONE: version bumped to 36; release.yml dispatched twice (run 35908319439 failed on a doubled @Composable annotation left by the StepTerminalOutput deletion — fixed in commit f4c22d26 and re-dispatched); run 35908581600 completed success and compiled all task-180/182 Kotlin changes in the CI Android SDK environment (this satisfies the task-180 compile-validation boundary — no local SDK was available). Release clipforge-android-v36 verified live via the Releases API: assets app-clipforge-android-v36.apk + forgebuild-manifest.json at https://github.com/vjumbo264/forgebuild/releases/tag/clipforge-android-v36. Prior releases untouched."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
