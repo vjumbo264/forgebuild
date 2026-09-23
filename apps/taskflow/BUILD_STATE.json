@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass4-session",
-  "current_task": "step-24",
+  "current_task": "step-25",
   "substitutions": [],
   "tasks": [
     {
@@ -149,8 +149,8 @@
     {
       "id": "step-24",
       "title": "FIX Unfinished view retention: auto-delete recurring (and all) unfinished entries after configurable retention period, same as Completed",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Unfinished (missed) tasks \u2014 including recurring instances \u2014 now expire under the SAME configurable retention period as Completed. TaskDao.deleteMissedBefore(cutoff) added; TaskRepository.purgeExpiredMissed(retentionDays) added; TaskViewModel purges missed entries both on app init and whenever retentionDays changes. Settings UI label updated to 'Completed & Unfinished Retention' so the shared period is explicit."
     },
     {
       "id": "step-25",

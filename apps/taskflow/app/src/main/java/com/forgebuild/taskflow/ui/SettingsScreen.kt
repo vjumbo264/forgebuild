@@ -156,9 +156,9 @@ fun SettingsScreen(
 
             // ---- COMPLETED TASK RETENTION PERIOD ----
             Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                Text("Completed Tasks Retention", style = MaterialTheme.typography.titleMedium)
+                Text("Completed & Unfinished Retention", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Completed tasks auto-delete after this duration so your archive doesn't grow indefinitely.",
+                    "Completed tasks and missed/unfinished tasks (incl. recurring) auto-delete after this duration so neither list grows indefinitely.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
