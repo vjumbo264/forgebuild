@@ -173,3 +173,36 @@ The previous pass did not actually change the UI — it kept the existing look a
   - The "time remaining today" indicator must use Material 3's current expressive animated progress indicator component (the newer wavy/animated style), not a plain static progress bar.
   - General loading states throughout the app should use expressive/animated indicators consistent with this design language, not generic spinners.
 - The end result should look and feel like a premium, modern Google first-party app — comparable to current Google Calendar/Tasks/Keep — not an incremental reskin of what exists now.
+
+## 2026-09-23 — TaskFlow — Revision Pass 5 (Fixes)
+
+This is a follow-up pass on the existing app (previous revisions already implemented). These are new fixes/requirements only.
+
+### Recurring Fixed-Time Tasks Not Showing Their Time (FIX)
+- Recurring tasks that also have a fixed time are not displaying their time in the UI. Fix this so the fixed time is always visible for these tasks, same as it is for non-recurring fixed-time tasks.
+
+### Sub-task Duration Cannot Exceed Parent (NEW constraint)
+- The same way total task durations for a day cannot exceed the total time available in that day, a task's direct sub-tasks' durations cannot cumulatively exceed their parent task's own duration.
+- This applies at every level of nesting: for any given task, the sum of its immediate children's durations must always be ≤ that task's own duration. Block creation/editing of a sub-task if it would push the cumulative total over the parent's duration.
+- This also applies to overnight/cross-midnight tasks (see below) — e.g. if a parent task spans 8 PM to 2 AM (6 hours), its children's durations combined cannot exceed 6 hours.
+
+### Recurring Task Completion Duplication Bug (FIX — critical)
+- Confirmed bug: completing (checking off) a recurring task leaves behind a duplicate "normal" (non-recurring) copy of it in its place, missing its children/sub-tasks.
+- Restoring the original from task history and completing it again creates yet another duplicate each time — this compounds with repeated use.
+- Diagnose and fix the recurring-task completion logic so that completing an instance correctly: marks that instance as completed (moving it to Completed as normal), and generates/advances the next recurring instance properly, without leaving behind any duplicate, non-recurring, children-less copy.
+
+### Voice Recording Send Button Cropped (FIX — minor)
+- The send button shown while recording/composing a voice note is visually cropped. Fix its layout/sizing so it displays correctly, uncropped.
+
+### Overnight Tasks Require a Fixed Time (NEW constraint)
+- Overnight/cross-midnight tasks are only allowed when the task has a fixed time set (with duration), whether it's a one-off or recurring task.
+- A task without a fixed time must never be allowed to span/cross into the next day — this prevents a plain flexible-time task from ambiguously "leaking" overnight just because the day ran out. If a task has no fixed time, its scheduling must stay confined to a single day; block any attempt to set it up as an overnight-spanning task.
+
+### Overnight Task Children Constraint (Clarification of above)
+- For tasks that span into the next day (e.g. 8 PM–2 AM, 6 hours total), the same parent/child cumulative duration constraint applies: children's combined duration must not exceed the full span of the overnight task, not just one day's portion of it.
+
+### AI Chat Interface — Reimagine This Screen Specifically (NEW — targeted UI redo)
+This is a fix to how UI-redo requests have been scoped: rather than a global instruction, this pass targets one specific screen precisely — the AI chat/voice interface (where the user sends text or voice messages to the AI and sees its responses).
+- Treat this screen as a full redesign, not a patch — layout, message bubble/list style, input bar, mic button, and any surrounding chrome should all be reconsidered.
+- Fully adopt Material 3 Expressive for this screen: expressive shapes, spring-based motion, satisfying press/state-change animations on the mic button, send button, and message elements; smooth animated transitions for new messages appearing and for state changes (idle → recording → sending → responded).
+- Should feel as premium and polished as the rest of the app is intended to be — comparable to a well-designed first-party Google chat-style surface.
