@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -99,9 +100,28 @@ fun SettingsScreen(
     val keys by keyStore.keys.collectAsState()
     val theme by vm.themeMode.collectAsState()
     val retentionDays by vm.retentionDays.collectAsState()
+    val pomodoroEnabled by vm.pomodoroEnabled.collectAsState()
+    val pomodoroWork by vm.pomodoroWorkMinutes.collectAsState()
+    val pomodoroBreak by vm.pomodoroBreakMinutes.collectAsState()
 
     var newKey by remember { mutableStateOf("") }
     var isBatteryExempt by remember { mutableStateOf(PermissionWiring.isBatteryOptimizationExempt(context)) }
+    // Pass 7 FIX: live exact-alarm grant status (the flow previously never surfaced it).
+    var alarmGranted by remember { mutableStateOf(PermissionWiring.canScheduleExactAlarms(context)) }
+
+    // Re-read both special-permission statuses whenever Settings resumes, so returning
+    // from the OS screens flips the status pills instead of leaving a stale state.
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, ev ->
+            if (ev == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                alarmGranted = PermissionWiring.canScheduleExactAlarms(context)
+                isBatteryExempt = PermissionWiring.isBatteryOptimizationExempt(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+    }
 
     @Suppress("UNCHECKED_CAST")
     val effectsSpec = MotionTokens.defaultEffects as
@@ -274,6 +294,65 @@ fun SettingsScreen(
                 }
             }
 
+            // ── 2b. POMODORO — work/break interval settings (Pass 7) ──────────
+            SettingsSection(
+                icon = EngineIcons.Timer,
+                title = "Pomodoro",
+                subtitle = "Split running timers into work intervals with short breaks."
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Pomodoro timers", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "When you press play, the countdown alternates work and break intervals. Breaks are free — the countdown pauses and resumes by itself.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = pomodoroEnabled, onCheckedChange = { vm.setPomodoroEnabled(it) })
+                }
+
+                AnimatedVisibility(
+                    visible = pomodoroEnabled,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column {
+                        Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+                        Text("Work interval", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                            listOf(15, 20, 25, 30, 45, 60).forEach { m ->
+                                FilterChip(
+                                    selected = pomodoroWork == m,
+                                    onClick = { vm.setPomodoroWorkMinutes(m) },
+                                    label = { Text("${m}m") }
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+                        Text("Break interval", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
+                            listOf(5, 10, 15, 20).forEach { m ->
+                                FilterChip(
+                                    selected = pomodoroBreak == m,
+                                    onClick = { vm.setPomodoroBreakMinutes(m) },
+                                    label = { Text("${m}m") }
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(SpacingTokens.Spacing.xs))
+                        Text(
+                            "Applies when a task's duration fits at least one full work interval; shorter tasks run a normal countdown.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+
             // ── 3. ALERTS — notification matrix ──────────────────────────────
             SettingsSection(
                 icon = EngineIcons.Alarm,
@@ -385,11 +464,36 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     FilledTonalButton(
-                        onClick = { (context as? Activity)?.let { PermissionWiring.requestExactAlarm(it) } },
+                        onClick = {
+                            (context as? Activity)?.let { PermissionWiring.requestExactAlarm(it) }
+                            alarmGranted = PermissionWiring.canScheduleExactAlarms(context)
+                        },
                         shapes = ButtonDefaults.shapes()
                     ) { Text("Exact alarms") }
+                    // Live grant status pill: flips to Granted as soon as the OS flow completes.
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (alarmGranted) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            if (alarmGranted) "Granted" else "Not granted — tap to open the system setting",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (alarmGranted) MaterialTheme.colorScheme.onPrimaryContainer
+                            else MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(SpacingTokens.Spacing.sm))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
 
                     val exemptColor by animateColorAsState(
                         targetValue = if (isBatteryExempt) MaterialTheme.colorScheme.primaryContainer

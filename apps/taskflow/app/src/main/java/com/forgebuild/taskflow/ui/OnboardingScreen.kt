@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +49,21 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     }
     var batteryExempt by remember {
         mutableStateOf(PermissionWiring.isBatteryOptimizationExempt(context))
+    }
+    // Pass 7 FIX: live exact-alarm status so the card flips to granted after the OS flow.
+    var alarmGranted by remember {
+        mutableStateOf(PermissionWiring.canScheduleExactAlarms(context))
+    }
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, ev ->
+            if (ev == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                alarmGranted = PermissionWiring.canScheduleExactAlarms(context)
+                batteryExempt = PermissionWiring.isBatteryOptimizationExempt(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
     }
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -94,9 +110,10 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 icon = EngineIcons.CalendarToday,
                 title = "Exact alarms",
                 why = "Ensures reminders fire at the exact minute you set, even in Doze mode. Android shows you the official system permission screen for this.",
-                isGranted = false,
+                isGranted = alarmGranted,
                 onGrant = {
                     (context as? Activity)?.let { PermissionWiring.requestExactAlarm(it) }
+                    alarmGranted = PermissionWiring.canScheduleExactAlarms(context)
                 }
             )
 

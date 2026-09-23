@@ -24,8 +24,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -388,8 +390,21 @@ fun TaskRowItem(
                     }
                 }
                 TimerEngine.TimerState.FINISHED -> {
+                    // Pass 7 FIX: the extend affordance was a bare cropped text button — now a
+                    // clean filled-tonal button with the proper MoreTime icon beside Done.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onTimerExtend) { Text("Extend", style = MaterialTheme.typography.labelMedium) }
+                        FilledTonalButton(
+                            onClick = onTimerExtend,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                        ) {
+                            Icon(
+                                EngineIcons.MoreTime, null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Extend", style = MaterialTheme.typography.labelMedium)
+                        }
                         TextButton(onClick = onTimerComplete) {
                             Text("Done", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                         }

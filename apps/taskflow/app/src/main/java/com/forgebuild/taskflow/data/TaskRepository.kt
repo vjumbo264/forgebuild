@@ -1,8 +1,10 @@
 package com.forgebuild.taskflow.data
 
 import android.content.Context
+import com.forgebuild.taskflow.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
@@ -11,7 +13,7 @@ import java.util.Calendar
  * Handles priority rank generation, recursive deletion, recurrence spawning,
  * due-now pinning, and daily duration allocation tracking.
  */
-class TaskRepository(private val dao: TaskDao) {
+class TaskRepository(private val dao: TaskDao, private val appContext: Context? = null) {
     /** Hook wired to ReminderScheduler.rescheduleAll. */
     var onTimedTasksChanged: (suspend () -> Unit)? = null
     /** Low-priority ping hook when a recurring instance is generated. */
@@ -27,6 +29,8 @@ class TaskRepository(private val dao: TaskDao) {
     fun allActive(): Flow<List<Task>> = dao.observeAllActive()
 
     suspend fun get(id: Long): Task? = dao.getById(id)
+    /** One-shot snapshot of all active tasks (used by the foreground service timer watcher). */
+    suspend fun allActiveNow(): List<Task> = withContext(Dispatchers.IO) { dao.allActive() }
     suspend fun childCount(parentId: Long?): Int = dao.childCount(parentId)
     suspend fun activeChildCount(parentId: Long?): Int = dao.activeChildCount(parentId)
     suspend fun siblingsOf(parentId: Long?): List<Task> = withContext(Dispatchers.IO) { dao.children(parentId) }
@@ -337,7 +341,17 @@ class TaskRepository(private val dao: TaskDao) {
 
     // ---- Per-task countdown timer (TimerEngine state machine, persisted on Task) ----
     suspend fun timerStart(id: Long) = withContext(Dispatchers.IO) {
-        dao.getById(id)?.let { dao.update(TimerEngine.startOrResume(it)) }
+        // Pass 7: snapshot the Pomodoro settings at start so the plan survives later changes.
+        var workMs: Long? = null
+        var breakMs: Long? = null
+        appContext?.let { ctx ->
+            val s = AppSettings.get(ctx)
+            if (s.pomodoroEnabled.first()) {
+                workMs = s.pomodoroWorkMinutes.first() * 60_000L
+                breakMs = s.pomodoroBreakMinutes.first() * 60_000L
+            }
+        }
+        dao.getById(id)?.let { dao.update(TimerEngine.startOrResume(it, pomodoroWorkMs = workMs, pomodoroBreakMs = breakMs)) }
     }
     suspend fun timerPause(id: Long) = withContext(Dispatchers.IO) {
         dao.getById(id)?.let { dao.update(TimerEngine.pause(it)) }
@@ -380,7 +394,7 @@ class TaskRepository(private val dao: TaskDao) {
 
         fun get(context: Context): TaskRepository =
             instance ?: synchronized(this) {
-                instance ?: TaskRepository(TaskFlowDb.get(context).taskDao()).also { instance = it }
+                instance ?: TaskRepository(TaskFlowDb.get(context).taskDao(), context.applicationContext).also { instance = it }
             }
     }
 }

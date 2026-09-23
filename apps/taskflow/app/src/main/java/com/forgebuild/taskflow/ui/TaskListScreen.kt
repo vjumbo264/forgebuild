@@ -96,6 +96,7 @@ fun TaskListScreen(
     val timeRange by vm.timeRange.collectAsState()
     val allocatedMinutes by vm.allocatedMinutesToday.collectAsState()
     val remainingMinutes by vm.remainingMinutesToday.collectAsState()
+    val usedDayMinutes by vm.usedDayMinutes.collectAsState()
 
     var peekInfo by remember { mutableStateOf<Task?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -252,7 +253,11 @@ fun TaskListScreen(
             }
 
             // HERO: today's time budget on the official expressive wavy indicators.
-            TodayHero(allocatedMinutes = allocatedMinutes, remainingMinutes = remainingMinutes)
+            TodayHero(
+                allocatedMinutes = allocatedMinutes,
+                remainingMinutes = remainingMinutes,
+                usedDayMinutes = usedDayMinutes
+            )
 
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
@@ -457,9 +462,13 @@ fun TaskListScreen(
  * wavy progress indicators (circular + linear) — no static progress bar.
  */
 @Composable
-private fun TodayHero(allocatedMinutes: Long, remainingMinutes: Long) {
+private fun TodayHero(allocatedMinutes: Long, remainingMinutes: Long, usedDayMinutes: Long) {
     val total = (allocatedMinutes + remainingMinutes).coerceAtLeast(1L)
     val booked = (allocatedMinutes.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    // Pass 7: horizontal bar is now a DISTINCT metric — the whole 24h day vs. how much
+    // of it is used (elapsed time + time still booked by tasks). The circular indicator
+    // keeps its original meaning (remaining-today share already booked).
+    val dayUsed = (usedDayMinutes.toFloat() / 1440f).coerceIn(0f, 1f)
 
     Surface(
         shape = MaterialTheme.shapes.extraLargeIncreased,
@@ -511,8 +520,14 @@ private fun TodayHero(allocatedMinutes: Long, remainingMinutes: Long) {
             Spacer(Modifier.height(SpacingTokens.Spacing.md))
 
             EngineLinearWavyProgress(
-                progress = { booked },
+                progress = { dayUsed },
                 modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(SpacingTokens.Spacing.xxs))
+            Text(
+                "Day used: ${usedDayMinutes / 60}h ${usedDayMinutes % 60}m of 24h (elapsed + booked)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

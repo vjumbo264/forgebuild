@@ -129,6 +129,24 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         DayAccounting.allocatedMinutesForDay(all, now, now)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
+    /** Pass 7: minutes of the 24h day already elapsed. */
+    val elapsedMinutesToday: StateFlow<Long> = repo.allActive().map {
+        val now = System.currentTimeMillis()
+        ((now - DayAccounting.dayStart(now)) / 60000L).coerceIn(0L, 1440L)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    /** Pass 7 (horizontal bar): day "used" = elapsed time + time still booked by tasks, vs 24h. */
+    val usedDayMinutes: StateFlow<Long> = combine(allocatedMinutesToday, elapsedMinutesToday) { alloc, elapsed ->
+        (elapsed + alloc).coerceIn(0L, 1440L)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val pomodoroEnabled: StateFlow<Boolean> = settings.pomodoroEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val pomodoroWorkMinutes: StateFlow<Int> = settings.pomodoroWorkMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 25)
+    val pomodoroBreakMinutes: StateFlow<Int> = settings.pomodoroBreakMinutes
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
+
     val remainingMinutesToday: StateFlow<Long> = allocatedMinutesToday.map { allocated ->
         val now = System.currentTimeMillis()
         val minutesUntilMidnight = ((DayAccounting.nextDayStart(now) - now) / 60000L).coerceAtLeast(0L)
@@ -180,9 +198,14 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         recurrence: Recurrence = Recurrence.NONE,
         weekdaysMask: Int = 0,
         info: String = "",
-        recurrenceEndDate: Long? = null
+        recurrenceEndDate: Long? = null,
+        parentId: Long? = null
     ) = viewModelScope.launch {
         if (title.isBlank()) return@launch
+        // Pass 7 FIX: an explicit parentId (e.g. the edit screen adding a sub-task)
+        // overrides the navigation level, so the new task nests under the intended
+        // parent instead of becoming a root task.
+        val effectiveParent = parentId ?: _path.value.lastOrNull()
         val dur = durationMinutes.coerceAtLeast(1L)
         val now = System.currentTimeMillis()
         val proposed = Task(title = "", rank = 0.0, durationMinutes = dur, fixedTime = fixedTime)
@@ -206,14 +229,14 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         // Parent/child constraint: cumulative direct sub-task durations ≤ parent duration.
-        repo.childDurationError(_path.value.lastOrNull(), dur)?.let {
+        repo.childDurationError(effectiveParent, dur)?.let {
             _userMessage.emit(it)
             return@launch
         }
 
         repo.create(
             title = title.trim(),
-            parentId = _path.value.lastOrNull(),
+            parentId = effectiveParent,
             durationMinutes = dur,
             fixedTime = fixedTime,
             recurrence = recurrence,
@@ -239,6 +262,9 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         repo.timerExtend(task.id, minutes)
         repo.get(task.id)?.timerEndsAt?.let { scheduler.scheduleTimerEnd(task.id, it) }
     }
+    fun setPomodoroEnabled(enabled: Boolean) = viewModelScope.launch { settings.setPomodoroEnabled(enabled) }
+    fun setPomodoroWorkMinutes(m: Int) = viewModelScope.launch { settings.setPomodoroWorkMinutes(m) }
+    fun setPomodoroBreakMinutes(m: Int) = viewModelScope.launch { settings.setPomodoroBreakMinutes(m) }
     fun timerComplete(task: com.forgebuild.taskflow.data.Task) = viewModelScope.launch {
         repo.setCompleted(task.id, true)
     }

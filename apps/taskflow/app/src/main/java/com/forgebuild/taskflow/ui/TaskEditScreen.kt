@@ -324,9 +324,12 @@ fun TaskEditScreen(
                 IconButton(
                     onClick = {
                         if (newSubtaskTitle.isNotBlank()) {
+                            // Pass 7 FIX: nest under THIS task (was defaulting to the nav
+                            // level, creating a standalone root task instead of a child).
                             vm.addTask(
                                 title = newSubtaskTitle,
-                                durationMinutes = newSubtaskDuration
+                                durationMinutes = newSubtaskDuration,
+                                parentId = current.id
                             )
                             newSubtaskTitle = ""
                         }

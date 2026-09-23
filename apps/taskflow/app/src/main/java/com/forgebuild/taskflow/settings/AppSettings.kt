@@ -26,6 +26,9 @@ class AppSettings private constructor(private val context: Context) {
     private val keyForegroundActive = booleanPreferencesKey("foreground_service_active")
     private val keyAgendaHour = intPreferencesKey("agenda_hour")
     private val keyRetentionDays = intPreferencesKey("completed_retention_days")
+    private val keyPomodoroEnabled = booleanPreferencesKey("pomodoro_enabled")
+    private val keyPomodoroWorkMinutes = intPreferencesKey("pomodoro_work_minutes")
+    private val keyPomodoroBreakMinutes = intPreferencesKey("pomodoro_break_minutes")
 
     fun notifEnabled(type: NotifType): Flow<Boolean> =
         context.dataStore.data.map { it[keyEnabled(type)] ?: type.defaultOn }
@@ -40,6 +43,10 @@ class AppSettings private constructor(private val context: Context) {
     val agendaHour: Flow<Int> = context.dataStore.data.map { it[keyAgendaHour] ?: 8 }
     /** Auto-delete retention period for completed tasks in days (default 14 days). */
     val retentionDays: Flow<Int> = context.dataStore.data.map { it[keyRetentionDays] ?: 14 }
+    /** Pomodoro timers (Pass 7): when enabled, task countdowns split into work/break intervals. */
+    val pomodoroEnabled: Flow<Boolean> = context.dataStore.data.map { it[keyPomodoroEnabled] ?: false }
+    val pomodoroWorkMinutes: Flow<Int> = context.dataStore.data.map { it[keyPomodoroWorkMinutes] ?: 25 }
+    val pomodoroBreakMinutes: Flow<Int> = context.dataStore.data.map { it[keyPomodoroBreakMinutes] ?: 5 }
 
     suspend fun setNotifEnabled(type: NotifType, enabled: Boolean) {
         context.dataStore.edit { it[keyEnabled(type)] = enabled }
@@ -51,6 +58,9 @@ class AppSettings private constructor(private val context: Context) {
     suspend fun setForegroundActive(active: Boolean) { context.dataStore.edit { it[keyForegroundActive] = active } }
     suspend fun setAgendaHour(h: Int) { context.dataStore.edit { it[keyAgendaHour] = h.coerceIn(0, 23) } }
     suspend fun setRetentionDays(days: Int) { context.dataStore.edit { it[keyRetentionDays] = days.coerceAtLeast(1) } }
+    suspend fun setPomodoroEnabled(enabled: Boolean) { context.dataStore.edit { it[keyPomodoroEnabled] = enabled } }
+    suspend fun setPomodoroWorkMinutes(m: Int) { context.dataStore.edit { it[keyPomodoroWorkMinutes] = m.coerceIn(1, 180) } }
+    suspend fun setPomodoroBreakMinutes(m: Int) { context.dataStore.edit { it[keyPomodoroBreakMinutes] = m.coerceIn(1, 60) } }
 
     companion object {
         @Volatile private var instance: AppSettings? = null

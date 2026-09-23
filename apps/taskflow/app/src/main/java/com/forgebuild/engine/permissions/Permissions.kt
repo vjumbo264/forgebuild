@@ -94,6 +94,13 @@ object PermissionWiring {
         }
     }
 
+    /** True when the app may schedule exact alarms (API 31+); true below 31. */
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return true
+        val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        return am.canScheduleExactAlarms()
+    }
+
     fun requestExactAlarm(activity: Activity) {
         if (Build.VERSION.SDK_INT >= 31) {
             val am = activity.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager

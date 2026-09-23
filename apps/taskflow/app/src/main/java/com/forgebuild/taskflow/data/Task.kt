@@ -60,6 +60,12 @@ data class Task(
     val timerRemainingMs: Long? = null,
     /** True after the countdown has fully elapsed, until the user extends or completes the task. */
     val timerFinished: Boolean = false,
+    /** Wall-clock start of the current timer run (needed to map wall time onto a Pomodoro plan). */
+    val timerStartedAt: Long? = null,
+    /** Pomodoro snapshot taken at timer start: work-interval ms. Null = plain continuous countdown. */
+    val pomodoroWorkMs: Long? = null,
+    /** Pomodoro snapshot taken at timer start: break-interval ms. Null = plain continuous countdown. */
+    val pomodoroBreakMs: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 ) {

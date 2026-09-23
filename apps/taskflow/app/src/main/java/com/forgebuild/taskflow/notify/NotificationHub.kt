@@ -16,6 +16,11 @@ object NotificationHub {
     const val CHANNEL_AGENT = "agent"
     const val CHANNEL_SYSTEM = "system_status"
     const val CHANNEL_FOREGROUND = "foreground_service"
+    /** Pass 7: silent channel for the live-countdown timer notification (never interrupts). */
+    const val CHANNEL_TIMER = "timer_live"
+
+    /** Fixed id for the live timer notification (reused so the countdown updates in place). */
+    const val TIMER_NOTIFICATION_ID = 1002
 
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -30,6 +35,11 @@ object NotificationHub {
                 .apply { description = "Alerts such as all Gemini API keys failing" },
             NotificationChannel(CHANNEL_FOREGROUND, "TaskFlow background service", NotificationManager.IMPORTANCE_LOW)
                 .apply { description = "Persistent indicator that keeps reminders reliable in background" },
+            NotificationChannel(CHANNEL_TIMER, "Live task timer", NotificationManager.IMPORTANCE_LOW)
+                .apply {
+                    description = "Persistent live countdown while a task timer is running"
+                    setShowBadge(false)
+                },
         ).forEach { nm.createNotificationChannel(it) }
     }
 
@@ -113,5 +123,43 @@ object NotificationHub {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
+    }
+
+    /**
+     * Pass 7: persistent live-countdown notification for a running task timer.
+     * Ongoing + silent (low-importance channel), updated in place every second by the
+     * foreground service. [phaseLabel] and [transitionProgress] describe the current
+     * Pomodoro segment (progress toward the upcoming break while working, toward
+     * resuming work while on a break); pass phaseLabel=null/progress=-1 for a plain timer.
+     */
+    fun timerNotification(
+        context: Context,
+        title: String,
+        countdown: String,
+        phaseLabel: String?,
+        transitionProgress: Float
+    ): android.app.Notification {
+        ensureChannels(context)
+        val b = NotificationCompat.Builder(context, CHANNEL_TIMER)
+            .setSmallIcon(com.forgebuild.taskflow.R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(if (phaseLabel == null) countdown else "$countdown · $phaseLabel")
+            .setContentIntent(launchPi(context, null))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+        if (transitionProgress >= 0f) {
+            b.setProgress(1000, (transitionProgress.coerceIn(0f, 1f) * 1000).toInt(), false)
+        }
+        return b.build()
+    }
+
+    fun cancelTimerNotification(context: Context) {
+        runCatching {
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .cancel(TIMER_NOTIFICATION_ID)
+        }
     }
 }

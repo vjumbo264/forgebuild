@@ -58,6 +58,10 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0")
     suspend fun allActive(): List<Task>
 
+    /** Pass 7: any currently RUNNING timer (for the live-countdown notification). */
+    @Query("SELECT * FROM tasks WHERE completed = 0 AND missed = 0 AND timerEndsAt IS NOT NULL AND timerRemainingMs IS NULL AND timerFinished = 0")
+    suspend fun runningTimers(): List<Task>
+
     @Query("SELECT * FROM tasks")
     fun observeAll(): Flow<List<Task>>
 

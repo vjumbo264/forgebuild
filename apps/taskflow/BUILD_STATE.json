@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass7-session",
-  "current_task": "step-44",
+  "current_task": "step-49",
   "substitutions": [],
   "tasks": [
     {
@@ -269,37 +269,37 @@
     {
       "id": "step-44",
       "title": "CRITICAL FIX: sub-task added from a task's edit screen is created as root task — attach as child of the edited task",
-      "status": "in_progress",
-      "notes": ""
+      "status": "done",
+      "notes": "FIXED: TaskEditScreen's add-subtask control called vm.addTask() which defaulted the parent to the nav level (root at top level), so the sub-task landed as a standalone root task. TaskViewModel.addTask now takes an optional parentId that overrides the nav path, and the edit screen passes current.id — sub-tasks added from the edit screen nest under the edited task."
     },
     {
       "id": "step-45",
       "title": "NEW Pomodoro: work/break interval settings; Pomodoro-pattern countdown (free breaks between work intervals, short-task + leftover rules); persistent live-countdown notification with transition progress",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "NEW Pomodoro: work/break interval settings added (Settings > Pomodoro, DataStore-backed, defaults 25/5). TimerEngine rebuilt with a plan engine: n=floor(duration/work) full work intervals, FREE breaks between them (countdown pauses and auto-resumes; breaks do not consume duration), a trailing break that fits inside the duration consumes it, leftover too short for a full work interval finishes as a normal countdown, and tasks shorter than one work interval never get Pomodoro (25/5 on 30m -> one cycle then done; 10/5 on 30m -> three work intervals with free breaks between). Timer state persisted on Task (timerStartedAt + pomodoroWorkMs/pomodoroBreakMs snapshot, Room DB v5). DueForegroundService now posts a persistent silent live-countdown notification (CHANNEL_TIMER) while any timer runs, updated 1s, with progress-toward-next-transition (toward break while working / toward resuming while on break) rendered by the system wavy Material-You progress bar."
     },
     {
       "id": "step-46",
       "title": "FIX exact-alarm/background permission flow not completing (diagnose + make grant flow actually land, with live status)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "FIXED exact-alarm permission flow: the exact-alarm card hardcoded isGranted=false so the request never reflected real state and looked broken. Added PermissionWiring.canScheduleExactAlarms() (app-local engine copy) and wired live grant status into both OnboardingScreen and Settings (Reliability) with an ON_RESUME re-read so the Granted/Not-granted pill flips as soon as the user returns from the OS special-access screen. Battery exemption status likewise re-read on resume. NOTE: engine/ itself was NOT modified (this is not an operator-declared engine-level fix); the app-local copy under apps/taskflow/.../engine/permissions was extended, consistent with the copy-on-app pattern."
     },
     {
       "id": "step-47",
       "title": "FIX main-screen indicators duplicating one metric: circular keeps remaining-today/booked; horizontal shows 24h vs used (elapsed + booked)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "FIXED duplicated metric: circular indicator unchanged (remaining-today / % booked). Horizontal bar now shows a distinct metric — the full 24h day vs used (elapsed minutes + booked/allocated task minutes), with an explicit 'Day used: Xh Ym of 24h (elapsed + booked)' caption. New TaskViewModel.elapsedMinutesToday + usedDayMinutes flows."
     },
     {
       "id": "step-48",
       "title": "FIX task time-extension icon + extend UI/flow visual presentation",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "FIXED extend UI: the finished-state 'Extend' was a bare cropped TextButton; now a clean FilledTonalButton with the MoreTime icon + label beside 'Done'. The extend entry in the row overflow already used the MoreTime icon; the dialog flow is unchanged (hours+minutes fields, quick +5/10/15/30 chips, Add time / Mark complete)."
     },
     {
       "id": "step-49",
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v7, verify release + assets live via GitHub Releases API",
-      "status": "pending",
+      "status": "in_progress",
       "notes": ""
     },
     {
