@@ -723,7 +723,6 @@ private fun PublishErrorDialog(err: ClipForgeViewModel.ZernioDispatchError, onDi
 @Composable
 private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.LogStep>, state: String) {
     val context = LocalContext.current
-    val expandedKeys by vm.expandedStepKeys.collectAsState()
     val rawLog by vm.detailRawLog.collectAsState()
     var viewMode by remember { mutableStateOf(0) } // 0 = Step View, 1 = Raw Terminal
 
@@ -731,6 +730,13 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
     val completedSteps = logs.count { it.level == ClipForgeViewModel.LogLevel.SUCCESS }
     val runningStep = logs.firstOrNull { it.level == ClipForgeViewModel.LogLevel.RUNNING }
     val failedStep = logs.firstOrNull { it.level == ClipForgeViewModel.LogLevel.FAILURE }
+    // Issue 3: rolling window — the active step plus the three preceding ones.
+    // Full per-step detail lives in the Raw Console view; the step view renders
+    // plain non-interactive rows only.
+    val activeIdx = logs.indexOfFirst { it.level == ClipForgeViewModel.LogLevel.RUNNING }
+        .let { if (it >= 0) it else logs.lastIndex }
+    val windowStart = (activeIdx - 3).coerceAtLeast(0)
+    val visibleSteps = if (logs.isEmpty()) logs else logs.subList(windowStart, (activeIdx + 1).coerceAtMost(logs.size))
 
     CfSection(
         title = "Pipeline Execution Log",
@@ -741,7 +747,7 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
             else -> "Real-time runner logs from GitHub Actions"
         }
     ) {
-        // Top Toolbar: Mode Switcher + Expand/Collapse + Copy
+        // Top Toolbar: Mode Switcher + Copy (per-step expand removed — issue 3)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -772,13 +778,6 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
 
             Row(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xxs)) {
                 if (viewMode == 0 && logs.isNotEmpty()) {
-                    val allExpanded = logs.isNotEmpty() && logs.all { vm.isStepExpanded(it) }
-                    TextActionButton(
-                        label = if (allExpanded) "Collapse" else "Expand all",
-                        onClick = {
-                            if (allExpanded) vm.collapseAllSteps() else vm.expandAllSteps()
-                        }
-                    )
                 }
                 TextActionButton(
                     label = "Copy",
@@ -857,12 +856,15 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
                 ) {
-                    logs.forEach { step ->
-                        LogStepRow(
-                            step = step,
-                            expanded = vm.isStepExpanded(step),
-                            onToggle = { vm.toggleStepExpanded(step.key) }
+                    if (totalSteps > 0) {
+                        Text(
+                            text = "Step ${activeIdx + 1} of $totalSteps",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    visibleSteps.forEach { step ->
+                        LogStepRow(step = step)
                     }
                 }
             }
@@ -871,27 +873,19 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
 }
 
 @Composable
-private fun LogStepRow(
-    step: ClipForgeViewModel.LogStep,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-) {
+private fun LogStepRow(step: ClipForgeViewModel.LogStep) {
     val accent = cfStatusColor(step.level)
-    val interactionSource = remember { MutableInteractionSource() }
+    val active = step.level == ClipForgeViewModel.LogLevel.RUNNING
 
     Surface(
-        onClick = onToggle,
         shape = MaterialTheme.shapes.medium,
-        color = ElevationTokens.tonalContainerColor(if (expanded) 2 else 1),
+        color = ElevationTokens.tonalContainerColor(if (active) 2 else 1),
         border = BorderStroke(
             1.dp,
-            if (expanded) accent.copy(alpha = 0.5f)
+            if (active) accent.copy(alpha = 0.5f)
             else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         ),
-        interactionSource = interactionSource,
-        modifier = Modifier
-            .fillMaxWidth()
-            .expressiveBounce(interactionSource, pressedScale = 0.98f),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(SpacingTokens.Spacing.sm),
@@ -939,7 +933,7 @@ private fun LogStepRow(
                 Text(
                     text = step.name,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = if (expanded || step.level == ClipForgeViewModel.LogLevel.RUNNING) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal
                     ),
                     color = if (step.level == ClipForgeViewModel.LogLevel.FAILURE) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurface,
@@ -954,110 +948,17 @@ private fun LogStepRow(
                     )
                 }
 
-                // Animated chevron
-                val rotation by animateFloatAsState(
-                    targetValue = if (expanded) 90f else -90f,
-                    label = "chevronRotation"
-                )
-                Icon(
-                    imageVector = EngineIcons.ArrowBack,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
-                    modifier = Modifier
-                        .size(20.dp)
-                        .rotate(rotation),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
-            if (step.level == ClipForgeViewModel.LogLevel.RUNNING && !expanded) {
+            if (step.level == ClipForgeViewModel.LogLevel.RUNNING) {
                 EngineLinearWavyProgress(Modifier.fillMaxWidth())
             }
 
-            // Expanded terminal console view for step details
-            if (expanded) {
-                StepTerminalOutput(details = step.details)
-            }
         }
     }
 }
 
 @Composable
-private fun StepTerminalOutput(details: List<ClipForgeViewModel.LogDetail>) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color(0xFF141416),
-        border = BorderStroke(1.dp, Color(0xFF26262B)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = SpacingTokens.Spacing.xxs)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "${details.size} log lines",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp
-                    ),
-                    color = Color(0xFF7E7E8A)
-                )
-            }
-
-            // Scrollable terminal lines container
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    details.forEachIndexed { idx, detail ->
-                        val isError = detail.level == ClipForgeViewModel.LogLevel.FAILURE ||
-                                detail.text.contains("error", ignoreCase = true) ||
-                                detail.text.contains("fatal", ignoreCase = true) ||
-                                detail.text.contains("failed", ignoreCase = true)
-                        val isWarn = detail.text.contains("warn", ignoreCase = true)
-
-                        val textColor = when {
-                            isError -> Color(0xFFFF8B8B)
-                            isWarn -> Color(0xFFFFD56B)
-                            detail.text.startsWith("##[") || detail.text.startsWith("===") -> Color(0xFF8CE090)
-                            else -> Color(0xFFD4D4DC)
-                        }
-
-                        Row(verticalAlignment = Alignment.Top) {
-                            Text(
-                                text = "${idx + 1}".padStart(3, ' ') + "  ",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                ),
-                                color = Color(0xFF55555F)
-                            )
-                            Text(
-                                text = detail.text,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                ),
-                                color = textColor
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun RawConsoleTerminal(rawText: String) {

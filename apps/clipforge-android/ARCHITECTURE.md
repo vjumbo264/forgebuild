@@ -147,3 +147,22 @@ Releases are GitHub Releases on the app's own repo (`v1`, `v2`, ...) — never
 overwritten. Rollback/history come from the GitHub Releases API. Signing uses
 the app repo's Actions secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
 `KEY_ALIAS`, `KEY_PASSWORD`.
+
+## Task expiry / cleanup policy (2026-09-23, five-issue pass item 5)
+
+The backend repo (motionssalt/clipforge) owns expiry: `.github/workflows/cleanup.yml`
+runs every 6h (verified live — run 35891182645 succeeded 2026-09-23T16:47Z) and deletes
+jobs whose `status.json.expires_at_epoch` is in the past, including their GitHub
+releases, tags, `jobs/<id>/` folders and per-job branches.
+
+- TTL knob: the single Actions variable `CLIPFORGE_TTL_SECONDS` (default 172800 =
+  48h) is written into every new status record by stage-a.yml; `pipeline/status.py`'s
+  internal 12h default is only the no-config fallback.
+- Series protection (bug-66): a part whose series has unfinished siblings is not
+  reaped; a series counts as finished only when a part is marked `is_final`.
+- Stuck-series escape hatch: when NO part is `is_final` but every part is terminal
+  AND the newest part expired more than `DEFAULT_SERIES_GRACE_SECONDS` (24h) ago,
+  the series is treated as complete and reaped (pipeline/cleanup/expired.py).
+- App side: the task list is a CacheFirstStore; each background refresh replaces
+  the local cache with the remote `jobs/` listing, so backend-deleted jobs
+  disappear from the app on the next refresh — no extra app-side expiry needed.

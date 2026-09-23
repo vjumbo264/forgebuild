@@ -381,36 +381,13 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     private val _nextPart = MutableStateFlow<NextPartInfo?>(null)
     val nextPart: StateFlow<NextPartInfo?> = _nextPart
 
-        private val _expandedStepKeys = MutableStateFlow<Set<String>>(emptySet())
-    val expandedStepKeys: StateFlow<Set<String>> = _expandedStepKeys.asStateFlow()
 
     private val _detailRawLog = MutableStateFlow("")
     val detailRawLog: StateFlow<String> = _detailRawLog.asStateFlow()
 
-    fun isStepExpanded(step: LogStep): Boolean {
-        val set = _expandedStepKeys.value
-        if (set.contains(step.key)) return true
-        if (set.isEmpty() && (step.level == LogLevel.RUNNING || step.level == LogLevel.FAILURE)) return true
-        return false
-    }
 
-    fun toggleStepExpanded(key: String) {
-        val current = _expandedStepKeys.value.toMutableSet()
-        if (current.contains(key)) {
-            current.remove(key)
-        } else {
-            current.add(key)
-        }
-        _expandedStepKeys.value = current
-    }
 
-    fun expandAllSteps() {
-        _expandedStepKeys.value = _detailLogs.value.map { it.key }.toSet()
-    }
 
-    fun collapseAllSteps() {
-        _expandedStepKeys.value = emptySet()
-    }
 
     /** Fix #2 — stream the bot's pre-rendered sample assets/tts-previews/<voiceId>.mp3
      *  (same file the bot's set:voice:prev handler serves via getRepositoryFileBytes).
@@ -918,7 +895,6 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         _detailRequest.value = detailRequestCache[jobId]?.let { JSONObject(it.toString()) }
         _detailLogs.value = detailLogsCache[jobId].orEmpty()
         _detailRawLog.value = detailRawLogCache[jobId].orEmpty()
-        _expandedStepKeys.value = emptySet()
         _detailRequest.value = null
         _detailPlan.value = null
         _detailSuperState.value = null
@@ -2288,17 +2264,6 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun pushNews(newsText: String) = viewModelScope.launch {
-        val c = api ?: return@launch
-        withBusy("push_news") {
-            try {
-                c.pushNews(newsText)
-                toast("Broadcasted news message")
-            } catch (e: Exception) {
-                toast("Broadcast error: ${e.message}")
-            }
-        }
-    }
 
     // Bot parity: bot/src/github.js saveNarrator writes the full Edge-TTS doc.
     fun setNarratorVoice(voiceId: String) = viewModelScope.launch {

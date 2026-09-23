@@ -95,7 +95,6 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
     var showClearZernioDialog by remember { mutableStateOf(false) }
     var watermarkInput by remember(settings.watermarkText) { mutableStateOf(settings.watermarkText) }
     var zernioKeyInput by remember { mutableStateOf("") }
-    var newsInput by remember { mutableStateOf("") }
 
     // ---- Full Zernio settings editor state (v23-R6) ----
     var zFull by remember { mutableStateOf<ZernioSettings.Settings?>(null) }
@@ -155,18 +154,6 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
                             label = "Push update to clones",
                             busy = busyOf(vm, "push_update"),
                             onClick = { vm.pushUpdateToClones() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        OutlinedTextField(
-                            value = newsInput, onValueChange = { newsInput = it },
-                            label = { Text("Broadcast news to clones") },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        ActionButton(
-                            label = "Broadcast news",
-                            busy = busyOf(vm, "push_news"),
-                            enabled = newsInput.isNotBlank(),
-                            onClick = { vm.pushNews(newsInput); newsInput = "" },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

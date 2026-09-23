@@ -353,22 +353,6 @@ class GitHubClient(val pat: String, val owner: String, val repo: String, private
         dispatchWorkflow("push-update.yml", emptyMap())
     }
 
-    /**
-     * Bot parity (bot/src/index.js pushNews): the announcement lives at
-     * docs/news.json with {version, message, interval_hours, published_at(ISO)}
-     * — the app's previous branding/news.json {message, updated_at} shape was
-     * invented and never matched the bot.
-     */
-    suspend fun pushNews(newsText: String) {
-        if (!isOriginalRepo()) throw IllegalStateException("Only main account can broadcast news")
-        val publishedAt = java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
-        val payload = JSONObject()
-            .put("version", 1)
-            .put("message", newsText)
-            .put("interval_hours", 0)
-            .put("published_at", publishedAt)
-        putFile("docs/news.json", payload.toString(2).toByteArray(), "clipforge: broadcast news")
-    }
 
     // ---- GitHub Actions secrets (bot parity: the Zernio API key is stored as
     // the sealed repo Actions secret ZERNIO_API_KEY, NEVER in a settings json) ----
