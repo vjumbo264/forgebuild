@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass5-session",
-  "current_task": "implementing Pass 5 fixes",
+  "current_task": "release taskflow-v5 dispatched",
   "substitutions": [],
   "tasks": [
     {
@@ -179,32 +179,32 @@
     {
       "id": "step-29",
       "title": "FIX recurring fixed-time tasks not showing time in TaskRowItem badge",
-      "status": "in_progress",
+      "status": "done",
       "notes": "TaskRowItem RECURRING_FIXED badge now renders the template fixedTime (HH:mm) alongside recurrence + overnight span label."
     },
     {
       "id": "step-30",
       "title": "NEW sub-task cumulative duration <= parent duration at every nesting level (incl. overnight spans); NEW overnight-requires-fixed-time constraint",
-      "status": "in_progress",
+      "status": "done",
       "notes": "TaskRepository.childDurationError/parentShrinkError enforce the cap in both directions; TaskViewModel.addTask/saveEdit + TaskAgentTools create/update block violations; untimed tasks can never span overnight (whole duration charged to today, blocked when overflowing); TaskEditScreen shows live sub-task budget."
     },
     {
       "id": "step-31",
       "title": "CRITICAL FIX recurring completion duplication: templates/instances advance in place; separate completed record for history; no duplicate children-less copy",
-      "status": "in_progress",
+      "status": "done",
       "notes": "setCompleted() rewritten: completing a recurring template writes a completed history record and advances the template fixedTime to the next occurrence in place (children/recurrence/identity preserved); rollover() advances stale templates in place instead of spawning bare instances; spawnNextInstance() removed entirely."
     },
     {
       "id": "step-32",
       "title": "FIX voice recording send button cropped; REIMAGINE AI chat screen (Material 3 Expressive: asymmetric bubbles, floating composer capsule, spring motion, AnimatedContent state transitions)",
-      "status": "in_progress",
+      "status": "done",
       "notes": "ChatPanel.kt fully rewritten: header orb + live status, asymmetric corner-smoothed bubbles with per-message spring entrance via MotionTokens.defaultSpatial, floating composer capsule with expressive-shape mic/send IconButtons (colour state shift), recording pill with natural-size Send button (no height cap = uncropped) and scrolling waveform, AnimatedContent swaps idle/recording/sending with MotionTokens.fastSpatial."
     },
     {
       "id": "step-33",
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v5, verify release + assets live via GitHub Releases API, set build_complete: true",
       "status": "pending",
-      "notes": "Next operation after implementation commits land: dispatch release workflow, verify taskflow-v5 via API, then set build_complete."
+      "notes": "Release workflow dispatched 2026-09-23 with app_path=apps/taskflow after implementation commit a3ad2e5 pushed+verified on origin/main. Awaiting run completion + Releases API verification of taskflow-v5."
     }
   ]
 }
