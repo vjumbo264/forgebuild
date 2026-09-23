@@ -34,33 +34,30 @@ object TimerSounds {
         Thread {
             runCatching {
                 val ding = synthDing()
-                val track = AudioTrack.Builder()
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
-                    .setAudioFormat(
-                        AudioFormat.Builder()
-                            .setSampleRate(SR)
-                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                            .build()
-                    )
-                    .setBufferSizeInBytes(ding.size * 2)
-                    .setTransferMode(AudioTrack.MODE_STATIC)
-                    .build()
-                track.write(ding, 0, ding.size)
-                track.play()
-                repeat(3) { k ->
-                    if (k > 0) {
-                        track.stop(); track.reloadStaticData(); track.play()
-                    }
-                    Thread.sleep(720)
+                fun ring() {
+                    val track = AudioTrack.Builder()
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                        .setAudioFormat(
+                            AudioFormat.Builder()
+                                .setSampleRate(SR)
+                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                                .build()
+                        )
+                        .setBufferSizeInBytes(ding.size * 2)
+                        .setTransferMode(AudioTrack.MODE_STATIC)
+                        .build()
+                    track.write(ding, 0, ding.size)
+                    track.play()
+                    Thread.sleep(640)
+                    track.release()
                 }
-                Thread.sleep(400)
-                track.release()
+                repeat(3) { k -> if (k > 0) Thread.sleep(90); ring() }
             }
         }.start()
     }
