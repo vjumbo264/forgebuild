@@ -3,9 +3,9 @@
   "project": "forgebuild-taskflow",
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "taskflow-pass4-session",
-  "current_task": "step-27",
+  "current_task": "complete",
   "substitutions": [],
   "tasks": [
     {
@@ -167,8 +167,8 @@
     {
       "id": "step-27",
       "title": "Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v4, verify release + assets live on GitHub Releases API, set build_complete: true",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "release.yml dispatched (app_path=apps/taskflow); run 35802282380 succeeded after fixing one compile error (cast expressive effects spec to AnimationSpec<Color> in TaskRowItem.kt). Verified live via GitHub Releases API: tag taskflow-v4 with assets app-taskflow-v4.apk (2,192,201 bytes, R8-minified, signed) + forgebuild-manifest.json (626 bytes). Prior releases taskflow-v1/v2/v3 untouched."
     }
   ]
 }
