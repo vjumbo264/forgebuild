@@ -3,7 +3,7 @@
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
   "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-23 (five-issue update; task-180 in progress)",
+  "updated_by": "forgebuild-ai-session 2026-09-23 (task-180 in progress; prompt duration root cause fixed, Android SDK/device validation pending)",
   "current_task": "task-180",
   "tasks": [
     {
@@ -609,7 +609,7 @@
       "id": "task-180",
       "title": "Investigate and fix Stage A prompt duration incorrectly defaulting to 120s",
       "status": "in_progress",
-      "notes": "Investigating. Prior wizard session-cache and choice-precedence logic is present and createStageATask serializes target_duration_seconds from the selected WizardForm value. A real 30-second Stage A request and its live 00_READ_THIS_FIRST.txt both contain 30. New distinct cause found in the Android TaskDetail prompt path: AgentPromptBuilder defaults to 120 when detailRequest is null/missing, while cache-first detail preparation exposes the screen before asynchronous request refresh finishes; detail cache persists status/logs but not request. Operator confirms the symptom is the Android Stage A agent prompt showing 120 instead of 30. Fix request caching and prevent prompt generation until the persisted Stage A request/duration is available; verify non-default values across repeated flows where possible."
+      "notes": "INVESTIGATION COMPLETE; fix implemented but validation boundary remains. The previous cache-first wizard/session-choice-precedence code is present and correct: NewTaskWizard reads ViewModel WizardForm, createStageATask writes target_duration_seconds from the selected value. A real latest Stage A request carried 30 and its live 00_READ_THIS_FIRST.txt also embedded 30, so the selected duration is not being replaced in Stage A. The operator clarified the 120 symptom is the Android app's copied Stage A agent prompt. Root cause: TaskDetailScreen can render cached awaiting_plan status before stage-a-request.json returns; its Copy agent prompt button was immediately enabled, while AgentPromptBuilder silently substituted its default 120 when request/options was null. Request was not part of the on-disk detail cache. Fix in this checkpoint: persist/restore per-task stage-a-request.json with detail cache, retain last-known request on transient read failure, gate prompt-copy until a valid saved 1..36000 duration exists, and make AgentPromptBuilder return no prompt instead of using a 120 fallback. Static source trace and git diff --check pass. Local Android build attempted but cannot proceed because this sandbox has no Android SDK configured; no attached device is available for operator's requested on-device sequence. REMAINING: build with Android SDK/CI, run/correct compile errors, then on-device verify copied prompts show multiple consecutive selected values including 30/60/custom. Exact next operation: configure Android SDK (or use the release workflow's Android build environment) and compile this checkpoint before continuing task-180."
     },
     {
       "id": "task-181",

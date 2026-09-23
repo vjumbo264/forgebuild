@@ -293,6 +293,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         _wizardDefaults.value = com.forgebuild.clipforgeandroid.data.SettingsCache.WizardDefaults()
         _wizardForm.value = WizardForm()
         detailStatusCache.clear()
+        detailRequestCache.clear()
         detailLogsCache.clear()
         detailRawLogCache.clear()
         detailJobId = null
@@ -810,6 +811,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
     // an already-loaded task shows this INSTANTLY while the poll merges updates
     // in place — no blank screen, no loading-state flash.
     private val detailStatusCache = mutableMapOf<String, TaskStatus>()
+    private val detailRequestCache = mutableMapOf<String, JSONObject>()
     private val detailLogsCache = mutableMapOf<String, List<LogStep>>()
     private val detailRawLogCache = mutableMapOf<String, String>()
 
@@ -865,6 +867,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             val raw = detailRawLogCache[jobId].orEmpty()
             val doc = JSONObject()
                 .put("status", status.toJson())
+                .put("request", detailRequestCache[jobId] ?: JSONObject.NULL)
                 .put("logs", serializeSteps(detailLogsCache[jobId].orEmpty()))
                 // Raw runner logs can be megabytes — cap what we persist.
                 .put("raw", if (raw.length <= 400_000) raw else "")
@@ -880,6 +883,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             if (!f.exists()) return
             val doc = JSONObject(f.readText())
             doc.optJSONObject("status")?.let { detailStatusCache[jobId] = TaskStatus.fromJson(it) }
+            doc.optJSONObject("request")?.let { detailRequestCache[jobId] = JSONObject(it.toString()) }
             val logsText = doc.optString("logs")
             if (logsText.isNotBlank()) detailLogsCache[jobId] = deserializeSteps(logsText)
             val raw = doc.optString("raw")
@@ -911,6 +915,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         restoreDetailCacheFromDisk(jobId)
         val cached = detailStatusCache[jobId]
         _detailStatus.value = cached
+        _detailRequest.value = detailRequestCache[jobId]?.let { JSONObject(it.toString()) }
         _detailLogs.value = detailLogsCache[jobId].orEmpty()
         _detailRawLog.value = detailRawLogCache[jobId].orEmpty()
         _expandedStepKeys.value = emptySet()
@@ -1129,7 +1134,12 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
 
             val reqFile = c.readFile("jobs/$jobId/stage-a-request.json")
             if (reqFile != null) {
-                _detailRequest.value = JSONObject(reqFile.first)
+                val request = JSONObject(reqFile.first)
+                detailRequestCache[jobId] = request
+                _detailRequest.value = request
+            } else {
+                // Preserve the last-known request across a transient/missing read.
+                _detailRequest.value = detailRequestCache[jobId]
             }
 
             val planFile = c.readFile("jobs/$jobId/production.json")

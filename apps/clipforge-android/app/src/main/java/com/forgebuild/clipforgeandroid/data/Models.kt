@@ -351,12 +351,15 @@ object Pipeline {
  * releases/tag/clipforge-<jobId> fallback when that field is empty/missing.
  */
 object AgentPromptBuilder {
-    fun build(status: TaskStatus, request: JSONObject?, owner: String, repo: String): String {
+    fun build(status: TaskStatus, request: JSONObject?, owner: String, repo: String): String? {
         val releaseUrl = if (status.releaseUrl.isNotBlank()) status.releaseUrl
         else "https://github.com/" + owner + "/" + repo + "/releases/tag/clipforge-" + status.jobId
 
         val options = request?.optJSONObject("options")
-        val target = options?.optInt("target_duration_seconds", 120) ?: 120
+        // Never silently compose an agent prompt with a default duration. The
+        // durable Stage A request is authoritative; wait if it has not loaded.
+        val target = options?.optInt("target_duration_seconds", -1)
+            ?.takeIf { it in 1..36000 } ?: return null
         val focus = options?.optString("focus", "").orEmpty().trim()
         val focusClause = if (focus.isNotBlank()) ", focused on: " + focus else ""
 

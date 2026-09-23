@@ -281,6 +281,8 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
     val playVideo by vm.playVideoUri.collectAsState()
 
     val isSuperSeriesTask = request?.optJSONObject("series")?.optBoolean("super_series", false) == true
+    val promptDuration = request?.optJSONObject("options")?.optInt("target_duration_seconds", -1) ?: -1
+    val promptReady = promptDuration in 1..36000
 
     var rawPlanText by remember { mutableStateOf("") }
     var planErrors by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -401,16 +403,21 @@ fun TaskDetailScreen(vm: ClipForgeViewModel, jobId: String, onBack: () -> Unit) 
             // ---- Copy agent prompt ----
             if (currentStatus.state == "awaiting_plan" || currentStatus.isComplete) {
                 ActionButton(
-                    label = "Copy agent prompt",
+                    label = if (promptReady) "Copy agent prompt" else "Loading exact task duration…",
                     icon = EngineIcons.Copy,
+                    enabled = promptReady,
                     onClick = {
                         val text = AgentPromptBuilder.build(
                             currentStatus, request,
                             login?.owner ?: "motionssalt", login?.repo ?: "clipforge",
                         )
-                        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                            .setPrimaryClip(ClipData.newPlainText("ClipForge Agent Prompt", text))
-                        vm.toast("Agent prompt copied")
+                        if (text == null) {
+                            vm.toast("The saved task duration is not available yet. Wait for task details to refresh and try again.")
+                        } else {
+                            (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                                .setPrimaryClip(ClipData.newPlainText("ClipForge Agent Prompt", text))
+                            vm.toast("Agent prompt copied with ${promptDuration}s target")
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
