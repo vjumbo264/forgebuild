@@ -36,4 +36,8 @@ object EngineIcons {
     val Error: ImageVector get() = EngineIconsGenerated.Error
     val Info: ImageVector get() = EngineIconsGenerated.Info
     val MoreVert: ImageVector get() = EngineIconsGenerated.MoreVert
+    val PlayArrow: ImageVector get() = EngineIconsGenerated.PlayArrow
+    val Pause: ImageVector get() = EngineIconsGenerated.Pause
+    val Timer: ImageVector get() = EngineIconsGenerated.Timer
+    val MoreTime: ImageVector get() = EngineIconsGenerated.MoreTime
 }

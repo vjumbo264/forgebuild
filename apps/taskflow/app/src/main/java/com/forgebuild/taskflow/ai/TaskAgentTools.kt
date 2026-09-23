@@ -52,7 +52,7 @@ class TaskAgentTools(private val repo: TaskRepository) {
             "title" to prop("string", "Task title (required)."),
             "duration_minutes" to prop("integer", "Estimated duration in minutes (e.g. 15, 30, 45, 60). Mandatory."),
             "parent_id" to prop("integer", "Parent id for a sub-task."),
-            "fixed_time" to prop("string", "Local datetime 'yyyy-MM-dd HH:mm' if a specific due time applies."),
+            "fixed_time" to prop("string", "Local datetime 'yyyy-MM-dd HH:mm'. ONLY set this when the user explicitly stated or clearly implied a specific clock time (e.g. 'at 3pm', 'remind me tomorrow at 9'). NEVER invent or auto-assign a time — untimed is the default."),
             "recurrence" to prop("string", "none, daily, weekly, monthly, yearly."),
             "weekdays" to prop("string", "For weekly: comma list like tue or mon,wed,fri."),
             "recurrence_end" to prop("string", "Optional last day of a recurrence as 'yyyy-MM-dd' (repeat until that date, then stop). Omit for indefinite."),
@@ -83,6 +83,17 @@ class TaskAgentTools(private val repo: TaskRepository) {
         d("move_task", "Reparent a task under another task (or to top level if new_parent_id omitted).", mapOf(
             "task_id" to prop("integer", "Task to move (required)."),
             "new_parent_id" to prop("integer", "New parent task id; omit for top level.")), listOf("task_id"))
+
+        d("start_timer", "Start (or resume) the countdown timer on a task, based on its duration.", mapOf(
+            "task_id" to prop("integer", "Task id (required).")), listOf("task_id"))
+
+        d("pause_timer", "Pause the currently running countdown timer on a task (can be resumed later).", mapOf(
+            "task_id" to prop("integer", "Task id (required).")), listOf("task_id"))
+
+        d("extend_timer", "Add extra time to a task's countdown timer. Works while the timer is running (mid-countdown), while paused, and after it has finished. Also starts a fresh timer if none was running.", mapOf(
+            "task_id" to prop("integer", "Task id (required)."),
+            "amount" to prop("integer", "How much time to add (required)."),
+            "unit" to prop("string", "'minutes' (default) or 'hours'.")), listOf("task_id", "amount"))
 
         return JsonArray(listOf(buildJsonObject { putJsonArray("functionDeclarations") { decls.forEach { add(it) } } }))
     }
@@ -156,7 +167,15 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 if (list.isEmpty()) "No tasks found." else list.joinToString("\n") { t ->
                     "#${t.id} ${if (t.completed) "[done] " else ""}${t.title} (${t.durationMinutes}m)" +
                         (t.fixedTime?.let { " @ " + SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(it)) } ?: "") +
-                        (if (t.recurrence != Recurrence.NONE) " (${t.recurrence})" else "")
+                        (if (t.recurrence != Recurrence.NONE) " (${t.recurrence})" else "") +
+                        when (com.forgebuild.taskflow.data.TimerEngine.stateOf(t)) {
+                            com.forgebuild.taskflow.data.TimerEngine.TimerState.RUNNING ->
+                                " [timer running, " + (com.forgebuild.taskflow.data.TimerEngine.remainingMs(t) / 60000L) + "m left]"
+                            com.forgebuild.taskflow.data.TimerEngine.TimerState.PAUSED ->
+                                " [timer paused, " + (com.forgebuild.taskflow.data.TimerEngine.remainingMs(t) / 60000L) + "m left]"
+                            com.forgebuild.taskflow.data.TimerEngine.TimerState.FINISHED -> " [timer finished — awaiting extend/complete]"
+                            else -> ""
+                        }
                 }
             }
 
@@ -275,6 +294,41 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val id = args.longOrNull("task_id") ?: return "Missing task_id."
                 repo.move(id, args.longOrNull("new_parent_id"))
                 "Moved task #$id."
+            }
+
+            "start_timer" -> {
+                val id = args.longOrNull("task_id") ?: return "Missing task_id."
+                val t = repo.get(id) ?: return "Task #$id not found."
+                val before = com.forgebuild.taskflow.data.TimerEngine.stateOf(t)
+                repo.timerStart(id)
+                if (before == com.forgebuild.taskflow.data.TimerEngine.TimerState.PAUSED)
+                    "Resumed the timer on \"${t.title}\"." else "Started the timer on \"${t.title}\" (${t.durationMinutes}m countdown)."
+            }
+
+            "pause_timer" -> {
+                val id = args.longOrNull("task_id") ?: return "Missing task_id."
+                val t = repo.get(id) ?: return "Task #$id not found."
+                if (com.forgebuild.taskflow.data.TimerEngine.stateOf(t) !=
+                    com.forgebuild.taskflow.data.TimerEngine.TimerState.RUNNING)
+                    return "No running timer on \"${t.title}\" to pause."
+                repo.timerPause(id)
+                val left = com.forgebuild.taskflow.data.TimerEngine.remainingMs(repo.get(id)!!) / 60000L
+                "Paused the timer on \"${t.title}\" with about ${left}m left."
+            }
+
+            "extend_timer" -> {
+                val id = args.longOrNull("task_id") ?: return "Missing task_id."
+                val t = repo.get(id) ?: return "Task #$id not found."
+                val amount = (args.longOrNull("amount") ?: return "Missing amount.").coerceAtLeast(1L)
+                val minutes = if (args.str("unit")?.lowercase()?.startsWith("hour") == true) amount * 60 else amount
+                val was = com.forgebuild.taskflow.data.TimerEngine.stateOf(t)
+                repo.timerExtend(id, minutes)
+                "Extended \"${t.title}\" by ${minutes}m" + when (was) {
+                    com.forgebuild.taskflow.data.TimerEngine.TimerState.RUNNING -> " (mid-countdown)."
+                    com.forgebuild.taskflow.data.TimerEngine.TimerState.FINISHED -> " — a fresh ${minutes}m timer is now running."
+                    com.forgebuild.taskflow.data.TimerEngine.TimerState.PAUSED -> " (timer stays paused)."
+                    else -> " (timer now running)."
+                }
             }
 
             else -> "Unknown action: $name"

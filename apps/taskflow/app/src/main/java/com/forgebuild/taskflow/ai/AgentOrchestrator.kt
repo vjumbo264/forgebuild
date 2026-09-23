@@ -51,6 +51,8 @@ class AgentOrchestrator(context: Context) {
             append("Today's schedule: ").append(allocatedToday).append(" minutes allocated, ")
             append(remainingToday).append(" minutes remaining unallocated before midnight. ")
             append("You manage the user's to-do list by calling the provided tools. ")
+            append("FIXED TIMES: A task must only get a fixed_time when the user explicitly specifies a time or clearly implies one (e.g. \"remind me at 3pm\", \"tomorrow at 9\"). NEVER auto-assign or invent a fixed time — when no time is requested, create the task with NO fixed_time, exactly as if the user added it manually without one. ")
+            append("TASK TIMERS: Every task has a countdown timer (based on its duration) that the user can play/start, pause, resume, and extend at any moment — including mid-countdown and after it has finished. Use start_timer, pause_timer and extend_timer (amount + unit minutes/hours) whenever the user asks. When a timer finishes, the app plays a ding and offers extend or complete. ")
             append("MANDATORY DURATION: Every task MUST have a duration in minutes (e.g. 15, 30, 45, 60). If the user does not specify a duration, you MUST estimate and assign a sensible duration yourself. Never leave duration blank. ")
             append("REMAINING TIME: If a task's duration exceeds today's remaining unallocated time (${remainingToday}m), suggest scheduling it for tomorrow or a future date, or adjust duration. ")
             append("OPEN-ENDED INSTRUCTIONS: Understand vague requests like 'Set this to only happen on Tuesdays' (weekly, tue), or 'scatter three tasks across the week' (create 3 tasks on different days with reasonable durations). ")

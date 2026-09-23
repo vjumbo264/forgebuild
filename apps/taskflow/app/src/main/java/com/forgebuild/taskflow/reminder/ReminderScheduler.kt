@@ -78,4 +78,20 @@ class ReminderScheduler(private val context: Context) {
         if (am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.timeInMillis, p)
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, c.timeInMillis, p)
     }
+
+    /** Exact alarm for when a due-now task's full span elapses (start + duration). */
+    fun scheduleDueEnd(taskId: Long, atMillis: Long) {
+        if (atMillis <= System.currentTimeMillis()) return
+        val p = pi(taskId, ReminderReceiver.ACTION_DUE_END)
+        if (am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, p)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, p)
+    }
+
+    /** Exact alarm for a running countdown finishing while the app is closed. */
+    fun scheduleTimerEnd(taskId: Long, atMillis: Long) {
+        if (atMillis <= System.currentTimeMillis()) return
+        val p = pi(taskId, ReminderReceiver.ACTION_TIMER_END)
+        if (am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, p)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, p)
+    }
 }
