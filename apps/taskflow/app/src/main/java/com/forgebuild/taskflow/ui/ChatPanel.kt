@@ -69,7 +69,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.math.sin
 
 private enum class VoiceStage { IDLE, RECORDING, SENDING }
 
@@ -95,6 +94,8 @@ fun ChatPanel(
     var input by remember { mutableStateOf("") }
     var voiceStage by remember { mutableStateOf(VoiceStage.IDLE) }
     var micLevel by remember { mutableFloatStateOf(0f) }
+    /** Rolling history of live amplitude samples — one entry per bar, newest last (scrolls right→left). */
+    var waveformSamples by remember { mutableStateOf<List<Float>>(emptyList()) }
     var recorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var audioFile by remember { mutableStateOf<File?>(null) }
     val listState = rememberLazyListState()
@@ -136,6 +137,7 @@ fun ChatPanel(
     }
 
     fun startRecording() {
+        waveformSamples = emptyList()
         runCatching {
             val f = File(context.cacheDir, "voice_${System.currentTimeMillis()}.m4a")
             val r = MediaRecorder()
@@ -173,12 +175,17 @@ fun ChatPanel(
         if (initialStartListening) requestMic()
     }
 
-    // Live mic-amplitude sampling drives the WhatsApp-style waveform while recording.
+    // Live mic-amplitude sampling: every tick captures ONE new bar that scrolls in from
+    // the right while older bars shift left — the WhatsApp voice-note recording behaviour.
     LaunchedEffect(voiceStage) {
         while (voiceStage == VoiceStage.RECORDING && isActive) {
             val maxAmp = runCatching { recorder?.maxAmplitude ?: 0 }.getOrDefault(0)
-            micLevel = (maxAmp / 32767f).coerceIn(0f, 1f)
-            delay(80)
+            val level = (maxAmp / 32767f).coerceIn(0f, 1f)
+            micLevel = level
+            // sqrt-scaling gives a perceptually even response across quiet/loud speech.
+            val shaped = kotlin.math.sqrt(level).coerceIn(0.06f, 1f)
+            waveformSamples = (waveformSamples + shaped).takeLast(MAX_WAVEFORM_BARS)
+            delay(90)
         }
     }
 
@@ -280,7 +287,7 @@ fun ChatPanel(
 
             when (voiceStage) {
                 VoiceStage.RECORDING -> LiveWaveformBanner(
-                    rmsLevel = micLevel,
+                    samples = waveformSamples,
                     onSend = { sendRecording() },
                     onCancel = { cancelRecording() }
                 )
@@ -330,13 +337,18 @@ fun ChatPanel(
     }
 }
 
+/** Capacity of the rolling waveform history (one amplitude sample per bar). */
+private const val MAX_WAVEFORM_BARS = 48
+
 /**
- * Live audio spectrum / waveform animation matching WhatsApp-style voice-note recording,
- * driven by the real microphone amplitude while the raw clip is captured.
+ * Live waveform matching WhatsApp voice-note recording: bars scroll in from the right
+ * and travel left continuously while recording; each bar's height is the live amplitude
+ * captured at that moment. Uniform bar width, spacing and fully-rounded caps — drawn on
+ * a Canvas so the strip stays clean and consistent no matter how loud the input is.
  */
 @Composable
 private fun LiveWaveformBanner(
-    rmsLevel: Float,
+    samples: List<Float>,
     onSend: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -398,34 +410,34 @@ private fun LiveWaveformBanner(
 
             Spacer(Modifier.height(10.dp))
 
-            // Spectrum bars (24 animated bars, real mic amplitude)
-            Row(
+            // Scrolling waveform strip: newest bar at the right edge, history sliding left.
+            // Uniform 4dp bars / 3dp gaps / fully rounded caps, single accent colour with a
+            // subtle age fade toward the left (older bars) — the chat-app voice-note look.
+            val barColor = MaterialTheme.colorScheme.primary
+            androidx.compose.foundation.Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .height(44.dp)
             ) {
-                val barCount = 24
-                for (i in 0 until barCount) {
-                    val phase = (i.toFloat() / barCount) * 3.14159f
-                    val sinFactor = (sin((phase * 2.2f).toDouble()).toFloat() + 1.2f) / 2.2f
-                    val targetHeight = (8f + (rmsLevel * 36f * sinFactor)).coerceIn(6f, 40f)
-                    val animatedHeight by animateFloatAsState(
-                        targetValue = targetHeight,
-                        animationSpec = tween(120),
-                        label = "barHeight$i"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .width(4.dp)
-                            .height(animatedHeight.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(
-                                if (i % 2 == 0) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.tertiary
-                            )
+                val barWidth = 4.dp.toPx()
+                val gap = 3.dp.toPx()
+                val step = barWidth + gap
+                val maxBarH = size.height
+                val minBarH = 3.dp.toPx()
+                val centerY = size.height / 2f
+                val capacity = (size.width / step).toInt().coerceAtLeast(1)
+                val visible = samples.takeLast(capacity)
+                visible.forEachIndexed { index, amp ->
+                    // index 0 = oldest (leftmost); last = newest, flush to the right edge.
+                    val fromRight = visible.size - 1 - index
+                    val x = size.width - step * (fromRight + 1) + gap / 2f
+                    val h = (minBarH + (maxBarH - minBarH) * amp).coerceIn(minBarH, maxBarH)
+                    val ageFade = 0.45f + 0.55f * (index + 1).toFloat() / visible.size
+                    drawRoundRect(
+                        color = barColor.copy(alpha = ageFade),
+                        topLeft = androidx.compose.ui.geometry.Offset(x, centerY - h / 2f),
+                        size = androidx.compose.ui.geometry.Size(barWidth, h),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2f, barWidth / 2f)
                     )
                 }
             }

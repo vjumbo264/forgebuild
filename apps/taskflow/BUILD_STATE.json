@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass4-session",
-  "current_task": "step-25",
+  "current_task": "step-26",
   "substitutions": [],
   "tasks": [
     {
@@ -155,8 +155,8 @@
     {
       "id": "step-25",
       "title": "FIX voice waveform: true WhatsApp-style scrolling bars (right-to-left), per-bar live amplitude, uniform width/spacing/rounding",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Voice waveform rebuilt as a true WhatsApp-style scrolling strip: every 90ms mic sample (maxAmplitude, sqrt-shaped for perceptual evenness) appends ONE new bar to a rolling history (cap 48) shown newest-at-right, older bars sliding left continuously. Bars drawn on a Canvas with uniform 4dp width / 3dp gap / fully rounded caps and single accent color with subtle age fade \u2014 no more wobbling sine shape. Removed the old sin-based bar layout and unused import."
     },
     {
       "id": "step-26",
