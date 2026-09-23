@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "taskflow-pass4-session",
-  "current_task": "step-23",
+  "current_task": "step-24",
   "substitutions": [],
   "tasks": [
     {
@@ -143,8 +143,8 @@
     {
       "id": "step-23",
       "title": "NEW overnight/cross-midnight tasks: single logical task split into two linked per-day segments (one-off + recurring fixed-time); day accounting, due-now pinning, day/week/month/year views safe",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Overnight/cross-midnight tasks modeled as ONE logical task whose span (fixedTime .. fixedTime+duration) can cross midnight. DayAccounting.spanOf/crossesMidnight/segmentsOnDay split the span into per-day segments: pre-midnight portion counts on the start day, post-midnight on the next. Validations (TaskViewModel.addTask/saveEdit, TaskAgentTools create/update) now charge only the TODAY segment against today's remaining time. sweepMissed and stale due-now clearing are span-aware (task not missed/pin-cleared while its span still runs past midnight). Day/week/month/year views use DayAccounting.touchesDay so each day shows the task segment. One entry/one completion/one edit preserved. TaskListScreen shows the linked span label (e.g. '20:00 \u2192 03:00 +1d')."
     },
     {
       "id": "step-24",

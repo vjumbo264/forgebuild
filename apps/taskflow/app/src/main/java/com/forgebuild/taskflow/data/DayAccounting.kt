@@ -126,6 +126,18 @@ object DayAccounting {
         return start
     }
 
+    /** The absolute span of this task's occupancy: [start, start+duration) or null if unschedulable. */
+    fun spanOf(task: Task): Segment? {
+        val ft = task.fixedTime ?: return null
+        return Segment(ft, ft + task.durationMinutes.coerceAtLeast(1L) * 60_000L)
+    }
+
+    /** True when this task's span crosses a midnight boundary (occupies two calendar days). */
+    fun crossesMidnight(task: Task): Boolean {
+        val span = spanOf(task) ?: return false
+        return dayStart(span.startMillis) != dayStart(span.endMillis - 1L)
+    }
+
     /** Minutes of [task] allocated to the calendar day containing [dayMillis]. */
     fun minutesOnDay(task: Task, dayMillis: Long, nowMillis: Long): Long =
         segmentsOnDay(task, dayMillis, nowMillis).sumOf { it.minutes }

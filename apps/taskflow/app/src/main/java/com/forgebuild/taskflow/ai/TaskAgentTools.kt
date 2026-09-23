@@ -169,14 +169,15 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val recurrenceEnd = if (recurrence != Recurrence.NONE) parseEndDate(args.str("recurrence_end")) else null
                 val info = args.str("info") ?: ""
 
-                // Validate if task fits today's remaining time (incl. overnight segment on today)
+                // Validate against today's segment only (overnight tasks split across two days)
                 val now = System.currentTimeMillis()
-                val isToday = fixedTime == null || com.forgebuild.taskflow.data.DayAccounting.touchesDay(
+                val todaySegment = if (fixedTime == null) duration else com.forgebuild.taskflow.data.DayAccounting.minutesOnDay(
                     com.forgebuild.taskflow.data.Task(title = "", rank = 0.0, durationMinutes = duration, fixedTime = fixedTime), now, now)
+                val isToday = fixedTime == null || todaySegment > 0L
                 if (isToday) {
                     val remaining = repo.getRemainingMinutesToday()
-                    if (duration > remaining) {
-                        return "Cannot create task \"$title\" (${duration}m): exceeds remaining unallocated time today (${remaining}m left). Schedule for another day or reduce duration."
+                    if (todaySegment > remaining) {
+                        return "Cannot create task \"$title\" (${duration}m): today's portion (${todaySegment}m) exceeds remaining unallocated time today (${remaining}m left). Schedule for another day or reduce duration."
                     }
                 }
 
@@ -199,14 +200,16 @@ class TaskAgentTools(private val repo: TaskRepository) {
                 val newDuration = args.longOrNull("duration_minutes") ?: t.durationMinutes
                 val newFixed = if (args.str("fixed_time") != null) parseTime(args.str("fixed_time")) else t.fixedTime
 
-                // Check remaining time if updating duration for today (incl. overnight segment)
+                // Check remaining time if updating duration for today (today's segment only)
                 val now = System.currentTimeMillis()
-                val isToday = newFixed == null || com.forgebuild.taskflow.data.DayAccounting.touchesDay(
-                    t.copy(durationMinutes = newDuration.coerceAtLeast(1L), fixedTime = newFixed), now, now)
+                val candidate = t.copy(durationMinutes = newDuration.coerceAtLeast(1L), fixedTime = newFixed)
+                val todaySegment = if (newFixed == null) newDuration.coerceAtLeast(1L)
+                    else com.forgebuild.taskflow.data.DayAccounting.minutesOnDay(candidate, now, now)
+                val isToday = newFixed == null || todaySegment > 0L
                 if (isToday) {
                     val remainingWithOld = repo.getRemainingMinutesToday(excludeTaskId = t.id)
-                    if (newDuration > remainingWithOld) {
-                        return "Cannot update task #$id to ${newDuration}m: exceeds remaining time today (${remainingWithOld}m available)."
+                    if (todaySegment > remainingWithOld) {
+                        return "Cannot update task #$id to ${newDuration}m: today's portion (${todaySegment}m) exceeds remaining time today (${remainingWithOld}m available)."
                     }
                 }
 

@@ -434,6 +434,17 @@ private fun TaskRow(
     val timeFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val dateFmt = remember { SimpleDateFormat("EEE, MMM d · HH:mm", Locale.getDefault()) }
 
+    // Overnight/cross-midnight tasks show their linked span: start → end (+Nd when it
+    // spills into later calendar days). Still ONE task — one entry, one completion, one edit.
+    val overnightLabel: String? = remember(task.fixedTime, task.durationMinutes) {
+        val ft = task.fixedTime ?: return@remember null
+        if (!com.forgebuild.taskflow.data.DayAccounting.crossesMidnight(task)) return@remember null
+        val end = ft + task.durationMinutes.coerceAtLeast(1L) * 60_000L
+        val days = ((com.forgebuild.taskflow.data.DayAccounting.dayStart(end - 1L) -
+            com.forgebuild.taskflow.data.DayAccounting.dayStart(ft)) / 86_400_000L).toInt()
+        "${timeFmt.format(Date(ft))} → ${timeFmt.format(Date(end))}" + if (days > 0) " +${days}d" else ""
+    }
+
     // Pulsing effect for Due-Now tasks
     val infiniteTransition = rememberInfiniteTransition(label = "dueNowPulse")
     val dueNowAlpha by infiniteTransition.animateFloat(
@@ -461,7 +472,8 @@ private fun TaskRow(
         task.taskType == TaskType.RECURRING_FIXED -> Quadruple(
             MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
             MaterialTheme.colorScheme.tertiary,
-            "Recurring • ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}",
+            "Recurring • ${task.recurrence.name.lowercase().replaceFirstChar { it.uppercase() }}" +
+                (overnightLabel?.let { " · $it" } ?: ""),
             EngineIcons.Repeat
         )
         task.taskType == TaskType.RECURRING_NO_TIME -> Quadruple(
@@ -473,7 +485,7 @@ private fun TaskRow(
         task.taskType == TaskType.FIXED_TIME -> Quadruple(
             MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
             MaterialTheme.colorScheme.secondary,
-            task.fixedTime?.let { dateFmt.format(Date(it)) } ?: "Scheduled",
+            task.fixedTime?.let { dateFmt.format(Date(it)) + (overnightLabel?.let { o -> " → $o" } ?: "") } ?: "Scheduled",
             EngineIcons.Alarm
         )
         else -> Quadruple(

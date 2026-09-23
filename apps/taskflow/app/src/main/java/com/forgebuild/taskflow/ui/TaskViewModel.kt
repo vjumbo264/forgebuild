@@ -183,13 +183,14 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         if (title.isBlank()) return@launch
         val dur = durationMinutes.coerceAtLeast(1L)
         val now = System.currentTimeMillis()
-        val isToday = fixedTime == null ||
-            DayAccounting.touchesDay(Task(title = "", rank = 0.0, durationMinutes = dur, fixedTime = fixedTime), now, now)
+        val proposed = Task(title = "", rank = 0.0, durationMinutes = dur, fixedTime = fixedTime)
+        val todaySegment = if (fixedTime == null) dur else DayAccounting.minutesOnDay(proposed, now, now)
+        val isToday = fixedTime == null || todaySegment > 0L
 
         if (isToday) {
             val remaining = repo.getRemainingMinutesToday()
-            if (dur > remaining) {
-                _userMessage.emit("Cannot add \"$title\": Duration (${dur}m) exceeds remaining unallocated time today (${remaining}m left).")
+            if (todaySegment > remaining) {
+                _userMessage.emit("Cannot add \"$title\": today's portion (${todaySegment}m) exceeds remaining unallocated time today (${remaining}m left).")
                 return@launch
             }
         }
@@ -215,13 +216,15 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
 
     fun saveEdit(task: Task, onResult: (Boolean, String?) -> Unit) = viewModelScope.launch {
         val now = System.currentTimeMillis()
-        val isToday = task.fixedTime == null || DayAccounting.touchesDay(task, now, now)
         val dur = task.durationMinutes.coerceAtLeast(1L)
+        // Overnight-aware: only the portion of the task landing on today counts against today.
+        val todaySegment = if (task.fixedTime == null) dur else DayAccounting.minutesOnDay(task, now, now)
+        val isToday = task.fixedTime == null || todaySegment > 0L
 
         if (isToday) {
             val remainingWithOld = repo.getRemainingMinutesToday(excludeTaskId = task.id)
-            if (dur > remainingWithOld) {
-                onResult(false, "Duration (${dur}m) exceeds remaining time left today (${remainingWithOld}m available).")
+            if (todaySegment > remainingWithOld) {
+                onResult(false, "Duration (${dur}m) puts ${todaySegment}m on today, exceeding remaining time left today (${remainingWithOld}m available).")
                 return@launch
             }
         }
