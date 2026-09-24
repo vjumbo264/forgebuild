@@ -102,10 +102,13 @@
     {
       "id": "t9",
       "title": "Hamburger menu & tab manager drawer: slide-over sheet listing tabs with close, switch, and new tab",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Added TabsDrawerSheet.kt implementing Material 3 ModalDrawerSheet sliding drawer triggered by hamburger menu button or tabs badge. Provides complete list of open tabs with active indicator, close button (X) per tab to cancel/close tabs, + New Tab button, and quick access to Keep-Alive settings and Close Others.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/TabsDrawerSheet.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t10",
