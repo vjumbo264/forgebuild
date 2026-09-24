@@ -1,7 +1,38 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <!-- Placeholder bolt inside the 66dp safe zone; replaced per app by tools/make_adaptive_icon.py -->
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M57,26 L38,57 h13 L47,82 L70,49 h-15 L57,26 z" />
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Orbital Navigation Ring -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeAlpha="0.4"
+        android:strokeWidth="1.5"
+        android:pathData="M54,26 A28,28 0 1,1 53.9,26 Z" />
+    <!-- Cardinal Compass Points -->
+    <path android:fillColor="#38BDF8" android:pathData="M54,24.5 A1.5,1.5 0 1,1 53.9,24.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M82,52.5 A1.5,1.5 0 1,1 81.9,52.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M54,80.5 A1.5,1.5 0 1,1 53.9,80.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M26,52.5 A1.5,1.5 0 1,1 25.9,52.5 Z"/>
+    <!-- Infinity Wave -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="5.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,54 C 44,39 30,39 24,46 C 18,54 18,63 24,68.5 C 30,74 44,69 54,54 C 64,39 78,35 84,41 C 90,47 90,55 84,63 C 78,71 64,69 54,54 Z" />
+    <!-- Speed Stem -->
+    <path
+        android:strokeColor="#60A5FA"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M 38,70 L 74,34" />
+    <!-- Arrowhead Head -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 77,31 L 60,35 L 67,42 L 60,49 L 66,49 L 71,42 L 78,49 Z" />
+    <!-- Energy Sparkle -->
+    <path
+        android:fillColor="#67E8F9"
+        android:pathData="M 81,25 L 81.75,27.25 L 84,28 L 81.75,28.75 L 81,31 L 80.25,28.75 L 78,28 L 80.25,27.25 Z" />
 </vector>

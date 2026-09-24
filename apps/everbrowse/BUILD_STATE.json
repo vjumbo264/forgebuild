@@ -356,8 +356,8 @@
     {
       "id": "t34",
       "title": "Design and implement modern premium app icon (Infinity Explorer motif with midnight-to-nebula gradient, orbital ring, dynamic compass arrow, and Android 13+ monochrome layer) across all mipmap densities and vector drawables",
-      "status": "in_progress",
-      "notes": "Generating high-resolution adaptive icon background, foreground, and monochrome assets across all mipmap densities and vector drawables.",
+      "status": "done",
+      "notes": "Designed and generated modern Infinity Explorer app icon: deep midnight-to-nebula gradient background with radial glow, dynamic infinity loop with electric cyan and indigo styling, supersonic browser exploration arrow, and Android 13+ monochrome layer across all mipmap density buckets (mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi) and vector drawable fallback.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/res/drawable/ic_launcher_background.xml",
@@ -369,8 +369,8 @@
     {
       "id": "t35",
       "title": "Fix text field cursor visibility in dark and light modes with SolidColor(MaterialTheme.colorScheme.primary) cursorBrush in MainActivity and HomePageView",
-      "status": "in_progress",
-      "notes": "Configured cursorBrush = SolidColor(MaterialTheme.colorScheme.primary) on BasicTextField in address bar and home search.",
+      "status": "done",
+      "notes": "Configured cursorBrush = SolidColor(MaterialTheme.colorScheme.primary) on BasicTextField in address bar and home search view, ensuring high contrast and sharp visibility in both dark mode and light mode.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
@@ -380,8 +380,8 @@
     {
       "id": "t36",
       "title": "Validate build configuration and files for everbrowse-v7",
-      "status": "pending",
-      "notes": "Validate resource xmls, Compose imports, and manifest.",
+      "status": "in_progress",
+      "notes": "Validating app resources, manifest, and compilation for everbrowse-v7.",
       "commits": [],
       "files": []
     },
