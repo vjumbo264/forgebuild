@@ -173,10 +173,13 @@
     {
       "id": "t16",
       "title": "Fix permissions: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS in manifest, exact alarms real check, device admin isAdminActive check",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Declared REQUEST_IGNORE_BATTERY_OPTIMIZATIONS in AndroidManifest.xml so battery optimization intent dialog pops up cleanly. Removed USE_EXACT_ALARM from manifest so exact alarms no longer falsely auto-grant on Android 13+. Dynamically checked DevicePolicyManager.isAdminActive() so granted admin permission displays Granted accurately.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t17",
