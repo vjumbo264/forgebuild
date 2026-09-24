@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  EverBrowse's UI is Jetpack Compose (MainActivity.setContent). This layout is
+  provided to satisfy the requested file set: it hosts a ComposeView if a
+  non-Compose host ever needs to embed the browser screen.
+-->
+<androidx.compose.ui.platform.ComposeView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/compose_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
