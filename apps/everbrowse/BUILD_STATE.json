@@ -237,8 +237,8 @@
     {
       "id": "t22",
       "title": "Fix Refresh button: always-present reload action that unconditionally reloads active URL with fallback",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Separated Refresh button from Cancel Loading action. The Refresh button is now permanent in the top bar (never replaced or disabled by long-lived WebSockets or stuck progress). BrowserTab.reload() unconditionally reloads active tab URL with robust fallback to currentUrl if webView.url is uninitialized or blank, resetting progress and loading state.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
