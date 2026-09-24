@@ -42,8 +42,8 @@
   {
    "id": "t5a",
    "title": "Browser shell: tabbed WebView, URL/search bar, back/forward/reload, state save/restore, configChanges",
-   "status": "pending",
-   "notes": "",
+   "status": "done",
+   "notes": "Tabbed WebView shell in MainActivity: top action bar (back/forward/reload/address+Go), per-tab long-lived WebViews (JS/DOM/database enabled), tab strip + new/close, Google-search address resolution, manifest configChanges=orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize|uiMode, WebView saveState/restoreState in onSaveInstanceState/onCreate.",
    "commits": [],
    "files": []
   },
@@ -58,24 +58,24 @@
   {
    "id": "t5c",
    "title": "File upload protection (onShowFileChooser via ActivityResultLauncher) + downloads via Engine SafeSave",
-   "status": "pending",
-   "notes": "",
+   "status": "done",
+   "notes": "onShowFileChooser via ActivityResultLauncher (file uploads don't destroy Activity); downloads via Engine SafeSave (SAF ACTION_CREATE_DOCUMENT) with MIME/name guessing + in-app download status \u2014 DownloadManager deliberately NOT used per contract (substitution recorded).",
    "commits": [],
    "files": []
   },
   {
    "id": "t5d",
    "title": "Permissions & admin onboarding UI (notifications, battery opt, FGS, exact alarm, DeviceAdminReceiver)",
-   "status": "pending",
-   "notes": "",
+   "status": "done",
+   "notes": "Onboarding dialog: POST_NOTIFICATIONS, ignore-battery-optimizations (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), exact alarm (requestExactAlarm), device admin via AdminReceiver; FGS permissions declared in manifest. Wired through Engine PermissionWiring.",
    "commits": [],
    "files": []
   },
   {
    "id": "t6",
    "title": "Validate build config, dispatch release everbrowse-v1, verify release+APK via API",
-   "status": "pending",
-   "notes": "",
+   "status": "in_progress",
+   "notes": "in progress",
    "commits": [],
    "files": []
   },
