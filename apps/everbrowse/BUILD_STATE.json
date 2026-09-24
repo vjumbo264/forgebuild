@@ -479,8 +479,8 @@
     {
       "id": "t44",
       "title": "Dispatch release workflow for everbrowse-v8, monitor run, verify live release and APK via GitHub API, set build_complete true",
-      "status": "pending",
-      "notes": "",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v8.",
       "commits": [],
       "files": []
     }
