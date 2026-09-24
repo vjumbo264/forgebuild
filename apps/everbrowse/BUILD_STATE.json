@@ -317,8 +317,8 @@
     {
       "id": "t30",
       "title": "Fix homepage dark mode UI (solid background, proper surface roles, hide webview underneath while on home), remove Colab auto-desktop default while keeping manual Desktop Site toggle, and enable tap-outside to close hamburger menu via gesturesEnabled = drawerState.isOpen",
-      "status": "in_progress",
-      "notes": "Implementing homepage dark mode theming, drawer scrim tap-to-close behavior, and optional manual desktop mode for Colab.",
+      "status": "done",
+      "notes": "Fixed homepage dark mode UI: wrapped HomePageView in a solid Material 3 background Surface with proper onBackground/surfaceContainer tokens, and toggled native WebView visibility to GONE on homepage to prevent background bleeding. Removed Colab auto-desktop mode default so it opens in normal mobile view unless user explicitly toggles desktop mode. Fixed desktop mode squeezed layout by applying 1280px overview viewport override. Enabled tapping outside hamburger menu drawer to close it via gesturesEnabled = drawerState.isOpen.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt",
@@ -329,8 +329,8 @@
     {
       "id": "t31",
       "title": "Validate build configuration and files for everbrowse-v6",
-      "status": "pending",
-      "notes": "Validate manifests, layouts, and theme tokens.",
+      "status": "in_progress",
+      "notes": "Validating everbrowse-v6 build configuration.",
       "commits": [],
       "files": []
     },

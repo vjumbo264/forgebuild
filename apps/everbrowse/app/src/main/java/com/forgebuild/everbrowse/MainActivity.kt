@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.GeolocationPermissions
 import android.webkit.JsPromptResult
@@ -195,7 +196,9 @@ class MainActivity : ComponentActivity() {
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
-                    gesturesEnabled = false, // CRITICAL: Disable swipe gesture so websites scroll freely!
+                    // gesturesEnabled = drawerState.isOpen:
+                    // When open -> scrim tap closes drawer; when closed -> no accidental swipe gestures while scrolling web pages
+                    gesturesEnabled = drawerState.isOpen,
                     drawerContent = {
                         TabsDrawerSheet(
                             tabs = tabs,
@@ -286,7 +289,6 @@ class MainActivity : ComponentActivity() {
                 val uri = request.url
                 val scheme = uri.scheme?.lowercase() ?: ""
 
-                // CRITICAL FIX FOR COLAB & WEB APPS:
                 // Let WebView handle all web links and internal browser execution schemes
                 // (including blob:, data:, about:, javascript:, file:, content:)
                 if (scheme in listOf("http", "https", "about", "data", "blob", "javascript", "content", "file")) {
@@ -322,6 +324,7 @@ class MainActivity : ComponentActivity() {
                 tab.title = view.title ?: ""
                 tab.isLoading = false
                 tab.progress = 100
+                tab.applyDesktopViewport()
                 if (tabs.getOrNull(activeTabIndex) == tab) {
                     addressText = url
                 }
@@ -351,7 +354,7 @@ class MainActivity : ComponentActivity() {
                 callback?.invoke(origin, true, false)
             }
 
-            // JavaScript confirmation/alert dialogs (vital for Google Colab runtime reset, notebook run confirmation)
+            // JavaScript confirmation/alert dialogs (vital for web app confirmations and runtime prompts)
             override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
                 AndroidAlertDialog.Builder(this@MainActivity)
                     .setTitle(view?.title?.takeIf { it.isNotBlank() } ?: "Notice")
@@ -394,7 +397,7 @@ class MainActivity : ComponentActivity() {
                 return true
             }
 
-            // Support multi-window popups (e.g. Google Sign-In, OAuth popups, Colab file dialogues)
+            // Support multi-window popups (e.g. Google Sign-In, OAuth popups, file dialogues)
             override fun onCreateWindow(
                 view: WebView?,
                 isDialog: Boolean,
@@ -623,7 +626,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 4. Desktop Site Mode Toggle Button (Essential for Google Colab & interactive web apps)
+                        // 4. Desktop Site Mode Toggle Button (Optional on-demand desktop view)
                         IconButton(
                             onClick = {
                                 tab?.let {
@@ -685,7 +688,7 @@ class MainActivity : ComponentActivity() {
                     .weight(1f)
             ) {
                 if (tab != null) {
-                    // Continuous WebView attachment with explicit layout parameters ensures full rendering
+                    // Continuous WebView attachment with explicit layout parameters and visibility control
                     key(tab.id) {
                         AndroidView(
                             factory = {
@@ -695,7 +698,11 @@ class MainActivity : ComponentActivity() {
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
                                     )
+                                    visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
                                 }
+                            },
+                            update = { view ->
+                                view.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
                             },
                             modifier = Modifier.fillMaxSize()
                         )

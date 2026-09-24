@@ -1,9 +1,6 @@
 package com.forgebuild.everbrowse
 
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +18,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -38,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -87,244 +85,255 @@ fun HomePageView(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = s.md, vertical = s.lg),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(s.md)
+    // Root Surface guarantees solid theme background in both Light and Dark mode
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Spacer(modifier = Modifier.height(s.sm))
-
-        // --- Brand Header ---
-        Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(68.dp)
-        ) {
-            Icon(
-                imageVector = EngineIcons.Security,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(s.sm)
-            )
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "EverBrowse",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(s.xxs))
-            Text(
-                text = "Ultra-persistent · Distraction-free",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(s.xs))
-
-        // --- Central Search Bar (Never cropped, vertically centered) ---
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = s.md, vertical = s.lg),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(s.md)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = s.sm),
-                verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(s.sm))
+
+            // --- Brand Header ---
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(56.dp)
             ) {
-                Icon(
-                    imageVector = EngineIcons.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(s.xs))
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (searchInput.isEmpty()) {
-                        Text(
-                            text = "Search or type web address…",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    BasicTextField(
-                        value = searchInput,
-                        onValueChange = { searchInput = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = {
-                            submitSearch(searchInput)
-                        })
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = EngineIcons.Bolt,
+                        contentDescription = "EverBrowse",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                if (searchInput.isNotBlank()) {
-                    IconButton(onClick = { submitSearch(searchInput) }) {
-                        Icon(
-                            imageVector = EngineIcons.ArrowForward,
-                            contentDescription = "Go",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
             }
-        }
 
-        // --- Keep-Alive Notification Card if permissions missing ---
-        if (needsKeepAliveSetup) {
-            Card(
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "EverBrowse",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "Persistent · Resilient · Never Refreshing",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(s.xxs))
+
+            // --- Prominent Search & Navigation Box ---
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(s.sm),
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        EngineIcons.Alarm,
+                        imageVector = EngineIcons.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(28.dp)
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
                     )
-                    Spacer(Modifier.width(s.xs))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Keep-Alive Setup Required",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Grant exact alarms & battery exemption so pages never refresh.",
-                            style = MaterialTheme.typography.bodySmall
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (searchInput.isEmpty()) {
+                            Text(
+                                text = "Search the web or enter address",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        BasicTextField(
+                            value = searchInput,
+                            onValueChange = { searchInput = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = {
+                                submitSearch(searchInput)
+                            })
                         )
                     }
-                    FilledTonalButton(
-                        onClick = onOpenKeepAlive,
-                        shape = MaterialTheme.shapes.small
-                    ) {
-                        Text("Setup")
+
+                    if (searchInput.isNotBlank()) {
+                        IconButton(onClick = { submitSearch(searchInput) }) {
+                            Icon(
+                                imageVector = EngineIcons.ArrowForward,
+                                contentDescription = "Go",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
-        } else {
-            // Keep-alive status badge (Active)
-            Surface(
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = s.sm, vertical = s.xs),
-                    verticalAlignment = Alignment.CenterVertically
+
+            // --- Keep-Alive Notification Card if permissions missing ---
+            if (needsKeepAliveSetup) {
+                Card(
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        EngineIcons.Check,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(s.xs))
-                    Text(
-                        text = "Anti-refresh keep-alive active",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(s.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            EngineIcons.Alarm,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(Modifier.width(s.xs))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Keep-Alive Setup Required",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Grant exact alarms & battery exemption so pages never refresh.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        FilledTonalButton(
+                            onClick = onOpenKeepAlive,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text("Setup")
+                        }
+                    }
+                }
+            } else {
+                // Keep-alive status badge (Active)
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = s.sm, vertical = s.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            EngineIcons.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(s.xs))
+                        Text(
+                            text = "Anti-refresh keep-alive active",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "Protected",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(s.xs))
+
+            // --- Speed Dial / Quick Shortcuts with Real Icons ---
+            Text(
+                text = "Frequently Visited",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Start
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(s.xs)
+            ) {
+                shortcuts.take(3).forEach { shortcut ->
+                    ShortcutItem(
+                        shortcut = shortcut,
+                        onClick = { submitSearch(shortcut.url) },
                         modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = "Protected",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(s.xs)
+            ) {
+                shortcuts.drop(3).take(3).forEach { shortcut ->
+                    ShortcutItem(
+                        shortcut = shortcut,
+                        onClick = { submitSearch(shortcut.url) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(s.xs))
+            Spacer(modifier = Modifier.height(s.sm))
 
-        // --- Speed Dial / Quick Shortcuts with Real Icons ---
-        Text(
-            text = "Frequently Visited",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Start
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(s.xs)
-        ) {
-            shortcuts.take(3).forEach { shortcut ->
-                ShortcutItem(
-                    shortcut = shortcut,
-                    onClick = { submitSearch(shortcut.url) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(s.xs)
-        ) {
-            shortcuts.drop(3).take(3).forEach { shortcut ->
-                ShortcutItem(
-                    shortcut = shortcut,
-                    onClick = { submitSearch(shortcut.url) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(s.sm))
-
-        // --- Quick Tab & Navigation Controls ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(s.xs)
-        ) {
-            FilledTonalButton(
-                onClick = onNewTab,
-                modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.medium
+            // --- Quick Tab & Navigation Controls ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(s.xs)
             ) {
-                Icon(EngineIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(s.xxs))
-                Text("New Tab")
-            }
-            FilledTonalButton(
-                onClick = onOpenTabs,
-                modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(EngineIcons.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(s.xxs))
-                Text("Open Tabs")
+                FilledTonalButton(
+                    onClick = onNewTab,
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(EngineIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(s.xxs))
+                    Text("New Tab")
+                }
+
+                FilledTonalButton(
+                    onClick = onOpenTabs,
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(EngineIcons.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(s.xxs))
+                    Text("Open Tabs")
+                }
             }
         }
     }

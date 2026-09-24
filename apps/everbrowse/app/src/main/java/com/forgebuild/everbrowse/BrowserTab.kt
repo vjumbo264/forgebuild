@@ -28,14 +28,6 @@ class BrowserTab(
     companion object {
         const val DESKTOP_USER_AGENT =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
-
-        fun isColabOrDesktopSite(url: String): Boolean {
-            val lower = url.lowercase()
-            return lower.contains("colab.research.google.com") ||
-                    lower.contains("colab.google") ||
-                    lower.contains("kaggle.com/code") ||
-                    lower.contains("nbviewer.org")
-        }
     }
 
     var isHomePage by mutableStateOf(
@@ -52,9 +44,10 @@ class BrowserTab(
     @SuppressLint("SetJavaScriptEnabled")
     val webView: WebView = WebView(context).apply {
         // Solid opaque background: DO NOT set Color.TRANSPARENT as it breaks hardware-accelerated
-        // Canvas/WebGL/Monaco editor rendering on Android, causing Google Colab notebooks to appear empty.
+        // Canvas/WebGL/Monaco editor rendering on Android.
         setBackgroundColor(Color.WHITE)
         setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        setInitialScale(0)
 
         val rawUa = settings.userAgentString
         mobileUserAgent = rawUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
@@ -81,8 +74,8 @@ class BrowserTab(
             userAgentString = mobileUserAgent
         }
 
-        // Enable third-party and cross-origin cookies so Colab notebook iframes (*.googleusercontent.com)
-        // and OAuth authentication frames work seamlessly without blank screens
+        // Enable third-party and cross-origin cookies so web apps, auth dialogs,
+        // and embedded frames work smoothly
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(this, true)
@@ -113,6 +106,27 @@ class BrowserTab(
         setDesktopMode(!isDesktopMode, reloadNow = true)
     }
 
+    /**
+     * Expands the page viewport to a true desktop layout (1280px) when Desktop Mode is enabled,
+     * overriding any responsive mobile meta viewport tags that crush/squeeze desktop layouts.
+     */
+    fun applyDesktopViewport() {
+        if (!isHomePage && isDesktopMode) {
+            val js = """
+                (function() {
+                    var meta = document.querySelector('meta[name="viewport"]');
+                    if (!meta) {
+                        meta = document.createElement('meta');
+                        meta.name = 'viewport';
+                        document.head.appendChild(meta);
+                    }
+                    meta.setAttribute('content', 'width=1280, initial-scale=0.1, user-scalable=yes');
+                })();
+            """.trimIndent()
+            webView.evaluateJavascript(js, null)
+        }
+    }
+
     fun load(url: String) {
         val resolved = AddressResolver.resolve(url)
         if (resolved == AddressResolver.HOME_URL) {
@@ -123,10 +137,7 @@ class BrowserTab(
             progress = 100
             webView.stopLoading()
         } else {
-            // Auto-detect Colab or data science notebooks and auto-enable desktop mode so Monaco editor renders
-            if (isColabOrDesktopSite(resolved) && !isDesktopMode) {
-                setDesktopMode(true, reloadNow = false)
-            }
+            // Colab and sites open in standard mobile mode by default, unless user has toggled desktop mode
             isHomePage = false
             currentUrl = resolved
             isLoading = true
