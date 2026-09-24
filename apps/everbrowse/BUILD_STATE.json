@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v5",
-  "updated_by": "session-update-colab-empty-fix",
-  "notes": "Operator instruction #6 resolved: Google Colab and interactive web apps render properly with Desktop Mode, solid opaque WebView background, and unblocked worker/iframe schemes. everbrowse-v5 verified live.",
+  "updated_by": "session-update-darkmode-drawer-colab",
+  "notes": "Operator instruction #7 received: Fix homepage dark mode UI, do not auto-force desktop mode for Colab by default, and allow tapping outside drawer to close menu. Seeding tasks t29-t32.",
   "tasks": [
     {
       "id": "t1",
@@ -302,6 +302,45 @@
       "notes": "release.yml run 36040634229 completed success. everbrowse-v5 verified live with assets app-everbrowse-v5.apk (1.33 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t29",
+      "title": "Append operator instruction #7 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v6",
+      "status": "done",
+      "notes": "Appended instruction #7 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t29-t32 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t30",
+      "title": "Fix homepage dark mode UI (solid background, proper surface roles, hide webview underneath while on home), remove Colab auto-desktop default while keeping manual Desktop Site toggle, and enable tap-outside to close hamburger menu via gesturesEnabled = drawerState.isOpen",
+      "status": "in_progress",
+      "notes": "Implementing homepage dark mode theming, drawer scrim tap-to-close behavior, and optional manual desktop mode for Colab.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t31",
+      "title": "Validate build configuration and files for everbrowse-v6",
+      "status": "pending",
+      "notes": "Validate manifests, layouts, and theme tokens.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t32",
+      "title": "Dispatch release workflow for everbrowse-v6, verify release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v6 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -311,5 +350,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v5"
+  "target_release": "everbrowse-v6"
 }

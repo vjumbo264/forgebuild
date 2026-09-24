@@ -32,3 +32,10 @@ When I type something in the search bar and click go, it currently flashes the s
 
 ## 2026-09-24 — Operator instruction #6 (verbatim)
 "Fix for sites like Google Colab appearing empty"
+
+## 2026-09-24 — Operator instruction #7 (verbatim)
+"One thing I need you to fix is the homepage UI on dark mode. Currently, on dark mode, the homepage looks very messed up, and some things are white and some things are black, so that needs to be fixed.
+
+Secondly, let Colab not open in desktop mode by default unless I use the desktop mode, because I actually like the desktop mode feature.
+
+Also, when I open the hamburger menu, I want the functionality that when I tap outside the menu, it will actually close it, because right now I used to try tapping outside the menu and it doesn't close the menu."
