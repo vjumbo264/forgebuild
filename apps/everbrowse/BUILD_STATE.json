@@ -113,10 +113,15 @@
     {
       "id": "t10",
       "title": "Native EverBrowse Home Page: stress-free default search page with speed dial and quick search",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Added native HomePageView.kt as default landing page instead of auto-loading Google. Includes EverBrowse branding, prominent search/URL field, keep-alive status indicator, speed dial shortcuts (Google, Wikipedia, GitHub, DuckDuckGo, Reddit, Hacker News), and home button in top navigation bar.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t11",

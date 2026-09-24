@@ -1,7 +1,6 @@
 package com.forgebuild.everbrowse
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import android.webkit.URLUtil
@@ -13,11 +12,15 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Resolves what the user typed into an address-bar entry: a URL or a Google search. */
+/** Resolves what the user typed into an address-bar entry: a URL, home, or a Google search. */
 object AddressResolver {
+    const val HOME_URL = "everbrowse://home"
+
     fun resolve(input: String): String {
         val q = input.trim()
-        if (q.isEmpty()) return "https://www.google.com"
+        if (q.isEmpty() || q.equals("home", ignoreCase = true) || q == HOME_URL || q == "about:blank") {
+            return HOME_URL
+        }
         val looksLikeUrl = q.startsWith("http://") || q.startsWith("https://") ||
             (!q.contains(" ") && q.contains(".") && !q.startsWith("."))
         return if (looksLikeUrl) {
@@ -39,7 +42,6 @@ object AddressResolver {
  * to the user-picked Uri.
  */
 object DownloadCoordinator {
-
     data class PendingDownload(val url: String, val suggestedName: String)
 
     /** Fetches [pending] and writes it to [target]. Reports completion via [onDone]. */

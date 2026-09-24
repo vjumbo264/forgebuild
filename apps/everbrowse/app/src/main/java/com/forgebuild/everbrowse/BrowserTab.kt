@@ -5,6 +5,10 @@ import android.content.Context
 import android.os.Bundle
 import android.webkit.WebSettings
 import android.webkit.WebView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 /**
  * One browser tab. The WebView instance is created once per tab and kept alive
@@ -16,8 +20,16 @@ import android.webkit.WebView
 class BrowserTab(
     val id: Long,
     context: Context,
-    initialUrl: String,
+    initialUrl: String = AddressResolver.HOME_URL,
 ) {
+    var isHomePage by mutableStateOf(
+        initialUrl.isBlank() || initialUrl == AddressResolver.HOME_URL || initialUrl == "about:blank"
+    )
+    var currentUrl by mutableStateOf(if (isHomePage) AddressResolver.HOME_URL else initialUrl)
+    var title by mutableStateOf(if (isHomePage) "Home" else "")
+    var isLoading by mutableStateOf(false)
+    var progress by mutableIntStateOf(100)
+
     @SuppressLint("SetJavaScriptEnabled")
     val webView: WebView = WebView(context.applicationContext).apply {
         settings.javaScriptEnabled = true
@@ -36,18 +48,88 @@ class BrowserTab(
         private set
 
     init {
-        webView.loadUrl(initialUrl)
+        if (!isHomePage && initialUrl.isNotBlank()) {
+            load(initialUrl)
+        }
+    }
+
+    fun load(url: String) {
+        val resolved = AddressResolver.resolve(url)
+        if (resolved == AddressResolver.HOME_URL) {
+            isHomePage = true
+            currentUrl = AddressResolver.HOME_URL
+            title = "Home"
+            isLoading = false
+            progress = 100
+            webView.stopLoading()
+        } else {
+            isHomePage = false
+            currentUrl = resolved
+            isLoading = true
+            progress = 0
+            webView.loadUrl(resolved)
+        }
+    }
+
+    fun stopLoading() {
+        if (!isHomePage) {
+            webView.stopLoading()
+            isLoading = false
+            progress = 100
+        }
+    }
+
+    fun reload() {
+        if (!isHomePage) {
+            isLoading = true
+            progress = 0
+            webView.reload()
+        }
+    }
+
+    fun goBack(): Boolean {
+        if (!isHomePage && webView.canGoBack()) {
+            webView.goBack()
+            return true
+        } else if (!isHomePage) {
+            load(AddressResolver.HOME_URL)
+            return true
+        }
+        return false
     }
 
     fun save(out: Bundle) {
-        webView.saveState(out)
+        out.putBoolean("isHomePage", isHomePage)
+        out.putString("currentUrl", currentUrl)
+        out.putString("title", title)
+        if (!isHomePage) {
+            webView.saveState(out)
+        }
     }
 
     fun restore(state: Bundle): Boolean {
-        restoredFromState = webView.restoreState(state) != null
-        return restoredFromState
+        isHomePage = state.getBoolean("isHomePage", false)
+        currentUrl = state.getString("currentUrl", AddressResolver.HOME_URL) ?: AddressResolver.HOME_URL
+        title = state.getString("title", if (isHomePage) "Home" else "") ?: ""
+        if (!isHomePage) {
+            restoredFromState = webView.restoreState(state) != null
+            return restoredFromState
+        }
+        return true
     }
 
-    val title: String get() = webView.title ?: ""
-    val url: String get() = webView.url ?: ""
+    val displayTitle: String
+        get() = when {
+            isHomePage -> "Home"
+            title.isNotBlank() -> title
+            currentUrl.isNotBlank() -> currentUrl
+            else -> "New Tab"
+        }
+
+    val displayUrl: String
+        get() = when {
+            isHomePage -> "everbrowse://home"
+            currentUrl.isNotBlank() -> currentUrl
+            else -> ""
+        }
 }
