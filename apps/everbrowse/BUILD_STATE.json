@@ -2,7 +2,7 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v2",
   "updated_by": "ai-session-2026-09-24",
   "notes": "Operator instruction #4 received. Starting v3 fixes: uncropped address bar text, exact alarm check fix without USE_EXACT_ALARM auto-grant, battery optimization manifest & launch fix, device admin active state detection, remove duplicate right tabs button, disable swipe gesture on tabs drawer, dedicated shortcut icons on home page, and direct Downloads folder saving with storage permission handling.",
@@ -221,6 +221,48 @@
       "notes": "everbrowse-v3 verified live via GitHub Releases API: app-everbrowse-v3.apk (1.40 MB) + forgebuild-manifest.json. All v3 issues resolved.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t21",
+      "title": "Fix Google Colab & rich web app rendering: clean Chrome user-agent, third-party cookies, mixed content, and hardware acceleration",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t22",
+      "title": "Fix Refresh button: always-present reload action that unconditionally reloads active URL with fallback",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t23",
+      "title": "Eliminate screen flash on search/go: continuous WebView attachment, keyboard focus clearance, and transparent background",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t24",
+      "title": "Validate build config, dispatch release everbrowse-v4, verify release+APK via API, set build_complete true",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -230,5 +272,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v3"
+  "target_release": "everbrowse-v4"
 }
