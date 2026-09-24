@@ -3,36 +3,66 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Orbital Navigation Ring -->
+    <!-- Outer Precision Orbital Ring & Cardinal Nodes -->
     <path
         android:strokeColor="#38BDF8"
-        android:strokeAlpha="0.4"
-        android:strokeWidth="1.5"
-        android:pathData="M54,26 A28,28 0 1,1 53.9,26 Z" />
-    <!-- Cardinal Compass Points -->
-    <path android:fillColor="#38BDF8" android:pathData="M54,24.5 A1.5,1.5 0 1,1 53.9,24.5 Z"/>
-    <path android:fillColor="#38BDF8" android:pathData="M82,52.5 A1.5,1.5 0 1,1 81.9,52.5 Z"/>
-    <path android:fillColor="#38BDF8" android:pathData="M54,80.5 A1.5,1.5 0 1,1 53.9,80.5 Z"/>
-    <path android:fillColor="#38BDF8" android:pathData="M26,52.5 A1.5,1.5 0 1,1 25.9,52.5 Z"/>
-    <!-- Infinity Wave -->
+        android:strokeAlpha="0.35"
+        android:strokeWidth="0.6"
+        android:pathData="M 54,26 A 28,28 0 1,1 53.9,26 Z" />
     <path
         android:strokeColor="#38BDF8"
-        android:strokeWidth="5.5"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="0.4"
+        android:pathData="M 54,29 A 25,25 0 1,1 53.9,29 Z" />
+
+    <!-- Cardinal Nodes -->
+    <path android:fillColor="#38BDF8" android:pathData="M 54,25.5 A 1,1 0 1,1 53.9,25.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M 82,53.5 A 1,1 0 1,1 81.9,53.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M 54,81.5 A 1,1 0 1,1 53.9,81.5 Z"/>
+    <path android:fillColor="#38BDF8" android:pathData="M 26,53.5 A 1,1 0 1,1 25.9,53.5 Z"/>
+
+    <!-- Left Sapphire Ribbon -->
+    <path
+        android:strokeColor="#2563EB"
+        android:strokeWidth="6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 54,54 C 44,39 30,39 24,46 C 18,54 18,63 24,68.5 C 30,74 44,69 54,54 C 64,39 78,35 84,41 C 90,47 90,55 84,63 C 78,71 64,69 54,54 Z" />
-    <!-- Speed Stem -->
+        android:pathData="M 54,54 C 40,33 27,34 27,54 C 27,71.5 40,74 54,54" />
+
+    <!-- Right Electric Cyan Ribbon -->
+    <path
+        android:strokeColor="#06B6D4"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,54 C 68,34 81,36.5 81,54 C 81,71.5 68,74 54,54" />
+
+    <!-- Ribbon Highlights -->
     <path
         android:strokeColor="#60A5FA"
-        android:strokeWidth="4"
+        android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:pathData="M 38,70 L 74,34" />
-    <!-- Arrowhead Head -->
+        android:pathData="M 50,50 C 40,36.5 31,38 31,54" />
+    <path
+        android:strokeColor="#67E8F9"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M 58,58 C 68,71.5 77,70 77,54" />
+
+    <!-- Supersonic Speed Arrow -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M 77,31 L 60,35 L 67,42 L 60,49 L 66,49 L 71,42 L 78,49 Z" />
-    <!-- Energy Sparkle -->
+        android:pathData="M 70,38 L 52,51.5 L 57,56.5 Z" />
     <path
-        android:fillColor="#67E8F9"
-        android:pathData="M 81,25 L 81.75,27.25 L 84,28 L 81.75,28.75 L 81,31 L 80.25,28.75 L 78,28 L 80.25,27.25 Z" />
+        android:fillColor="#BAE6FD"
+        android:pathData="M 70,38 L 57,56.5 L 61.5,58 Z" />
+
+    <!-- Core Radiant Beacon -->
+    <path
+        android:fillColor="#38BDF8"
+        android:fillAlpha="0.45"
+        android:pathData="M 54,50 A 4,4 0 1,1 53.9,50 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 54,52.5 A 1.5,1.5 0 1,1 53.9,52.5 Z" />
 </vector>

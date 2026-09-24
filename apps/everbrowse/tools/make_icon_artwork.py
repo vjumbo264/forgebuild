@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Generate EverBrowse foreground artwork: an aerodynamic infinity loop + supersonic browser needle."""
+"""Generate EverBrowse iconic Google Material 3 foreground artwork:
+Aerodynamic Infinity Navigator emblem with dual-tone electric cyan/sapphire Mobius loop,
+outer navigational orbital ring, supersonic speed needle, and radiant core beacon."""
+
 import subprocess, os
 
 tools_dir = os.path.dirname(os.path.abspath(__file__))
