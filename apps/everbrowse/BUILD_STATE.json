@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v6",
-  "updated_by": "session-update-darkmode-drawer-colab",
-  "notes": "Operator instruction #7 resolved: Homepage UI on dark mode fully themed with solid background and proper M3 tokens, Colab opens in standard mobile mode by default (manual Desktop Site toggle available on-demand), desktop mode unsqueezed with 1280px overview viewport, and tapping outside hamburger menu closes drawer. everbrowse-v6 verified live.",
+  "updated_by": "session-update-icon-and-cursor",
+  "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
       "id": "t1",
@@ -341,6 +341,57 @@
       "notes": "release.yml run 36046545512 completed success. everbrowse-v6 live with assets app-everbrowse-v6.apk (1.33 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t33",
+      "title": "Append operator instruction #8 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v7",
+      "status": "done",
+      "notes": "Appended instruction #8 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t33-t37 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t34",
+      "title": "Design and implement modern premium app icon (Infinity Explorer motif with midnight-to-nebula gradient, orbital ring, dynamic compass arrow, and Android 13+ monochrome layer) across all mipmap densities and vector drawables",
+      "status": "in_progress",
+      "notes": "Generating high-resolution adaptive icon background, foreground, and monochrome assets across all mipmap densities and vector drawables.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/res/drawable/ic_launcher_background.xml",
+        "apps/everbrowse/app/src/main/res/drawable/ic_launcher_foreground.xml",
+        "apps/everbrowse/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+        "apps/everbrowse/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
+      ]
+    },
+    {
+      "id": "t35",
+      "title": "Fix text field cursor visibility in dark and light modes with SolidColor(MaterialTheme.colorScheme.primary) cursorBrush in MainActivity and HomePageView",
+      "status": "in_progress",
+      "notes": "Configured cursorBrush = SolidColor(MaterialTheme.colorScheme.primary) on BasicTextField in address bar and home search.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt"
+      ]
+    },
+    {
+      "id": "t36",
+      "title": "Validate build configuration and files for everbrowse-v7",
+      "status": "pending",
+      "notes": "Validate resource xmls, Compose imports, and manifest.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t37",
+      "title": "Dispatch release workflow for everbrowse-v7, verify release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v7 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -350,5 +401,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v6"
+  "target_release": "everbrowse-v7"
 }

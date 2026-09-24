@@ -39,3 +39,8 @@ When I type something in the search bar and click go, it currently flashes the s
 Secondly, let Colab not open in desktop mode by default unless I use the desktop mode, because I actually like the desktop mode feature.
 
 Also, when I open the hamburger menu, I want the functionality that when I tap outside the menu, it will actually close it, because right now I used to try tapping outside the menu and it doesn't close the menu."
+
+## 2026-09-24 — Operator instruction #8 (verbatim)
+"Nice. Okay, now give it a better icon. I don't like the app icon, so can you give it a better app icon?
+
+And secondly, the keyboard cursor in dark mode is black, which is making it hard for me to see it, so I need you to fix that. And if this issue is vice versa, fix it also for light mode."
