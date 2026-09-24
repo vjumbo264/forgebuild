@@ -53,6 +53,11 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -518,27 +523,45 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // --- Top Navigation Bar: Clean row with search, home, desktop mode, refresh, new tab ---
+            // --- Top Navigation Bar: Google Material 3 Expressive floating pill bar ---
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
+                            .height(58.dp)
                             .padding(horizontal = s.xs, vertical = s.xxs),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(s.xxs)
                     ) {
-                        // 1. Hamburger Menu Button (Tabs drawer trigger)
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(
-                                imageVector = EngineIcons.Menu,
-                                contentDescription = "Menu and tabs",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                        // 1. Hamburger Menu & Tabs Button with Tab Count Badge
+                        BadgedBox(
+                            badge = {
+                                if (tabs.size > 1) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ) {
+                                        Text(
+                                            text = "${tabs.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            IconButton(onClick = onOpenDrawer) {
+                                Icon(
+                                    imageVector = EngineIcons.Menu,
+                                    contentDescription = "Menu and tabs",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
 
                         // 2. Home Button
@@ -556,14 +579,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Compact Search & URL Input Bar: Vertically centered BasicTextField, NEVER cropped
+                        // 3. Compact Search & URL Input Bar: Floating pill with leading site/security badge
                         Surface(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(42.dp)
+                                .height(44.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -571,13 +594,35 @@ class MainActivity : ComponentActivity() {
                                     .padding(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                // Leading Site / Security Icon
+                                val isSecure = tab?.url?.startsWith("https://") == true
+                                val leadingIcon = when {
+                                    tab?.isHomePage == true -> EngineIcons.Search
+                                    isSecure -> EngineIcons.Security
+                                    else -> EngineIcons.Language
+                                }
+                                val leadingTint = when {
+                                    tab?.isHomePage == true -> MaterialTheme.colorScheme.primary
+                                    isSecure -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+
+                                Icon(
+                                    imageVector = leadingIcon,
+                                    contentDescription = null,
+                                    tint = leadingTint,
+                                    modifier = Modifier.size(18.dp)
+                                )
+
+                                Spacer(Modifier.width(8.dp))
+
                                 Box(
                                     modifier = Modifier.weight(1f),
                                     contentAlignment = Alignment.CenterStart
                                 ) {
                                     if (addressText.isEmpty()) {
                                         Text(
-                                            text = if (tab?.isHomePage == true) "Search or type URL" else "Search or URL",
+                                            text = if (tab?.isHomePage == true) "Search Google or type URL" else "Search or type URL",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1
@@ -612,7 +657,7 @@ class MainActivity : ComponentActivity() {
                                 if (isLoading) {
                                     IconButton(
                                         onClick = { tab?.stopLoading() },
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
                                         Icon(
                                             imageVector = EngineIcons.Close,
@@ -624,7 +669,7 @@ class MainActivity : ComponentActivity() {
                                 } else if (addressText.isNotBlank()) {
                                     IconButton(
                                         onClick = { addressText = "" },
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
                                         Icon(
                                             imageVector = EngineIcons.Close,
@@ -637,33 +682,44 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 4. Desktop Site Mode Toggle Button (Optional on-demand desktop view)
+                        // 4. Desktop Site Mode Toggle Button with active pill container
+                        Surface(
+                            shape = CircleShape,
+                            color = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    tab?.let {
+                                        it.toggleDesktopMode()
+                                        val msg = if (it.isDesktopMode) "Desktop site enabled" else "Mobile site enabled"
+                                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = EngineIcons.DesktopWindows,
+                                    contentDescription = "Toggle desktop site",
+                                    tint = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // 5. Action Button: Refresh Tab (ALWAYS present and active - forces fresh reload)
                         IconButton(
                             onClick = {
-                                tab?.let {
-                                    it.toggleDesktopMode()
-                                    val msg = if (it.isDesktopMode) "Desktop site enabled" else "Mobile site enabled"
-                                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                                if (tab?.isHomePage == true) {
+                                    addressText = ""
+                                    Toast.makeText(this@MainActivity, "Home page refreshed", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    tab?.reload(bypassCache = true)
                                 }
                             }
                         ) {
                             Icon(
-                                imageVector = EngineIcons.DesktopWindows,
-                                contentDescription = "Toggle desktop site",
-                                tint = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // 5. Action Button: Refresh Tab (ALWAYS present and active)
-                        IconButton(
-                            onClick = {
-                                tab?.reload()
-                            }
-                        ) {
-                            Icon(
                                 imageVector = EngineIcons.Refresh,
-                                contentDescription = "Refresh tab",
+                                contentDescription = "Refresh page",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -701,19 +757,35 @@ class MainActivity : ComponentActivity() {
                 if (tab != null) {
                     // Continuous WebView attachment with explicit layout parameters and visibility control
                     key(tab.id) {
+                        val primaryColorArgb = MaterialTheme.colorScheme.primary.toArgb()
+                        val containerColorArgb = MaterialTheme.colorScheme.surfaceContainer.toArgb()
+
                         AndroidView(
-                            factory = {
-                                tab.webView.apply {
-                                    (parent as? ViewGroup)?.removeView(this)
+                            factory = { ctx ->
+                                SwipeRefreshLayout(ctx).apply {
+                                    setColorSchemeColors(primaryColorArgb)
+                                    setProgressBackgroundColorSchemeColor(containerColorArgb)
                                     layoutParams = ViewGroup.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
                                     )
+                                    (tab.webView.parent as? ViewGroup)?.removeView(tab.webView)
+                                    tab.webView.layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    addView(tab.webView)
+                                    setOnRefreshListener {
+                                        tab.reload(bypassCache = true)
+                                    }
                                     visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
+                                    isEnabled = !tab.isHomePage
                                 }
                             },
-                            update = { view ->
-                                view.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
+                            update = { swipeRefresh ->
+                                swipeRefresh.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
+                                swipeRefresh.isEnabled = !tab.isHomePage
+                                swipeRefresh.isRefreshing = tab.isLoading
                             },
                             modifier = Modifier.fillMaxSize()
                         )

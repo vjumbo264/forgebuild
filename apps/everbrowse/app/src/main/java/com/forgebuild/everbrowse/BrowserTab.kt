@@ -154,7 +154,7 @@ class BrowserTab(
         }
     }
 
-    fun reload() {
+    fun reload(bypassCache: Boolean = true) {
         if (isHomePage) {
             isLoading = false
             progress = 100
@@ -162,11 +162,33 @@ class BrowserTab(
         }
         isLoading = true
         progress = 15
-        val target = webView.url?.takeIf { it.isNotBlank() && it != "about:blank" } ?: currentUrl
-        if (target.isNotBlank() && target != AddressResolver.HOME_URL) {
-            webView.loadUrl(target)
+        if (bypassCache) {
+            val prevCacheMode = webView.settings.cacheMode
+            webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            if (webView.url.isNullOrBlank() || webView.url == "about:blank") {
+                if (currentUrl.isNotBlank() && currentUrl != AddressResolver.HOME_URL) {
+                    webView.loadUrl(currentUrl)
+                } else {
+                    webView.reload()
+                }
+            } else {
+                webView.reload()
+            }
+            webView.postDelayed({
+                try {
+                    webView.settings.cacheMode = prevCacheMode
+                } catch (_: Exception) {}
+            }, 2500)
         } else {
-            webView.reload()
+            if (webView.url.isNullOrBlank() || webView.url == "about:blank") {
+                if (currentUrl.isNotBlank() && currentUrl != AddressResolver.HOME_URL) {
+                    webView.loadUrl(currentUrl)
+                } else {
+                    webView.reload()
+                }
+            } else {
+                webView.reload()
+            }
         }
     }
 

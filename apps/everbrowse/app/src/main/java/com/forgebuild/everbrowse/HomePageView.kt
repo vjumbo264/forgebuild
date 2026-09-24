@@ -1,8 +1,5 @@
 package com.forgebuild.everbrowse
 
-import androidx.compose.foundation.text.selection.LocalTextSelectionColors
-import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,10 +81,10 @@ fun HomePageView(
     val shortcuts = remember {
         listOf(
             QuickShortcut("Google", "https://www.google.com", EngineIcons.Search, "Search"),
-            QuickShortcut("Wikipedia", "https://www.wikipedia.org", EngineIcons.Language, "Reference"),
+            QuickShortcut("Google Colab", "https://colab.research.google.com", EngineIcons.Code, "AI & Python"),
             QuickShortcut("GitHub", "https://github.com", EngineIcons.Code, "Development"),
+            QuickShortcut("Wikipedia", "https://www.wikipedia.org", EngineIcons.Language, "Reference"),
             QuickShortcut("DuckDuckGo", "https://duckduckgo.com", EngineIcons.Security, "Privacy"),
-            QuickShortcut("Reddit", "https://www.reddit.com", EngineIcons.Forum, "Community"),
             QuickShortcut("Hacker News", "https://news.ycombinator.com", EngineIcons.Newspaper, "Tech News")
         )
     }
@@ -102,25 +102,29 @@ fun HomePageView(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(s.md)
         ) {
-            Spacer(modifier = Modifier.height(s.sm))
+            Spacer(modifier = Modifier.height(s.xs))
 
-            // --- Brand Header ---
+            // --- Material 3 Expressive Brand Hero ---
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(64.dp),
+                tonalElevation = 2.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = EngineIcons.Bolt,
                         contentDescription = "EverBrowse",
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(s.xxs)
+            ) {
                 Text(
                     text = "EverBrowse",
                     style = MaterialTheme.typography.headlineLarge,
@@ -128,22 +132,96 @@ fun HomePageView(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Persistent · Resilient · Never Refreshing",
+                    text = "Ultra-Persistent Web Browser",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.height(s.xxs))
+            // --- Keep-Alive / Anti-Refresh Protection Status Card ---
+            Card(
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = if (needsKeepAliveSetup) {
+                        MaterialTheme.colorScheme.tertiaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerLow
+                    }
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (needsKeepAliveSetup) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)
+                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                ),
+                onClick = onOpenKeepAlive,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = s.md, vertical = s.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (needsKeepAliveSetup) {
+                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                        } else {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (needsKeepAliveSetup) EngineIcons.BatterySaver else EngineIcons.Security,
+                                contentDescription = null,
+                                tint = if (needsKeepAliveSetup) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
 
-            // --- Prominent Search & Navigation Box ---
+                    Spacer(Modifier.width(s.sm))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (needsKeepAliveSetup) "Setup Background Keep-Alive" else "Anti-Refresh Engine Active",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (needsKeepAliveSetup) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (needsKeepAliveSetup) "Tap to grant persistent background permissions" else "Tabs stay resident in memory • Zero reloads",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (needsKeepAliveSetup) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Surface(
+                        shape = CircleShape,
+                        color = if (needsKeepAliveSetup) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(start = s.xs)
+                    ) {
+                        Text(
+                            text = if (needsKeepAliveSetup) "SETUP" else "PROTECTED",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (needsKeepAliveSetup) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // --- Google-Style Large Pill Search Box ---
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                tonalElevation = 2.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(54.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -154,8 +232,8 @@ fun HomePageView(
                     Icon(
                         imageVector = EngineIcons.Search,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
                     )
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -166,12 +244,13 @@ fun HomePageView(
                     ) {
                         if (searchInput.isEmpty()) {
                             Text(
-                                text = "Search the web or enter address",
+                                text = "Search Google or type URL",
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1
                             )
                         }
+
                         val textSelectionColors = TextSelectionColors(
                             handleColor = MaterialTheme.colorScheme.primary,
                             backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
@@ -195,98 +274,45 @@ fun HomePageView(
                     }
 
                     if (searchInput.isNotBlank()) {
-                        IconButton(onClick = { submitSearch(searchInput) }) {
-                            Icon(
-                                imageVector = EngineIcons.ArrowForward,
-                                contentDescription = "Go",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-            }
-
-            // --- Keep-Alive Notification Card if permissions missing ---
-            if (needsKeepAliveSetup) {
-                Card(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(s.sm),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            EngineIcons.Alarm,
-                            contentDescription = null,
+                        IconButton(
+                            onClick = { searchInput = "" },
                             modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(Modifier.width(s.xs))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Keep-Alive Setup Required",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Grant exact alarms & battery exemption so pages never refresh.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        FilledTonalButton(
-                            onClick = onOpenKeepAlive,
-                            shape = MaterialTheme.shapes.small
                         ) {
-                            Text("Setup")
+                            Icon(
+                                imageVector = EngineIcons.Close,
+                                contentDescription = "Clear search",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
-                    }
-                }
-            } else {
-                // Keep-alive status badge (Active)
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = s.sm, vertical = s.xs),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            EngineIcons.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(s.xs))
-                        Text(
-                            text = "Anti-refresh keep-alive active",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = "Protected",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(34.dp),
+                            onClick = { submitSearch(searchInput) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = EngineIcons.ArrowForward,
+                                    contentDescription = "Search",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(s.xs))
+            Spacer(modifier = Modifier.height(s.xxs))
 
-            // --- Speed Dial / Quick Shortcuts with Real Icons ---
+            // --- Top Destinations / Speed Dial Grid ---
             Text(
-                text = "Frequently Visited",
-                style = MaterialTheme.typography.titleSmall,
+                text = "Top Destinations",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.fillMaxWidth(),
@@ -319,31 +345,31 @@ fun HomePageView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(s.sm))
+            Spacer(modifier = Modifier.height(s.xs))
 
-            // --- Quick Tab & Navigation Controls ---
+            // --- Quick Navigation Controls ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(s.xs)
+                horizontalArrangement = Arrangement.spacedBy(s.sm)
             ) {
                 FilledTonalButton(
                     onClick = onNewTab,
                     modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Icon(EngineIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(s.xxs))
+                    Spacer(Modifier.width(s.xs))
                     Text("New Tab")
                 }
 
                 FilledTonalButton(
                     onClick = onOpenTabs,
                     modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.medium
+                    shape = MaterialTheme.shapes.large
                 ) {
-                    Icon(EngineIcons.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(s.xxs))
-                    Text("Open Tabs")
+                    Icon(EngineIcons.Tabs, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(s.xs))
+                    Text("Tabs Menu")
                 }
             }
         }
@@ -357,10 +383,13 @@ private fun ShortcutItem(
     modifier: Modifier = Modifier
 ) {
     val s = SpacingTokens.Spacing
+
     Surface(
         onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        tonalElevation = 1.dp,
         modifier = modifier
     ) {
         Column(
@@ -368,9 +397,9 @@ private fun ShortcutItem(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Surface(
-                shape = MaterialTheme.shapes.small,
+                shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(44.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -384,15 +413,18 @@ private fun ShortcutItem(
                     )
                 }
             }
-            Spacer(Modifier.height(s.xxs))
+
+            Spacer(Modifier.height(s.xs))
+
             Text(
                 text = shortcut.name,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
             Text(
                 text = shortcut.category,
                 style = MaterialTheme.typography.labelSmall,

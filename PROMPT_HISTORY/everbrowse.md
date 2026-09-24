@@ -47,3 +47,8 @@ And secondly, the keyboard cursor in dark mode is black, which is making it hard
 
 ## 2026-09-24 — Operator instruction #9 (verbatim)
 "Also, enhance the UI. Give it a complete UI overhaul using the new latest Google Material 3 style."
+
+## 2026-09-24 — Operator instruction #10 (verbatim)
+"Fix the issue that if I press the refresh button, it doesn't refresh the page for some reason. It just blinks and nothing happens. So, refreshing the page with the button should actually refresh the page.
+
+Also, add a pull to refresh feature so that I can pull to refresh."

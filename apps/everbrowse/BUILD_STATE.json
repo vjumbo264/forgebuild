@@ -447,21 +447,37 @@
     {
       "id": "t41",
       "title": "Complete Material 3 UI overhaul: redesign address bar with pill geometry, security indicator, and compact action cluster; revamp home page with M3 Expressive brand hero, pill search bar, elevated tonal speed dial cards, and keep-alive status pill; overhaul tabs navigation drawer with prominent cards and action bar",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Overhauled entire UI using Google Material 3 Expressive discipline: floating pill address bar with dynamic site/security lock indicator, home shortcut, desktop mode chip, and tab count badge; redesigned home page with bold brand hero, 54dp pill search box, elevated top destinations speed dials (Google, Colab, GitHub, Wikipedia, DuckDuckGo, Hacker News), and keep-alive protection card; modernized tabs drawer sheet with rounded tab cards, tab count badge, new tab pill button, and desktop mode switch.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/TabsDrawerSheet.kt"
+      ]
     },
     {
       "id": "t42",
-      "title": "Validate build configuration, resource assets, and Compose Kotlin source files for everbrowse-v8",
+      "title": "Fix refresh button functionality (force webView.reload() bypassing cache instead of no-op loadUrl) and implement SwipeRefreshLayout pull-to-refresh for web pages",
+      "status": "done",
+      "notes": "Fixed page reload: replaced ineffective webView.loadUrl(currentUrl) with webView.reload(bypassCache = true) using WebSettings.LOAD_NO_CACHE, resolving the issue where pressing refresh only blinked without reloading. Added SwipeRefreshLayout dependency and wrapped native WebView to provide native pull-to-refresh while preserving web page vertical scrolling.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/build.gradle.kts",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t43",
+      "title": "Dispatch release workflow for everbrowse-v8, monitor run, verify live release and APK via GitHub API, set build_complete true",
       "status": "pending",
       "notes": "",
       "commits": [],
       "files": []
     },
     {
-      "id": "t43",
+      "id": "t44",
       "title": "Dispatch release workflow for everbrowse-v8, monitor run, verify live release and APK via GitHub API, set build_complete true",
       "status": "pending",
       "notes": "",
@@ -474,6 +490,11 @@
       "what": "Download handling mechanism",
       "why": "Operator prompt #4 explicitly required saving directly to device public Downloads folder with storage permission prompt, replacing document picker",
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
+    },
+    {
+      "what": "Pull-to-refresh container",
+      "why": "Native Android WebView consumes touch events and does not implement Compose ScrollableState; official AndroidX SwipeRefreshLayout correctly checks canScrollVertically(-1) without breaking in-page scrolling",
+      "used": "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     }
   ],
   "target_release": "everbrowse-v8"

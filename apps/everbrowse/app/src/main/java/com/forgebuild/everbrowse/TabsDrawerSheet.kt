@@ -2,23 +2,31 @@ package com.forgebuild.everbrowse
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Badge
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,76 +42,104 @@ import com.forgebuild.engine.ui.theme.SpacingTokens
 fun TabsDrawerSheet(
     tabs: List<BrowserTab>,
     activeTabIndex: Int,
+    isDesktop: Boolean,
     onSelectTab: (Int) -> Unit,
     onCloseTab: (Int) -> Unit,
     onNewTab: () -> Unit,
     onCloseAllTabs: () -> Unit,
-    onOpenKeepAlive: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onOpenKeepAlive: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val s = SpacingTokens.Spacing
-    val activeTab = tabs.getOrNull(activeTabIndex)
-    val isDesktop = activeTab?.isDesktopMode == true
 
-    ModalDrawerSheet(
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = modifier
             .fillMaxHeight()
-            .width(320.dp),
-        drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            .width(320.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight()
-                .padding(s.sm)
+                .fillMaxSize()
+                .padding(horizontal = s.md, vertical = s.lg),
+            verticalArrangement = Arrangement.spacedBy(s.sm)
         ) {
-            // --- Header ---
+            // --- Header: Title + Tab Count Badge + Close Button ---
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = s.xs, horizontal = s.xxs),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = EngineIcons.Tabs,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = EngineIcons.Tabs,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
                 Spacer(Modifier.width(s.xs))
+
                 Text(
-                    text = "Tabs (${tabs.size})",
+                    text = "Tabs",
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
+
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(end = s.xs)
+                ) {
+                    Text(
+                        text = "${tabs.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 IconButton(onClick = onCloseDrawer) {
-                    Icon(EngineIcons.Close, contentDescription = "Close tabs drawer")
+                    Icon(
+                        imageVector = EngineIcons.Close,
+                        contentDescription = "Close tabs drawer",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            // --- Add Tab Action Button ---
-            FilledTonalButton(
+            // --- Add Tab Prominent Pill Button ---
+            Button(
                 onClick = onNewTab,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = s.xxs),
-                shape = MaterialTheme.shapes.medium
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large
             ) {
                 Icon(EngineIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(s.xs))
                 Text("New Tab", style = MaterialTheme.typography.labelLarge)
             }
 
-            // --- Desktop Site Mode Quick Toggle ---
-            Surface(
+            // --- Desktop Site Mode Modern Toggle Card ---
+            Card(
                 shape = MaterialTheme.shapes.medium,
-                color = if (isDesktop) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDesktop) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    }
+                ),
                 onClick = onToggleDesktopMode,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = s.xxs)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
@@ -117,30 +153,34 @@ fun TabsDrawerSheet(
                         tint = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
+
                     Spacer(Modifier.width(s.xs))
+
                     Text(
                         text = "Desktop Site",
                         style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
                         color = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    if (isDesktop) {
-                        Icon(
-                            imageVector = EngineIcons.Check,
-                            contentDescription = "Active",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+
+                    Switch(
+                        checked = isDesktop,
+                        onCheckedChange = { onToggleDesktopMode() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
                         )
-                    }
+                    )
                 }
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = s.xs),
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.padding(vertical = s.xxs),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
-            // --- Tab List ---
+            // --- Tab List with Generous Rounded Cards ---
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -150,23 +190,24 @@ fun TabsDrawerSheet(
                 itemsIndexed(tabs, key = { _, tab -> tab.id }) { index, tab ->
                     val isSelected = index == activeTabIndex
                     val containerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.secondaryContainer
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainer
+                        MaterialTheme.colorScheme.surfaceContainerHigh
                     }
                     val contentColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
+                        MaterialTheme.colorScheme.onPrimaryContainer
                     } else {
                         MaterialTheme.colorScheme.onSurface
                     }
 
                     Surface(
                         onClick = { onSelectTab(index) },
-                        shape = MaterialTheme.shapes.medium,
+                        shape = MaterialTheme.shapes.large,
                         color = containerColor,
                         border = if (isSelected) {
                             BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
                         } else null,
+                        tonalElevation = if (isSelected) 2.dp else 0.dp,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -175,14 +216,23 @@ fun TabsDrawerSheet(
                                 .padding(s.xs),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Icon: Home or Web
-                            Icon(
-                                imageVector = if (tab.isHomePage) EngineIcons.Home else EngineIcons.Search,
-                                contentDescription = null,
-                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = if (isSelected) MaterialTheme.colorScheme.surface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = if (tab.isHomePage) EngineIcons.Home else EngineIcons.Language,
+                                        contentDescription = null,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
                             Spacer(Modifier.width(s.xs))
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = tab.displayTitle,
@@ -195,12 +245,12 @@ fun TabsDrawerSheet(
                                 Text(
                                     text = tab.displayUrl,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (isSelected) contentColor.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            // Close Button for this tab
+
                             IconButton(
                                 onClick = { onCloseTab(index) },
                                 modifier = Modifier.size(32.dp)
@@ -208,7 +258,7 @@ fun TabsDrawerSheet(
                                 Icon(
                                     imageVector = EngineIcons.Close,
                                     contentDescription = "Close tab",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isSelected) contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -218,8 +268,8 @@ fun TabsDrawerSheet(
             }
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = s.xs),
-                color = MaterialTheme.colorScheme.outlineVariant
+                modifier = Modifier.padding(vertical = s.xxs),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
 
             // --- Footer Utilities ---
