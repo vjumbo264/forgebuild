@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v5",
+  "build_complete": true,
+  "current_release": "everbrowse-v6",
   "updated_by": "session-update-darkmode-drawer-colab",
-  "notes": "Operator instruction #7 received: Fix homepage dark mode UI, do not auto-force desktop mode for Colab by default, and allow tapping outside drawer to close menu. Seeding tasks t29-t32.",
+  "notes": "Operator instruction #7 resolved: Homepage UI on dark mode fully themed with solid background and proper M3 tokens, Colab opens in standard mobile mode by default (manual Desktop Site toggle available on-demand), desktop mode unsqueezed with 1280px overview viewport, and tapping outside hamburger menu closes drawer. everbrowse-v6 verified live.",
   "tasks": [
     {
       "id": "t1",
@@ -337,8 +337,8 @@
     {
       "id": "t32",
       "title": "Dispatch release workflow for everbrowse-v6, verify release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml workflow for everbrowse-v6.",
+      "status": "done",
+      "notes": "release.yml run 36046545512 completed success. everbrowse-v6 live with assets app-everbrowse-v6.apk (1.33 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
     }
