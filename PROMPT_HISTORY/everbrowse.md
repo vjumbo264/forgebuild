@@ -52,3 +52,14 @@ And secondly, the keyboard cursor in dark mode is black, which is making it hard
 "Fix the issue that if I press the refresh button, it doesn't refresh the page for some reason. It just blinks and nothing happens. So, refreshing the page with the button should actually refresh the page.
 
 Also, add a pull to refresh feature so that I can pull to refresh."
+
+## 2026-09-24 — Operator instruction #11 (verbatim)
+"Fix the issue that if I press the refresh button, it doesn't refresh the page for some reason. It just blinks and nothing happens. So, refreshing the page with the button should actually refresh the page.
+
+Also, add a pull to refresh feature so that I can pull to refresh.
+
+Okay, now there are two distinct issues I need to fix.
+
+First of all, the spinner for refresh always shows when I'm opening a site or anything I'm doing. It should only show when I pull to refresh, not when I'm doing any kind of site loading thing.
+
+And secondly, the issue that I'm passing through now is that if I tap on a link to open another site, it carries me to the homepage and renders the site behind the homepage stuff. That should be fixed so that if I click on a link that opens another tab, it actually opens the tab correctly."

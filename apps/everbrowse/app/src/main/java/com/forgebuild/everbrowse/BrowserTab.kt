@@ -24,6 +24,7 @@ class BrowserTab(
     val id: Long,
     context: Context,
     initialUrl: String = AddressResolver.HOME_URL,
+    val isNewWindow: Boolean = false,
 ) {
     companion object {
         const val DESKTOP_USER_AGENT =
@@ -31,12 +32,13 @@ class BrowserTab(
     }
 
     var isHomePage by mutableStateOf(
-        initialUrl.isBlank() || initialUrl == AddressResolver.HOME_URL || initialUrl == "about:blank"
+        if (isNewWindow) false
+        else (initialUrl.isBlank() || initialUrl == AddressResolver.HOME_URL || initialUrl == "about:blank")
     )
     var currentUrl by mutableStateOf(if (isHomePage) AddressResolver.HOME_URL else initialUrl)
-    var title by mutableStateOf(if (isHomePage) "Home" else "")
-    var isLoading by mutableStateOf(false)
-    var progress by mutableIntStateOf(100)
+    var title by mutableStateOf(if (isHomePage) "Home" else if (isNewWindow) "Loading..." else "")
+    var isLoading by mutableStateOf(isNewWindow)
+    var progress by mutableIntStateOf(if (isNewWindow) 10 else 100)
     var isDesktopMode by mutableStateOf(false)
 
     private val mobileUserAgent: String

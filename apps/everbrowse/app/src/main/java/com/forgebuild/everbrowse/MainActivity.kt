@@ -321,29 +321,46 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                val isHome = url.isBlank() || url == AddressResolver.HOME_URL || url == "about:blank"
+                tab.isHomePage = isHome
                 tab.currentUrl = url
                 tab.isLoading = true
                 tab.progress = 10
                 if (tabs.getOrNull(activeTabIndex) == tab) {
-                    addressText = url
+                    addressText = if (isHome) "" else url
                 }
             }
 
             override fun onPageFinished(view: WebView, url: String) {
+                val isHome = url.isBlank() || url == AddressResolver.HOME_URL || url == "about:blank"
+                tab.isHomePage = isHome
                 tab.currentUrl = url
-                tab.title = view.title ?: ""
+                tab.title = view.title?.takeIf { it.isNotBlank() } ?: tab.title
                 tab.isLoading = false
                 tab.progress = 100
                 tab.applyDesktopViewport()
                 if (tabs.getOrNull(activeTabIndex) == tab) {
-                    addressText = url
+                    addressText = if (isHome) "" else url
                 }
+            }
+
+            override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+                tab.isLoading = false
+                tab.progress = 100
             }
         }
 
         tab.webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
                 tab.progress = newProgress
+                val url = view.url ?: ""
+                if (url.isNotBlank() && url != AddressResolver.HOME_URL && url != "about:blank") {
+                    tab.isHomePage = false
+                    tab.currentUrl = url
+                    if (tabs.getOrNull(activeTabIndex) == tab && addressText.isBlank()) {
+                        addressText = url
+                    }
+                }
                 if (newProgress >= 100) {
                     tab.isLoading = false
                 }
@@ -407,7 +424,7 @@ class MainActivity : ComponentActivity() {
                 return true
             }
 
-            // Support multi-window popups (e.g. Google Sign-In, OAuth popups, file dialogues)
+            // Support multi-window popups (e.g. Google Sign-In, OAuth popups, target="_blank" links)
             override fun onCreateWindow(
                 view: WebView?,
                 isDialog: Boolean,
@@ -415,7 +432,12 @@ class MainActivity : ComponentActivity() {
                 resultMsg: android.os.Message?
             ): Boolean {
                 if (resultMsg == null) return false
-                val newTab = BrowserTab(System.nanoTime(), this@MainActivity, "")
+                val newTab = BrowserTab(
+                    id = System.nanoTime(),
+                    context = this@MainActivity,
+                    initialUrl = "",
+                    isNewWindow = true
+                )
                 wireTab(newTab)
                 tabs.add(newTab)
                 activeTabIndex = tabs.lastIndex
@@ -786,7 +808,12 @@ class MainActivity : ComponentActivity() {
                             update = { swipeRefresh ->
                                 swipeRefresh.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
                                 swipeRefresh.isEnabled = !tab.isHomePage
-                                swipeRefresh.isRefreshing = tab.isLoading
+                                // Pull-to-refresh spinner should ONLY show when triggered by a pull gesture,
+                                // never during ordinary page navigation or address bar searches.
+                                // When page loading finishes, ensure the spinner is dismissed.
+                                if (!tab.isLoading && swipeRefresh.isRefreshing) {
+                                    swipeRefresh.isRefreshing = false
+                                }
                             },
                             modifier = Modifier.fillMaxSize()
                         )

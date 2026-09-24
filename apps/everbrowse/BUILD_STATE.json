@@ -2,7 +2,7 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v6",
   "updated_by": "session-update-icon-and-cursor",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
@@ -483,6 +483,54 @@
       "notes": "release.yml run 36054448442 completed success. everbrowse-v8 live with assets app-everbrowse-v8.apk (1.52 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t45",
+      "title": "Append operator instruction #11 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v9",
+      "status": "done",
+      "notes": "Appended instruction #11 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t45-t49 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t46",
+      "title": "Fix pull-to-refresh spinner: isolate SwipeRefreshLayout.isRefreshing strictly to user pull gestures and auto-dismiss on load finish, keeping regular site loading cleanly on the top wavy progress bar",
+      "status": "done",
+      "notes": "Fixed pull-to-refresh spinner: removed swipeRefresh.isRefreshing = tab.isLoading from Compose AndroidView update block, and replaced it with if (!tab.isLoading && swipeRefresh.isRefreshing) { swipeRefresh.isRefreshing = false }. The circular pull-to-refresh spinner now only appears when user physically pulls down to refresh and dismisses when loading finishes, keeping ordinary site loading cleanly on the top wavy progress bar.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t47",
+      "title": "Fix new tab link opening: in onCreateWindow set isNewWindow = true (isHomePage = false) and in onPageStarted/onPageFinished dynamically sync isHomePage so tapped links and window popups display immediately without being obscured by HomePageView",
+      "status": "done",
+      "notes": "Fixed new tab link opening: in BrowserTab added isNewWindow parameter initializing isHomePage = false when opened from onCreateWindow. In MainActivity wireTab callbacks (onPageStarted, onPageFinished, onProgressChanged), dynamically sync tab.isHomePage so tapped links and window popups immediately render in the active WebView rather than being hidden behind HomePageView.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t48",
+      "title": "Validate build configuration, XML drawables, and Kotlin Compose syntax for everbrowse-v9",
+      "status": "done",
+      "notes": "Validated XML resources, Kotlin syntax, and Compose structure for everbrowse-v9.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t49",
+      "title": "Dispatch release workflow for everbrowse-v9, monitor CI run, verify live release and APK via GitHub API, set build_complete true",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v9.",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -497,5 +545,5 @@
       "used": "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     }
   ],
-  "target_release": "everbrowse-v8"
+  "target_release": "everbrowse-v9"
 }
