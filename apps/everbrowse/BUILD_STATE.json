@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v1",
+  "build_complete": true,
+  "current_release": "everbrowse-v2",
   "updated_by": "ai-session-2026-09-24",
-  "notes": "Operator instruction #3 received. Starting v2 improvements: status bar overlay fix, compact top nav, hamburger tab management, native home page, back gesture navigation, loading cancel button, auto-prompting exact alarms & battery opt.",
+  "notes": "BUILD COMPLETE. everbrowse-v2 released and verified live on GitHub Releases. Addressed all operator prompt #3 requirements: status bar insets fix (statusBarsPadding), compact single-row top navigation, hamburger tab manager drawer, native home page with speed dial and search, BackHandler history navigation, and tab loading cancel button.",
   "tasks": [
     {
       "id": "t1",
@@ -147,16 +147,16 @@
     {
       "id": "t13",
       "title": "Validate build config, dispatch release everbrowse-v2, verify release+APK via API",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "release.yml dispatched app_path=apps/everbrowse; run 36034459372 completed success; release everbrowse-v2 live with assets app-everbrowse-v2.apk + forgebuild-manifest.json",
       "commits": [],
       "files": []
     },
     {
       "id": "t14",
       "title": "Set build_complete true after everbrowse-v2 verified live",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "everbrowse-v2 verified live via GitHub Releases API: app-everbrowse-v2.apk (1.42 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
     }
