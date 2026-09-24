@@ -388,8 +388,59 @@
     {
       "id": "t37",
       "title": "Dispatch release workflow for everbrowse-v7, verify release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml workflow for everbrowse-v7.",
+      "status": "done",
+      "notes": "release.yml run 36051108274 completed success. everbrowse-v7 live with assets app-everbrowse-v7.apk (1.47 MB) + forgebuild-manifest.json.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t38",
+      "title": "Append operator instruction #9 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v8",
+      "status": "done",
+      "notes": "Appended instruction #9 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t38-t43 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t39",
+      "title": "Craft iconic Google Material 3 app icon (Infinity Globe motif with deep cosmic navy background, dual-tone electric cyan/sapphire Mobius loop, radial luminance, high-contrast monochrome layer, and high-density adaptive mipmap assets)",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t40",
+      "title": "Enhance text field cursor visibility and selection handles across dark and light modes with explicit CompositionLocalProvider(LocalTextSelectionColors) and SolidColor(primary) cursorBrush",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t41",
+      "title": "Complete Material 3 UI overhaul: redesign address bar with pill geometry, security indicator, and compact action cluster; revamp home page with M3 Expressive brand hero, pill search bar, elevated tonal speed dial cards, and keep-alive status pill; overhaul tabs navigation drawer with prominent cards and action bar",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t42",
+      "title": "Validate build configuration, resource assets, and Compose Kotlin source files for everbrowse-v8",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t43",
+      "title": "Dispatch release workflow for everbrowse-v8, monitor run, verify live release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "",
       "commits": [],
       "files": []
     }
@@ -401,5 +452,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v7"
+  "target_release": "everbrowse-v8"
 }

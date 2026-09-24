@@ -44,3 +44,6 @@ Also, when I open the hamburger menu, I want the functionality that when I tap o
 "Nice. Okay, now give it a better icon. I don't like the app icon, so can you give it a better app icon?
 
 And secondly, the keyboard cursor in dark mode is black, which is making it hard for me to see it, so I need you to fix that. And if this issue is vice versa, fix it also for light mode."
+
+## 2026-09-24 — Operator instruction #9 (verbatim)
+"Also, enhance the UI. Give it a complete UI overhaul using the new latest Google Material 3 style."
