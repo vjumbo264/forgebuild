@@ -184,10 +184,12 @@
     {
       "id": "t17",
       "title": "Remove swipe gesture on tabs drawer (gesturesEnabled=false) and remove duplicate right tabs button",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Disabled swipe-to-open gesture on ModalNavigationDrawer (gesturesEnabled = false) so vertical/horizontal page scrolling inside web sites is uninterrupted. Removed duplicate right-side tabs badge button; top bar now has a single hamburger menu trigger on the left and a quick + (New Tab) action.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t18",
