@@ -90,10 +90,14 @@
     {
       "id": "t8",
       "title": "Top nav & status bar overlay fix: compact single-row URL bar with statusBarsPadding",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Fixed status bar overlay via Modifier.statusBarsPadding() so top navigation panel renders cleanly below the system status bar. Compact single-row top navigation bar (56dp) with hamburger menu button, home button, compact search/URL field, stop/reload toggle, and tab counter badge. Removed vertical clutter and permanent top tab strip.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIcons.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIconsGenerated.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t9",

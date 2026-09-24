@@ -106,4 +106,29 @@ internal object EngineIconsGenerated {
             .addPath(PathParser().parsePathString("M17,11c0.34,0 0.67,0.04 1,0.09V6.27L10.5,3L3,6.27v4.91c0,4.54 3.2,8.79 7.5,9.82 0.55,-0.13 1.08,-0.32 1.6,-0.55 -0.69,-0.98 -1.1,-2.17 -1.1,-3.45 0,-3.31 2.69,-6 6,-6zM17,13c-2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4 -1.79,-4 -4,-4zM17,14.38c0.62,0 1.12,0.51 1.12,1.12s-0.51,1.12 -1.12,1.12 -1.12,-0.51 -1.12,-1.12 0.5,-1.12 1.12,-1.12zM17,19.75c-0.93,0 -1.74,-0.46 -2.24,-1.17 0.05,-0.72 1.51,-1.08 2.24,-1.08s2.19,0.36 2.24,1.08c-0.5,0.71 -1.31,1.17 -2.24,1.17z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
+
+    val Menu: ImageVector by lazy {
+        ImageVector.Builder(name = "Menu", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M3,18h18v-2H3v2zm0,-5h18v-2H3v2zm0,-7v2h18V6H3z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Tabs: ImageVector by lazy {
+        ImageVector.Builder(name = "Tabs", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M19,3H5C3.9,3 3,3.9 3,5v14c0,1.1 0.9,2 2,2h14c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2zm0,16H5V5h14v14z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Check: ImageVector by lazy {
+        ImageVector.Builder(name = "Check", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Delete: ImageVector by lazy {
+        ImageVector.Builder(name = "Delete", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
 }

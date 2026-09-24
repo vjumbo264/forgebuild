@@ -21,4 +21,9 @@ object EngineIcons {
     val BatterySaver: ImageVector get() = EngineIconsGenerated.BatterySaver
     val Alarm: ImageVector get() = EngineIconsGenerated.Alarm
     val AdminPanelSettings: ImageVector get() = EngineIconsGenerated.AdminPanelSettings
+
+    val Menu: ImageVector get() = EngineIconsGenerated.Menu
+    val Tabs: ImageVector get() = EngineIconsGenerated.Tabs
+    val Check: ImageVector get() = EngineIconsGenerated.Check
+    val Delete: ImageVector get() = EngineIconsGenerated.Delete
 }
