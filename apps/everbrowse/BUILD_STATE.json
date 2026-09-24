@@ -137,10 +137,12 @@
     {
       "id": "t12",
       "title": "Permissions & background usage auto-prompting: exact alarms, battery opt, and notifications on startup",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Configured auto-prompting of essential keep-alive permissions (exact alarms, battery optimization ignore, and post-notifications) on application launch. Tracks lifecycle onResume with dynamic recomposition so granted badges update immediately upon return from system settings. Provides direct 1-tap launchers for each system permission dialog.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t13",
