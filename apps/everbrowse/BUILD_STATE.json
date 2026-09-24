@@ -248,8 +248,8 @@
     {
       "id": "t23",
       "title": "Eliminate screen flash on search/go: continuous WebView attachment, keyboard focus clearance, and transparent background",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Eliminated jarring white screen flash and visual interruption on search/go. Set WebView background color to transparent, avoiding uninitialized white surface flashes. Kept active tab WebView continuously attached in Compose view tree (with HomePageView layered cleanly on top while at home) so the native rendering pipeline never tears down or remounts. Explicitly hid software keyboard and cleared focus on go/search submit.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",

@@ -1,5 +1,8 @@
 package com.forgebuild.everbrowse
 
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +64,17 @@ fun HomePageView(
 ) {
     var searchInput by remember { mutableStateOf("") }
     val s = SpacingTokens.Spacing
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    val submitSearch: (String) -> Unit = { query ->
+        val trimmed = query.trim()
+        if (trimmed.isNotBlank()) {
+            keyboardController?.hide()
+            focusManager.clearFocus()
+            onSearch(trimmed)
+        }
+    }
 
     val shortcuts = remember {
         listOf(
@@ -158,12 +172,12 @@ fun HomePageView(
                         ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = {
-                            if (searchInput.isNotBlank()) onSearch(searchInput)
+                            submitSearch(searchInput)
                         })
                     )
                 }
                 if (searchInput.isNotBlank()) {
-                    IconButton(onClick = { onSearch(searchInput) }) {
+                    IconButton(onClick = { submitSearch(searchInput) }) {
                         Icon(
                             imageVector = EngineIcons.ArrowForward,
                             contentDescription = "Go",
@@ -268,7 +282,7 @@ fun HomePageView(
             shortcuts.take(3).forEach { shortcut ->
                 ShortcutItem(
                     shortcut = shortcut,
-                    onClick = { onSearch(shortcut.url) },
+                    onClick = { submitSearch(shortcut.url) },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -281,7 +295,7 @@ fun HomePageView(
             shortcuts.drop(3).take(3).forEach { shortcut ->
                 ShortcutItem(
                     shortcut = shortcut,
-                    onClick = { onSearch(shortcut.url) },
+                    onClick = { submitSearch(shortcut.url) },
                     modifier = Modifier.weight(1f)
                 )
             }
