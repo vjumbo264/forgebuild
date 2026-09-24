@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v10",
-  "updated_by": "operator prompt #13 \u2014 download manager & storage permission download fix",
+  "build_complete": true,
+  "current_release": "everbrowse-v11",
+  "updated_by": "operator prompt #13 & #14 \u2014 Material 3 Download Manager, notification tray progress & storage permissions",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -636,8 +636,8 @@
     {
       "id": "t60",
       "title": "Dispatch release workflow for everbrowse-v11, monitor CI run, verify live release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml for commit 41d1f5b on apps/everbrowse.",
+      "status": "done",
+      "notes": "Dispatched release.yml workflow (run 36069218398) for commit db1ccf6. Workflow completed successfully. Live release everbrowse-v11 verified via GitHub API with published asset app-everbrowse-v11.apk (1,607,087 bytes).",
       "commits": [],
       "files": []
     }
