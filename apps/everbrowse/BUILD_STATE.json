@@ -380,16 +380,16 @@
     {
       "id": "t36",
       "title": "Validate build configuration and files for everbrowse-v7",
-      "status": "in_progress",
-      "notes": "Validating app resources, manifest, and compilation for everbrowse-v7.",
+      "status": "done",
+      "notes": "Validated icon assets in all mipmap densities, vector drawables, and cursorBrush Compose configurations.",
       "commits": [],
       "files": []
     },
     {
       "id": "t37",
       "title": "Dispatch release workflow for everbrowse-v7, verify release and APK via GitHub API, set build_complete true",
-      "status": "pending",
-      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v7 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v7.",
       "commits": [],
       "files": []
     }
