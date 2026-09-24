@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v10",
-  "updated_by": "session-update-icon-and-cursor",
+  "updated_by": "operator prompt #13 \u2014 download manager & storage permission download fix",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -579,6 +579,67 @@
       "notes": "Dispatched release.yml workflow (run 36062169819) for commit 5027fc8. Workflow completed successfully. Live release everbrowse-v10 verified via GitHub API with published asset app-everbrowse-v10.apk (1,502,779 bytes).",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t55",
+      "title": "Append operator instruction #13 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v11",
+      "status": "done",
+      "notes": "Appended instruction #13 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t55-t60 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t56",
+      "title": "Add FileProvider configuration and storage permissions in AndroidManifest.xml, plus runtime permission request for storage before downloading",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/res/xml/file_paths.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t57",
+      "title": "Overhaul DownloadCoordinator with robust HTTP connection (User-Agent, headers, cookies, redirect loop), MediaStore relative path, direct public Downloads fallback, media scanning, and system notifications with progress and open-file intent",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
+      ]
+    },
+    {
+      "id": "t58",
+      "title": "Build Material 3 Expressive DownloadManagerSheet with active download progress, completed downloads list, tap-to-open, share, delete, open Downloads folder, and wire into top bar and drawer sheet",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadManagerSheet.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/TabsDrawerSheet.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t59",
+      "title": "Validate build configuration, XML resources, and Kotlin Compose syntax for everbrowse-v11",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t60",
+      "title": "Dispatch release workflow for everbrowse-v11, monitor CI run, verify live release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -588,5 +649,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v10"
+  "target_release": "everbrowse-v11"
 }

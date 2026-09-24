@@ -65,3 +65,7 @@ First of all, the spinner for refresh always shows when I'm opening a site or an
 And secondly, the issue that I'm passing through now is that if I tap on a link to open another site, it carries me to the homepage and renders the site behind the homepage stuff. That should be fixed so that if I click on a link that opens another tab, it actually opens the tab correctly."
 ## 2026-09-24 — Operator instruction #12 (verbatim)
 "Please fix it. The button refresh is making me unable to even scroll up in websites. It's not really something I prefer."
+
+## 2026-09-24 — Operator instruction #13 (verbatim)
+"The browser doesn't even have a download manager, and it doesn't ask me for storage permission to save files to my downloads folder.
+Right now, I can't download files. If I download a file, the browser will say that the file is downloading, and it will say that the file has downloaded, but I don't see anything downloading anywhere. Please just fix that."
