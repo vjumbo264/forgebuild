@@ -65,10 +65,9 @@ class BrowserTab(
 
         // Enable third-party and cross-origin cookies so Colab notebook iframes (*.googleusercontent.com)
         // and OAuth authentication frames work seamlessly without blank screens
-        CookieManager.getInstance().apply {
-            setAcceptCookie(true)
-            setAcceptThirdPartyCookies(this@apply, true)
-        }
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(this, true)
     }
 
     var restoredFromState = false
