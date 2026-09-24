@@ -2,10 +2,10 @@
  "slug": "everbrowse",
  "app_name": "EverBrowse",
  "package": "com.forgebuild.everbrowse",
- "build_complete": false,
- "current_release": null,
+ "build_complete": true,
+ "current_release": "everbrowse-v1",
  "updated_by": "ai-session-2026-09-24",
- "notes": "Slug chosen by building AI (operator left it blank): everbrowse \u2014 ultra-persistent anti-LMK WebView browser with tabs. Seeded from engine/. DEVIATION RECORDED: operator asked for android.app.DownloadManager -> public Downloads, but the ForgeBuild contract's standing Engine rule mandates SafeSave (SAF, user-picked destination) and forbids DownloadManager; downloads are implemented via Engine SafeSave. Everything else follows the description.",
+ "notes": "BUILD COMPLETE. everbrowse-v1 released and verified live. Tabbed ultra-persistent WebView browser. Deviation recorded: downloads use Engine SafeSave (SAF) not DownloadManager, per contract. Next: operator verifies on-device; future versions everbrowse-v2+ monotonic.",
  "tasks": [
   {
    "id": "t1",
@@ -74,16 +74,16 @@
   {
    "id": "t6",
    "title": "Validate build config, dispatch release everbrowse-v1, verify release+APK via API",
-   "status": "in_progress",
-   "notes": "in progress",
+   "status": "done",
+   "notes": "release.yml dispatched app_path=apps/everbrowse; run 36029250871 completed success; release everbrowse-v1 live with assets app-everbrowse-v1.apk + forgebuild-manifest.json",
    "commits": [],
    "files": []
   },
   {
    "id": "t7",
    "title": "Set build_complete true after everbrowse-v1 verified live",
-   "status": "pending",
-   "notes": "",
+   "status": "done",
+   "notes": "everbrowse-v1 verified live via GitHub Releases API",
    "commits": [],
    "files": []
   }
