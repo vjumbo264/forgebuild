@@ -1,5 +1,8 @@
 package com.forgebuild.everbrowse
 
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.runtime.CompositionLocalProvider
 import android.Manifest
 import android.app.AlarmManager
 import android.app.AlertDialog as AndroidAlertDialog
@@ -580,24 +583,30 @@ class MainActivity : ComponentActivity() {
                                             maxLines = 1
                                         )
                                     }
-                                    BasicTextField(
-                                        value = addressText,
-                                        onValueChange = { addressText = it },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                                        keyboardActions = KeyboardActions(onGo = {
-                                            if (addressText.isNotBlank()) {
-                                                keyboardController?.hide()
-                                                focusManager.clearFocus()
-                                                tab?.load(addressText)
-                                            }
-                                        })
+                                    val addressSelectionColors = TextSelectionColors(
+                                        handleColor = MaterialTheme.colorScheme.primary,
+                                        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
                                     )
+                                    CompositionLocalProvider(LocalTextSelectionColors provides addressSelectionColors) {
+                                        BasicTextField(
+                                            value = addressText,
+                                            onValueChange = { addressText = it },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                            keyboardActions = KeyboardActions(onGo = {
+                                                if (addressText.isNotBlank()) {
+                                                    keyboardController?.hide()
+                                                    focusManager.clearFocus()
+                                                    tab?.load(addressText)
+                                                }
+                                            })
+                                        )
+                                    }
                                 }
 
                                 if (isLoading) {

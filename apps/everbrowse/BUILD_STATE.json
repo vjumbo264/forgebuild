@@ -435,10 +435,14 @@
     {
       "id": "t40",
       "title": "Enhance text field cursor visibility and selection handles across dark and light modes with explicit CompositionLocalProvider(LocalTextSelectionColors) and SolidColor(primary) cursorBrush",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Configured explicit CompositionLocalProvider(LocalTextSelectionColors provides TextSelectionColors(handleColor = MaterialTheme.colorScheme.primary, backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))) and cursorBrush = SolidColor(MaterialTheme.colorScheme.primary) across HomePageView and MainActivity address bar. Guarantees high-contrast, luminous cursor and handle visibility in dark mode (vibrant lavender/cyan/blue) and light mode.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
     },
     {
       "id": "t41",

@@ -1,5 +1,8 @@
 package com.forgebuild.everbrowse
 
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -169,20 +172,26 @@ fun HomePageView(
                                 maxLines = 1
                             )
                         }
-                        BasicTextField(
-                            value = searchInput,
-                            onValueChange = { searchInput = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = {
-                                submitSearch(searchInput)
-                            })
+                        val textSelectionColors = TextSelectionColors(
+                            handleColor = MaterialTheme.colorScheme.primary,
+                            backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
                         )
+                        CompositionLocalProvider(LocalTextSelectionColors provides textSelectionColors) {
+                            BasicTextField(
+                                value = searchInput,
+                                onValueChange = { searchInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    submitSearch(searchInput)
+                                })
+                            )
+                        }
                     }
 
                     if (searchInput.isNotBlank()) {
