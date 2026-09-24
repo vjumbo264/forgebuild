@@ -50,8 +50,8 @@
   {
    "id": "t5b",
    "title": "BrowserKeepAliveService: START_STICKY foreground service, persistent notification, PARTIAL_WAKE_LOCK",
-   "status": "pending",
-   "notes": "",
+   "status": "done",
+   "notes": "BrowserKeepAliveService START_STICKY + PARTIAL_WAKE_LOCK + IMPORTANCE_MIN ongoing notification 'Browser active in background'; restarts itself in onDestroy; BootReceiver restarts on BOOT_COMPLETED; manifest declares FOREGROUND_SERVICE(_SPECIAL_USE), WAKE_LOCK, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, SCHEDULE/USE_EXACT_ALARM, specialUse FGS subtype property.",
    "commits": [],
    "files": []
   },
