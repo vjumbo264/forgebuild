@@ -1,0 +1,24 @@
+{
+ "slug": "everbrowse",
+ "app_name": "EverBrowse",
+ "package": "com.forgebuild.everbrowse",
+ "build_complete": false,
+ "current_release": null,
+ "updated_by": "ai-session-2026-09-24",
+ "notes": "Slug chosen by building AI (operator left it blank): everbrowse — ultra-persistent anti-LMK WebView browser with tabs. Seeded from engine/. DEVIATION RECORDED: operator asked for android.app.DownloadManager -> public Downloads, but the ForgeBuild contract's standing Engine rule mandates SafeSave (SAF, user-picked destination) and forbids DownloadManager; downloads are implemented via Engine SafeSave. Everything else follows the description.",
+ "tasks": [
+  {"id":"t1","title":"Choose slug, copy engine into apps/everbrowse, seed PROMPT_HISTORY + BUILD_STATE","status":"in_progress","notes":"","commits":[],"files":[]},
+  {"id":"t2","title":"Set identity: namespace/applicationId com.forgebuild.everbrowse, app_name EverBrowse","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t3","title":"Adaptive icon via tools/make_adaptive_icon.py (create artwork)","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t4","title":"Confirm repo-level signing secrets exist (no regeneration)","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t5a","title":"Browser shell: tabbed WebView, URL/search bar, back/forward/reload, state save/restore, configChanges","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t5b","title":"BrowserKeepAliveService: START_STICKY foreground service, persistent notification, PARTIAL_WAKE_LOCK","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t5c","title":"File upload protection (onShowFileChooser via ActivityResultLauncher) + downloads via Engine SafeSave","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t5d","title":"Permissions & admin onboarding UI (notifications, battery opt, FGS, exact alarm, DeviceAdminReceiver)","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t6","title":"Validate build config, dispatch release everbrowse-v1, verify release+APK via API","status":"pending","notes":"","commits":[],"files":[]},
+  {"id":"t7","title":"Set build_complete true after everbrowse-v1 verified live","status":"pending","notes":"","commits":[],"files":[]}
+ ],
+ "substitutions": [
+  {"what":"android.app.DownloadManager to system Downloads folder","why":"ForgeBuild contract permanent rule: saving files must use Engine SafeSave (SAF), NEVER native DownloadManager","used":"com.forgebuild.engine.files.SafeSave via WebView setDownloadListener -> SAF ACTION_CREATE_DOCUMENT"}
+ ]
+}
