@@ -2,7 +2,7 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
+  "build_complete": true,
   "current_release": "everbrowse-v2",
   "updated_by": "ai-session-2026-09-24",
   "notes": "Operator instruction #4 received. Starting v3 fixes: uncropped address bar text, exact alarm check fix without USE_EXACT_ALARM auto-grant, battery optimization manifest & launch fix, device admin active state detection, remove duplicate right tabs button, disable swipe gesture on tabs drawer, dedicated shortcut icons on home page, and direct Downloads folder saving with storage permission handling.",
@@ -217,8 +217,8 @@
     {
       "id": "t20",
       "title": "Validate build config, dispatch release everbrowse-v3, verify release+APK via API, set build_complete true",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "everbrowse-v3 verified live via GitHub Releases API: app-everbrowse-v3.apk (1.40 MB) + forgebuild-manifest.json. All v3 issues resolved.",
       "commits": [],
       "files": []
     }
