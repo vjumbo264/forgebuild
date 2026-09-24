@@ -63,3 +63,5 @@ Okay, now there are two distinct issues I need to fix.
 First of all, the spinner for refresh always shows when I'm opening a site or anything I'm doing. It should only show when I pull to refresh, not when I'm doing any kind of site loading thing.
 
 And secondly, the issue that I'm passing through now is that if I tap on a link to open another site, it carries me to the homepage and renders the site behind the homepage stuff. That should be fixed so that if I click on a link that opens another tab, it actually opens the tab correctly."
+## 2026-09-24 — Operator instruction #12 (verbatim)
+"Please fix it. The button refresh is making me unable to even scroll up in websites. It's not really something I prefer."

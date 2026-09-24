@@ -56,8 +56,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerValue
@@ -780,40 +778,19 @@ class MainActivity : ComponentActivity() {
                 if (tab != null) {
                     // Continuous WebView attachment with explicit layout parameters and visibility control
                     key(tab.id) {
-                        val primaryColorArgb = MaterialTheme.colorScheme.primary.toArgb()
-                        val containerColorArgb = MaterialTheme.colorScheme.surfaceContainer.toArgb()
-
                         AndroidView(
-                            factory = { ctx ->
-                                SwipeRefreshLayout(ctx).apply {
-                                    setColorSchemeColors(primaryColorArgb)
-                                    setProgressBackgroundColorSchemeColor(containerColorArgb)
+                            factory = {
+                                tab.webView.apply {
+                                    (parent as? ViewGroup)?.removeView(this)
                                     layoutParams = ViewGroup.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
                                     )
-                                    (tab.webView.parent as? ViewGroup)?.removeView(tab.webView)
-                                    tab.webView.layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    addView(tab.webView)
-                                    setOnRefreshListener {
-                                        tab.reload(bypassCache = true)
-                                    }
                                     visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
-                                    isEnabled = !tab.isHomePage
                                 }
                             },
-                            update = { swipeRefresh ->
-                                swipeRefresh.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
-                                swipeRefresh.isEnabled = !tab.isHomePage
-                                // Pull-to-refresh spinner should ONLY show when triggered by a pull gesture,
-                                // never during ordinary page navigation or address bar searches.
-                                // When page loading finishes, ensure the spinner is dismissed.
-                                if (!tab.isLoading && swipeRefresh.isRefreshing) {
-                                    swipeRefresh.isRefreshing = false
-                                }
+                            update = { view ->
+                                view.visibility = if (tab.isHomePage) View.GONE else View.VISIBLE
                             },
                             modifier = Modifier.fillMaxSize()
                         )

@@ -2,8 +2,8 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
-  "current_release": "everbrowse-v6",
+  "build_complete": false,
+  "current_release": "everbrowse-v9",
   "updated_by": "session-update-icon-and-cursor",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
@@ -531,6 +531,54 @@
       "notes": "Dispatched release.yml workflow (run 36055722946) for commit 0e4e69d. Workflow completed successfully. Live release everbrowse-v9 verified via GitHub API with published asset app-everbrowse-v9.apk (1,519,464 bytes).",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t50",
+      "title": "Append operator instruction #12 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v10",
+      "status": "done",
+      "notes": "Appended instruction #12 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t50-t54 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t51",
+      "title": "Remove SwipeRefreshLayout container: restore direct native WebView hosting in AndroidView so upward and downward webpage scrolling is 100% uninhibited and smooth, eliminating touch/gesture interception",
+      "status": "done",
+      "notes": "Removed SwipeRefreshLayout wrapping around WebView in MainActivity.kt. WebView is now hosted directly in AndroidView, completely resolving the issue where pull gestures intercepted upward scrolling in websites.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t52",
+      "title": "Remove swiperefreshlayout dependency from app/build.gradle.kts and cleanup imports in MainActivity.kt",
+      "status": "done",
+      "notes": "Cleaned up unused swiperefreshlayout dependency from app/build.gradle.kts and unused imports (SwipeRefreshLayout, toArgb) from MainActivity.kt.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/build.gradle.kts",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
+    },
+    {
+      "id": "t53",
+      "title": "Validate build configuration, XML drawables, and Kotlin Compose syntax for everbrowse-v10",
+      "status": "done",
+      "notes": "Validated XML resources, Kotlin syntax, and Compose structure for everbrowse-v10.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t54",
+      "title": "Dispatch release workflow for everbrowse-v10, monitor CI run, verify live release and APK via GitHub API, set build_complete true",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v10.",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -538,12 +586,7 @@
       "what": "Download handling mechanism",
       "why": "Operator prompt #4 explicitly required saving directly to device public Downloads folder with storage permission prompt, replacing document picker",
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
-    },
-    {
-      "what": "Pull-to-refresh container",
-      "why": "Native Android WebView consumes touch events and does not implement Compose ScrollableState; official AndroidX SwipeRefreshLayout correctly checks canScrollVertically(-1) without breaking in-page scrolling",
-      "used": "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     }
   ],
-  "target_release": "everbrowse-v9"
+  "target_release": "everbrowse-v10"
 }

@@ -72,8 +72,6 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:$composeTrain")
     implementation("androidx.compose.material3:material3:1.5.0-alpha28")
     implementation("androidx.compose.material:material-icons-core:1.7.8")
-    // Official AndroidX pull-to-refresh container for scrollable views (WebView)
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0") // tiny core set; extended icons come from local bundled vectors
     // kotlinx-coroutines: REQUIRED by the Engine's standing cache-first data
     // layer (com.forgebuild.engine.data.CacheFirstStore) — justified engine-level
     // dependency, do not remove even though the starter UI itself is coroutine-free.
