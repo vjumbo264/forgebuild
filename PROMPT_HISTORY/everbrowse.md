@@ -75,3 +75,8 @@ Right now, I can't download files. If I download a file, the browser will say th
 
 ## 2026-09-24 — Operator instruction #15 (verbatim)
 "Remove the desktop mode and download button from the top bar since it is compressing the search bar."
+
+## 2026-09-24 — Operator instruction #16 (verbatim)
+"Also, the app isn't asking for storage permission. I wanted to download a file of 100 megabytes, and once the download started, it finished instantly.
+
+The app the stuff I downloaded was fake or something because it didn't actually download it. So fix it because files are not actually being saved to anywhere."

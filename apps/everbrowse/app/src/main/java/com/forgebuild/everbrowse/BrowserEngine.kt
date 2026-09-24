@@ -249,19 +249,70 @@ object DownloadCoordinator {
         notificationId: Int,
         record: DownloadRecord,
         pending: PendingDownload
-    ): File {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+    ): File? {
+        val resolver = context.contentResolver
+        var contentUri: Uri? = null
+        var targetFile: File? = null
+        var outputStream: OutputStream? = null
 
-        val targetFile = resolveUniqueFile(downloadsDir, record.fileName)
+        // 1. On Android 10+ (API 29+), write directly via ContentResolver + MediaStore.Downloads
+        // This avoids Scoped Storage EACCES permission denied errors on modern Android.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, record.fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, record.mimeType.ifBlank { "application/octet-stream" })
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    val stream = resolver.openOutputStream(uri, "w")
+                    if (stream != null) {
+                        contentUri = uri
+                        outputStream = stream
+                        record.contentUri = uri.toString()
+                    }
+                }
+            } catch (_: Exception) {
+                contentUri = null
+                outputStream = null
+            }
+        }
+
+        // 2. Fallback to public Downloads directory or app-specific external files
+        if (outputStream == null) {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
+            val file = resolveUniqueFile(downloadsDir, record.fileName)
+            try {
+                outputStream = FileOutputStream(file)
+                targetFile = file
+                record.localPath = file.absolutePath
+            } catch (_: Exception) {
+                // Last-resort fallback: app-specific external files dir (always writable)
+                val fallbackDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.filesDir
+                val fallbackFile = resolveUniqueFile(fallbackDir, record.fileName)
+                outputStream = FileOutputStream(fallbackFile)
+                targetFile = fallbackFile
+                record.localPath = fallbackFile.absolutePath
+            }
+        }
+
+        val out = outputStream ?: throw IOException("Could not create output stream for download")
 
         // Handle data: URI
         if (pending.url.startsWith("data:")) {
-            saveDataUrl(pending.url, targetFile)
-            record.localPath = targetFile.absolutePath
-            record.totalBytes = targetFile.length()
-            record.downloadedBytes = targetFile.length()
-            MediaScannerConnection.scanFile(context, arrayOf(targetFile.absolutePath), arrayOf(record.mimeType), null)
+            saveDataUrlToStream(pending.url, out)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri != null) {
+                val cv = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+                resolver.update(contentUri, cv, null, null)
+            }
+            if (targetFile != null) {
+                record.totalBytes = targetFile.length()
+                record.downloadedBytes = targetFile.length()
+                MediaScannerConnection.scanFile(context, arrayOf(targetFile.absolutePath), arrayOf(record.mimeType), null)
+            }
             return targetFile
         }
 
@@ -270,15 +321,14 @@ object DownloadCoordinator {
         var connection: HttpURLConnection? = null
         var inputStream: InputStream? = null
         var redirects = 0
-        val maxRedirects = 6
+        val maxRedirects = 10
 
         while (redirects < maxRedirects) {
             val url = URL(currentUrl)
             connection = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 20000
-                readTimeout = 30000
+                connectTimeout = 30000
+                readTimeout = 60000
                 instanceFollowRedirects = true
-
                 val cookie = CookieManager.getInstance().getCookie(currentUrl)
                 if (!cookie.isNullOrBlank()) {
                     setRequestProperty("Cookie", cookie)
@@ -308,12 +358,13 @@ object DownloadCoordinator {
             }
 
             if (status !in 200..299) {
+                connection.disconnect()
                 throw IOException("Server returned HTTP $status: ${connection.responseMessage}")
             }
             break
         }
 
-        val conn = connection ?: throw IOException("Failed to establish connection")
+        val conn = connection ?: throw IOException("Failed to establish network connection")
         val contentLen = conn.contentLengthLong
         if (contentLen > 0) {
             record.totalBytes = contentLen
@@ -321,65 +372,71 @@ object DownloadCoordinator {
 
         inputStream = conn.inputStream
 
-        // Save to file
-        val outputStream = FileOutputStream(targetFile)
-        val buffer = ByteArray(16384)
+        // High-speed 64KB buffer for large files (100MB+)
+        val buffer = ByteArray(65536)
         var bytesRead: Int
         var totalRead = 0L
         var lastNotifTime = 0L
 
         try {
-            outputStream.use { out ->
+            out.use { stream ->
                 inputStream.use { input ->
                     while (input.read(buffer).also { bytesRead = it } != -1) {
-                        out.write(buffer, 0, bytesRead)
+                        stream.write(buffer, 0, bytesRead)
                         totalRead += bytesRead
                         record.downloadedBytes = totalRead
 
                         val now = System.currentTimeMillis()
-                        if (now - lastNotifTime > 500) {
+                        if (now - lastNotifTime > 300) {
                             lastNotifTime = now
                             postProgressNotification(context, nm, notificationId, record)
                         }
                     }
                 }
             }
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri != null) {
+                runCatching { resolver.delete(contentUri, null, null) }
+            }
+            targetFile?.delete()
+            throw e
         } finally {
             conn.disconnect()
         }
 
-        // On Android 10+ (API 29+), also ensure MediaStore.Downloads has an entry if needed
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            runCatching {
-                val resolver = context.contentResolver
-                val values = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, targetFile.name)
-                    put(MediaStore.Downloads.MIME_TYPE, record.mimeType)
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    put(MediaStore.Downloads.IS_PENDING, 0)
-                }
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        if (totalRead == 0L) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri != null) {
+                runCatching { resolver.delete(contentUri, null, null) }
+            }
+            targetFile?.delete()
+            throw IOException("Downloaded 0 bytes from server")
+        }
+
+        // On Android 10+ (API 29+), mark file complete in MediaStore (IS_PENDING = 0)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri != null) {
+            val completedValues = ContentValues().apply {
+                put(MediaStore.Downloads.IS_PENDING, 0)
+            }
+            resolver.update(contentUri, completedValues, null, null)
+        }
+
+        // Scan file so media scanner and download provider index it immediately
+        if (targetFile != null) {
+            MediaScannerConnection.scanFile(
+                context,
+                arrayOf(targetFile.absolutePath),
+                arrayOf(record.mimeType)
+            ) { path, uri ->
                 if (uri != null) {
                     record.contentUri = uri.toString()
                 }
             }
         }
 
-        // Explicit media scanner scan so files app and download providers see the file instantly
-        MediaScannerConnection.scanFile(
-            context,
-            arrayOf(targetFile.absolutePath),
-            arrayOf(record.mimeType)
-        ) { path, uri ->
-            if (uri != null) {
-                record.contentUri = uri.toString()
-            }
-        }
-
         return targetFile
     }
 
-    private fun saveDataUrl(dataUrl: String, targetFile: File) {
+    private fun saveDataUrlToStream(dataUrl: String, out: OutputStream) {
         val comma = dataUrl.indexOf(',')
         if (comma < 0) throw IOException("Malformed data URL")
         val metadata = dataUrl.substring(5, comma)
@@ -390,7 +447,8 @@ object DownloadCoordinator {
         } else {
             URLDecoder.decode(data, "UTF-8").toByteArray(Charsets.UTF_8)
         }
-        FileOutputStream(targetFile).use { it.write(bytes) }
+        out.write(bytes)
+        out.flush()
     }
 
     private fun resolveUniqueFile(dir: File, baseName: String): File {
@@ -483,19 +541,23 @@ object DownloadCoordinator {
     }
 
     fun openFile(context: Context, record: DownloadRecord) {
-        val path = record.localPath
-        if (path.isNullOrBlank()) {
-            Toast.makeText(context, "File path not found", Toast.LENGTH_SHORT).show()
+        val uri: Uri? = when {
+            !record.contentUri.isNullOrBlank() -> Uri.parse(record.contentUri)
+            !record.localPath.isNullOrBlank() -> {
+                val f = File(record.localPath!!)
+                if (f.exists()) getFileUri(context, f) else null
+            }
+            else -> null
+        }
+        if (uri == null) {
+            Toast.makeText(context, "File not found or still downloading", Toast.LENGTH_SHORT).show()
             return
         }
-        val file = File(path)
-        if (!file.exists()) {
-            Toast.makeText(context, "File does not exist: ${file.name}", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         try {
-            val intent = createOpenFileIntent(context, file, record.mimeType)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, record.mimeType.ifBlank { "*/*" })
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
             context.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(context, "No app available to open this file", Toast.LENGTH_LONG).show()
@@ -505,14 +567,18 @@ object DownloadCoordinator {
     }
 
     fun shareFile(context: Context, record: DownloadRecord) {
-        val path = record.localPath ?: return
-        val file = File(path)
-        if (!file.exists()) {
-            Toast.makeText(context, "File does not exist", Toast.LENGTH_SHORT).show()
+        val uri: Uri? = when {
+            !record.contentUri.isNullOrBlank() -> Uri.parse(record.contentUri)
+            !record.localPath.isNullOrBlank() -> {
+                val f = File(record.localPath!!)
+                if (f.exists()) getFileUri(context, f) else null
+            }
+            else -> null
+        }
+        if (uri == null) {
+            Toast.makeText(context, "File not found", Toast.LENGTH_SHORT).show()
             return
         }
-
-        val uri = getFileUri(context, file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = record.mimeType.ifBlank { "*/*" }
             putExtra(Intent.EXTRA_STREAM, uri)

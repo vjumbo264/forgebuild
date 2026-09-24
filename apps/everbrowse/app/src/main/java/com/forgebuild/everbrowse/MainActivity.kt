@@ -507,19 +507,29 @@ class MainActivity : ComponentActivity() {
         pendingDownload = pending
         val needed = mutableListOf<String>()
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        // 1. Storage permissions:
+        // On Android 12L (API 32) and below, request WRITE_EXTERNAL_STORAGE & READ_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
-        } else if (Build.VERSION.SDK_INT < 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        } else {
+            // Android 13+ (API 33+)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.READ_MEDIA_IMAGES)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.READ_MEDIA_VIDEO)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.READ_MEDIA_AUDIO)
             }
         }
 
+        // Notification permission so progress shows in notification bar
         if (Build.VERSION.SDK_INT >= 33) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 needed.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -527,7 +537,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if (needed.isNotEmpty()) {
-            Toast.makeText(this, "Requesting storage permission to save file to Downloads…", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please allow storage permission to save downloads to your device", Toast.LENGTH_SHORT).show()
             storagePermissionLauncher.launch(needed.toTypedArray())
             return
         }
@@ -536,12 +546,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun executeDownload(pending: DownloadCoordinator.PendingDownload) {
-        Toast.makeText(this, "Downloading ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Starting download: ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
+        showDownloadsSheet = true
         DownloadCoordinator.startDownload(this, pending, lifecycleScope) { ok, result ->
             if (ok) {
                 Toast.makeText(this@MainActivity, "Saved to Downloads: $result", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this@MainActivity, "Download failed: $result", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Download failed: $result", Toast.LENGTH_LONG).show()
             }
         }
     }

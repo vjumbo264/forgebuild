@@ -3,8 +3,8 @@
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
   "build_complete": false,
-  "current_release": "everbrowse-v11",
-  "updated_by": "operator prompt #15 \u2014 Remove desktop mode and download button from top bar",
+  "current_release": "everbrowse-v12",
+  "updated_by": "operator prompt #16 \u2014 Real 100MB+ file downloads via MediaStore/ContentResolver and storage permission prompts",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -656,8 +656,32 @@
     {
       "id": "t63",
       "title": "Dispatch release workflow for everbrowse-v12, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
+      "status": "done",
+      "notes": "Dispatched release.yml workflow (run 36073623273). Workflow completed successfully. Live release everbrowse-v12 verified via GitHub API with published asset app-everbrowse-v12.apk."
+    },
+    {
+      "id": "t64",
+      "title": "Append operator prompt #16 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v13",
+      "status": "done",
+      "notes": "Appended instruction #16 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t64-t67 in BUILD_STATE.json."
+    },
+    {
+      "id": "t65",
+      "title": "Fix storage permission request in MainActivity to prompt for storage permissions on Android <= 32 (WRITE/READ_EXTERNAL_STORAGE), media permissions on API 33+, and notification permission, plus declare MANAGE_EXTERNAL_STORAGE and media permissions in AndroidManifest.xml",
+      "status": "done",
+      "notes": "Configured storage permission checks in MainActivity.kt to request WRITE_EXTERNAL_STORAGE and READ_EXTERNAL_STORAGE on Android <= 32 (API 32 and below), media permissions on API 33+, and notification permissions. Declared MANAGE_EXTERNAL_STORAGE and media permissions in AndroidManifest.xml."
+    },
+    {
+      "id": "t66",
+      "title": "Overhaul executeDownloadStream in BrowserEngine to stream real file data via ContentResolver and MediaStore.Downloads (IS_PENDING=1 during download, IS_PENDING=0 on complete), eliminating EACCES permission denied errors on modern Android, with 64KB high-speed buffer, public Downloads fallback, accurate byte accounting, and live notification progress",
+      "status": "done",
+      "notes": "Overhauled executeDownloadStream in BrowserEngine.kt to write via ContentResolver + MediaStore.Downloads with IS_PENDING=1 and IS_PENDING=0 on completion, eliminating Scoped Storage EACCES errors on modern Android. Added 64KB high-speed stream buffer, public Downloads and app-external fallbacks, zero-byte detection, and updated openFile/shareFile to handle content URIs."
+    },
+    {
+      "id": "t67",
+      "title": "Dispatch release workflow for everbrowse-v13, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
       "status": "in_progress",
-      "notes": "Dispatching release.yml for everbrowse-v12."
+      "notes": "Dispatching release.yml for everbrowse-v13."
     }
   ],
   "substitutions": [
@@ -667,5 +691,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v12"
+  "target_release": "everbrowse-v13"
 }
