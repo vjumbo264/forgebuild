@@ -329,16 +329,16 @@
     {
       "id": "t31",
       "title": "Validate build configuration and files for everbrowse-v6",
-      "status": "in_progress",
-      "notes": "Validating everbrowse-v6 build configuration.",
+      "status": "done",
+      "notes": "Validated Compose themes, layout parameters, and manifest configuration for everbrowse-v6.",
       "commits": [],
       "files": []
     },
     {
       "id": "t32",
       "title": "Dispatch release workflow for everbrowse-v6, verify release and APK via GitHub API, set build_complete true",
-      "status": "pending",
-      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v6 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v6.",
       "commits": [],
       "files": []
     }
