@@ -1,98 +1,155 @@
 {
- "slug": "everbrowse",
- "app_name": "EverBrowse",
- "package": "com.forgebuild.everbrowse",
- "build_complete": true,
- "current_release": "everbrowse-v1",
- "updated_by": "ai-session-2026-09-24",
- "notes": "BUILD COMPLETE. everbrowse-v1 released and verified live. Tabbed ultra-persistent WebView browser. Deviation recorded: downloads use Engine SafeSave (SAF) not DownloadManager, per contract. Next: operator verifies on-device; future versions everbrowse-v2+ monotonic.",
- "tasks": [
-  {
-   "id": "t1",
-   "title": "Choose slug, copy engine into apps/everbrowse, seed PROMPT_HISTORY + BUILD_STATE",
-   "status": "done",
-   "notes": "",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t2",
-   "title": "Set identity: namespace/applicationId com.forgebuild.everbrowse, app_name EverBrowse",
-   "status": "done",
-   "notes": "namespace/applicationId com.forgebuild.everbrowse; app_name EverBrowse",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t3",
-   "title": "Adaptive icon via tools/make_adaptive_icon.py (create artwork)",
-   "status": "done",
-   "notes": "globe artwork via tools/make_icon_artwork.py + make_adaptive_icon.py; mdpi-xxxhdpi + monochrome + anydpi XML",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t4",
-   "title": "Confirm repo-level signing secrets exist (no regeneration)",
-   "status": "done",
-   "notes": "GitHub Actions secrets confirmed present via API: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD (not regenerated)",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t5a",
-   "title": "Browser shell: tabbed WebView, URL/search bar, back/forward/reload, state save/restore, configChanges",
-   "status": "done",
-   "notes": "Tabbed WebView shell in MainActivity: top action bar (back/forward/reload/address+Go), per-tab long-lived WebViews (JS/DOM/database enabled), tab strip + new/close, Google-search address resolution, manifest configChanges=orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize|uiMode, WebView saveState/restoreState in onSaveInstanceState/onCreate.",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t5b",
-   "title": "BrowserKeepAliveService: START_STICKY foreground service, persistent notification, PARTIAL_WAKE_LOCK",
-   "status": "done",
-   "notes": "BrowserKeepAliveService START_STICKY + PARTIAL_WAKE_LOCK + IMPORTANCE_MIN ongoing notification 'Browser active in background'; restarts itself in onDestroy; BootReceiver restarts on BOOT_COMPLETED; manifest declares FOREGROUND_SERVICE(_SPECIAL_USE), WAKE_LOCK, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, SCHEDULE/USE_EXACT_ALARM, specialUse FGS subtype property.",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t5c",
-   "title": "File upload protection (onShowFileChooser via ActivityResultLauncher) + downloads via Engine SafeSave",
-   "status": "done",
-   "notes": "onShowFileChooser via ActivityResultLauncher (file uploads don't destroy Activity); downloads via Engine SafeSave (SAF ACTION_CREATE_DOCUMENT) with MIME/name guessing + in-app download status \u2014 DownloadManager deliberately NOT used per contract (substitution recorded).",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t5d",
-   "title": "Permissions & admin onboarding UI (notifications, battery opt, FGS, exact alarm, DeviceAdminReceiver)",
-   "status": "done",
-   "notes": "Onboarding dialog: POST_NOTIFICATIONS, ignore-battery-optimizations (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), exact alarm (requestExactAlarm), device admin via AdminReceiver; FGS permissions declared in manifest. Wired through Engine PermissionWiring.",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t6",
-   "title": "Validate build config, dispatch release everbrowse-v1, verify release+APK via API",
-   "status": "done",
-   "notes": "release.yml dispatched app_path=apps/everbrowse; run 36029250871 completed success; release everbrowse-v1 live with assets app-everbrowse-v1.apk + forgebuild-manifest.json",
-   "commits": [],
-   "files": []
-  },
-  {
-   "id": "t7",
-   "title": "Set build_complete true after everbrowse-v1 verified live",
-   "status": "done",
-   "notes": "everbrowse-v1 verified live via GitHub Releases API",
-   "commits": [],
-   "files": []
-  }
- ],
- "substitutions": [
-  {
-   "what": "android.app.DownloadManager to system Downloads folder",
-   "why": "ForgeBuild contract permanent rule: saving files must use Engine SafeSave (SAF), NEVER native DownloadManager",
-   "used": "com.forgebuild.engine.files.SafeSave via WebView setDownloadListener -> SAF ACTION_CREATE_DOCUMENT"
-  }
- ]
+  "slug": "everbrowse",
+  "app_name": "EverBrowse",
+  "package": "com.forgebuild.everbrowse",
+  "build_complete": false,
+  "current_release": "everbrowse-v1",
+  "updated_by": "ai-session-2026-09-24",
+  "notes": "Operator instruction #3 received. Starting v2 improvements: status bar overlay fix, compact top nav, hamburger tab management, native home page, back gesture navigation, loading cancel button, auto-prompting exact alarms & battery opt.",
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "Choose slug, copy engine into apps/everbrowse, seed PROMPT_HISTORY + BUILD_STATE",
+      "status": "done",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t2",
+      "title": "Set identity: namespace/applicationId com.forgebuild.everbrowse, app_name EverBrowse",
+      "status": "done",
+      "notes": "namespace/applicationId com.forgebuild.everbrowse; app_name EverBrowse",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t3",
+      "title": "Adaptive icon via tools/make_adaptive_icon.py (create artwork)",
+      "status": "done",
+      "notes": "globe artwork via tools/make_icon_artwork.py + make_adaptive_icon.py; mdpi-xxxhdpi + monochrome + anydpi XML",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t4",
+      "title": "Confirm repo-level signing secrets exist (no regeneration)",
+      "status": "done",
+      "notes": "GitHub Actions secrets confirmed present via API: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD (not regenerated)",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t5a",
+      "title": "Browser shell: tabbed WebView, URL/search bar, back/forward/reload, state save/restore, configChanges",
+      "status": "done",
+      "notes": "Tabbed WebView shell in MainActivity: top action bar (back/forward/reload/address+Go), per-tab long-lived WebViews (JS/DOM/database enabled), tab strip + new/close, Google-search address resolution, manifest configChanges=orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize|uiMode, WebView saveState/restoreState in onSaveInstanceState/onCreate.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t5b",
+      "title": "BrowserKeepAliveService: START_STICKY foreground service, persistent notification, PARTIAL_WAKE_LOCK",
+      "status": "done",
+      "notes": "BrowserKeepAliveService START_STICKY + PARTIAL_WAKE_LOCK + IMPORTANCE_MIN ongoing notification 'Browser active in background'; restarts itself in onDestroy; BootReceiver restarts on BOOT_COMPLETED; manifest declares FOREGROUND_SERVICE(_SPECIAL_USE), WAKE_LOCK, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, SCHEDULE/USE_EXACT_ALARM, specialUse FGS subtype property.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t5c",
+      "title": "File upload protection (onShowFileChooser via ActivityResultLauncher) + downloads via Engine SafeSave",
+      "status": "done",
+      "notes": "onShowFileChooser via ActivityResultLauncher (file uploads don't destroy Activity); downloads via Engine SafeSave (SAF ACTION_CREATE_DOCUMENT) with MIME/name guessing + in-app download status \u2014 DownloadManager deliberately NOT used per contract (substitution recorded).",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t5d",
+      "title": "Permissions & admin onboarding UI (notifications, battery opt, FGS, exact alarm, DeviceAdminReceiver)",
+      "status": "done",
+      "notes": "Onboarding dialog: POST_NOTIFICATIONS, ignore-battery-optimizations (ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), exact alarm (requestExactAlarm), device admin via AdminReceiver; FGS permissions declared in manifest. Wired through Engine PermissionWiring.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t6",
+      "title": "Validate build config, dispatch release everbrowse-v1, verify release+APK via API",
+      "status": "done",
+      "notes": "release.yml dispatched app_path=apps/everbrowse; run 36029250871 completed success; release everbrowse-v1 live with assets app-everbrowse-v1.apk + forgebuild-manifest.json",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t7",
+      "title": "Set build_complete true after everbrowse-v1 verified live",
+      "status": "done",
+      "notes": "everbrowse-v1 verified live via GitHub Releases API",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t8",
+      "title": "Top nav & status bar overlay fix: compact single-row URL bar with statusBarsPadding",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t9",
+      "title": "Hamburger menu & tab manager drawer: slide-over sheet listing tabs with close, switch, and new tab",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t10",
+      "title": "Native EverBrowse Home Page: stress-free default search page with speed dial and quick search",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t11",
+      "title": "Navigation back gesture & tab loading cancel: BackHandler history and stop-loading button",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t12",
+      "title": "Permissions & background usage auto-prompting: exact alarms, battery opt, and notifications on startup",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t13",
+      "title": "Validate build config, dispatch release everbrowse-v2, verify release+APK via API",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t14",
+      "title": "Set build_complete true after everbrowse-v2 verified live",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    }
+  ],
+  "substitutions": [
+    {
+      "what": "android.app.DownloadManager to system Downloads folder",
+      "why": "ForgeBuild contract permanent rule: saving files must use Engine SafeSave (SAF), NEVER native DownloadManager",
+      "used": "com.forgebuild.engine.files.SafeSave via WebView setDownloadListener -> SAF ACTION_CREATE_DOCUMENT"
+    }
+  ],
+  "target_release": "everbrowse-v2"
 }
