@@ -1,5 +1,12 @@
 package com.forgebuild.everbrowse
 
+import android.view.ViewGroup
+import android.webkit.PermissionRequest
+import android.webkit.WebResourceRequest
+import androidx.compose.runtime.key
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+
 import android.Manifest
 import android.app.AlarmManager
 import android.app.admin.DevicePolicyManager
@@ -267,10 +274,24 @@ class MainActivity : ComponentActivity() {
 
     private fun wireTab(tab: BrowserTab) {
         tab.webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                val url = request.url.toString()
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    return false // Let WebView handle all web links and auth redirects internally
+                }
+                return try {
+                    val intent = Intent(Intent.ACTION_VIEW, request.url)
+                    startActivity(intent)
+                    true
+                } catch (e: Exception) {
+                    true
+                }
+            }
+
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
                 tab.currentUrl = url
                 tab.isLoading = true
-                tab.progress = 0
+                tab.progress = 10
                 if (tabs.getOrNull(activeTabIndex) == tab) {
                     addressText = url
                 }
@@ -297,6 +318,10 @@ class MainActivity : ComponentActivity() {
 
             override fun onReceivedTitle(view: WebView, title: String?) {
                 tab.title = title ?: ""
+            }
+
+            override fun onPermissionRequest(request: PermissionRequest) {
+                request.grant(request.resources)
             }
 
             override fun onShowFileChooser(
@@ -382,6 +407,8 @@ class MainActivity : ComponentActivity() {
     ) {
         val tab = tabs.getOrNull(activeTabIndex)
         val s = SpacingTokens.Spacing
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val focusManager = LocalFocusManager.current
         val isLoading = tab?.isLoading == true || (tab?.progress ?: 100) < 100
 
         Column(
@@ -465,13 +492,27 @@ class MainActivity : ComponentActivity() {
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                                         keyboardActions = KeyboardActions(onGo = {
                                             if (addressText.isNotBlank()) {
+                                                keyboardController?.hide()
+                                                focusManager.clearFocus()
                                                 tab?.load(addressText)
                                             }
                                         })
                                     )
                                 }
 
-                                if (addressText.isNotBlank()) {
+                                if (isLoading) {
+                                    IconButton(
+                                        onClick = { tab?.stopLoading() },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = EngineIcons.Close,
+                                            contentDescription = "Cancel loading",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                } else if (addressText.isNotBlank()) {
                                     IconButton(
                                         onClick = { addressText = "" },
                                         modifier = Modifier.size(24.dp)
@@ -487,31 +528,17 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 4. Action Button: Cancel Loading ("X") when loading, or Reload when done
-                        if (isLoading) {
-                            IconButton(
-                                onClick = { tab?.stopLoading() }
-                            ) {
-                                Icon(
-                                    imageVector = EngineIcons.Close,
-                                    contentDescription = "Cancel loading",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
+                        // 4. Action Button: Refresh Tab (ALWAYS present and active)
+                        IconButton(
+                            onClick = {
+                                tab?.reload()
                             }
-                        } else {
-                            IconButton(
-                                onClick = {
-                                    if (tab?.isHomePage == false) {
-                                        tab.reload()
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = EngineIcons.Refresh,
-                                    contentDescription = "Reload",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                        ) {
+                            Icon(
+                                imageVector = EngineIcons.Refresh,
+                                contentDescription = "Refresh tab",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
                         // 5. New Tab Quick Button (No redundant drawer button)
@@ -545,9 +572,23 @@ class MainActivity : ComponentActivity() {
                     .weight(1f)
             ) {
                 if (tab != null) {
+                    // Continuous WebView attachment prevents surface destruction and screen flash
+                    key(tab.id) {
+                        AndroidView(
+                            factory = {
+                                tab.webView.apply {
+                                    (parent as? ViewGroup)?.removeView(this)
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
                     if (tab.isHomePage) {
                         HomePageView(
                             onSearch = { query ->
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
                                 tab.load(query)
                                 addressText = query
                             },
@@ -559,11 +600,6 @@ class MainActivity : ComponentActivity() {
                                 showOnboarding = true
                             },
                             needsKeepAliveSetup = needsKeepAlivePermissions()
-                        )
-                    } else {
-                        AndroidView(
-                            factory = { tab.webView },
-                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }

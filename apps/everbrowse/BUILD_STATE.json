@@ -225,8 +225,8 @@
     {
       "id": "t21",
       "title": "Fix Google Colab & rich web app rendering: clean Chrome user-agent, third-party cookies, mixed content, and hardware acceleration",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Enabled hardware acceleration in AndroidManifest.xml. Configured WebSettings with mixedContentMode=MIXED_CONTENT_ALWAYS_ALLOW, domStorageEnabled=true, databaseEnabled=true, useWideViewPort=true, and loadWithOverviewMode=true. Enabled third-party cookies via CookieManager.setAcceptThirdPartyCookies so cross-origin Colab notebook iframes (*.googleusercontent.com) and auth frames load. Cleaned User-Agent by removing '; wv' and 'Version/4.0' so Google Colab treats EverBrowse as standard Chrome on Android. Added WebChromeClient.onPermissionRequest to grant notebook permissions.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/AndroidManifest.xml",

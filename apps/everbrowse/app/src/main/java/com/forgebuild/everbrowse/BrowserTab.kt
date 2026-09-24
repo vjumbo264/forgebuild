@@ -2,7 +2,10 @@ package com.forgebuild.everbrowse
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
 import android.os.Bundle
+import android.view.View
+import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.compose.runtime.getValue
@@ -31,17 +34,41 @@ class BrowserTab(
     var progress by mutableIntStateOf(100)
 
     @SuppressLint("SetJavaScriptEnabled")
-    val webView: WebView = WebView(context.applicationContext).apply {
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        settings.databaseEnabled = true
-        settings.loadsImagesAutomatically = true
-        settings.javaScriptCanOpenWindowsAutomatically = true
-        settings.mediaPlaybackRequiresUserGesture = true
-        settings.builtInZoomControls = true
-        settings.displayZoomControls = false
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
-        settings.setSupportMultipleWindows(false)
+    val webView: WebView = WebView(context).apply {
+        // Transparent background so no blinding white flash occurs during page transitions
+        setBackgroundColor(Color.TRANSPARENT)
+        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+        settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            loadsImagesAutomatically = true
+            javaScriptCanOpenWindowsAutomatically = true
+            mediaPlaybackRequiresUserGesture = false
+            builtInZoomControls = true
+            displayZoomControls = false
+            setSupportZoom(true)
+            useWideViewPort = true
+            loadWithOverviewMode = true
+            allowFileAccess = true
+            allowContentAccess = true
+            cacheMode = WebSettings.LOAD_DEFAULT
+            setSupportMultipleWindows(false)
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+            // Clean User-Agent: strip "; wv" and "Version/4.0 " so Google Colab, Google Docs,
+            // and modern interactive web apps treat EverBrowse as standard Chrome on Android
+            val rawUa = userAgentString
+            userAgentString = rawUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+        }
+
+        // Enable third-party and cross-origin cookies so Colab notebook iframes (*.googleusercontent.com)
+        // and OAuth authentication frames work seamlessly without blank screens
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(this@apply, true)
+        }
     }
 
     var restoredFromState = false
@@ -66,7 +93,7 @@ class BrowserTab(
             isHomePage = false
             currentUrl = resolved
             isLoading = true
-            progress = 0
+            progress = 10
             webView.loadUrl(resolved)
         }
     }
@@ -80,9 +107,17 @@ class BrowserTab(
     }
 
     fun reload() {
-        if (!isHomePage) {
-            isLoading = true
-            progress = 0
+        if (isHomePage) {
+            isLoading = false
+            progress = 100
+            return
+        }
+        isLoading = true
+        progress = 15
+        val target = webView.url?.takeIf { it.isNotBlank() && it != "about:blank" } ?: currentUrl
+        if (target.isNotBlank() && target != AddressResolver.HOME_URL) {
+            webView.loadUrl(target)
+        } else {
             webView.reload()
         }
     }
