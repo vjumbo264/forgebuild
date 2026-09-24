@@ -212,6 +212,7 @@ class MainActivity : ComponentActivity() {
                         TabsDrawerSheet(
                             tabs = tabs,
                             activeTabIndex = activeTabIndex,
+                            isDesktop = currentTab?.isDesktopMode == true,
                             onSelectTab = { index ->
                                 activeTabIndex = index
                                 val t = tabs.getOrNull(index)
@@ -595,7 +596,7 @@ class MainActivity : ComponentActivity() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // Leading Site / Security Icon
-                                val isSecure = tab?.url?.startsWith("https://") == true
+                                val isSecure = tab?.currentUrl?.startsWith("https://") == true
                                 val leadingIcon = when {
                                     tab?.isHomePage == true -> EngineIcons.Search
                                     isSecure -> EngineIcons.Security
