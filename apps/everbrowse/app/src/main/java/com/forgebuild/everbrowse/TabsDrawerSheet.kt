@@ -48,6 +48,7 @@ fun TabsDrawerSheet(
     onNewTab: () -> Unit,
     onCloseAllTabs: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onOpenDownloads: () -> Unit,
     onOpenKeepAlive: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
@@ -85,9 +86,7 @@ fun TabsDrawerSheet(
                         )
                     }
                 }
-
                 Spacer(Modifier.width(s.xs))
-
                 Text(
                     text = "Tabs",
                     style = MaterialTheme.typography.titleLarge,
@@ -95,7 +94,6 @@ fun TabsDrawerSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-
                 Badge(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -107,7 +105,6 @@ fun TabsDrawerSheet(
                         fontWeight = FontWeight.Bold
                     )
                 }
-
                 IconButton(onClick = onCloseDrawer) {
                     Icon(
                         imageVector = EngineIcons.Close,
@@ -126,6 +123,62 @@ fun TabsDrawerSheet(
                 Icon(EngineIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(s.xs))
                 Text("New Tab", style = MaterialTheme.typography.labelLarge)
+            }
+
+            // --- Downloads Modern Action Card ---
+            val activeDownloadsCount = DownloadCoordinator.activeCount
+            val totalDownloadsCount = DownloadCoordinator.downloads.size
+            Card(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = if (activeDownloadsCount > 0) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    }
+                ),
+                onClick = onOpenDownloads,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = s.sm, vertical = s.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = EngineIcons.Download,
+                        contentDescription = null,
+                        tint = if (activeDownloadsCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(s.xs))
+                    Text(
+                        text = "Downloads",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = if (activeDownloadsCount > 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (activeDownloadsCount > 0) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ) {
+                            Text(
+                                text = "$activeDownloadsCount downloading",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else if (totalDownloadsCount > 0) {
+                        Text(
+                            text = "$totalDownloadsCount",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             // --- Desktop Site Mode Modern Toggle Card ---
@@ -153,9 +206,7 @@ fun TabsDrawerSheet(
                         tint = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
-
                     Spacer(Modifier.width(s.xs))
-
                     Text(
                         text = "Desktop Site",
                         style = MaterialTheme.typography.labelLarge,
@@ -163,7 +214,6 @@ fun TabsDrawerSheet(
                         color = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-
                     Switch(
                         checked = isDesktop,
                         onCheckedChange = { onToggleDesktopMode() },
@@ -230,9 +280,7 @@ fun TabsDrawerSheet(
                                     )
                                 }
                             }
-
                             Spacer(Modifier.width(s.xs))
-
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = tab.displayTitle,
@@ -250,7 +298,6 @@ fun TabsDrawerSheet(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-
                             IconButton(
                                 onClick = { onCloseTab(index) },
                                 modifier = Modifier.size(32.dp)
@@ -283,7 +330,6 @@ fun TabsDrawerSheet(
                     Spacer(Modifier.width(s.xxs))
                     Text("Keep-Alive", style = MaterialTheme.typography.labelMedium)
                 }
-
                 if (tabs.size > 1) {
                     TextButton(onClick = onCloseAllTabs) {
                         Icon(EngineIcons.Delete, contentDescription = null, modifier = Modifier.size(16.dp))

@@ -582,9 +582,9 @@
     },
     {
       "id": "t55",
-      "title": "Append operator instruction #13 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v11",
+      "title": "Append operator instructions #13 and #14 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v11",
       "status": "done",
-      "notes": "Appended instruction #13 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t55-t60 in apps/everbrowse/BUILD_STATE.json.",
+      "notes": "Appended instructions #13 and #14 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t55-t60 in apps/everbrowse/BUILD_STATE.json.",
       "commits": [],
       "files": [
         "PROMPT_HISTORY/everbrowse.md",
@@ -594,8 +594,8 @@
     {
       "id": "t56",
       "title": "Add FileProvider configuration and storage permissions in AndroidManifest.xml, plus runtime permission request for storage before downloading",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Added FileProvider authority in AndroidManifest.xml and res/xml/file_paths.xml. Added requestLegacyExternalStorage and unconstrained WRITE_EXTERNAL_STORAGE/READ_EXTERNAL_STORAGE permissions. Upgraded storage permission launcher in MainActivity to RequestMultiplePermissions, prompting runtime storage/notification permissions before executing downloads.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/AndroidManifest.xml",
@@ -606,8 +606,8 @@
     {
       "id": "t57",
       "title": "Overhaul DownloadCoordinator with robust HTTP connection (User-Agent, headers, cookies, redirect loop), MediaStore relative path, direct public Downloads fallback, media scanning, and system notifications with progress and open-file intent",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Overhauled DownloadCoordinator: added manual HTTP->HTTPS redirect following up to 6 hops; passed Web cookie, User-Agent, and Referer headers; added data: URI decoding support; ensured MediaStore.Downloads sets RELATIVE_PATH = Environment.DIRECTORY_DOWNLOADS; dual-saved to public Downloads folder with MediaScannerConnection indexing; added system notification channel with live download progress bar, content size/percentage, tap-to-open PendingIntent with FileProvider, and failed state notifications.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
@@ -616,8 +616,8 @@
     {
       "id": "t58",
       "title": "Build Material 3 Expressive DownloadManagerSheet with active download progress, completed downloads list, tap-to-open, share, delete, open Downloads folder, and wire into top bar and drawer sheet",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Created DownloadManagerSheet with Google Material 3 Expressive design: header with active count badge, 'Open Downloads folder' and 'Clear history' actions; active downloads card with animated EngineLinearWavyProgress, downloaded/total size, and Cancel button; completed downloads list with file-type icons, size, date, tap-to-open via FileProvider, share, and delete actions; failed downloads with retry; and expressive empty state. Integrated downloads action into TabsDrawerSheet and top navigation bar with active download badge.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadManagerSheet.kt",
@@ -628,8 +628,8 @@
     {
       "id": "t59",
       "title": "Validate build configuration, XML resources, and Kotlin Compose syntax for everbrowse-v11",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Validated AndroidManifest.xml and file_paths.xml with ElementTree parser. Validated Kotlin syntax, balanced braces, and Compose parameters across BrowserEngine.kt, DownloadManagerSheet.kt, TabsDrawerSheet.kt, and MainActivity.kt.",
       "commits": [],
       "files": []
     },

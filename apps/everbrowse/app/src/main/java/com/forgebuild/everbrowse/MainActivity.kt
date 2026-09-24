@@ -113,20 +113,19 @@ class MainActivity : ComponentActivity() {
     private var showOnboarding by mutableStateOf(false)
     private var hasPromptedPermissions by mutableStateOf(false)
     private var resumeCounter by mutableIntStateOf(0)
+    private var showDownloadsSheet by mutableStateOf(false)
 
     // File-upload callback held across system picker
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingDownload: DownloadCoordinator.PendingDownload? = null
 
-    // Storage permission launcher for saving to Downloads folder
+    // Storage and notification permissions launcher for downloads
     private val storagePermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
         val pending = pendingDownload
-        if (isGranted && pending != null) {
-            triggerDownload(pending)
-        } else if (!isGranted) {
-            Toast.makeText(this, "Storage permission required to save downloads", Toast.LENGTH_SHORT).show()
+        if (pending != null) {
+            executeDownload(pending)
         }
     }
 
@@ -151,6 +150,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        DownloadCoordinator.init(this)
         BrowserKeepAliveService.start(this)
 
         if (savedInstanceState != null) {
@@ -237,6 +237,10 @@ class MainActivity : ComponentActivity() {
                                 val msg = if (currentTab?.isDesktopMode == true) "Desktop site enabled" else "Mobile site enabled"
                                 Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
                             },
+                            onOpenDownloads = {
+                                scope.launch { drawerState.close() }
+                                showDownloadsSheet = true
+                            },
                             onCloseDrawer = {
                                 scope.launch { drawerState.close() }
                             }
@@ -253,6 +257,19 @@ class MainActivity : ComponentActivity() {
 
                         if (showOnboarding) {
                             OnboardingDialog()
+                        }
+                        if (showDownloadsSheet) {
+                            DownloadManagerSheet(
+                                onDismiss = { showDownloadsSheet = false },
+                                onRetryDownload = { record ->
+                                    val pending = DownloadCoordinator.PendingDownload(
+                                        url = record.url,
+                                        suggestedName = record.fileName,
+                                        mimeType = record.mimeType
+                                    )
+                                    triggerDownload(pending)
+                                }
+                            )
                         }
                     }
                 }
@@ -472,26 +489,57 @@ class MainActivity : ComponentActivity() {
         }
 
         // Downloads save directly to system Downloads folder
-        tab.webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
+        tab.webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
             val (name, resolvedMime) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
-            val pending = DownloadCoordinator.PendingDownload(url, name, resolvedMime)
+            val pending = DownloadCoordinator.PendingDownload(
+                url = url,
+                suggestedName = name,
+                mimeType = resolvedMime,
+                userAgent = userAgent.ifBlank { tab.webView.settings.userAgentString },
+                referer = tab.currentUrl,
+                contentLength = contentLength
+            )
             triggerDownload(pending)
         }
     }
 
     private fun triggerDownload(pending: DownloadCoordinator.PendingDownload) {
         pendingDownload = pending
+        val needed = mutableListOf<String>()
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                storagePermissionLauncher.launch(permission)
-                return
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+        } else if (Build.VERSION.SDK_INT < 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
         }
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        if (needed.isNotEmpty()) {
+            Toast.makeText(this, "Requesting storage permission to save file to Downloads…", Toast.LENGTH_SHORT).show()
+            storagePermissionLauncher.launch(needed.toTypedArray())
+            return
+        }
+
+        executeDownload(pending)
+    }
+
+    private fun executeDownload(pending: DownloadCoordinator.PendingDownload) {
         Toast.makeText(this, "Downloading ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
-        DownloadCoordinator.saveToDownloads(this, pending, lifecycleScope) { ok, result ->
+        DownloadCoordinator.startDownload(this, pending, lifecycleScope) { ok, result ->
             if (ok) {
-                Toast.makeText(this@MainActivity, "Saved $result", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Saved to Downloads: $result", Toast.LENGTH_LONG).show()
             } else {
                 Toast.makeText(this@MainActivity, "Download failed: $result", Toast.LENGTH_SHORT).show()
             }
@@ -723,6 +771,33 @@ class MainActivity : ComponentActivity() {
                                     contentDescription = "Toggle desktop site",
                                     tint = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.onPrimaryContainer
                                     else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Downloads Button with Active Download Badge
+                        val activeDownloads = DownloadCoordinator.activeCount
+                        BadgedBox(
+                            badge = {
+                                if (activeDownloads > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ) {
+                                        Text(
+                                            text = "$activeDownloads",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            IconButton(onClick = { showDownloadsSheet = true }) {
+                                Icon(
+                                    imageVector = EngineIcons.Download,
+                                    contentDescription = "Downloads",
+                                    tint = if (activeDownloads > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }

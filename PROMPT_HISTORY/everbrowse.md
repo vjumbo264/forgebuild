@@ -69,3 +69,6 @@ And secondly, the issue that I'm passing through now is that if I tap on a link 
 ## 2026-09-24 — Operator instruction #13 (verbatim)
 "The browser doesn't even have a download manager, and it doesn't ask me for storage permission to save files to my downloads folder.
 Right now, I can't download files. If I download a file, the browser will say that the file is downloading, and it will say that the file has downloaded, but I don't see anything downloading anywhere. Please just fix that."
+
+## 2026-09-24 — Operator instruction #14 (verbatim)
+"The download process should also show in the notification bar. Make sure the download manager has a nice Google Material 3 UI."
