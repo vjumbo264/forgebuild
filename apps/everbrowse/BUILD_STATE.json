@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v2",
   "updated_by": "ai-session-2026-09-24",
-  "notes": "BUILD COMPLETE. everbrowse-v2 released and verified live on GitHub Releases. Addressed all operator prompt #3 requirements: status bar insets fix (statusBarsPadding), compact single-row top navigation, hamburger tab manager drawer, native home page with speed dial and search, BackHandler history navigation, and tab loading cancel button.",
+  "notes": "Operator instruction #4 received. Starting v3 fixes: uncropped address bar text, exact alarm check fix without USE_EXACT_ALARM auto-grant, battery optimization manifest & launch fix, device admin active state detection, remove duplicate right tabs button, disable swipe gesture on tabs drawer, dedicated shortcut icons on home page, and direct Downloads folder saving with storage permission handling.",
   "tasks": [
     {
       "id": "t1",
@@ -159,6 +159,54 @@
       "notes": "everbrowse-v2 verified live via GitHub Releases API: app-everbrowse-v2.apk (1.42 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t15",
+      "title": "Fix search bar text cropping with vertically centered BasicTextField and clean pill container",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t16",
+      "title": "Fix permissions: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS in manifest, exact alarms real check, device admin isAdminActive check",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t17",
+      "title": "Remove swipe gesture on tabs drawer (gesturesEnabled=false) and remove duplicate right tabs button",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t18",
+      "title": "Home screen shortcut icons: replace letter boxes with real vector iconography for web shortcuts",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t19",
+      "title": "Direct Downloads folder saving via MediaStore.Downloads with storage permission request flow",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t20",
+      "title": "Validate build config, dispatch release everbrowse-v3, verify release+APK via API, set build_complete true",
+      "status": "pending",
+      "notes": "",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -168,5 +216,5 @@
       "used": "com.forgebuild.engine.files.SafeSave via WebView setDownloadListener -> SAF ACTION_CREATE_DOCUMENT"
     }
   ],
-  "target_release": "everbrowse-v2"
+  "target_release": "everbrowse-v3"
 }
