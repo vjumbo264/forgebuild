@@ -163,10 +163,12 @@
     {
       "id": "t15",
       "title": "Fix search bar text cropping with vertically centered BasicTextField and clean pill container",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Replaced crushed OutlinedTextField with vertically centered BasicTextField inside a Material 3 pill container (Surface with CircleShape and 42dp height). Solved baseline text cropping on all screen densities.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t16",

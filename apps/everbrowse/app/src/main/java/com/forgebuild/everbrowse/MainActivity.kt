@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -22,8 +23,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,20 +37,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,12 +63,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.forgebuild.engine.permissions.EnginePermission
 import com.forgebuild.engine.permissions.PermissionWiring
@@ -84,55 +80,39 @@ import kotlinx.coroutines.launch
 /**
  * EverBrowse — ultra-persistent tabbed browser.
  *
- * Anti-refresh strategy (the whole point of the app):
- *  - configChanges in the manifest -> rotation/keyboard/theme never recreate
- *    this Activity, so WebViews are never torn down on those changes.
- *  - Tabs hold long-lived WebView instances; only the ACTIVE tab is attached
- *    to the view tree, the rest stay alive off-screen with their page state.
- *  - Full WebView state bundles are saved in onSaveInstanceState and restored
- *    in onCreate so a process death + task relaunch returns pages without a
- *    network reload.
- *  - BrowserKeepAliveService (START_STICKY + PARTIAL_WAKE_LOCK + persistent
- *    notification) keeps the process out of the LMK kill list in background.
+ * Anti-refresh strategy:
+ *  - configChanges in manifest -> Activity survives screen/keyboard/theme changes.
+ *  - Tabs hold long-lived WebView instances with JS/DOM/databases enabled.
+ *  - Full WebView state saved/restored across process death.
+ *  - BrowserKeepAliveService (START_STICKY + PARTIAL_WAKE_LOCK + persistent notification).
  */
 class MainActivity : ComponentActivity() {
 
-    // ---- browser state (survives config change because Activity survives) ----
+    // ---- browser state ----
     private val tabs = mutableStateListOf<BrowserTab>()
     private var activeTabIndex by mutableIntStateOf(0)
     private var addressText by mutableStateOf("")
-    private var downloadStatus by mutableStateOf("")
     private var showOnboarding by mutableStateOf(false)
     private var hasPromptedPermissions by mutableStateOf(false)
     private var resumeCounter by mutableIntStateOf(0)
 
-    override fun onResume() {
-        super.onResume()
-        resumeCounter++
-    }
-
-    // File-upload callback held across the system picker; NOT nulled on config
-    // change because the Activity is not recreated then.
+    // File-upload callback held across system picker
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private var pendingDownload: DownloadCoordinator.PendingDownload? = null
 
-    // SAF create-document launcher (Engine SafeSave flow for downloads).
-    private val saveLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("*/*")
-    ) { uri ->
+    // Storage permission launcher for saving to Downloads folder
+    private val storagePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
         val pending = pendingDownload
-        if (uri == null || pending == null) {
-            downloadStatus = "Download cancelled"
-            return@registerForActivityResult
-        }
-        downloadStatus = "Downloading ${pending.suggestedName}…"
-        DownloadCoordinator.save(this, pending, uri, lifecycleScope) { ok ->
-            downloadStatus = if (ok) "Saved ${pending.suggestedName}" else "Download failed"
-            Toast.makeText(this, downloadStatus, Toast.LENGTH_SHORT).show()
+        if (isGranted && pending != null) {
+            triggerDownload(pending)
+        } else if (!isGranted) {
+            Toast.makeText(this, "Storage permission required to save downloads", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // System file picker for web <input type=file> (file-upload protection).
+    // System file picker for web <input type=file>
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -142,6 +122,11 @@ class MainActivity : ComponentActivity() {
         } else null
         cb.onReceiveValue(uris)
         filePathCallback = null
+    }
+
+    override fun onResume() {
+        super.onResume()
+        resumeCounter++
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -160,7 +145,7 @@ class MainActivity : ComponentActivity() {
             intent?.dataString?.let { intent.data = null }
         }
 
-        // Check if keep-alive permissions are missing; auto-prompt on launch
+        // Auto-prompt keep-alive setup on startup if missing
         if (!hasPromptedPermissions && needsKeepAlivePermissions()) {
             showOnboarding = true
             hasPromptedPermissions = true
@@ -186,7 +171,7 @@ class MainActivity : ComponentActivity() {
                             scope.launch { drawerState.close() }
                         }
                         currentTab != null && currentTab.goBack() -> {
-                            // Handled by tab.goBack() (either went back in WebView or back to Home)
+                            // Handled by tab.goBack()
                         }
                         tabs.size > 1 -> {
                             closeTab(activeTabIndex)
@@ -200,7 +185,7 @@ class MainActivity : ComponentActivity() {
 
                 ModalNavigationDrawer(
                     drawerState = drawerState,
-                    gesturesEnabled = true,
+                    gesturesEnabled = false, // CRITICAL: Disable swipe gesture so websites scroll freely!
                     drawerContent = {
                         TabsDrawerSheet(
                             tabs = tabs,
@@ -332,16 +317,35 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Downloads -> Engine SafeSave (SAF), never DownloadManager (contract rule).
+        // Downloads save directly to system Downloads folder
         tab.webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-            val (name, _) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
-            pendingDownload = DownloadCoordinator.PendingDownload(url, name)
-            downloadStatus = "Saving $name…"
-            saveLauncher.launch(name)
+            val (name, resolvedMime) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
+            val pending = DownloadCoordinator.PendingDownload(url, name, resolvedMime)
+            triggerDownload(pending)
         }
     }
 
-    // ---------------- state save / restore (page-refresh prevention) ----------------
+    private fun triggerDownload(pending: DownloadCoordinator.PendingDownload) {
+        pendingDownload = pending
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                storagePermissionLauncher.launch(permission)
+                return
+            }
+        }
+
+        Toast.makeText(this, "Downloading ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
+        DownloadCoordinator.saveToDownloads(this, pending, lifecycleScope) { ok, result ->
+            if (ok) {
+                Toast.makeText(this@MainActivity, "Saved $result", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@MainActivity, "Download failed: $result", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ---------------- state save / restore ----------------
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
@@ -383,9 +387,9 @@ class MainActivity : ComponentActivity() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding() // CRITICAL: Fix status bar overlap!
+                .statusBarsPadding()
         ) {
-            // --- Top Navigation Bar: Compact, single-row Material 3 Expressive bar ---
+            // --- Top Navigation Bar: Single clean row, no duplicate right button ---
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth()
@@ -399,7 +403,7 @@ class MainActivity : ComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(s.xxs)
                     ) {
-                        // 1. Hamburger Menu Button (opens tab list drawer)
+                        // 1. Hamburger Menu Button (Sole tabs drawer trigger)
                         IconButton(onClick = onOpenDrawer) {
                             Icon(
                                 imageVector = EngineIcons.Menu,
@@ -408,7 +412,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 2. Home Button (instant return to Home Page)
+                        // 2. Home Button
                         IconButton(
                             onClick = {
                                 tab?.load(AddressResolver.HOME_URL)
@@ -423,41 +427,54 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Compact Search & URL Input Bar
-                        OutlinedTextField(
-                            value = addressText,
-                            onValueChange = { addressText = it },
+                        // 3. Compact Search & URL Input Bar: Vertically centered BasicTextField, NEVER cropped
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier
                                 .weight(1f)
-                                .height(44.dp),
-                            placeholder = {
-                                Text(
-                                    text = if (tab?.isHomePage == true) "Search or type URL" else "Search or URL",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium,
-                            shape = CircleShape,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(onGo = {
-                                if (addressText.isNotBlank()) {
-                                    tab?.load(addressText)
+                                .height(42.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier.weight(1f),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (addressText.isEmpty()) {
+                                        Text(
+                                            text = if (tab?.isHomePage == true) "Search or type URL" else "Search or URL",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    BasicTextField(
+                                        value = addressText,
+                                        onValueChange = { addressText = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                        keyboardActions = KeyboardActions(onGo = {
+                                            if (addressText.isNotBlank()) {
+                                                tab?.load(addressText)
+                                            }
+                                        })
+                                    )
                                 }
-                            }),
-                            trailingIcon = {
+
                                 if (addressText.isNotBlank()) {
                                     IconButton(
                                         onClick = { addressText = "" },
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size(24.dp)
                                     ) {
                                         Icon(
                                             imageVector = EngineIcons.Close,
@@ -468,15 +485,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                        )
+                        }
 
-                        // 4. Cancel Loading / Reload Button
+                        // 4. Action Button: Cancel Loading ("X") when loading, or Reload when done
                         if (isLoading) {
-                            // CANCEL BUTTON: cancels tab loading!
                             IconButton(
-                                onClick = {
-                                    tab?.stopLoading()
-                                }
+                                onClick = { tab?.stopLoading() }
                             ) {
                                 Icon(
                                     imageVector = EngineIcons.Close,
@@ -485,13 +499,10 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         } else {
-                            // RELOAD BUTTON
                             IconButton(
                                 onClick = {
-                                    if (tab?.isHomePage == true) {
-                                        // On home page, reload does nothing or refreshes
-                                    } else {
-                                        tab?.reload()
+                                    if (tab?.isHomePage == false) {
+                                        tab.reload()
                                     }
                                 }
                             ) {
@@ -503,25 +514,19 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 5. Tabs Counter Button (pill badge)
-                        Surface(
-                            onClick = onOpenDrawer,
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(34.dp)
+                        // 5. New Tab Quick Button (No redundant drawer button)
+                        IconButton(
+                            onClick = { newTab(AddressResolver.HOME_URL) }
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "${tabs.size}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
+                            Icon(
+                                imageVector = EngineIcons.Add,
+                                contentDescription = "New tab",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
-                    // --- Expressive Loading Progress (thin wavy bar) ---
+                    // --- Expressive Loading Progress ---
                     if (isLoading) {
                         EngineLinearWavyProgress(
                             progress = { ((tab?.progress ?: 0) / 100f).coerceIn(0.05f, 1f) },
@@ -541,7 +546,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 if (tab != null) {
                     if (tab.isHomePage) {
-                        // Native Home Page
                         HomePageView(
                             onSearch = { query ->
                                 tab.load(query)
@@ -557,7 +561,6 @@ class MainActivity : ComponentActivity() {
                             needsKeepAliveSetup = needsKeepAlivePermissions()
                         )
                     } else {
-                        // Web Page
                         AndroidView(
                             factory = { tab.webView },
                             modifier = Modifier.fillMaxSize()
@@ -571,7 +574,6 @@ class MainActivity : ComponentActivity() {
     // ---------------- permissions & admin onboarding ----------------
 
     private fun needsKeepAlivePermissions(): Boolean {
-        // Reference resumeCounter to trigger Compose recomposition when returning from Settings
         val _counter = resumeCounter
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val batteryExempt = if (Build.VERSION.SDK_INT >= 23) pm.isIgnoringBatteryOptimizations(packageName) else true
@@ -587,6 +589,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun OnboardingDialog() {
+        val _counter = resumeCounter
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         val batteryExempt = if (Build.VERSION.SDK_INT >= 23) pm.isIgnoringBatteryOptimizations(packageName) else true
         val exactAlarmAllowed = if (Build.VERSION.SDK_INT >= 31) {
@@ -596,6 +599,10 @@ class MainActivity : ComponentActivity() {
         val notifGranted = if (Build.VERSION.SDK_INT >= 33) {
             PermissionWiring.isGranted(this, Manifest.permission.POST_NOTIFICATIONS)
         } else true
+
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val adminComponent = ComponentName(this, AdminReceiver::class.java)
+        val adminActive = dpm.isAdminActive(adminComponent)
 
         AlertDialog(
             onDismissRequest = { showOnboarding = false },
@@ -614,8 +621,16 @@ class MainActivity : ComponentActivity() {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.sm)) {
                     Text(
-                        "Grant these permissions so Android's memory killer never closes or refreshes your open tabs.",
+                        "Grant these permissions so EverBrowse stays resident and never refreshes your open tabs in the background.",
                         style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    // Battery Optimization
+                    PermissionRow(
+                        title = "Ignore Battery Optimization",
+                        subtitle = "Lets browser process stay alive in background",
+                        isGranted = batteryExempt,
+                        onClick = { requestIgnoreBatteryOpt() }
                     )
 
                     // Exact Alarms
@@ -623,15 +638,7 @@ class MainActivity : ComponentActivity() {
                         title = "Exact Alarms",
                         subtitle = "Timed watchdog keep-alive",
                         isGranted = exactAlarmAllowed,
-                        onClick = { PermissionWiring.requestExactAlarm(this@MainActivity) }
-                    )
-
-                    // Battery Optimization
-                    PermissionRow(
-                        title = "Unrestricted Battery",
-                        subtitle = "Ignore battery optimization",
-                        isGranted = batteryExempt,
-                        onClick = { requestIgnoreBatteryOpt() }
+                        onClick = { requestExactAlarm() }
                     )
 
                     // Notifications
@@ -644,16 +651,18 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    // Device Admin (Optional)
+                    // Device Admin (Correctly checks isAdminActive)
                     PermissionRow(
-                        title = "Device Admin (Optional)",
-                        subtitle = "Maximum process persistence",
-                        isGranted = false,
+                        title = "Device Admin",
+                        subtitle = if (adminActive) "Device admin active" else "Optional process persistence",
+                        isGranted = adminActive,
                         onClick = {
-                            PermissionWiring.requestDeviceAdmin(
-                                this@MainActivity, AdminReceiver::class.java,
-                                "Lets EverBrowse resist being killed so your tabs stay loaded."
-                            )
+                            if (!adminActive) {
+                                PermissionWiring.requestDeviceAdmin(
+                                    this@MainActivity, AdminReceiver::class.java,
+                                    "Lets EverBrowse resist being killed so your tabs stay loaded."
+                                )
+                            }
                         }
                     )
                 }
@@ -722,18 +731,41 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestExactAlarm() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            runCatching {
+                startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                        .setData(Uri.parse("package:$packageName"))
+                )
+            }.onFailure {
+                runCatching {
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.parse("package:$packageName"))
+                    )
+                }
+            }
+        } else {
+            Toast.makeText(this, "Exact alarms permitted on this Android version", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun requestIgnoreBatteryOpt() {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         if (Build.VERSION.SDK_INT >= 23 && !pm.isIgnoringBatteryOptimizations(packageName)) {
             runCatching {
-                startActivity(
-                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                        .setData(Uri.parse("package:$packageName"))
-                )
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:$packageName"))
+                startActivity(intent)
             }.onFailure {
-                // Fallback to battery optimization settings list
                 runCatching {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    startActivity(intent)
+                }.onFailure {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(Uri.parse("package:$packageName"))
+                    startActivity(intent)
                 }
             }
         } else {
