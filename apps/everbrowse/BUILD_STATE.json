@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v11",
-  "updated_by": "operator prompt #13 & #14 \u2014 Material 3 Download Manager, notification tray progress & storage permissions",
+  "updated_by": "operator prompt #15 \u2014 Remove desktop mode and download button from top bar",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -640,6 +640,24 @@
       "notes": "Dispatched release.yml workflow (run 36069218398) for commit db1ccf6. Workflow completed successfully. Live release everbrowse-v11 verified via GitHub API with published asset app-everbrowse-v11.apk (1,607,087 bytes).",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t61",
+      "title": "Append operator prompt #15 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v12",
+      "status": "done",
+      "notes": "Appended instruction #15 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t61-t63 in BUILD_STATE.json."
+    },
+    {
+      "id": "t62",
+      "title": "Remove Desktop Site mode toggle button and Downloads button from top bar in MainActivity.kt, giving search bar maximum width",
+      "status": "done",
+      "notes": "Removed Desktop Site mode toggle button and Downloads button from top app bar in MainActivity.kt, leaving search bar with maximum horizontal width while keeping full access in TabsDrawerSheet."
+    },
+    {
+      "id": "t63",
+      "title": "Dispatch release workflow for everbrowse-v12, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml for everbrowse-v12."
     }
   ],
   "substitutions": [
@@ -649,5 +667,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v11"
+  "target_release": "everbrowse-v12"
 }

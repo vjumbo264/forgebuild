@@ -751,58 +751,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 4. Desktop Site Mode Toggle Button with active pill container
-                        Surface(
-                            shape = CircleShape,
-                            color = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    tab?.let {
-                                        it.toggleDesktopMode()
-                                        val msg = if (it.isDesktopMode) "Desktop site enabled" else "Mobile site enabled"
-                                        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = EngineIcons.DesktopWindows,
-                                    contentDescription = "Toggle desktop site",
-                                    tint = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // Downloads Button with Active Download Badge
-                        val activeDownloads = DownloadCoordinator.activeCount
-                        BadgedBox(
-                            badge = {
-                                if (activeDownloads > 0) {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ) {
-                                        Text(
-                                            text = "$activeDownloads",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        ) {
-                            IconButton(onClick = { showDownloadsSheet = true }) {
-                                Icon(
-                                    imageVector = EngineIcons.Download,
-                                    contentDescription = "Downloads",
-                                    tint = if (activeDownloads > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // 5. Action Button: Refresh Tab (ALWAYS present and active - forces fresh reload)
+                        // 4. Action Button: Refresh Tab (ALWAYS present and active - forces fresh reload)
                         IconButton(
                             onClick = {
                                 if (tab?.isHomePage == true) {

@@ -72,3 +72,6 @@ Right now, I can't download files. If I download a file, the browser will say th
 
 ## 2026-09-24 — Operator instruction #14 (verbatim)
 "The download process should also show in the notification bar. Make sure the download manager has a nice Google Material 3 UI."
+
+## 2026-09-24 — Operator instruction #15 (verbatim)
+"Remove the desktop mode and download button from the top bar since it is compressing the search bar."
