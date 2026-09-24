@@ -126,10 +126,13 @@
     {
       "id": "t11",
       "title": "Navigation back gesture & tab loading cancel: BackHandler history and stop-loading button",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Integrated Jetpack Compose BackHandler so back gesture / system back navigates to previous web pages in history instead of closing the app. If history is exhausted on a web page, returns to the native home page. If at home with multiple tabs, closes the active tab. Also added dedicated loading cancel button in the top navigation bar to abort in-flight tab loading.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt"
+      ]
     },
     {
       "id": "t12",
