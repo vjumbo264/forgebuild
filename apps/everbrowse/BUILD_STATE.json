@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
-  "current_release": "everbrowse-v2",
-  "updated_by": "ai-session-2026-09-24",
-  "notes": "Operator instruction #4 received. Starting v3 fixes: uncropped address bar text, exact alarm check fix without USE_EXACT_ALARM auto-grant, battery optimization manifest & launch fix, device admin active state detection, remove duplicate right tabs button, disable swipe gesture on tabs drawer, dedicated shortcut icons on home page, and direct Downloads folder saving with storage permission handling.",
+  "build_complete": false,
+  "current_release": "everbrowse-v4",
+  "updated_by": "session-update-colab-empty-fix",
+  "notes": "Operator instruction #6 received: Fix for sites like Google Colab appearing empty. Seeding tasks t25-t28.",
   "tasks": [
     {
       "id": "t1",
@@ -263,6 +263,45 @@
       "notes": "everbrowse-v4 verified live via GitHub Releases API: app-everbrowse-v4.apk (1.40 MB) + forgebuild-manifest.json. Google Colab rendering, always-active refresh button, and zero-flash search/navigation fully operational.",
       "commits": [],
       "files": []
+    },
+    {
+      "id": "t25",
+      "title": "Append operator instruction #6 to PROMPT_HISTORY, seed tasks in BUILD_STATE.json, set target_release to everbrowse-v5",
+      "status": "done",
+      "notes": "Appended instruction #6 to PROMPT_HISTORY/everbrowse.md. Seeded tasks t25-t28 in apps/everbrowse/BUILD_STATE.json.",
+      "commits": [],
+      "files": [
+        "PROMPT_HISTORY/everbrowse.md",
+        "apps/everbrowse/BUILD_STATE.json"
+      ]
+    },
+    {
+      "id": "t26",
+      "title": "Fix Google Colab & rich web apps: restore opaque WebView background (fix hardware canvas/Monaco blanking), implement per-tab Desktop Mode with auto-detection for Colab, fix shouldOverrideUrlLoading to allow blob:/data:/about:, enable multi-window popups with onCreateWindow, add JS dialog handlers, and configure offscreen pre-rastering",
+      "status": "in_progress",
+      "notes": "Implementing comprehensive rendering and compatibility fixes for Google Colab and modern interactive web apps.",
+      "commits": [],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/TabsDrawerSheet.kt"
+      ]
+    },
+    {
+      "id": "t27",
+      "title": "Validate build configuration and local test/compilation for everbrowse-v5",
+      "status": "pending",
+      "notes": "Compile app, verify kotlin and resources, run assembleRelease.",
+      "commits": [],
+      "files": []
+    },
+    {
+      "id": "t28",
+      "title": "Dispatch release workflow for everbrowse-v5, verify release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v5 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "commits": [],
+      "files": []
     }
   ],
   "substitutions": [
@@ -272,5 +311,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v4"
+  "target_release": "everbrowse-v5"
 }

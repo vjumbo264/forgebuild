@@ -29,3 +29,6 @@ also, I forgot to mention the top navigation. Panel of the browser is messed up.
 Also, if I tap on the refresh button, it should refresh the tab. Right now, it doesn't refresh the tab, so please just fix that so that when I tap on the refresh button, it should actually refresh the tab.
 
 When I type something in the search bar and click go, it currently flashes the screen. I don't need that flash on the screen. If you check, you'll see that there's something that just displays on my, like it first flashes the screen for some time before the site starts loading. I just need it to be direct, so once I type something and click go, it just starts going. I don't see anything that will interrupt my vision of the site, of the app."
+
+## 2026-09-24 — Operator instruction #6 (verbatim)
+"Fix for sites like Google Colab appearing empty"
