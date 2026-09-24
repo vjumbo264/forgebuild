@@ -2,6 +2,7 @@ package com.forgebuild.everbrowse
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,18 +13,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,7 +46,8 @@ import com.forgebuild.engine.ui.theme.SpacingTokens
 private data class QuickShortcut(
     val name: String,
     val url: String,
-    val initial: String
+    val icon: ImageVector,
+    val category: String
 )
 
 @Composable
@@ -60,12 +64,12 @@ fun HomePageView(
 
     val shortcuts = remember {
         listOf(
-            QuickShortcut("Google", "https://www.google.com", "G"),
-            QuickShortcut("Wikipedia", "https://www.wikipedia.org", "W"),
-            QuickShortcut("GitHub", "https://github.com", "GH"),
-            QuickShortcut("DuckDuckGo", "https://duckduckgo.com", "DDG"),
-            QuickShortcut("Reddit", "https://www.reddit.com", "R"),
-            QuickShortcut("Hacker News", "https://news.ycombinator.com", "HN")
+            QuickShortcut("Google", "https://www.google.com", EngineIcons.Search, "Search"),
+            QuickShortcut("Wikipedia", "https://www.wikipedia.org", EngineIcons.Language, "Reference"),
+            QuickShortcut("GitHub", "https://github.com", EngineIcons.Code, "Development"),
+            QuickShortcut("DuckDuckGo", "https://duckduckgo.com", EngineIcons.Security, "Privacy"),
+            QuickShortcut("Reddit", "https://www.reddit.com", EngineIcons.Forum, "Community"),
+            QuickShortcut("Hacker News", "https://news.ycombinator.com", EngineIcons.Newspaper, "Tech News")
         )
     }
 
@@ -83,7 +87,7 @@ fun HomePageView(
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(68.dp)
         ) {
             Icon(
                 imageVector = EngineIcons.Security,
@@ -99,6 +103,7 @@ fun HomePageView(
             Text(
                 text = "EverBrowse",
                 style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(s.xxs))
@@ -111,25 +116,52 @@ fun HomePageView(
 
         Spacer(modifier = Modifier.height(s.xs))
 
-        // --- Central Search Bar ---
-        OutlinedTextField(
-            value = searchInput,
-            onValueChange = { searchInput = it },
-            placeholder = {
-                Text(
-                    text = "Search or type web address…",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            leadingIcon = {
+        // --- Central Search Bar (Never cropped, vertically centered) ---
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = s.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     imageVector = EngineIcons.Search,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
-            },
-            trailingIcon = {
+                Spacer(Modifier.width(s.xs))
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (searchInput.isEmpty()) {
+                        Text(
+                            text = "Search or type web address…",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    BasicTextField(
+                        value = searchInput,
+                        onValueChange = { searchInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            if (searchInput.isNotBlank()) onSearch(searchInput)
+                        })
+                    )
+                }
                 if (searchInput.isNotBlank()) {
                     IconButton(onClick = { onSearch(searchInput) }) {
                         Icon(
@@ -139,27 +171,6 @@ fun HomePageView(
                         )
                     }
                 }
-            },
-            singleLine = true,
-            shape = MaterialTheme.shapes.extraLarge,
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = MaterialTheme.typography.bodyLarge,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = {
-                if (searchInput.isNotBlank()) onSearch(searchInput)
-            })
-        )
-
-        // --- Quick Search Go Button ---
-        if (searchInput.isNotBlank()) {
-            Button(
-                onClick = { onSearch(searchInput) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Icon(EngineIcons.Search, contentDescription = null)
-                Spacer(Modifier.width(s.xs))
-                Text("Search or Go", style = MaterialTheme.typography.labelLarge)
             }
         }
 
@@ -188,10 +199,11 @@ fun HomePageView(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Keep-Alive Setup Required",
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = "Grant exact alarms & background usage so pages never refresh.",
+                            text = "Grant exact alarms & battery exemption so pages never refresh.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -230,6 +242,7 @@ fun HomePageView(
                     Text(
                         text = "Protected",
                         style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -238,10 +251,11 @@ fun HomePageView(
 
         Spacer(modifier = Modifier.height(s.xs))
 
-        // --- Speed Dial / Quick Shortcuts ---
+        // --- Speed Dial / Quick Shortcuts with Real Icons ---
         Text(
-            text = "Shortcuts",
+            text = "Frequently Visited",
             style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Start
@@ -275,7 +289,7 @@ fun HomePageView(
 
         Spacer(modifier = Modifier.height(s.sm))
 
-        // --- Quick Tab & Protection Controls ---
+        // --- Quick Tab & Navigation Controls ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(s.xs)
@@ -294,7 +308,7 @@ fun HomePageView(
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Icon(EngineIcons.Tabs, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(EngineIcons.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(s.xxs))
                 Text("Open Tabs")
             }
@@ -322,21 +336,33 @@ private fun ShortcutItem(
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(40.dp)
             ) {
-                Text(
-                    text = shortcut.initial,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = shortcut.icon,
+                        contentDescription = shortcut.name,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
             Spacer(Modifier.height(s.xxs))
             Text(
                 text = shortcut.name,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = shortcut.category,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

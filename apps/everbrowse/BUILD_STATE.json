@@ -194,10 +194,14 @@
     {
       "id": "t18",
       "title": "Home screen shortcut icons: replace letter boxes with real vector iconography for web shortcuts",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Replaced generic letter boxes with distinct Material vector icons for all home screen shortcuts (Google, Wikipedia, GitHub, DuckDuckGo, Reddit, Hacker News) using EngineIcons with dedicated iconography.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIcons.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIconsGenerated.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/HomePageView.kt"
+      ]
     },
     {
       "id": "t19",

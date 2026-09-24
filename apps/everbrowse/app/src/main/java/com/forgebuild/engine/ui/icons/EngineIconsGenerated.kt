@@ -131,4 +131,35 @@ internal object EngineIconsGenerated {
             .addPath(PathParser().parsePathString("M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
+
+    val Language: ImageVector by lazy {
+        ImageVector.Builder(name = "Language", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2zm6.93,6h-2.95c-0.32,-1.25 -0.78,-2.45 -1.38,-3.56 1.84,0.63 3.37,1.91 4.33,3.56zM12,4.04c0.83,1.2 1.48,2.53 1.91,3.96h-3.82c0.43,-1.43 1.08,-2.76 1.91,-3.96zM4.26,14C4.1,13.36 4,12.69 4,12s0.1,-1.36 0.26,-2h3.38c-0.08,0.66 -0.14,1.32 -0.14,2 0,0.68 0.06,1.34 0.14,2H4.26zm0.82,2h2.95c0.32,1.25 0.78,2.45 1.38,3.56 -1.84,-0.63 -3.37,-1.9 -4.33,-3.56zm2.95,-8H5.08c0.96,-1.66 2.49,-2.93 4.33,-3.56C8.81,5.55 8.35,6.75 8.03,8zM12,19.96c-0.83,-1.2 -1.48,-2.53 -1.91,-3.96h3.82c-0.43,1.43 -1.08,2.76 -1.91,3.96zM14.34,14H9.66c-0.09,-0.66 -0.16,-1.32 -0.16,-2 0,-0.68 0.07,-1.35 0.16,-2h4.68c0.09,0.65 0.16,1.32 0.16,2 0,0.68 -0.07,1.34 -0.16,2zm0.25,5.56c0.6,-1.11 1.06,-2.31 1.38,-3.56h2.95c-0.96,1.65 -2.49,2.93 -4.33,3.56zM16.36,14c0.08,-0.66 0.14,-1.32 0.14,-2 0,-0.68 -0.06,-1.34 -0.14,-2h3.38c0.16,0.64 0.26,1.31 0.26,2s-0.1,1.36 -0.26,2h-3.38z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Code: ImageVector by lazy {
+        ImageVector.Builder(name = "Code", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M9.4,16.6L4.8,12l4.6,-4.6L8,6l-6,6 6,6 1.4,-1.4zm5.2,0l4.6,-4.6 -4.6,-4.6L16,6l6,6 -6,6 -1.4,-1.4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Forum: ImageVector by lazy {
+        ImageVector.Builder(name = "Forum", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M21,6h-2v9H6v2c0,0.55 0.45,1 1,1h11l4,4V7c0,-0.55 -0.45,-1 -1,-1zm-4,6V3c0,-0.55 -0.45,-1 -1,-1H3c-0.55,0 -1,0.45 -1,1v14l4,-4h10c0.55,0 1,-0.45 1,-1z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Newspaper: ImageVector by lazy {
+        ImageVector.Builder(name = "Newspaper", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M22,3l-1.67,1.67L18.67,3 17,4.67 15.33,3 13.67,4.67 12,3l-1.67,1.67L8.67,3 7,4.67 5.33,3 3.67,4.67 2,3v18l1.67,-1.67L5.33,21 7,19.33 8.67,21l1.66,-1.67L12,21l1.67,-1.67L15.33,21 17,19.33 18.67,21l1.66,-1.67L22,21V3zM18,17H6v-2h12v2zm0,-4H6v-2h12v2zm0,-4H6V7h12v2z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+    val Folder: ImageVector by lazy {
+        ImageVector.Builder(name = "Folder", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
 }

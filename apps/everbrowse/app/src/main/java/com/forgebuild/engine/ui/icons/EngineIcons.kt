@@ -26,4 +26,10 @@ object EngineIcons {
     val Tabs: ImageVector get() = EngineIconsGenerated.Tabs
     val Check: ImageVector get() = EngineIconsGenerated.Check
     val Delete: ImageVector get() = EngineIconsGenerated.Delete
+
+    val Language: ImageVector get() = EngineIconsGenerated.Language
+    val Code: ImageVector get() = EngineIconsGenerated.Code
+    val Forum: ImageVector get() = EngineIconsGenerated.Forum
+    val Newspaper: ImageVector get() = EngineIconsGenerated.Newspaper
+    val Folder: ImageVector get() = EngineIconsGenerated.Folder
 }
