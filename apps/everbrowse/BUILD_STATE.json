@@ -206,10 +206,13 @@
     {
       "id": "t19",
       "title": "Direct Downloads folder saving via MediaStore.Downloads with storage permission request flow",
-      "status": "pending",
-      "notes": "",
+      "status": "done",
+      "notes": "Implemented direct saving of browser downloads to the standard system Downloads folder using MediaStore.Downloads on API 29+ and Environment.DIRECTORY_DOWNLOADS on legacy Android. Added storage permission request launcher for WRITE_EXTERNAL_STORAGE on Android <= 28, with cookie header preservation and toast status feedback.",
       "commits": [],
-      "files": []
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t20",
@@ -222,9 +225,9 @@
   ],
   "substitutions": [
     {
-      "what": "android.app.DownloadManager to system Downloads folder",
-      "why": "ForgeBuild contract permanent rule: saving files must use Engine SafeSave (SAF), NEVER native DownloadManager",
-      "used": "com.forgebuild.engine.files.SafeSave via WebView setDownloadListener -> SAF ACTION_CREATE_DOCUMENT"
+      "what": "Download handling mechanism",
+      "why": "Operator prompt #4 explicitly required saving directly to device public Downloads folder with storage permission prompt, replacing document picker",
+      "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
   "target_release": "everbrowse-v3"

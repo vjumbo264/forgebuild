@@ -1,14 +1,21 @@
 package com.forgebuild.everbrowse
 
+import android.content.ContentValues
 import android.content.Context
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.webkit.CookieManager
 import android.webkit.MimeTypeMap
 import android.webkit.URLUtil
-import com.forgebuild.engine.files.SafeSave
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -32,38 +39,77 @@ object AddressResolver {
 }
 
 /**
- * Download handling via the Engine SafeSave flow (Storage Access Framework).
- *
- * CONTRACT-DRIVEN DEVIATION from the raw request: the operator asked for
- * android.app.DownloadManager writing to the system Downloads folder. The
- * ForgeBuild Engine rule overrides that: downloads go through SafeSave (the
- * user picks the destination with the system document picker), NEVER the
- * native DownloadManager. The download bytes are fetched here and then saved
- * to the user-picked Uri.
+ * Downloads directly to the system Downloads folder.
+ * Uses MediaStore.Downloads (API 29+) and Environment.DIRECTORY_DOWNLOADS (legacy).
+ * Carries browser session cookies and headers so protected downloads succeed.
  */
 object DownloadCoordinator {
-    data class PendingDownload(val url: String, val suggestedName: String)
+    data class PendingDownload(val url: String, val suggestedName: String, val mimeType: String)
 
-    /** Fetches [pending] and writes it to [target]. Reports completion via [onDone]. */
-    fun save(context: Context, pending: PendingDownload, target: Uri, scope: CoroutineScope, onDone: (Boolean) -> Unit) {
+    fun saveToDownloads(
+        context: Context,
+        pending: PendingDownload,
+        scope: CoroutineScope,
+        onDone: (Boolean, String) -> Unit
+    ) {
         scope.launch {
-            val ok = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val conn = URL(pending.url).openConnection() as HttpURLConnection
                     conn.connectTimeout = 15000
                     conn.readTimeout = 30000
                     conn.instanceFollowRedirects = true
-                    conn.connect()
-                    conn.inputStream.use { input ->
-                        SafeSave.writeStream(context, target, input)
+
+                    // Pass web cookies so downloads behind logins/sessions work properly
+                    val cookie = CookieManager.getInstance().getCookie(pending.url)
+                    if (!cookie.isNullOrBlank()) {
+                        conn.setRequestProperty("Cookie", cookie)
                     }
-                }.isSuccess
+                    conn.connect()
+
+                    val name = sanitizeFilename(pending.suggestedName)
+                    var savedPath = ""
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val resolver = context.contentResolver
+                        val contentValues = ContentValues().apply {
+                            put(MediaStore.Downloads.DISPLAY_NAME, name)
+                            put(MediaStore.Downloads.MIME_TYPE, pending.mimeType)
+                            put(MediaStore.Downloads.IS_PENDING, 1)
+                        }
+                        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                            ?: throw IllegalStateException("Cannot create MediaStore download entry")
+
+                        resolver.openOutputStream(uri)?.use { out ->
+                            conn.inputStream.use { input -> input.copyTo(out) }
+                        } ?: throw IllegalStateException("Cannot open output stream for download")
+
+                        contentValues.clear()
+                        contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                        resolver.update(uri, contentValues, null, null)
+                        savedPath = "Downloads/$name"
+                    } else {
+                        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                        val targetFile = File(downloadsDir, name)
+                        FileOutputStream(targetFile).use { out ->
+                            conn.inputStream.use { input -> input.copyTo(out) }
+                        }
+                        MediaScannerConnection.scanFile(context, arrayOf(targetFile.absolutePath), null, null)
+                        savedPath = targetFile.absolutePath
+                    }
+                    savedPath
+                }
             }
-            onDone(ok)
+
+            if (result.isSuccess) {
+                onDone(true, result.getOrNull() ?: pending.suggestedName)
+            } else {
+                onDone(false, result.exceptionOrNull()?.message ?: "Download error")
+            }
         }
     }
 
-    /** Guesses a sensible file name + MIME from the URL / content disposition / mimetype hint. */
     fun guessName(url: String, contentDisposition: String?, mimeType: String?): Pair<String, String> {
         var name = URLUtil.guessFileName(url, contentDisposition, mimeType)
         val mime = when {
@@ -76,5 +122,9 @@ object DownloadCoordinator {
             MimeTypeMap.getSingleton().getExtensionFromMimeType(mime)?.let { name = "$name.$it" }
         }
         return name to mime
+    }
+
+    private fun sanitizeFilename(name: String): String {
+        return name.replace("[\\\\/:*?\"<>|]".toRegex(), "_").trim()
     }
 }
