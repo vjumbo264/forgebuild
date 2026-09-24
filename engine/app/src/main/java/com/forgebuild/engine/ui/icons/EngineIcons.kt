@@ -16,4 +16,5 @@ object EngineIcons {
     val Home: ImageVector get() = EngineIconsGenerated.Home
     val Search: ImageVector get() = EngineIconsGenerated.Search
     val ArrowBack: ImageVector get() = EngineIconsGenerated.ArrowBack
+    val DesktopWindows: ImageVector get() = EngineIconsGenerated.DesktopWindows
 }

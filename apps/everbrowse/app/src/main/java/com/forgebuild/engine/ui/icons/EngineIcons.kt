@@ -32,4 +32,5 @@ object EngineIcons {
     val Forum: ImageVector get() = EngineIconsGenerated.Forum
     val Newspaper: ImageVector get() = EngineIconsGenerated.Newspaper
     val Folder: ImageVector get() = EngineIconsGenerated.Folder
+    val DesktopWindows: ImageVector get() = EngineIconsGenerated.DesktopWindows
 }

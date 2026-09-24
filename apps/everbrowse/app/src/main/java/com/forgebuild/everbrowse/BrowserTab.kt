@@ -25,6 +25,19 @@ class BrowserTab(
     context: Context,
     initialUrl: String = AddressResolver.HOME_URL,
 ) {
+    companion object {
+        const val DESKTOP_USER_AGENT =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+
+        fun isColabOrDesktopSite(url: String): Boolean {
+            val lower = url.lowercase()
+            return lower.contains("colab.research.google.com") ||
+                    lower.contains("colab.google") ||
+                    lower.contains("kaggle.com/code") ||
+                    lower.contains("nbviewer.org")
+        }
+    }
+
     var isHomePage by mutableStateOf(
         initialUrl.isBlank() || initialUrl == AddressResolver.HOME_URL || initialUrl == "about:blank"
     )
@@ -32,12 +45,19 @@ class BrowserTab(
     var title by mutableStateOf(if (isHomePage) "Home" else "")
     var isLoading by mutableStateOf(false)
     var progress by mutableIntStateOf(100)
+    var isDesktopMode by mutableStateOf(false)
+
+    private val mobileUserAgent: String
 
     @SuppressLint("SetJavaScriptEnabled")
     val webView: WebView = WebView(context).apply {
-        // Transparent background so no blinding white flash occurs during page transitions
-        setBackgroundColor(Color.TRANSPARENT)
+        // Solid opaque background: DO NOT set Color.TRANSPARENT as it breaks hardware-accelerated
+        // Canvas/WebGL/Monaco editor rendering on Android, causing Google Colab notebooks to appear empty.
+        setBackgroundColor(Color.WHITE)
         setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+        val rawUa = settings.userAgentString
+        mobileUserAgent = rawUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
 
         settings.apply {
             javaScriptEnabled = true
@@ -54,13 +74,11 @@ class BrowserTab(
             allowFileAccess = true
             allowContentAccess = true
             cacheMode = WebSettings.LOAD_DEFAULT
-            setSupportMultipleWindows(false)
+            setSupportMultipleWindows(true)
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-
-            // Clean User-Agent: strip "; wv" and "Version/4.0 " so Google Colab, Google Docs,
-            // and modern interactive web apps treat EverBrowse as standard Chrome on Android
-            val rawUa = userAgentString
-            userAgentString = rawUa.replace("; wv", "").replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+            offscreenPreRaster = true
+            textZoom = 100
+            userAgentString = mobileUserAgent
         }
 
         // Enable third-party and cross-origin cookies so Colab notebook iframes (*.googleusercontent.com)
@@ -79,6 +97,22 @@ class BrowserTab(
         }
     }
 
+    fun setDesktopMode(enabled: Boolean, reloadNow: Boolean = true) {
+        if (isDesktopMode != enabled) {
+            isDesktopMode = enabled
+            webView.settings.userAgentString = if (enabled) DESKTOP_USER_AGENT else mobileUserAgent
+            webView.settings.useWideViewPort = true
+            webView.settings.loadWithOverviewMode = true
+            if (reloadNow && !isHomePage) {
+                reload()
+            }
+        }
+    }
+
+    fun toggleDesktopMode() {
+        setDesktopMode(!isDesktopMode, reloadNow = true)
+    }
+
     fun load(url: String) {
         val resolved = AddressResolver.resolve(url)
         if (resolved == AddressResolver.HOME_URL) {
@@ -89,6 +123,10 @@ class BrowserTab(
             progress = 100
             webView.stopLoading()
         } else {
+            // Auto-detect Colab or data science notebooks and auto-enable desktop mode so Monaco editor renders
+            if (isColabOrDesktopSite(resolved) && !isDesktopMode) {
+                setDesktopMode(true, reloadNow = false)
+            }
             isHomePage = false
             currentUrl = resolved
             isLoading = true
@@ -136,6 +174,7 @@ class BrowserTab(
         out.putBoolean("isHomePage", isHomePage)
         out.putString("currentUrl", currentUrl)
         out.putString("title", title)
+        out.putBoolean("isDesktopMode", isDesktopMode)
         if (!isHomePage) {
             webView.saveState(out)
         }
@@ -145,6 +184,10 @@ class BrowserTab(
         isHomePage = state.getBoolean("isHomePage", false)
         currentUrl = state.getString("currentUrl", AddressResolver.HOME_URL) ?: AddressResolver.HOME_URL
         title = state.getString("title", if (isHomePage) "Home" else "") ?: ""
+        val savedDesktop = state.getBoolean("isDesktopMode", false)
+        if (savedDesktop) {
+            setDesktopMode(true, reloadNow = false)
+        }
         if (!isHomePage) {
             restoredFromState = webView.restoreState(state) != null
             return restoredFromState

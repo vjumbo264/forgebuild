@@ -162,4 +162,10 @@ internal object EngineIconsGenerated {
             .addPath(PathParser().parsePathString("M10,4H4c-1.1,0 -1.99,0.9 -1.99,2L2,18c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V8c0,-1.1 -0.9,-2 -2,-2h-8l-2,-2z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
+    val DesktopWindows: ImageVector by lazy {
+        ImageVector.Builder(name = "DesktopWindows", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M21,2H3c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h7v2H8v2h8v-2h-2v-2h7c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM21,14H3V4h18v10z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
 }

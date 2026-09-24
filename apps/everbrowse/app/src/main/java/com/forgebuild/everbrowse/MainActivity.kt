@@ -1,14 +1,8 @@
 package com.forgebuild.everbrowse
 
-import android.view.ViewGroup
-import android.webkit.PermissionRequest
-import android.webkit.WebResourceRequest
-import androidx.compose.runtime.key
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-
 import android.Manifest
 import android.app.AlarmManager
+import android.app.AlertDialog as AndroidAlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -20,10 +14,17 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.ViewGroup
+import android.webkit.GeolocationPermissions
+import android.webkit.JsPromptResult
+import android.webkit.JsResult
+import android.webkit.PermissionRequest
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -57,19 +58,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -92,6 +94,7 @@ import kotlinx.coroutines.launch
  *  - Tabs hold long-lived WebView instances with JS/DOM/databases enabled.
  *  - Full WebView state saved/restored across process death.
  *  - BrowserKeepAliveService (START_STICKY + PARTIAL_WAKE_LOCK + persistent notification).
+ *  - Robust multi-window, Desktop Site mode, and full Google Colab / rich app compatibility.
  */
 class MainActivity : ComponentActivity() {
 
@@ -218,6 +221,11 @@ class MainActivity : ComponentActivity() {
                                 showOnboarding = true
                                 scope.launch { drawerState.close() }
                             },
+                            onToggleDesktopMode = {
+                                currentTab?.toggleDesktopMode()
+                                val msg = if (currentTab?.isDesktopMode == true) "Desktop site enabled" else "Mobile site enabled"
+                                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                            },
                             onCloseDrawer = {
                                 scope.launch { drawerState.close() }
                             }
@@ -275,12 +283,24 @@ class MainActivity : ComponentActivity() {
     private fun wireTab(tab: BrowserTab) {
         tab.webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val url = request.url.toString()
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    return false // Let WebView handle all web links and auth redirects internally
+                val uri = request.url
+                val scheme = uri.scheme?.lowercase() ?: ""
+
+                // CRITICAL FIX FOR COLAB & WEB APPS:
+                // Let WebView handle all web links and internal browser execution schemes
+                // (including blob:, data:, about:, javascript:, file:, content:)
+                if (scheme in listOf("http", "https", "about", "data", "blob", "javascript", "content", "file")) {
+                    return false
                 }
+
+                // Only launch external applications for actual intent/app schemes (e.g. mailto:, tel:, sms:, market:, intent:)
+                val url = uri.toString()
                 return try {
-                    val intent = Intent(Intent.ACTION_VIEW, request.url)
+                    val intent = if (url.startsWith("intent:")) {
+                        Intent.parseUri(url, Intent.URI_INTENT_SCHEME)
+                    } else {
+                        Intent(Intent.ACTION_VIEW, uri)
+                    }
                     startActivity(intent)
                     true
                 } catch (e: Exception) {
@@ -324,6 +344,82 @@ class MainActivity : ComponentActivity() {
                 request.grant(request.resources)
             }
 
+            override fun onGeolocationPermissionsShowPrompt(
+                origin: String?,
+                callback: GeolocationPermissions.Callback?
+            ) {
+                callback?.invoke(origin, true, false)
+            }
+
+            // JavaScript confirmation/alert dialogs (vital for Google Colab runtime reset, notebook run confirmation)
+            override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                AndroidAlertDialog.Builder(this@MainActivity)
+                    .setTitle(view?.title?.takeIf { it.isNotBlank() } ?: "Notice")
+                    .setMessage(message ?: "")
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setOnCancelListener { result?.confirm() }
+                    .show()
+                return true
+            }
+
+            override fun onJsConfirm(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                AndroidAlertDialog.Builder(this@MainActivity)
+                    .setTitle(view?.title?.takeIf { it.isNotBlank() } ?: "Confirmation")
+                    .setMessage(message ?: "")
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm() }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            override fun onJsPrompt(
+                view: WebView?,
+                url: String?,
+                message: String?,
+                defaultValue: String?,
+                result: JsPromptResult?
+            ): Boolean {
+                val input = EditText(this@MainActivity).apply {
+                    setText(defaultValue ?: "")
+                }
+                AndroidAlertDialog.Builder(this@MainActivity)
+                    .setTitle(view?.title?.takeIf { it.isNotBlank() } ?: "Input")
+                    .setMessage(message ?: "")
+                    .setView(input)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result?.confirm(input.text.toString()) }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result?.cancel() }
+                    .setOnCancelListener { result?.cancel() }
+                    .show()
+                return true
+            }
+
+            // Support multi-window popups (e.g. Google Sign-In, OAuth popups, Colab file dialogues)
+            override fun onCreateWindow(
+                view: WebView?,
+                isDialog: Boolean,
+                isUserGesture: Boolean,
+                resultMsg: android.os.Message?
+            ): Boolean {
+                if (resultMsg == null) return false
+                val newTab = BrowserTab(System.nanoTime(), this@MainActivity, "")
+                wireTab(newTab)
+                tabs.add(newTab)
+                activeTabIndex = tabs.lastIndex
+                addressText = ""
+                val transport = resultMsg.obj as? WebView.WebViewTransport
+                transport?.webView = newTab.webView
+                resultMsg.sendToTarget()
+                return true
+            }
+
+            override fun onCloseWindow(window: WebView?) {
+                val index = tabs.indexOfFirst { it.webView == window }
+                if (index >= 0 && tabs.size > 1) {
+                    closeTab(index)
+                }
+            }
+
             override fun onShowFileChooser(
                 webView: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
@@ -359,7 +455,6 @@ class MainActivity : ComponentActivity() {
                 return
             }
         }
-
         Toast.makeText(this, "Downloading ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
         DownloadCoordinator.saveToDownloads(this, pending, lifecycleScope) { ok, result ->
             if (ok) {
@@ -416,7 +511,7 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // --- Top Navigation Bar: Single clean row, no duplicate right button ---
+            // --- Top Navigation Bar: Clean row with search, home, desktop mode, refresh, new tab ---
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth()
@@ -430,7 +525,7 @@ class MainActivity : ComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(s.xxs)
                     ) {
-                        // 1. Hamburger Menu Button (Sole tabs drawer trigger)
+                        // 1. Hamburger Menu Button (Tabs drawer trigger)
                         IconButton(onClick = onOpenDrawer) {
                             Icon(
                                 imageVector = EngineIcons.Menu,
@@ -528,7 +623,25 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // 4. Action Button: Refresh Tab (ALWAYS present and active)
+                        // 4. Desktop Site Mode Toggle Button (Essential for Google Colab & interactive web apps)
+                        IconButton(
+                            onClick = {
+                                tab?.let {
+                                    it.toggleDesktopMode()
+                                    val msg = if (it.isDesktopMode) "Desktop site enabled" else "Mobile site enabled"
+                                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = EngineIcons.DesktopWindows,
+                                contentDescription = "Toggle desktop site",
+                                tint = if (tab?.isDesktopMode == true) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // 5. Action Button: Refresh Tab (ALWAYS present and active)
                         IconButton(
                             onClick = {
                                 tab?.reload()
@@ -541,7 +654,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 5. New Tab Quick Button (No redundant drawer button)
+                        // 6. New Tab Quick Button
                         IconButton(
                             onClick = { newTab(AddressResolver.HOME_URL) }
                         ) {
@@ -572,12 +685,16 @@ class MainActivity : ComponentActivity() {
                     .weight(1f)
             ) {
                 if (tab != null) {
-                    // Continuous WebView attachment prevents surface destruction and screen flash
+                    // Continuous WebView attachment with explicit layout parameters ensures full rendering
                     key(tab.id) {
                         AndroidView(
                             factory = {
                                 tab.webView.apply {
                                     (parent as? ViewGroup)?.removeView(this)
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
                                 }
                             },
                             modifier = Modifier.fillMaxSize()
@@ -635,7 +752,6 @@ class MainActivity : ComponentActivity() {
         val notifGranted = if (Build.VERSION.SDK_INT >= 33) {
             PermissionWiring.isGranted(this, Manifest.permission.POST_NOTIFICATIONS)
         } else true
-
         val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val adminComponent = ComponentName(this, AdminReceiver::class.java)
         val adminActive = dpm.isAdminActive(adminComponent)
@@ -742,6 +858,7 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
                 if (isGranted) {
                     Surface(
                         shape = MaterialTheme.shapes.extraSmall,

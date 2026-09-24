@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,10 +39,13 @@ fun TabsDrawerSheet(
     onNewTab: () -> Unit,
     onCloseAllTabs: () -> Unit,
     onOpenKeepAlive: () -> Unit,
+    onToggleDesktopMode: () -> Unit,
     onCloseDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val s = SpacingTokens.Spacing
+    val activeTab = tabs.getOrNull(activeTabIndex)
+    val isDesktop = activeTab?.isDesktopMode == true
 
     ModalDrawerSheet(
         modifier = modifier
@@ -95,6 +96,45 @@ fun TabsDrawerSheet(
                 Text("New Tab", style = MaterialTheme.typography.labelLarge)
             }
 
+            // --- Desktop Site Mode Quick Toggle ---
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = if (isDesktop) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                onClick = onToggleDesktopMode,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = s.xxs)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = s.sm, vertical = s.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = EngineIcons.DesktopWindows,
+                        contentDescription = null,
+                        tint = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(s.xs))
+                    Text(
+                        text = "Desktop Site",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isDesktop) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isDesktop) {
+                        Icon(
+                            imageVector = EngineIcons.Check,
+                            contentDescription = "Active",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = s.xs),
                 color = MaterialTheme.colorScheme.outlineVariant
@@ -143,7 +183,6 @@ fun TabsDrawerSheet(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(s.xs))
-
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = tab.displayTitle,
@@ -161,7 +200,6 @@ fun TabsDrawerSheet(
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
-
                             // Close Button for this tab
                             IconButton(
                                 onClick = { onCloseTab(index) },

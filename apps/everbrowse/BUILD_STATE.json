@@ -278,8 +278,8 @@
     {
       "id": "t26",
       "title": "Fix Google Colab & rich web apps: restore opaque WebView background (fix hardware canvas/Monaco blanking), implement per-tab Desktop Mode with auto-detection for Colab, fix shouldOverrideUrlLoading to allow blob:/data:/about:, enable multi-window popups with onCreateWindow, add JS dialog handlers, and configure offscreen pre-rastering",
-      "status": "in_progress",
-      "notes": "Implementing comprehensive rendering and compatibility fixes for Google Colab and modern interactive web apps.",
+      "status": "done",
+      "notes": "Fixed Google Colab and interactive web apps: restored solid opaque WebView background (Color.WHITE) to prevent hardware-accelerated Canvas/Monaco editor blanking; implemented per-tab Desktop Mode with DESKTOP_USER_AGENT and auto-detection for colab.research.google.com and interactive notebook sites; fixed shouldOverrideUrlLoading to allow blob:, data:, about:, javascript:, and file: schemes instead of dropping them as external intents; added multi-window popup support with onCreateWindow and onCloseWindow; added JavaScript dialog handlers for onJsAlert, onJsConfirm, and onJsPrompt; enabled offscreenPreRaster and full layout params in AndroidView; added Desktop site toggle in top bar and tabs drawer.",
       "commits": [],
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
@@ -290,8 +290,8 @@
     {
       "id": "t27",
       "title": "Validate build configuration and local test/compilation for everbrowse-v5",
-      "status": "pending",
-      "notes": "Compile app, verify kotlin and resources, run assembleRelease.",
+      "status": "in_progress",
+      "notes": "Validating app configuration, manifests, and workflow inputs.",
       "commits": [],
       "files": []
     },
