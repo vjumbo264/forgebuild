@@ -2,10 +2,10 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v4",
+  "build_complete": true,
+  "current_release": "everbrowse-v5",
   "updated_by": "session-update-colab-empty-fix",
-  "notes": "Operator instruction #6 received: Fix for sites like Google Colab appearing empty. Seeding tasks t25-t28.",
+  "notes": "Operator instruction #6 resolved: Google Colab and interactive web apps render properly with Desktop Mode, solid opaque WebView background, and unblocked worker/iframe schemes. everbrowse-v5 verified live.",
   "tasks": [
     {
       "id": "t1",
@@ -298,8 +298,8 @@
     {
       "id": "t28",
       "title": "Dispatch release workflow for everbrowse-v5, verify release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml workflow for everbrowse-v5.",
+      "status": "done",
+      "notes": "release.yml run 36040634229 completed success. everbrowse-v5 verified live with assets app-everbrowse-v5.apk (1.33 MB) + forgebuild-manifest.json.",
       "commits": [],
       "files": []
     }
