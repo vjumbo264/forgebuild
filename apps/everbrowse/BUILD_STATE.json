@@ -2,8 +2,8 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v9",
+  "build_complete": true,
+  "current_release": "everbrowse-v10",
   "updated_by": "session-update-icon-and-cursor",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
@@ -575,8 +575,8 @@
     {
       "id": "t54",
       "title": "Dispatch release workflow for everbrowse-v10, monitor CI run, verify live release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml workflow for everbrowse-v10.",
+      "status": "done",
+      "notes": "Dispatched release.yml workflow (run 36062169819) for commit 5027fc8. Workflow completed successfully. Live release everbrowse-v10 verified via GitHub API with published asset app-everbrowse-v10.apk (1,502,779 bytes).",
       "commits": [],
       "files": []
     }
