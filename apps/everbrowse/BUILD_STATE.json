@@ -290,16 +290,16 @@
     {
       "id": "t27",
       "title": "Validate build configuration and local test/compilation for everbrowse-v5",
-      "status": "in_progress",
-      "notes": "Validating app configuration, manifests, and workflow inputs.",
+      "status": "done",
+      "notes": "Validated build configuration, AndroidManifest.xml, Compose and Kotlin source files. All imports, permissions, and theme discipline fully intact.",
       "commits": [],
       "files": []
     },
     {
       "id": "t28",
       "title": "Dispatch release workflow for everbrowse-v5, verify release and APK via GitHub API, set build_complete true",
-      "status": "pending",
-      "notes": "Dispatch release.yml with app_path=apps/everbrowse, poll until run succeeds, verify everbrowse-v5 release and APK live via GitHub Releases API, update BUILD_STATE.json with build_complete: true.",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v5.",
       "commits": [],
       "files": []
     }
