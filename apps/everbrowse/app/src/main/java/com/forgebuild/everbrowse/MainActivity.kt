@@ -16,6 +16,9 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
@@ -564,12 +567,13 @@ class MainActivity : ComponentActivity() {
                     } else false
                 }
                 WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
-                    val handler = Handler(Looper.getMainLooper()) { msg ->
-                        val linkUrl = msg.data.getString("url")
-                        val title = msg.data.getString("title")
+                    val handler = Handler(Looper.getMainLooper()) { msg: Message ->
+                        val dataBundle = msg.data
+                        val linkUrl = dataBundle?.getString("url")
+                        val title = dataBundle?.getString("title")
                         contextMenuTarget = WebContextMenuTarget(
                             type = type,
-                            linkUrl = linkUrl?.ifBlank { null },
+                            linkUrl = linkUrl?.takeIf { it.isNotBlank() },
                             imageUrl = extra,
                             titleOrText = title
                         )

@@ -145,8 +145,8 @@ class BrowserTab(
     }
 
     fun downloadBlob(blobUrl: String, suggestedName: String? = null, mimeType: String? = null) {
-        val cleanName = (suggestedName ?: "download").replace(""", "\\"").replace("'", "\\'")
-        val cleanMime = (mimeType ?: "application/octet-stream").replace(""", "\\"")
+        val cleanName = (suggestedName ?: "download").filter { it.isLetterOrDigit() || it in "._- " }
+        val cleanMime = (mimeType ?: "application/octet-stream").filter { it.isLetterOrDigit() || it in "/.-" }
         val js = """
             (function() {
                 try {
