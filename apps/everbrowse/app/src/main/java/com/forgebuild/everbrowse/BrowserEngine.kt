@@ -17,7 +17,11 @@ import android.webkit.CookieManager
 import android.webkit.MimeTypeMap
 import android.webkit.URLUtil
 import android.widget.Toast
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
@@ -68,19 +72,29 @@ enum class DownloadStatus {
     CANCELLED
 }
 
-data class DownloadRecord(
+class DownloadRecord(
     val id: String = UUID.randomUUID().toString(),
-    var url: String,
-    var fileName: String,
-    var mimeType: String,
-    var totalBytes: Long = -1L,
-    var downloadedBytes: Long = 0L,
-    var status: DownloadStatus = DownloadStatus.PENDING,
-    var localPath: String? = null,
-    var contentUri: String? = null,
-    var errorMessage: String? = null,
+    url: String,
+    fileName: String,
+    mimeType: String,
+    totalBytes: Long = -1L,
+    downloadedBytes: Long = 0L,
+    status: DownloadStatus = DownloadStatus.PENDING,
+    localPath: String? = null,
+    contentUri: String? = null,
+    errorMessage: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 ) {
+    var url: String by mutableStateOf(url)
+    var fileName: String by mutableStateOf(fileName)
+    var mimeType: String by mutableStateOf(mimeType)
+    var totalBytes: Long by mutableLongStateOf(totalBytes)
+    var downloadedBytes: Long by mutableLongStateOf(downloadedBytes)
+    var status: DownloadStatus by mutableStateOf(status)
+    var localPath: String? by mutableStateOf(localPath)
+    var contentUri: String? by mutableStateOf(contentUri)
+    var errorMessage: String? by mutableStateOf(errorMessage)
+
     val progress: Float
         get() = when {
             status == DownloadStatus.COMPLETED -> 1f
@@ -88,6 +102,14 @@ data class DownloadRecord(
             status == DownloadStatus.DOWNLOADING || status == DownloadStatus.PAUSED -> 0.15f
             else -> 0f
         }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DownloadRecord) return false
+        return id == other.id
+    }
+
+    override fun hashCode(): Int = id.hashCode()
 }
 
 /**
@@ -455,16 +477,23 @@ object DownloadCoordinator {
             var bytesRead = 0
             var totalRead = if (append) existingBytes else 0L
             var lastNotifTime = 0L
+            var lastUiUpdateTime = 0L
 
+            record.downloadedBytes = totalRead
             postProgressNotification(context, nm, notificationId, record)
 
             try {
                 while (!task.isPaused && !task.isCancelled && inputStream.read(buffer).also { bytesRead = it } != -1) {
                     fos.write(buffer, 0, bytesRead)
                     totalRead += bytesRead
-                    record.downloadedBytes = totalRead
 
                     val now = System.currentTimeMillis()
+                    // Actively update in-app Compose snapshot state every 80ms for real-time progress bar animation
+                    if (now - lastUiUpdateTime > 80) {
+                        lastUiUpdateTime = now
+                        record.downloadedBytes = totalRead
+                    }
+
                     if (now - lastNotifTime > 400) {
                         lastNotifTime = now
                         postProgressNotification(context, nm, notificationId, record)
@@ -476,6 +505,8 @@ object DownloadCoordinator {
                 try { inputStream.close() } catch (_: Exception) {}
                 conn.disconnect()
             }
+
+            record.downloadedBytes = totalRead
 
             // 5. Handle pause / cancel / completion
             if (task.isCancelled) {
