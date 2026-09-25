@@ -256,6 +256,36 @@ object DownloadCoordinator {
         }
     }
 
+    fun retryDownload(context: Context, record: DownloadRecord) {
+        if (record.status == DownloadStatus.DOWNLOADING) return
+
+        record.status = DownloadStatus.DOWNLOADING
+        record.errorMessage = null
+        record.downloadedBytes = 0L
+        saveHistory(context)
+
+        val downloadsDir = getDownloadDirectory(context)
+        val partFile = File(downloadsDir, "${record.fileName}.part")
+        if (partFile.exists()) partFile.delete()
+
+        val pending = PendingDownload(
+            url = record.url,
+            suggestedName = record.fileName,
+            mimeType = record.mimeType,
+            contentLength = record.totalBytes
+        )
+        val task = DownloadTask(record, pending)
+        activeTasks[record.id] = task
+
+        val notificationId = record.id.hashCode() and 0x7FFFFFFF
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        postProgressNotification(context, nm, notificationId, record)
+
+        task.job = downloadScope.launch(Dispatchers.IO) {
+            executeDownloadLoop(context, nm, notificationId, task, null)
+        }
+    }
+
     fun cancelDownload(context: Context, downloadId: String) {
         val task = activeTasks.remove(downloadId)
         task?.isCancelled = true

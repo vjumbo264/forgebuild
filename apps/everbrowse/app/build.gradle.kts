@@ -68,6 +68,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.webkit:webkit:1.12.0")
     implementation("androidx.compose.ui:ui:$composeTrain")
     implementation("androidx.compose.foundation:foundation:$composeTrain")
     implementation("androidx.compose.material3:material3:1.5.0-alpha28")

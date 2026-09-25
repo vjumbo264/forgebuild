@@ -3,11 +3,15 @@ package com.forgebuild.everbrowse
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +44,24 @@ class BrowserTab(
     var isLoading by mutableStateOf(isNewWindow)
     var progress by mutableIntStateOf(if (isNewWindow) 10 else 100)
     var isDesktopMode by mutableStateOf(false)
+    class BlobDownloadBridge(
+        private val onBlobReady: (dataUrl: String, name: String, mime: String) -> Unit,
+        private val onError: (message: String) -> Unit
+    ) {
+        @JavascriptInterface
+        fun onBlobConverted(name: String, mime: String, dataUrl: String) {
+            onBlobReady(dataUrl, name, mime)
+        }
+
+        @JavascriptInterface
+        fun onBlobFailed(error: String) {
+            onError(error)
+        }
+    }
+
+    var onBlobDownloadListener: ((dataUrl: String, name: String, mime: String) -> Unit)? = null
+    var previousWebUrlBeforeHome: String? = null
+
 
     private val mobileUserAgent: String
 
@@ -81,6 +103,16 @@ class BrowserTab(
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(this, true)
+
+        addJavascriptInterface(
+            BlobDownloadBridge(
+                onBlobReady = { dataUrl, name, mime ->
+                    onBlobDownloadListener?.invoke(dataUrl, name, mime)
+                },
+                onError = { /* ignored */ }
+            ),
+            "EverBrowseBlobBridge"
+        )
     }
 
     var restoredFromState = false
@@ -90,6 +122,66 @@ class BrowserTab(
         if (!isHomePage && initialUrl.isNotBlank()) {
             load(initialUrl)
         }
+    }
+
+    fun updateThemeMode(isDark: Boolean) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                webView.settings.isAlgorithmicDarkeningAllowed = false
+            }
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)) {
+                WebSettingsCompat.setForceDarkStrategy(
+                    webView.settings,
+                    WebSettingsCompat.DARK_STRATEGY_WEB_THEME_DARKENING_ONLY
+                )
+            }
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                WebSettingsCompat.setForceDark(
+                    webView.settings,
+                    if (isDark) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF
+                )
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun downloadBlob(blobUrl: String, suggestedName: String? = null, mimeType: String? = null) {
+        val cleanName = (suggestedName ?: "download").replace(""", "\\"").replace("'", "\\'")
+        val cleanMime = (mimeType ?: "application/octet-stream").replace(""", "\\"")
+        val js = """
+            (function() {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', '$blobUrl', true);
+                    xhr.responseType = 'blob';
+                    xhr.onload = function() {
+                        if (this.status === 200 || this.status === 0) {
+                            var reader = new FileReader();
+                            reader.readAsDataURL(this.response);
+                            reader.onloadend = function() {
+                                if (window.EverBrowseBlobBridge) {
+                                    window.EverBrowseBlobBridge.onBlobConverted('$cleanName', '$cleanMime', reader.result);
+                                }
+                            };
+                        } else {
+                            if (window.EverBrowseBlobBridge) {
+                                window.EverBrowseBlobBridge.onBlobFailed('HTTP ' + this.status);
+                            }
+                        }
+                    };
+                    xhr.onerror = function() {
+                        if (window.EverBrowseBlobBridge) {
+                            window.EverBrowseBlobBridge.onBlobFailed('Network error reading blob');
+                        }
+                    };
+                    xhr.send();
+                } catch(e) {
+                    if (window.EverBrowseBlobBridge) {
+                        window.EverBrowseBlobBridge.onBlobFailed(e.toString());
+                    }
+                }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
     }
 
     fun setDesktopMode(enabled: Boolean, reloadNow: Boolean = true) {
@@ -132,6 +224,9 @@ class BrowserTab(
     fun load(url: String) {
         val resolved = AddressResolver.resolve(url)
         if (resolved == AddressResolver.HOME_URL) {
+            if (!isHomePage && currentUrl.isNotBlank() && currentUrl != AddressResolver.HOME_URL) {
+                previousWebUrlBeforeHome = currentUrl
+            }
             isHomePage = true
             currentUrl = AddressResolver.HOME_URL
             title = "Home"
@@ -139,6 +234,7 @@ class BrowserTab(
             progress = 100
             webView.stopLoading()
         } else {
+            previousWebUrlBeforeHome = null
             // Colab and sites open in standard mobile mode by default, unless user has toggled desktop mode
             isHomePage = false
             currentUrl = resolved
@@ -195,14 +291,27 @@ class BrowserTab(
     }
 
     fun goBack(): Boolean {
-        if (!isHomePage && webView.canGoBack()) {
+        if (isHomePage) {
+            val prev = previousWebUrlBeforeHome
+            if (!prev.isNullOrBlank() && prev != AddressResolver.HOME_URL) {
+                previousWebUrlBeforeHome = null
+                isHomePage = false
+                currentUrl = prev
+                val wvUrl = webView.url
+                if (wvUrl.isNullOrBlank() || wvUrl == "about:blank" || wvUrl != prev) {
+                    webView.loadUrl(prev)
+                }
+                return true
+            }
+            return false
+        }
+        if (webView.canGoBack()) {
             webView.goBack()
             return true
-        } else if (!isHomePage) {
+        } else {
             load(AddressResolver.HOME_URL)
             return true
         }
-        return false
     }
 
     fun save(out: Bundle) {

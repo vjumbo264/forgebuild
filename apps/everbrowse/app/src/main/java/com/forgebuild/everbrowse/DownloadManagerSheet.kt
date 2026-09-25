@@ -63,7 +63,7 @@ private val PlayIcon: ImageVector by lazy {
 @Composable
 fun DownloadManagerSheet(
     onDismiss: () -> Unit,
-    onRetryDownload: (DownloadRecord) -> Unit = {}
+    onRetryDownload: ((DownloadRecord) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val s = SpacingTokens.Spacing
@@ -276,7 +276,7 @@ fun DownloadManagerSheet(
                                 onOpen = { DownloadCoordinator.openFile(context, record) },
                                 onShare = { DownloadCoordinator.shareFile(context, record) },
                                 onDelete = { DownloadCoordinator.removeDownload(context, record, deleteFile = true) },
-                                onRetry = { onRetryDownload(record) }
+                                onRetry = { onRetryDownload?.invoke(record) ?: DownloadCoordinator.retryDownload(context, record) }
                             )
                         }
                     }

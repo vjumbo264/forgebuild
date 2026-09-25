@@ -36,6 +36,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     // File-upload callback held across system picker
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
+    private var contextMenuTarget by mutableStateOf<WebContextMenuTarget?>(null)
     private var pendingDownload: DownloadCoordinator.PendingDownload? = null
 
     // Storage and notification permissions launcher for downloads
@@ -273,12 +275,38 @@ class MainActivity : ComponentActivity() {
                             DownloadManagerSheet(
                                 onDismiss = { showDownloadsSheet = false },
                                 onRetryDownload = { record ->
-                                    val pending = DownloadCoordinator.PendingDownload(
-                                        url = record.url,
-                                        suggestedName = record.fileName,
-                                        mimeType = record.mimeType
-                                    )
-                                    triggerDownload(pending)
+                                    DownloadCoordinator.retryDownload(this@MainActivity, record)
+                                }
+                            )
+                        }
+
+                        contextMenuTarget?.let { target ->
+                            WebContextMenuSheet(
+                                target = target,
+                                onDismiss = { contextMenuTarget = null },
+                                onOpenInNewTab = { url ->
+                                    newTab(url)
+                                },
+                                onOpenInBackgroundTab = { url ->
+                                    val bgTab = BrowserTab(System.nanoTime(), this@MainActivity, url)
+                                    wireTab(bgTab)
+                                    tabs.add(bgTab)
+                                    Toast.makeText(this@MainActivity, "Opened in background tab", Toast.LENGTH_SHORT).show()
+                                },
+                                onDownloadImage = { imgUrl ->
+                                    if (imgUrl.startsWith("blob:")) {
+                                        currentTab?.downloadBlob(imgUrl)
+                                    } else {
+                                        val (name, mime) = DownloadCoordinator.guessName(imgUrl, null, "image/*")
+                                        val pending = DownloadCoordinator.PendingDownload(
+                                            url = imgUrl,
+                                            suggestedName = name,
+                                            mimeType = mime,
+                                            userAgent = currentTab?.webView?.settings?.userAgentString,
+                                            referer = currentTab?.currentUrl
+                                        )
+                                        triggerDownload(pending)
+                                    }
                                 }
                             )
                         }
@@ -499,18 +527,79 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Downloads save directly to system Downloads folder
-        tab.webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
-            val (name, resolvedMime) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
+        // Bridge for blob: downloads converted into base64 data URLs
+        tab.onBlobDownloadListener = { dataUrl, name, mime ->
             val pending = DownloadCoordinator.PendingDownload(
-                url = url,
+                url = dataUrl,
                 suggestedName = name,
-                mimeType = resolvedMime,
-                userAgent = userAgent.ifBlank { tab.webView.settings.userAgentString },
-                referer = tab.currentUrl,
-                contentLength = contentLength
+                mimeType = mime,
+                referer = tab.currentUrl
             )
             triggerDownload(pending)
+        }
+
+        // Long-press context menu for links, images, and image-links
+        tab.webView.setOnLongClickListener { v ->
+            val hr = (v as? WebView)?.hitTestResult ?: return@setOnLongClickListener false
+            val type = hr.type
+            val extra = hr.extra
+
+            when (type) {
+                WebView.HitTestResult.SRC_ANCHOR_TYPE -> {
+                    if (!extra.isNullOrBlank()) {
+                        contextMenuTarget = WebContextMenuTarget(
+                            type = type,
+                            linkUrl = extra
+                        )
+                        true
+                    } else false
+                }
+                WebView.HitTestResult.IMAGE_TYPE -> {
+                    if (!extra.isNullOrBlank()) {
+                        contextMenuTarget = WebContextMenuTarget(
+                            type = type,
+                            imageUrl = extra
+                        )
+                        true
+                    } else false
+                }
+                WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                    val handler = Handler(Looper.getMainLooper()) { msg ->
+                        val linkUrl = msg.data.getString("url")
+                        val title = msg.data.getString("title")
+                        contextMenuTarget = WebContextMenuTarget(
+                            type = type,
+                            linkUrl = linkUrl?.ifBlank { null },
+                            imageUrl = extra,
+                            titleOrText = title
+                        )
+                        true
+                    }
+                    val msg = handler.obtainMessage()
+                    tab.webView.requestFocusNodeHref(msg)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // Downloads save directly to system Downloads folder with blob support
+        tab.webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            if (url.startsWith("blob:")) {
+                val (name, resolvedMime) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
+                tab.downloadBlob(url, name, resolvedMime)
+            } else {
+                val (name, resolvedMime) = DownloadCoordinator.guessName(url, contentDisposition, mimeType)
+                val pending = DownloadCoordinator.PendingDownload(
+                    url = url,
+                    suggestedName = name,
+                    mimeType = resolvedMime,
+                    userAgent = userAgent.ifBlank { tab.webView.settings.userAgentString },
+                    referer = tab.currentUrl,
+                    contentLength = contentLength
+                )
+                triggerDownload(pending)
+            }
         }
     }
 
