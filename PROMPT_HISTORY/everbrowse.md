@@ -80,3 +80,16 @@ Right now, I can't download files. If I download a file, the browser will say th
 "Also, the app isn't asking for storage permission. I wanted to download a file of 100 megabytes, and once the download started, it finished instantly.
 
 The app the stuff I downloaded was fake or something because it didn't actually download it. So fix it because files are not actually being saved to anywhere."
+
+## 2026-09-25 — Operator instruction #17 (verbatim)
+"""
+The download feature is completely broken.
+
+The first issue I'm experiencing is that the downloads are showing a fake download size and are not actually downloading. The file I'm trying to download is 3 MB, but it's showing 8 KB and says "download finished" even though I didn't see it downloading. I watched it, and it didn't even show that it was downloading.
+
+Secondly, it doesn't even ask me for storage permission. It only asks me for photos and videos and music permission. It doesn't ask me for actual storage permission.
+
+Also, the notification bar is not showing the progress bar, and I want to be able to pause and resume or cancel the download from the notifications.
+
+Please fix the downloads feature. It's completely broken.
+"""
