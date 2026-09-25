@@ -445,7 +445,7 @@ object DownloadCoordinator {
             val fos = FileOutputStream(partFile, append)
             val inputStream = conn.inputStream
             val buffer = ByteArray(65536)
-            var bytesRead: Int
+            var bytesRead = 0
             var totalRead = if (append) existingBytes else 0L
             var lastNotifTime = 0L
 
@@ -829,7 +829,7 @@ object DownloadCoordinator {
         val plainPattern = Pattern.compile("filename\\s*=\\s*([^;\\s]+)", Pattern.CASE_INSENSITIVE)
         val plainMatcher = plainPattern.matcher(contentDisposition)
         if (plainMatcher.find()) {
-            return plainMatcher.group(1).trim(''', '"')
+            return plainMatcher.group(1).trim { it == '"' || it == '\'' }
         }
         return null
     }
