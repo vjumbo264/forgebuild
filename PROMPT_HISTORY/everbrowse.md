@@ -93,3 +93,12 @@ Also, the notification bar is not showing the progress bar, and I want to be abl
 
 Please fix the downloads feature. It's completely broken.
 """
+
+## 2026-09-25 — Operator instruction #18 (verbatim)
+"""
+Okay, it is working now. But one thing is that the notification download is actually progressing, but the one that is in the download manager in the app doesn't progress.
+
+So the notification download is working normally, I can pause and resume it, but the one that is in the main app doesn't show anything. So that needs to be fixed.
+
+The one that is in the main app is not progressing. It just shows that it's downloading but it doesn't go anywhere. It's not actively progressing. That is the issue I'm having now.
+"""
