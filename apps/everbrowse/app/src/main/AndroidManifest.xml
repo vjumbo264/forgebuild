@@ -82,6 +82,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Broadcast receiver for interactive notification buttons (Pause, Resume, Cancel) -->
+        <receiver
+            android:name=".DownloadActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.forgebuild.everbrowse.ACTION_PAUSE_DOWNLOAD" />
+                <action android:name="com.forgebuild.everbrowse.ACTION_RESUME_DOWNLOAD" />
+                <action android:name="com.forgebuild.everbrowse.ACTION_CANCEL_DOWNLOAD" />
+            </intent-filter>
+        </receiver>
+
         <!-- FileProvider for opening downloaded files safely -->
         <provider
             android:name="androidx.core.content.FileProvider"

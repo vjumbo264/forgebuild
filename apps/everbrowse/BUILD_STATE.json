@@ -706,26 +706,38 @@
     {
       "id": "t69",
       "title": "Fix fake 8KB download bug: overhaul HTTP download client with manual redirect handling, CookieManager synchronization, browser request headers, Content-Disposition filename extraction, and HTML-error detection",
-      "status": "pending",
-      "notes": "Resolves root cause of 8KB fake download by preventing CDN/server HTML challenges and dropped cookies across redirects."
+      "status": "done",
+      "notes": "Resolved root cause of fake 8KB downloads: set instanceFollowRedirects=false to manually preserve cookies and session headers across CDN hops; synchronized CookieManager on every hop; sent browser navigation headers (Accept, Accept-Language, Sec-Fetch-*); extracted authentic filenames from response Content-Disposition (RFC 5987/6266); and added guard against 8KB HTML captcha/login pages.",
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
+      ]
     },
     {
       "id": "t70",
       "title": "Implement Pause, Resume, and Cancel with interactive notifications and HTTP Range (206) support in BrowserEngine and DownloadManagerSheet",
-      "status": "pending",
-      "notes": "Adds DownloadActionReceiver for notification Pause/Resume/Cancel buttons, HTTP Range resume support, and live notification progress updates."
+      "status": "done",
+      "notes": "Implemented interactive Pause, Resume, and Cancel in notification bar via DownloadActionReceiver with system drawables, and in DownloadManagerSheet. Supported HTTP Range (206 Partial Content) with .part file buffering for pause/resume.",
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadActionReceiver.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadManagerSheet.kt"
+      ]
     },
     {
       "id": "t71",
       "title": "Validate AndroidManifest, Gradle build configuration, and Kotlin compilation for everbrowse-v14",
-      "status": "pending",
-      "notes": "Ensure all receivers, permissions, and components compile cleanly."
+      "status": "done",
+      "notes": "Validated AndroidManifest declarations (DownloadActionReceiver, storage permissions, FileProvider) and verified all Kotlin sources compile cleanly.",
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t72",
       "title": "Dispatch release workflow for everbrowse-v14, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
-      "status": "pending",
-      "notes": "Build and release everbrowse-v14."
+      "status": "in_progress",
+      "notes": "Dispatching release.yml workflow for everbrowse-v14."
     }
   ],
   "substitutions": [

@@ -574,7 +574,7 @@ class MainActivity : ComponentActivity() {
     private fun executeDownload(pending: DownloadCoordinator.PendingDownload) {
         Toast.makeText(this, "Starting download: ${pending.suggestedName}…", Toast.LENGTH_SHORT).show()
         showDownloadsSheet = true
-        DownloadCoordinator.startDownload(this, pending, lifecycleScope) { ok, result ->
+        DownloadCoordinator.startDownload(this, pending) { ok, result ->
             if (ok) {
                 Toast.makeText(this@MainActivity, "Saved to Downloads: $result", Toast.LENGTH_LONG).show()
             } else {

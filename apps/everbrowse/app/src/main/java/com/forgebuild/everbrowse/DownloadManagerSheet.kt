@@ -37,12 +37,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.SpacingTokens
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private val PauseIcon: ImageVector by lazy {
+    ImageVector.Builder(name = "Pause", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
+        .addPath(PathParser().parsePathString("M6,19h4V5H6v14zm8,-14v14h4V5h-4z").toNodes(), fill = SolidColor(Color.Black))
+        .build()
+}
+
+private val PlayIcon: ImageVector by lazy {
+    ImageVector.Builder(name = "Play", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
+        .addPath(PathParser().parsePathString("M8,5v14l11,-7z").toNodes(), fill = SolidColor(Color.Black))
+        .build()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,10 +72,10 @@ fun DownloadManagerSheet(
     val downloads = DownloadCoordinator.downloads
 
     val activeDownloads = downloads.filter {
-        it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.PENDING
+        it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.PENDING || it.status == DownloadStatus.PAUSED
     }
     val finishedDownloads = downloads.filter {
-        it.status != DownloadStatus.DOWNLOADING && it.status != DownloadStatus.PENDING
+        it.status != DownloadStatus.DOWNLOADING && it.status != DownloadStatus.PENDING && it.status != DownloadStatus.PAUSED
     }
 
     ModalBottomSheet(
@@ -237,6 +253,8 @@ fun DownloadManagerSheet(
                         items(activeDownloads, key = { it.id }) { record ->
                             ActiveDownloadCard(
                                 record = record,
+                                onPause = { DownloadCoordinator.pauseDownload(context, record.id) },
+                                onResume = { DownloadCoordinator.resumeDownload(context, record.id) },
                                 onCancel = { DownloadCoordinator.cancelDownload(context, record.id) }
                             )
                         }
@@ -272,13 +290,17 @@ fun DownloadManagerSheet(
 @Composable
 private fun ActiveDownloadCard(
     record: DownloadRecord,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
     onCancel: () -> Unit
 ) {
     val s = SpacingTokens.Spacing
+    val isPaused = record.status == DownloadStatus.PAUSED
     Card(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            containerColor = if (isPaused) MaterialTheme.colorScheme.surfaceContainerHighest
+            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -293,14 +315,14 @@ private fun ActiveDownloadCard(
             ) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isPaused) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = EngineIcons.Download,
+                            imageVector = if (isPaused) PauseIcon else EngineIcons.Download,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = if (isPaused) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -315,7 +337,14 @@ private fun ActiveDownloadCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    val statusText = if (record.totalBytes > 0) {
+                    val statusText = if (isPaused) {
+                        if (record.totalBytes > 0) {
+                            val pct = ((record.downloadedBytes * 100) / record.totalBytes).toInt()
+                            "Paused • $pct% (${DownloadCoordinator.formatBytes(record.downloadedBytes)} of ${DownloadCoordinator.formatBytes(record.totalBytes)})"
+                        } else {
+                            "Paused • ${DownloadCoordinator.formatBytes(record.downloadedBytes)}"
+                        }
+                    } else if (record.totalBytes > 0) {
                         val pct = ((record.downloadedBytes * 100) / record.totalBytes).toInt()
                         "$pct% • ${DownloadCoordinator.formatBytes(record.downloadedBytes)} of ${DownloadCoordinator.formatBytes(record.totalBytes)}"
                     } else {
@@ -327,6 +356,36 @@ private fun ActiveDownloadCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                // Pause or Resume action
+                if (isPaused) {
+                    IconButton(
+                        onClick = onResume,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = PlayIcon,
+                            contentDescription = "Resume download",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = onPause,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = PauseIcon,
+                            contentDescription = "Pause download",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(s.xxs))
+
                 IconButton(
                     onClick = onCancel,
                     modifier = Modifier.size(28.dp)
