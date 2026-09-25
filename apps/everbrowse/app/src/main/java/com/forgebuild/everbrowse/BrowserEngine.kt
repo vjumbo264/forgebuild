@@ -105,6 +105,13 @@ object DownloadCoordinator {
 
     val downloads = mutableStateListOf<DownloadRecord>()
 
+    val activeCount: Int
+        get() = downloads.count {
+            it.status == DownloadStatus.DOWNLOADING ||
+            it.status == DownloadStatus.PENDING ||
+            it.status == DownloadStatus.PAUSED
+        }
+
     private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val activeTasks = ConcurrentHashMap<String, DownloadTask>()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -121,10 +128,10 @@ object DownloadCoordinator {
     data class PendingDownload(
         val url: String,
         val suggestedName: String,
-        val mimeType: String,
-        val userAgent: String?,
-        val referer: String?,
-        val contentLength: Long
+        val mimeType: String = "application/octet-stream",
+        val userAgent: String? = null,
+        val referer: String? = null,
+        val contentLength: Long = -1L
     )
 
     fun init(context: Context) {
