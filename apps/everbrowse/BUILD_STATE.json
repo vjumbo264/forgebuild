@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v15",
-  "updated_by": "operator prompt #18 \u2014 Fix in-app download manager progress bar synchronization with Compose snapshot state",
+  "updated_by": "operator prompt #19 \u2014 Long-press web context menu, theme-aware site dark mode, blob downloads, retry duplicate fix, home-back navigation",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -790,6 +790,48 @@
       "files": [
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
       ]
+    },
+    {
+      "id": "t77",
+      "title": "Implement WebView long-press context menu for links, images, and image-links",
+      "status": "pending",
+      "notes": "Wire setOnLongClickListener on WebView to detect HitTestResult (SRC_ANCHOR, IMAGE, SRC_IMAGE_ANCHOR) and present a Material 3 bottom sheet with options to Open in New Tab, Copy Link Address, Download Image, Copy Image Address, and Share."
+    },
+    {
+      "id": "t78",
+      "title": "Align site dark/light mode with browser state without forcing dark mode",
+      "status": "pending",
+      "notes": "Update themes.xml base theme to DayNight, add androidx.webkit:webkit dependency, and configure WebSettingsCompat with DARK_STRATEGY_WEB_THEME_DARKENING_ONLY and algorithmic darkening disabled so sites supporting prefers-color-scheme match the browser theme without forced inversion."
+    },
+    {
+      "id": "t79",
+      "title": "Support blob: URL downloads via WebView JavaScript bridge",
+      "status": "pending",
+      "notes": "Register BlobDownloadBridge JavascriptInterface on WebView and evaluate an XHR/FileReader script to convert blob: URLs into Base64 data URLs for seamless stream download."
+    },
+    {
+      "id": "t80",
+      "title": "Fix duplicate downloads on retry by updating existing DownloadRecord in-place",
+      "status": "pending",
+      "notes": "Add retryDownload in DownloadCoordinator that mutates the existing record and restarts its download loop without adding a new duplicate card to the download list."
+    },
+    {
+      "id": "t81",
+      "title": "Restore previous webpage on Back gesture/button after tapping Home button",
+      "status": "pending",
+      "notes": "Track previousWebUrlBeforeHome in BrowserTab when navigating to home, allowing back navigation to restore the previous active webpage smoothly."
+    },
+    {
+      "id": "t82",
+      "title": "Validate Kotlin compilation, AndroidManifest, and build configuration for everbrowse-v16",
+      "status": "pending",
+      "notes": "Verify all imports, Compose components, and resource references compile cleanly."
+    },
+    {
+      "id": "t83",
+      "title": "Dispatch release workflow for everbrowse-v16, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Build and release everbrowse-v16."
     }
   ],
   "substitutions": [
@@ -799,5 +841,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v15"
+  "target_release": "everbrowse-v16"
 }
