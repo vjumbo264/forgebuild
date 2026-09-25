@@ -15,6 +15,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
@@ -122,6 +123,16 @@ class MainActivity : ComponentActivity() {
     // Storage and notification permissions launcher for downloads
     private val storagePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        val pending = pendingDownload
+        if (pending != null) {
+            executeDownload(pending)
+        }
+    }
+
+    // All Files Access launcher for Android 11+ (API 30+)
+    private val manageStorageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { _ ->
         val pending = pendingDownload
         if (pending != null) {
@@ -505,41 +516,56 @@ class MainActivity : ComponentActivity() {
 
     private fun triggerDownload(pending: DownloadCoordinator.PendingDownload) {
         pendingDownload = pending
-        val needed = mutableListOf<String>()
 
-        // 1. Storage permissions:
-        // On Android 12L (API 32) and below, request WRITE_EXTERNAL_STORAGE & READ_EXTERNAL_STORAGE
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+        // 1. Notification permission so progress bar and actions show in notification bar
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                storagePermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            }
+        }
+
+        // 2. Storage permissions:
+        // On Android 11+ (API 30+), request All Files Access (actual storage permission)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                AndroidAlertDialog.Builder(this)
+                    .setTitle("Storage Permission Required")
+                    .setMessage("EverBrowse needs Storage Permission (All Files Access) to download and save files directly to your device storage.")
+                    .setPositiveButton("Grant Permission") { _, _ ->
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            manageStorageLauncher.launch(intent)
+                        } catch (_: Exception) {
+                            try {
+                                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                manageStorageLauncher.launch(intent)
+                            } catch (_: Exception) {
+                                executeDownload(pending)
+                            }
+                        }
+                    }
+                    .setNegativeButton("Continue Anyway") { _, _ ->
+                        executeDownload(pending)
+                    }
+                    .show()
+                return
+            }
+        } else {
+            // Android <= 29/32: Request standard WRITE_EXTERNAL_STORAGE and READ_EXTERNAL_STORAGE
+            val needed = mutableListOf<String>()
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 needed.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
-        } else {
-            // Android 13+ (API 33+)
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.READ_MEDIA_IMAGES)
+            if (needed.isNotEmpty()) {
+                Toast.makeText(this, "Please allow storage permission to save downloads to your device", Toast.LENGTH_SHORT).show()
+                storagePermissionLauncher.launch(needed.toTypedArray())
+                return
             }
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.READ_MEDIA_VIDEO)
-            }
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.READ_MEDIA_AUDIO)
-            }
-        }
-
-        // Notification permission so progress shows in notification bar
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        if (needed.isNotEmpty()) {
-            Toast.makeText(this, "Please allow storage permission to save downloads to your device", Toast.LENGTH_SHORT).show()
-            storagePermissionLauncher.launch(needed.toTypedArray())
-            return
         }
 
         executeDownload(pending)

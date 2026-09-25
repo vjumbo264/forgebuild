@@ -696,8 +696,12 @@
     {
       "id": "t68",
       "title": "Fix storage permission request: remove photo/video/music permissions, request genuine All Files Access on API 30+ (MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) and WRITE_EXTERNAL_STORAGE on <=32, and ensure notification permission is active",
-      "status": "pending",
-      "notes": "Removes READ_MEDIA_* that incorrectly prompted for photos/music, and implements genuine Android storage permissions flow with clear explanation."
+      "status": "done",
+      "notes": "Removed READ_MEDIA_IMAGES/VIDEO/AUDIO that provoked confusing media access prompts. Added All Files Access dialog and Settings launcher for API 30+ (ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) and WRITE_EXTERNAL_STORAGE for API <=32, and POST_NOTIFICATIONS for download progress.",
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt"
+      ]
     },
     {
       "id": "t69",
