@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v13",
-  "updated_by": "operator prompt #16 \u2014 Real 100MB+ file downloads via MediaStore/ContentResolver and storage permission prompts",
+  "updated_by": "operator prompt #17 \u2014 Fix fake 8KB downloads, true storage permission flow, and pause/resume/cancel in notifications",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -692,6 +692,36 @@
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
       ]
+    },
+    {
+      "id": "t68",
+      "title": "Fix storage permission request: remove photo/video/music permissions, request genuine All Files Access on API 30+ (MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) and WRITE_EXTERNAL_STORAGE on <=32, and ensure notification permission is active",
+      "status": "pending",
+      "notes": "Removes READ_MEDIA_* that incorrectly prompted for photos/music, and implements genuine Android storage permissions flow with clear explanation."
+    },
+    {
+      "id": "t69",
+      "title": "Fix fake 8KB download bug: overhaul HTTP download client with manual redirect handling, CookieManager synchronization, browser request headers, Content-Disposition filename extraction, and HTML-error detection",
+      "status": "pending",
+      "notes": "Resolves root cause of 8KB fake download by preventing CDN/server HTML challenges and dropped cookies across redirects."
+    },
+    {
+      "id": "t70",
+      "title": "Implement Pause, Resume, and Cancel with interactive notifications and HTTP Range (206) support in BrowserEngine and DownloadManagerSheet",
+      "status": "pending",
+      "notes": "Adds DownloadActionReceiver for notification Pause/Resume/Cancel buttons, HTTP Range resume support, and live notification progress updates."
+    },
+    {
+      "id": "t71",
+      "title": "Validate AndroidManifest, Gradle build configuration, and Kotlin compilation for everbrowse-v14",
+      "status": "pending",
+      "notes": "Ensure all receivers, permissions, and components compile cleanly."
+    },
+    {
+      "id": "t72",
+      "title": "Dispatch release workflow for everbrowse-v14, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Build and release everbrowse-v14."
     }
   ],
   "substitutions": [
@@ -701,5 +731,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v13"
+  "target_release": "everbrowse-v14"
 }
