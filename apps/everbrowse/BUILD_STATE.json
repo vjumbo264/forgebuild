@@ -2,8 +2,8 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v12",
+  "build_complete": true,
+  "current_release": "everbrowse-v13",
   "updated_by": "operator prompt #16 \u2014 Real 100MB+ file downloads via MediaStore/ContentResolver and storage permission prompts",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
@@ -680,8 +680,18 @@
     {
       "id": "t67",
       "title": "Dispatch release workflow for everbrowse-v13, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml for everbrowse-v13."
+      "status": "done",
+      "notes": "Dispatched release.yml workflow (run 36074233304) for commit 268e9c3. Workflow completed successfully. Live release everbrowse-v13 verified via GitHub API with published asset app-everbrowse-v13.apk (1,607,199 bytes) and forgebuild-manifest.json.",
+      "commits": [
+        "1c88c05",
+        "77f6a63",
+        "268e9c3"
+      ],
+      "files": [
+        "apps/everbrowse/app/src/main/AndroidManifest.xml",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt"
+      ]
     }
   ],
   "substitutions": [
