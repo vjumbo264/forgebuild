@@ -2,8 +2,8 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": false,
-  "current_release": "everbrowse-v15",
+  "build_complete": true,
+  "current_release": "everbrowse-v16",
   "updated_by": "operator prompt #19 \u2014 Long-press web context menu, theme-aware site dark mode, blob downloads, retry duplicate fix, home-back navigation",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
@@ -857,8 +857,21 @@
     {
       "id": "t83",
       "title": "Dispatch release workflow for everbrowse-v16, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml workflow for everbrowse-v16."
+      "status": "done",
+      "notes": "Dispatched release.yml workflow (run 36168549297). Workflow succeeded. Live release everbrowse-v16 verified via GitHub API with published assets: app-everbrowse-v16.apk (1,623,804 bytes) and forgebuild-manifest.json.",
+      "commits": [
+        "4a3419d",
+        "cf09991"
+      ],
+      "files": [
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/WebContextMenuSheet.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserTab.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/BrowserEngine.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/MainActivity.kt",
+        "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadManagerSheet.kt",
+        "apps/everbrowse/app/build.gradle.kts",
+        "apps/everbrowse/app/src/main/res/values/themes.xml"
+      ]
     }
   ],
   "substitutions": [
