@@ -2,9 +2,9 @@
   "slug": "everbrowse",
   "app_name": "EverBrowse",
   "package": "com.forgebuild.everbrowse",
-  "build_complete": true,
+  "build_complete": false,
   "current_release": "everbrowse-v14",
-  "updated_by": "operator prompt #17 \u2014 Fix fake 8KB downloads, true storage permission flow, and pause/resume/cancel in notifications",
+  "updated_by": "operator prompt #18 \u2014 Fix in-app download manager progress bar synchronization with Compose snapshot state",
   "notes": "Operator instruction #8 received: Replace app icon with modern high-quality icon, and fix keyboard cursor visibility in dark mode and light mode. Seeding tasks t33-t37.",
   "tasks": [
     {
@@ -751,6 +751,30 @@
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadActionReceiver.kt",
         "apps/everbrowse/app/src/main/java/com/forgebuild/everbrowse/DownloadManagerSheet.kt"
       ]
+    },
+    {
+      "id": "t73",
+      "title": "Make DownloadRecord properties Compose snapshot-observable using mutableStateOf and mutableLongStateOf so in-app DownloadManagerSheet actively tracks stream progress",
+      "status": "pending",
+      "notes": "Replaces plain JVM var fields with Compose mutableStateOf/mutableLongStateOf backing properties to trigger real-time UI recomposition as bytes arrive."
+    },
+    {
+      "id": "t74",
+      "title": "Optimize progress reporting and recomposition cadence in executeDownloadLoop and ActiveDownloadCard",
+      "status": "pending",
+      "notes": "Ensure smooth 60fps in-app progress updates, percent formatting, and status transitions without UI freezing."
+    },
+    {
+      "id": "t75",
+      "title": "Validate Kotlin compilation and build configuration for everbrowse-v15",
+      "status": "pending",
+      "notes": "Verify all Compose state bindings and components compile cleanly."
+    },
+    {
+      "id": "t76",
+      "title": "Dispatch release workflow for everbrowse-v15, monitor CI build, verify live release and APK via GitHub API, set build_complete true",
+      "status": "pending",
+      "notes": "Build and release everbrowse-v15."
     }
   ],
   "substitutions": [
@@ -760,5 +784,5 @@
       "used": "MediaStore.Downloads (Android 10+) and Environment.DIRECTORY_DOWNLOADS (Android <= 28) with WRITE_EXTERNAL_STORAGE permission flow"
     }
   ],
-  "target_release": "everbrowse-v14"
+  "target_release": "everbrowse-v15"
 }
