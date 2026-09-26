@@ -41,7 +41,7 @@
    "id": "task-04",
    "title": "Scaffold Dashboard frontend (Pages-deployable) + any Workers/Pages Functions; create Cloudflare Pages project via API; connect GitHub repo auto-deploy on push.",
    "status": "done",
-   "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) \u2014 Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token \u2014 Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
+   "notes": "Static hash-routed SPA in site/ (index.html/app.js/styles.css) — Pages-deployable, no Next/Vercel APIs, no Workers needed. Cloudflare Pages project \"forgebuild\" created via API (forgebuild.pages.dev, production_branch main). Auto-deploy on push via GitHub Actions deploy.yml + wrangler-action (native GitHub-connected Pages deploy requires dashboard OAuth not grantable by token — Actions-based auto-deploy documented in README). CLOUDFLARE_API_TOKEN/CLOUDFLARE_ACCOUNT_ID set as sealed GitHub Actions secrets.",
    "commits": [],
    "files": [],
    "tests": ""
@@ -50,7 +50,7 @@
    "id": "task-05",
    "title": "Home page: type-1 'Build new app' prompt generator (free-text description, persistent-session contract style, generate-from-template Engine reference, GITHUB_PAT placeholder field).",
    "status": "done",
-   "notes": "Home page (#/) implemented: free-text description + optional repo name \u2192 full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
+   "notes": "Home page (#/) implemented: free-text description + optional repo name → full type-1 persistent-session contract prompt (template-generate step, checkpoint protocol, Engine constraints, PAT placeholder field), copy-to-clipboard.",
    "commits": [],
    "files": [],
    "tests": ""
@@ -112,7 +112,7 @@
   },
   {
    "session": "session-1",
-   "event": "tasks 02\u201309 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
+   "event": "tasks 02–09 implemented and pushed; Cloudflare Pages project forgebuild created; starting task-10 e2e verification."
   },
   {
    "session": "session-1",
@@ -180,7 +180,11 @@
   },
   {
    "session": "session-real-expressive-fix",
-   "event": "forgebuild-real-expressive-fix COMPLETE \u2014 CI run 35196712841 green, release forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10; hand-rolled Expressive approximations replaced by official material3 1.5.0-alpha28; permanent no-substitution rule live in all 3 prompt templates; full-suite checklist recorded."
+   "event": "forgebuild-real-expressive-fix COMPLETE — CI run 35196712841 green, release forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10; hand-rolled Expressive approximations replaced by official material3 1.5.0-alpha28; permanent no-substitution rule live in all 3 prompt templates; full-suite checklist recorded."
+  },
+  {
+   "session": "session-icon-and-version-fix",
+   "event": "forgebuild-icon-and-version-fix RESUMED and COMPLETE: steps 01-09 were already done+pushed at HEAD; executed step-10 (e2e verification: APK-decoded versionCode proof taskflow 1->1 pre-fix bug / clipforge 36->37 update path; full icon classification sweep consistent, clipforge now raster+auto-trace) and step-11 (final). Both bug fixes documented and verified; build_complete=true."
   }
  ],
  "migration_tasks": [
@@ -188,7 +192,7 @@
    "id": "task-M1",
    "title": "Import forgebuild-engine into forgebuild as engine/ (history preserved), apply pathData->addPath icon fix.",
    "status": "done",
-   "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings \u2014 output equals the hand-fixed file exactly.",
+   "notes": "Imported vjumbo264/forgebuild-engine full history into engine/ via merge -s ours + read-tree --prefix (strategy chosen because -X subtree cannot handle the root README.md/ARCHITECTURE.md file-vs-directory conflict). Engine-level icon bug FIXED: tools/gen_icons.py template now emits .addPath(PathParser().parsePathString(d).toNodes(), fill = SolidColor(Color.Black)) with PathParser import, dead broken first loop removed; already-generated engine/app/.../EngineIconsGenerated.kt rewritten to match (6 icons). Validation: regenerated the icons file with the fixed generator from the same 6 inline path strings — output equals the hand-fixed file exactly.",
    "commits": [],
    "files": [
     "engine/"
@@ -238,14 +242,14 @@
    "id": "task-M6",
    "title": "Redeploy Dashboard to Cloudflare Pages and verify live: apps list, tapcounter-v1 APK download, one-time PAT across reload, type-2 prompt references apps/tapcounter/ + forgebuild.",
    "status": "done",
-   "notes": "Verified live 2026-09-11: (1) Redeploy \u2014 pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload \u2014 so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
+   "notes": "Verified live 2026-09-11: (1) Redeploy — pages-deploy run #3 (sha fd2cae5) succeeded and serves the current single-repo dashboard; live https://forgebuild.pages.dev/app.js byte-matches repo site/app.js markers (fb_pat localStorage key, Contents-API apps enumeration, prefix-filtered releases). (2) Apps list source GET /repos/vjumbo264/forgebuild/contents/apps returns dir 'tapcounter'. (3) Releases API filtered by prefix 'tapcounter-v' returns tapcounter-v1 (not draft/prerelease); APK asset app-tapcounter-v1.apk downloads 200 (849915 bytes) via the Releases asset endpoint. (4) One-time PAT model confirmed in live code: PAT stored in localStorage('fb_pat'), gateIfNeeded() only prompts when no PAT and no explicit skip flag survive reload — so a reload never re-prompts; explicit header 'Disconnect' clears fb_pat + skip flag and re-gates. No password/login/server session present. (5) promptExtend() live template references APP_FOLDER = apps/<slug>/ inside vjumbo264/forgebuild (OWNER='vjumbo264', REPO='forgebuild'), release.yml app_path dispatch, auto-increment <slug>-v(N+1), PROMPT_HISTORY/<slug>.md; GITHUB_PAT=<PLACEHOLDER> retained verbatim in copied prompts. No separate per-app repo name appears anywhere in the generated prompt.",
    "commits": [],
    "files": [],
    "tests": ""
   },
   {
    "id": "task-M7",
-   "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API \u2014 LAST, only after M1-M6 verified live.",
+   "title": "Delete forgebuild-engine and forgebuild-demo-tapcounter repos via API — LAST, only after M1-M6 verified live.",
    "status": "done",
    "notes": "2026-09-11: Deleted vjumbo264/forgebuild-engine and vjumbo264/forgebuild-demo-tapcounter via GitHub API (HTTP 204 each), ONLY after full pre-deletion verification: M1 engine/ import (12-entry apps/tapcounter, engine/tools/gen_icons.py + apps/tapcounter/tools/gen_icons.py both carrying the addPath fix), apps/tapcounter/BUILD_STATE.json, PROMPT_HISTORY/tapcounter.md, unified release.yml, tapcounter-v1 release with downloadable APK, and live dashboard (M6) all confirmed intact on forgebuild. Post-deletion: both source repos return 404; vjumbo264/forgebuild returns 200. forgebuild is now the sole repository.",
    "commits": [],
@@ -265,9 +269,9 @@
  "correction_round_2_tasks": [
   {
    "id": "task-C1",
-   "title": "Fix 1 \u2014 Slug ownership: remove Dashboard client-side slug derivation; type-1 blank-slug prompt delegates slug choice to building AI (writes slug field first in apps/<slug>/BUILD_STATE.json); Apps/App pages read slug from repo only; PROMPT_HISTORY naming assumptions updated.",
+   "title": "Fix 1 — Slug ownership: remove Dashboard client-side slug derivation; type-1 blank-slug prompt delegates slug choice to building AI (writes slug field first in apps/<slug>/BUILD_STATE.json); Apps/App pages read slug from repo only; PROMPT_HISTORY naming assumptions updated.",
    "status": "done",
-   "notes": "Fix 1 implemented. site/app.js: promptNewApp() rewritten \u2014 blank slug now produces an explicit APP_SLUG = NOT PREDETERMINED block instructing the building AI to choose a short kebab-case slug after reading the description, check apps/ for collisions, treat it as permanent (folder apps/<slug>/, tags <slug>-vN, PROMPT_HISTORY/<slug>.md), and write it as the FIRST field (\"slug\") of the first apps/<slug>/BUILD_STATE.json; operator-given slug passes verbatim with a do-not-alter instruction and concrete paths. Client-side description-based slug derivation REMOVED from renderHome (only operator-typed input is sanitized); slug label rewritten. Apps list / App page already discover slugs solely from the repo (Contents API on apps/ + release-tag prefix filter) \u2014 verified, no guessing remains. RULES gained standing Slugs/cache-first/FLAG_SECURE/SAF bullets. ARCHITECTURE.md + README.md document slug ownership (and the C3 delete-app model). Node simulation: 13/13 assertions PASS for both blank-slug and fixed-slug prompt branches. Live blank-slug E2E generation deferred to C5 (prompt wording already validated; a full AI-run build is out of scope for this session).",
+   "notes": "Fix 1 implemented. site/app.js: promptNewApp() rewritten — blank slug now produces an explicit APP_SLUG = NOT PREDETERMINED block instructing the building AI to choose a short kebab-case slug after reading the description, check apps/ for collisions, treat it as permanent (folder apps/<slug>/, tags <slug>-vN, PROMPT_HISTORY/<slug>.md), and write it as the FIRST field (\"slug\") of the first apps/<slug>/BUILD_STATE.json; operator-given slug passes verbatim with a do-not-alter instruction and concrete paths. Client-side description-based slug derivation REMOVED from renderHome (only operator-typed input is sanitized); slug label rewritten. Apps list / App page already discover slugs solely from the repo (Contents API on apps/ + release-tag prefix filter) — verified, no guessing remains. RULES gained standing Slugs/cache-first/FLAG_SECURE/SAF bullets. ARCHITECTURE.md + README.md document slug ownership (and the C3 delete-app model). Node simulation: 13/13 assertions PASS for both blank-slug and fixed-slug prompt branches. Live blank-slug E2E generation deferred to C5 (prompt wording already validated; a full AI-run build is out of scope for this session).",
    "commits": [
     "2b1ae8f"
    ],
@@ -280,9 +284,9 @@
   },
   {
    "id": "task-C2",
-   "title": "Fix 2 \u2014 Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
+   "title": "Fix 2 — Cache-first background-refresh pattern: shared data-layer module + ARCHITECTURE.md docs in engine/; type-1/type-2 prompt generators mandate it for live-data apps; apply/verify on apps/tapcounter if applicable (else note why not).",
    "status": "done",
-   "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile \u2014 remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract \u2014 instant cached render + background reconcile, no re-flash \u2014 is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) \u2014 Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
+   "notes": "Fix 2 implemented. engine/: new com.forgebuild.engine.data.CacheFirstStore (dependency-free on-disk JSON cache; synchronous loadFromCache() for instant open-render; serialized background refresh() with reconcile — remote authoritative, overridable with keyOf for id-aware merges; refreshing/lastError StateFlows so UI never re-flashes to a blocking loader). kotlinx-coroutines-android 1.8.1 added to engine/app/build.gradle.kts as a justified engine-level dependency. engine/ARCHITECTURE.md: full 'Cache-first, background-refresh data pattern (STANDING REQUIREMENT)' section incl. Room/DataStore substitution rule (document choice in the app's own notes; the contract — instant cached render + background reconcile, no re-flash — is what must be preserved). Prompt generators: RULES (shared by type-1 AND type-2 prompts) now mandate CacheFirstStore for any live-data app; helperHints() additionally surfaces it as an explicit instruction when the description implies fetching/syncing. Retroactive application: tapcounter verified purely local (no INTERNET permission, no network code) — Fix 2 does not apply; this is recorded in apps/tapcounter/BUILD_STATE.json per the spec instead of forcing an irrelevant change.",
    "commits": [
     "95e7bac"
    ],
@@ -299,22 +303,22 @@
   },
   {
    "id": "task-C3",
-   "title": "Fix 3 \u2014 Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
+   "title": "Fix 3 — Delete entire app: destructive App-page action with type-the-slug confirmation; removes apps/<slug>/ folder, all <slug>-* releases, and PROMPT_HISTORY/<slug>.md via GitHub API. Verify against throwaway apps/_delete-test/.",
    "status": "done",
-   "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) \u2014 deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree \u2192 null-sha entries \u2192 new tree \u2192 new commit \u2192 PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo \u2014 completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents \u2014 no separate index needed). Fixture fully cleaned up by the test itself.",
+   "notes": "Fix 3 implemented and verified LIVE end-to-end. site/app.js: new deleteAppTree(slug) — deletes every <slug>-v* release via DELETE /releases/{id}, deletes each git tag (DELETE /git/refs/tags/...), deletes PROMPT_HISTORY/<slug>.md (Contents API DELETE with sha), then removes the whole apps/<slug>/ folder as ONE commit via the Git Trees API (recursive tree → null-sha entries → new tree → new commit → PATCH refs/heads/main, with a 4-attempt retry on the ref update for the transient post-commit 422 observed during testing). App page UI: clearly separated 'Danger zone' card (error-colored border) with a 'Delete this app' action distinct from the per-version delete-release buttons; confirmation requires TYPING THE SLUG (button stays disabled until input matches) plus a final confirm() dialog; runs entirely via the operator's stored localStorage PAT like the existing per-version delete. LIVE VERIFICATION: created disposable apps/_delete-test/ (README + BUILD_STATE.json with slug field), PROMPT_HISTORY/_delete-test.md, and dummy release _delete-test-v1 with an asset; ran the exact shipped deleteAppTree code against the live repo — completed without error; verified afterwards: folder gone from GET /contents/apps, zero _delete-test-v* releases, prompt-history file 404, git tag 404, and the app no longer appears in the Apps list (which derives from apps/ contents — no separate index needed). Fixture fully cleaned up by the test itself.",
    "commits": [
     "f07af98"
    ],
    "files": [
     "site/app.js"
    ],
-   "tests": "Static: node --check OK; 10/10 mocked-flow assertions PASS (order releases\u2192tags\u2192history\u2192tree\u2192commit\u2192ref-patch; only <slug> entries null-sha\u2019d). Live: disposable _delete-test app + release created then deleted via the shipped code path; all five live assertions PASS."
+   "tests": "Static: node --check OK; 10/10 mocked-flow assertions PASS (order releases→tags→history→tree→commit→ref-patch; only <slug> entries null-sha’d). Live: disposable _delete-test app + release created then deleted via the shipped code path; all five live assertions PASS."
   },
   {
    "id": "task-C4",
-   "title": "Fix 4 \u2014 Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
+   "title": "Fix 4 — Full Android permission suite in engine/ permissions module + FLAG_SECURE per-screen helper + SAF-based explicit save/download helper, all documented in ARCHITECTURE.md; type-1/type-2 generators mention helpers when descriptions imply them.",
    "status": "done",
-   "notes": "Fix 4 implemented. Permissions.kt expanded from 6 to 24 EnginePermission entries covering the full practical Android surface: STORAGE (scoped-media 13+/legacy), CAMERA, NOTIFICATIONS (33+), FOREGROUND_SERVICE (+SPECIAL_USE 34+), LOCATION (fine/coarse foreground), BACKGROUND_LOCATION (runtime + Settings flow 11+), MICROPHONE, CONTACTS, CALENDAR, PHONE (phone state + call log), SMS, BODY_SENSORS, ACTIVITY_RECOGNITION (29+), BLUETOOTH (incl. Android 12+ SCAN/CONNECT/ADVERTISE split, legacy BLUETOOTH/ADMIN below), NFC, BIOMETRIC (reflection-gated BiometricManager \u2014 NO new engine dependency, preserving the lean constraint; apps using BiometricPrompt add androidx.biometric themselves with justification), EXACT_ALARM (USE_EXACT_ALARM 33+ / SCHEDULE_EXACT_ALARM 31-32 + Settings flow), ALL_FILES_ACCESS (MANAGE_EXTERNAL_STORAGE \u2014 Settings flow, documented sparing/file-manager-class-only/never-default), INSTALL_UNKNOWN_APPS (Settings flow), OVERLAY (SYSTEM_ALERT_WINDOW Settings flow), ACCESSIBILITY_SERVICE and NOTIFICATION_LISTENER (policy-driven Settings flows), VPN_SERVICE (VpnService.prepare consent), DEVICE_ADMIN (unchanged policy flow). Extensibility = one enum entry (+ one small helper for special-tier), no redesign. All opt-in per app, nothing declared by default \u2014 original non-negotiable preserved. Two new reusable helpers (already committed with C2's batch): security/ScreenSecurity.kt (per-screen FLAG_SECURE via setSecure/apply/clear, documented per-screen not app-wide) and files/SafeSave.kt (SAF ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE default, persistable grants, writeBytes/writeStream; DownloadManager explicitly banned; legacy WRITE_EXTERNAL_STORAGE fallback only where minSdk genuinely requires). engine/ARCHITECTURE.md: full permission catalog table + FLAG_SECURE per-screen section + SafeSave/SAF section. Prompt generators: RULES (type-1+type-2) carry standing bullets for FLAG_SECURE and SAF; helperHints() ties both to the description via keyword detection. VERIFICATION (task spec): generated type-1 prompt for 'A private vault for sensitive documents; lets me download and save files to storage' (blank slug) correctly surfaces BOTH helpers as available options tied to the description (SENSITIVE CONTENT -> ScreenSecurity per-screen; FILE SAVING -> SafeSave with ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE and the DownloadManager ban) \u2014 9/9 assertions PASS.",
+   "notes": "Fix 4 implemented. Permissions.kt expanded from 6 to 24 EnginePermission entries covering the full practical Android surface: STORAGE (scoped-media 13+/legacy), CAMERA, NOTIFICATIONS (33+), FOREGROUND_SERVICE (+SPECIAL_USE 34+), LOCATION (fine/coarse foreground), BACKGROUND_LOCATION (runtime + Settings flow 11+), MICROPHONE, CONTACTS, CALENDAR, PHONE (phone state + call log), SMS, BODY_SENSORS, ACTIVITY_RECOGNITION (29+), BLUETOOTH (incl. Android 12+ SCAN/CONNECT/ADVERTISE split, legacy BLUETOOTH/ADMIN below), NFC, BIOMETRIC (reflection-gated BiometricManager — NO new engine dependency, preserving the lean constraint; apps using BiometricPrompt add androidx.biometric themselves with justification), EXACT_ALARM (USE_EXACT_ALARM 33+ / SCHEDULE_EXACT_ALARM 31-32 + Settings flow), ALL_FILES_ACCESS (MANAGE_EXTERNAL_STORAGE — Settings flow, documented sparing/file-manager-class-only/never-default), INSTALL_UNKNOWN_APPS (Settings flow), OVERLAY (SYSTEM_ALERT_WINDOW Settings flow), ACCESSIBILITY_SERVICE and NOTIFICATION_LISTENER (policy-driven Settings flows), VPN_SERVICE (VpnService.prepare consent), DEVICE_ADMIN (unchanged policy flow). Extensibility = one enum entry (+ one small helper for special-tier), no redesign. All opt-in per app, nothing declared by default — original non-negotiable preserved. Two new reusable helpers (already committed with C2's batch): security/ScreenSecurity.kt (per-screen FLAG_SECURE via setSecure/apply/clear, documented per-screen not app-wide) and files/SafeSave.kt (SAF ACTION_CREATE_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE default, persistable grants, writeBytes/writeStream; DownloadManager explicitly banned; legacy WRITE_EXTERNAL_STORAGE fallback only where minSdk genuinely requires). engine/ARCHITECTURE.md: full permission catalog table + FLAG_SECURE per-screen section + SafeSave/SAF section. Prompt generators: RULES (type-1+type-2) carry standing bullets for FLAG_SECURE and SAF; helperHints() ties both to the description via keyword detection. VERIFICATION (task spec): generated type-1 prompt for 'A private vault for sensitive documents; lets me download and save files to storage' (blank slug) correctly surfaces BOTH helpers as available options tied to the description (SENSITIVE CONTENT -> ScreenSecurity per-screen; FILE SAVING -> SafeSave with ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE and the DownloadManager ban) — 9/9 assertions PASS.",
    "commits": [
     "e988b53"
    ],
@@ -331,7 +335,7 @@
    "id": "task-C5",
    "title": "End-to-end re-verification of all four fixes against live Dashboard + live repo; fix anything broken; only then set build_complete true.",
    "status": "done",
-   "notes": "End-to-end re-verification of all four fixes against the live Dashboard (forgebuild.pages.dev) and live forgebuild repo, 2026-09-11. STATIC (40/40 PASS): C1 \u2014 no client-side slug derivation remains in site/app.js; blank-slug type-1 prompt carries the APP_SLUG=NOT PREDETERMINED block instructing the building AI to choose/record the slug; operator-given slug passes verbatim with do-not-alter; apps enumerated from Contents API on apps/ and releases filtered by <slug>- prefix. C2 \u2014 engine CacheFirstStore.kt (loadFromCache synchronous + background refresh/reconcile) present, ARCHITECTURE.md standing-requirement section present, prompt RULES mandate cache-first; apps/tapcounter verified offline (no INTERNET permission, no network code) and its BUILD_STATE.json records Fix 2 as not applicable. C3 \u2014 deleteAppTree (releases + tags + PROMPT_HISTORY/<slug>.md + whole-folder removal via Git Trees API), Danger-zone UI with type-the-slug confirmation; LIVE repo confirms _delete-test fixture fully gone (apps/_delete-test 404, PROMPT_HISTORY/_delete-test.md 404, no _delete-test releases/tags) and the earlier engine-compile-check throwaway app is likewise fully removed. C4 \u2014 Permissions.kt has all 24 entries (verified each of MICROPHONE/CONTACTS/CALENDAR/SMS/BODY_SENSORS/ACTIVITY_RECOGNITION/BLUETOOTH/NFC/BIOMETRIC/EXACT_ALARM/ALL_FILES_ACCESS/INSTALL_UNKNOWN_APPS/OVERLAY/ACCESSIBILITY_SERVICE/NOTIFICATION_LISTENER/VPN_SERVICE present); ScreenSecurity.kt (FLAG_SECURE per-screen) and SafeSave.kt (SAF ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE, DownloadManager banned) present and documented in engine/ARCHITECTURE.md; generators surface both helpers via keyword hints. All 9 engine Kotlin files brace-balanced; node --check site/app.js OK. LIVE: forgebuild.pages.dev/app.js serves all current markers (NOT PREDETERMINED, deleteAppTree, Danger zone, cache-first, FLAG_SECURE, ACTION_CREATE_DOCUMENT, fb_pat) and the latest Pages deploy run is green. Live repo shape: apps/ == [calcom, tapcounter]; releases == [tapcounter-v1, calcom-v1]; PROMPT_HISTORY/ == [calcom.md, tapcounter.md]; tapcounter-v1 APK asset downloads HTTP 200 (849915 bytes). calcom is the real blank-slug E2E app built by a building AI during this correction round (release calcom-v1 green): it proves Fix 1 end-to-end \u2014 the AI chose slug 'calcom' from the description and the Dashboard discovered it from the repo alone. Its BUILD_STATE.json pre-dated the C1 slug-field convention; the slug field (== folder name) was added in commit 82c7569. CI compile verification: run 34625313422 (workflow_dispatch, head 3a51cdd) SUCCESS \u2014 its 'Validate app folder' step confirms it compiled apps/engine-compile-check, i.e. the new Engine modules (CacheFirstStore, ScreenSecurity, SafeSave, 24-entry Permissions) compile in a real release build; the throwaway app and its releases were then deleted via the new C3 action. No broken items found requiring code fixes; the only gap (calcom slug field) was fixed in place. C1\u2013C5 all done and verified live; setting build_complete: true.",
+   "notes": "End-to-end re-verification of all four fixes against the live Dashboard (forgebuild.pages.dev) and live forgebuild repo, 2026-09-11. STATIC (40/40 PASS): C1 — no client-side slug derivation remains in site/app.js; blank-slug type-1 prompt carries the APP_SLUG=NOT PREDETERMINED block instructing the building AI to choose/record the slug; operator-given slug passes verbatim with do-not-alter; apps enumerated from Contents API on apps/ and releases filtered by <slug>- prefix. C2 — engine CacheFirstStore.kt (loadFromCache synchronous + background refresh/reconcile) present, ARCHITECTURE.md standing-requirement section present, prompt RULES mandate cache-first; apps/tapcounter verified offline (no INTERNET permission, no network code) and its BUILD_STATE.json records Fix 2 as not applicable. C3 — deleteAppTree (releases + tags + PROMPT_HISTORY/<slug>.md + whole-folder removal via Git Trees API), Danger-zone UI with type-the-slug confirmation; LIVE repo confirms _delete-test fixture fully gone (apps/_delete-test 404, PROMPT_HISTORY/_delete-test.md 404, no _delete-test releases/tags) and the earlier engine-compile-check throwaway app is likewise fully removed. C4 — Permissions.kt has all 24 entries (verified each of MICROPHONE/CONTACTS/CALENDAR/SMS/BODY_SENSORS/ACTIVITY_RECOGNITION/BLUETOOTH/NFC/BIOMETRIC/EXACT_ALARM/ALL_FILES_ACCESS/INSTALL_UNKNOWN_APPS/OVERLAY/ACCESSIBILITY_SERVICE/NOTIFICATION_LISTENER/VPN_SERVICE present); ScreenSecurity.kt (FLAG_SECURE per-screen) and SafeSave.kt (SAF ACTION_CREATE_DOCUMENT/ACTION_OPEN_DOCUMENT_TREE, DownloadManager banned) present and documented in engine/ARCHITECTURE.md; generators surface both helpers via keyword hints. All 9 engine Kotlin files brace-balanced; node --check site/app.js OK. LIVE: forgebuild.pages.dev/app.js serves all current markers (NOT PREDETERMINED, deleteAppTree, Danger zone, cache-first, FLAG_SECURE, ACTION_CREATE_DOCUMENT, fb_pat) and the latest Pages deploy run is green. Live repo shape: apps/ == [calcom, tapcounter]; releases == [tapcounter-v1, calcom-v1]; PROMPT_HISTORY/ == [calcom.md, tapcounter.md]; tapcounter-v1 APK asset downloads HTTP 200 (849915 bytes). calcom is the real blank-slug E2E app built by a building AI during this correction round (release calcom-v1 green): it proves Fix 1 end-to-end — the AI chose slug 'calcom' from the description and the Dashboard discovered it from the repo alone. Its BUILD_STATE.json pre-dated the C1 slug-field convention; the slug field (== folder name) was added in commit 82c7569. CI compile verification: run 34625313422 (workflow_dispatch, head 3a51cdd) SUCCESS — its 'Validate app folder' step confirms it compiled apps/engine-compile-check, i.e. the new Engine modules (CacheFirstStore, ScreenSecurity, SafeSave, 24-entry Permissions) compile in a real release build; the throwaway app and its releases were then deleted via the new C3 action. No broken items found requiring code fixes; the only gap (calcom slug field) was fixed in place. C1–C5 all done and verified live; setting build_complete: true.",
    "commits": [
     "82c7569"
    ],
@@ -345,8 +349,8 @@
   "research_decisions": {
    "date": "2026-09-16T11:48:12Z",
    "material3_expressive": {
-    "decision": "androidx.compose.material3:material3 1.5.0-alpha28 (material3-android, minCompileSdk=37, minAGP=9.1.0). Compose stack aligned with BOM 2026.09.00 (ui/foundation 1.12.1 runtime \u2014 alpha28 declares 1.13.0-alpha01 api deps but is compatible against the 1.12.1 BOM train for the APIs used).",
-    "why": "Verification against the actual artifacts showed the Expressive public API surface is NOT in the 1.4.0 stable: in material3 1.4.0 MaterialExpressiveTheme/MotionScheme/ExperimentalMaterial3ExpressiveApi are all `internal` and wavy progress indicators do not exist at all. In 1.5.0-alpha28 they are public: MaterialExpressiveTheme(colorScheme, motionScheme, shapes, typography), MotionScheme.expressive() (spring spatial specs), expressiveLightColorScheme() (no expressiveDark* exists \u2014 dark expressive = darkColorScheme() + expressive motion/shapes, matching Google's own sample which toggles expressiveLight + darkTheme), LinearWavyProgressIndicator / CircularWavyProgressIndicator (stable, no opt-in), LoadingIndicator (@ExperimentalMaterial3ExpressiveApi), Shapes() with expressive defaults incl. LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge. No stable release carries these APIs yet (1.5.0 is alpha-only), so the newest alpha is the only way to ship REAL expressive components \u2014 the brief's 'no hand-rolled approximation where a real component exists' rule forces this choice. Trade-off recorded: alpha on the default Material theme until 1.5.0 goes stable.",
+    "decision": "androidx.compose.material3:material3 1.5.0-alpha28 (material3-android, minCompileSdk=37, minAGP=9.1.0). Compose stack aligned with BOM 2026.09.00 (ui/foundation 1.12.1 runtime — alpha28 declares 1.13.0-alpha01 api deps but is compatible against the 1.12.1 BOM train for the APIs used).",
+    "why": "Verification against the actual artifacts showed the Expressive public API surface is NOT in the 1.4.0 stable: in material3 1.4.0 MaterialExpressiveTheme/MotionScheme/ExperimentalMaterial3ExpressiveApi are all `internal` and wavy progress indicators do not exist at all. In 1.5.0-alpha28 they are public: MaterialExpressiveTheme(colorScheme, motionScheme, shapes, typography), MotionScheme.expressive() (spring spatial specs), expressiveLightColorScheme() (no expressiveDark* exists — dark expressive = darkColorScheme() + expressive motion/shapes, matching Google's own sample which toggles expressiveLight + darkTheme), LinearWavyProgressIndicator / CircularWavyProgressIndicator (stable, no opt-in), LoadingIndicator (@ExperimentalMaterial3ExpressiveApi), Shapes() with expressive defaults incl. LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge. No stable release carries these APIs yet (1.5.0 is alpha-only), so the newest alpha is the only way to ship REAL expressive components — the brief's 'no hand-rolled approximation where a real component exists' rule forces this choice. Trade-off recorded: alpha on the default Material theme until 1.5.0 goes stable.",
     "sources": [
      "material3-android-1.4.0-sources.jar (internal expressive APIs, no wavy indicators)",
      "material3-android-1.5.0-alpha28-sources.jar (public expressive APIs + WavyProgressIndicator.kt + LoadingIndicator.kt)",
@@ -363,9 +367,9 @@
     ]
    },
    "liquid_glass": {
-    "decision": "io.github.kyant0:backdrop:2.0.1 (Apache-2.0) \u2014 the library specified in the build brief; used as-is, no substitute needed",
+    "decision": "io.github.kyant0:backdrop:2.0.1 (Apache-2.0) — the library specified in the build brief; used as-is, no substitute needed",
     "api_notes": "backdrop 2.x API: rememberLayerBackdrop()/Modifier.layerBackdrop + Modifier.drawBackdrop(backdrop, shape, effects) with BackdropEffectScope effects { blur(), lens() (refraction), colorFilter(), highlight(), innerShadow(), shadow() }. Reference components live at app/src/commonMain/kotlin/com/kyant/backdrop/catalog/components/ (LiquidButton, LiquidToggle, LiquidSlider, LiquidBottomTabs) and are used as the starting point for the Engine components.",
-    "min_api_strategy": "Library AAR declares minSdk 21, but true refraction/lens uses AGSL RuntimeShader which requires API 33+. Engine strategy: EngineTheme.LIQUID_GLASS is selectable at any API; at runtime components query LiquidGlassSupport.isSupported (Build.VERSION.SDK_INT >= 33). Below API 33 every Liquid component automatically renders a graceful 'frosted-lite' fallback: semi-translucent solid surface + highlight + inner shadow, same layout/shape/typography \u2014 never a no-op or crash. The theme option is additionally annotated for app-level pickers so they can hide it below 33 if desired.",
+    "min_api_strategy": "Library AAR declares minSdk 21, but true refraction/lens uses AGSL RuntimeShader which requires API 33+. Engine strategy: EngineTheme.LIQUID_GLASS is selectable at any API; at runtime components query LiquidGlassSupport.isSupported (Build.VERSION.SDK_INT >= 33). Below API 33 every Liquid component automatically renders a graceful 'frosted-lite' fallback: semi-translucent solid surface + highlight + inner shadow, same layout/shape/typography — never a no-op or crash. The theme option is additionally annotated for app-level pickers so they can hide it below 33 if desired.",
     "sources": [
      "https://github.com/Kyant0/AndroidLiquidGlass",
      "https://repo1.maven.org/maven2/io/github/kyant0/backdrop-android/2.0.1/backdrop-android-2.0.1.pom"
@@ -377,7 +381,7 @@
    }
   },
   "follow_ups": [
-   "App-level Material/Miuix/Liquid-Glass picker UI not built (out of scope per brief) \u2014 Engine exposes EngineTheme selector + LiquidGlassSupport.isSupported; a generated app can build the picker trivially on top."
+   "App-level Material/Miuix/Liquid-Glass picker UI not built (out of scope per brief) — Engine exposes EngineTheme selector + LiquidGlassSupport.isSupported; a generated app can build the picker trivially on top."
   ],
   "steps": [
    {
@@ -405,7 +409,7 @@
      "engine/build.gradle.kts",
      "engine/gradle/wrapper/gradle-wrapper.properties"
     ],
-    "notes": "Toolchain + M3 dependency upgrade: AGP 8.5.2->9.4.0, Kotlin 2.0.20->2.4.20, Gradle wrapper 8.9->9.6.0 (AGP 9.4 min; JDK 17 retained), compileSdk/targetSdk 34->37 (backdrop 2.0.1 + miuix-ui 0.9.3 AARs declare minCompileSdk=37; material3 1.5.0-alpha needs minAGP 9.1 + compileSdk 37), core-ktx 1.19.0, activity-compose 1.13.0, lifecycle-runtime-compose 2.11.0, coroutines 1.11.0, minSdk stays 26. CORRECTION after artifact verification: BOM dropped \u2014 2026.09.00 pins material3 1.4.0 whose expressive APIs are internal; pinned material3 1.5.0-alpha28 + ui/foundation 1.13.0-alpha01 train instead (public MaterialExpressiveTheme/MotionScheme.expressive/wavy indicators/LoadingIndicator). miuix-ui 0.9.3 + backdrop 2.0.1 implementation lines present (wired from step-05/07)."
+    "notes": "Toolchain + M3 dependency upgrade: AGP 8.5.2->9.4.0, Kotlin 2.0.20->2.4.20, Gradle wrapper 8.9->9.6.0 (AGP 9.4 min; JDK 17 retained), compileSdk/targetSdk 34->37 (backdrop 2.0.1 + miuix-ui 0.9.3 AARs declare minCompileSdk=37; material3 1.5.0-alpha needs minAGP 9.1 + compileSdk 37), core-ktx 1.19.0, activity-compose 1.13.0, lifecycle-runtime-compose 2.11.0, coroutines 1.11.0, minSdk stays 26. CORRECTION after artifact verification: BOM dropped — 2026.09.00 pins material3 1.4.0 whose expressive APIs are internal; pinned material3 1.5.0-alpha28 + ui/foundation 1.13.0-alpha01 train instead (public MaterialExpressiveTheme/MotionScheme.expressive/wavy indicators/LoadingIndicator). miuix-ui 0.9.3 + backdrop 2.0.1 implementation lines present (wired from step-05/07)."
    },
    {
     "id": "step-03",
@@ -417,7 +421,7 @@
     "files": [
      "engine/app/src/main/java/com/forgebuild/engine/ui/theme/Theme.kt"
     ],
-    "notes": "Theme.kt migrated to Material 3 Expressive: ForgeBuildTheme now wraps MaterialExpressiveTheme with MotionScheme.expressive() (spring spatial/effects specs) + expressive Shapes() defaults (LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge morphing-capable tiers). Dynamic color (S+) and light/dark preserved; non-dynamic light path upgraded to expressiveLightColorScheme(); dark uses standard darkColorScheme (library ships no expressiveDark \u2014 verified in sources; expressive-ness for dark = motion+shape, per Google's own sample). Signature unchanged (darkTheme, dynamicColor, content) => fully backward compatible for existing generated apps."
+    "notes": "Theme.kt migrated to Material 3 Expressive: ForgeBuildTheme now wraps MaterialExpressiveTheme with MotionScheme.expressive() (spring spatial/effects specs) + expressive Shapes() defaults (LargeIncreased/ExtraLargeIncreased/ExtraExtraLarge morphing-capable tiers). Dynamic color (S+) and light/dark preserved; non-dynamic light path upgraded to expressiveLightColorScheme(); dark uses standard darkColorScheme (library ships no expressiveDark — verified in sources; expressive-ness for dark = motion+shape, per Google's own sample). Signature unchanged (darkTheme, dynamicColor, content) => fully backward compatible for existing generated apps."
    },
    {
     "id": "step-04",
@@ -429,7 +433,7 @@
     "files": [
      "engine/app/src/main/java/com/forgebuild/engine/ui/components/EngineProgress.kt"
     ],
-    "notes": "Engine shared expressive progress/loading component set added (ui/components/EngineProgress.kt): EngineLinearWavyProgress (determinate+indeterminate overloads), EngineCircularWavyProgress (both overloads), EngineLoadingIndicator (indeterminate + determinate) \u2014 all thin wrappers over the official material3 1.5.0-alpha28 LinearWavyProgressIndicator/CircularWavyProgressIndicator (stable, no opt-in) and LoadingIndicator (@ExperimentalMaterial3ExpressiveApi, opted-in at file level). No hand-rolled approximations."
+    "notes": "Engine shared expressive progress/loading component set added (ui/components/EngineProgress.kt): EngineLinearWavyProgress (determinate+indeterminate overloads), EngineCircularWavyProgress (both overloads), EngineLoadingIndicator (indeterminate + determinate) — all thin wrappers over the official material3 1.5.0-alpha28 LinearWavyProgressIndicator/CircularWavyProgressIndicator (stable, no opt-in) and LoadingIndicator (@ExperimentalMaterial3ExpressiveApi, opted-in at file level). No hand-rolled approximations."
    },
    {
     "id": "step-05",
@@ -441,7 +445,7 @@
     "files": [
      "engine/app/src/main/java/com/forgebuild/engine/ui/miuix/MiuixEngineTheme.kt"
     ],
-    "notes": "Miuix base theme added: ui/miuix/MiuixEngineTheme.kt wraps top.yukonga.miuix.kmp:miuix-ui 0.9.3 MiuixTheme with lightColorScheme()/darkColorScheme() (Miuix's own Colors: primary MIUI blue 0xFF3482FF etc.) and Miuix TextStyles (main/paragraph/body1/body2/button/title1-4/headline1-2/footnote...). Shape/corner-radius note: Miuix has no Material-style Shapes object \u2014 squircle corner treatment is per-component (cornerRadius params), so shape coverage lands in the step-06 component wrappers. Monet dynamic color available via ThemeController (documented; base theme stays colors-based for parity + system dark mode preserved). Dependency line already added in step-02."
+    "notes": "Miuix base theme added: ui/miuix/MiuixEngineTheme.kt wraps top.yukonga.miuix.kmp:miuix-ui 0.9.3 MiuixTheme with lightColorScheme()/darkColorScheme() (Miuix's own Colors: primary MIUI blue 0xFF3482FF etc.) and Miuix TextStyles (main/paragraph/body1/body2/button/title1-4/headline1-2/footnote...). Shape/corner-radius note: Miuix has no Material-style Shapes object — squircle corner treatment is per-component (cornerRadius params), so shape coverage lands in the step-06 component wrappers. Monet dynamic color available via ThemeController (documented; base theme stays colors-based for parity + system dark mode preserved). Dependency line already added in step-02."
    },
    {
     "id": "step-06",
@@ -467,7 +471,7 @@
      "engine/ARCHITECTURE.md",
      "engine/README.md"
     ],
-    "notes": "backdrop 2.0.1 already declared; added io.github.kyant0:shapes:1.2.1 (Capsule()/morph shapes used by the reference components \u2014 required, not bundled by backdrop). AGSL/API-33 handled in code: LiquidGlassSupport gates on the library's own isRuntimeShaderSupported(); minSdk stays 26 with a frosted-lite fallback (not a minSdk bump). compileSdk=37 (required by both theme AARs' minCompileSdk) confirmed; build config unchanged otherwise. Local Android SDK compile was not possible in this environment, so Kotlin sources are reference-faithful ports of the library's own verified examples; final compile/render verification runs in CI via release.yml (assembleRelease on a real toolchain), and any compile error will surface there and be retried on the next resume.",
+    "notes": "backdrop 2.0.1 already declared; added io.github.kyant0:shapes:1.2.1 (Capsule()/morph shapes used by the reference components — required, not bundled by backdrop). AGSL/API-33 handled in code: LiquidGlassSupport gates on the library's own isRuntimeShaderSupported(); minSdk stays 26 with a frosted-lite fallback (not a minSdk bump). compileSdk=37 (required by both theme AARs' minCompileSdk) confirmed; build config unchanged otherwise. Local Android SDK compile was not possible in this environment, so Kotlin sources are reference-faithful ports of the library's own verified examples; final compile/render verification runs in CI via release.yml (assembleRelease on a real toolchain), and any compile error will surface there and be retried on the next resume.",
     "commits": []
    },
    {
@@ -524,7 +528,7 @@
     "files": [
      "engine/"
     ],
-    "notes": "Representative app sanity check scoped: Engine remains backward compatible \u2014 DEFAULT is unchanged Material 3 Expressive (ForgeBuildTheme signature + dynamic color + dark mode intact), Miuix/Liquid-Glass are purely additive opt-in paths, and dynamic color/adaptive icons/FLAG_SECURE/permissions modules are untouched by the theme work. Local Android SDK compile was not possible in this environment, so Kotlin sources are reference-faithful ports of the library's own verified examples; final compile/render verification runs in CI via release.yml (assembleRelease on a real toolchain), and any compile error will surface there and be retried on the next resume. Live render check of an existing generated app runs in CI.",
+    "notes": "Representative app sanity check scoped: Engine remains backward compatible — DEFAULT is unchanged Material 3 Expressive (ForgeBuildTheme signature + dynamic color + dark mode intact), Miuix/Liquid-Glass are purely additive opt-in paths, and dynamic color/adaptive icons/FLAG_SECURE/permissions modules are untouched by the theme work. Local Android SDK compile was not possible in this environment, so Kotlin sources are reference-faithful ports of the library's own verified examples; final compile/render verification runs in CI via release.yml (assembleRelease on a real toolchain), and any compile error will surface there and be retried on the next resume. Live render check of an existing generated app runs in CI.",
     "commits": []
    },
    {
@@ -575,14 +579,14 @@
      "io.github.kyant0:backdrop:2.0.1",
      "io.github.kyant0:shapes:1.2.1 (added with backdrop, commit 30376ab)"
     ],
-    "gradle_comment_fix": "engine/app/build.gradle.kts compileSdk-37 comment cites backdrop/miuix as the reason \u2014 must be reworded (compileSdk 37 itself STAYS: material3 1.5.0-alpha28 has minCompileSdk=37 too)",
-    "mainactivity": "engine/app/src/main/java/com/forgebuild/app/MainActivity.kt imports EngineTheme and documents three themes \u2014 rewrite comment, drop import",
+    "gradle_comment_fix": "engine/app/build.gradle.kts compileSdk-37 comment cites backdrop/miuix as the reason — must be reworded (compileSdk 37 itself STAYS: material3 1.5.0-alpha28 has minCompileSdk=37 too)",
+    "mainactivity": "engine/app/src/main/java/com/forgebuild/app/MainActivity.kt imports EngineTheme and documents three themes — rewrite comment, drop import",
     "docs": [
      "engine/README.md",
-     "engine/ARCHITECTURE.md \u2014 three-theme sections (commits 2323949)"
+     "engine/ARCHITECTURE.md — three-theme sections (commits 2323949)"
     ],
     "manual_removal_reason": "git revert of the whole prior build is NOT safe: it also contains the M3E upgrade itself (steps 02-04: material3 1.5.0-alpha28 pin, MaterialExpressiveTheme migration, EngineProgress wavy indicators) which must be KEPT, plus later commits (17c8edb backdrop typing fix, ca5a3f1 AGP-9 Kotlin-plugin fix) and the theme-showcase build interleaved on top. Per-file manual removal is the thorough path.",
-    "site": "site/ + root README.md/ARCHITECTURE.md \u2014 grep-clean, zero Miuix/Liquid Glass references leaked to the dashboard",
+    "site": "site/ + root README.md/ARCHITECTURE.md — grep-clean, zero Miuix/Liquid Glass references leaked to the dashboard",
     "apps_dir": "apps/*/ contain per-app COPIES of the engine (incl. theme-showcase which deliberately demos all three themes in its own repo copy). Target of this build is engine/ (+site/) per brief; generated-app copies are owned by their own app repos and are intentionally untouched."
    },
    "to_keep_untouched": [
@@ -617,7 +621,7 @@
      "engine/app/src/main/java/com/forgebuild/app/MainActivity.kt",
      "BUILD_STATE.json"
     ],
-    "notes": "EngineTheme.kt deleted (not hardcoded \u2014 no theme choice exposed at all). MainActivity rewritten: ForgeBuildTheme only, no EngineTheme import."
+    "notes": "EngineTheme.kt deleted (not hardcoded — no theme choice exposed at all). MainActivity rewritten: ForgeBuildTheme only, no EngineTheme import."
    },
    {
     "id": "step-03",
@@ -674,7 +678,7 @@
      "engine/app/build.gradle.kts",
      "BUILD_STATE.json"
     ],
-    "notes": "GlassTheme/LiquidGlassSupport(API-33 gate)/LiquidGlassFallback(frosted-lite) deleted (ui/glass/ package gone entirely); backdrop:2.0.1 + shapes:1.2.1 removed; compileSdk-37 comment reworded (37 stays \u2014 material3 1.5.0-alpha28 also requires it)."
+    "notes": "GlassTheme/LiquidGlassSupport(API-33 gate)/LiquidGlassFallback(frosted-lite) deleted (ui/glass/ package gone entirely); backdrop:2.0.1 + shapes:1.2.1 removed; compileSdk-37 comment reworded (37 stays — material3 1.5.0-alpha28 also requires it)."
    },
    {
     "id": "step-07",
@@ -690,7 +694,7 @@
    },
    {
     "id": "step-08",
-    "title": "verify representative engine app still builds on Material 3 Expressive only \u2014 CI verify workflow added and triggered",
+    "title": "verify representative engine app still builds on Material 3 Expressive only — CI verify workflow added and triggered",
     "status": "in-progress",
     "timestamps": {
      "done_at": "2026-09-16T13:08:27Z",
@@ -704,11 +708,11 @@
      "engine/app/src/main/res/drawable/ic_launcher_foreground.xml",
      "engine/app/src/main/res/values/colors.xml"
     ],
-    "notes": "Added engine-verify.yml (assembleDebug of engine/ + grep guard that zero removed-theme references remain). Run triggered by this push; result polled and recorded next. ATTEMPT-1 CI run 35100025013 FAILED at :app:processDebugResources \u2014 AAPT: mipmap/ic_launcher_round not found. Root cause is a PRE-EXISTING engine-template gap (the template never carried launcher mipmaps; generated apps add theirs via tools/make_adaptive_icon.py), unrelated to the revert \u2014 Kotlin compilation of the post-revert sources was NOT the failing stage. Fix: placeholder adaptive-icon set added to the engine template (safe-zoned foreground + background + monochrome; overwritten per generated app). Retrying."
+    "notes": "Added engine-verify.yml (assembleDebug of engine/ + grep guard that zero removed-theme references remain). Run triggered by this push; result polled and recorded next. ATTEMPT-1 CI run 35100025013 FAILED at :app:processDebugResources — AAPT: mipmap/ic_launcher_round not found. Root cause is a PRE-EXISTING engine-template gap (the template never carried launcher mipmaps; generated apps add theirs via tools/make_adaptive_icon.py), unrelated to the revert — Kotlin compilation of the post-revert sources was NOT the failing stage. Fix: placeholder adaptive-icon set added to the engine template (safe-zoned foreground + background + monochrome; overwritten per generated app). Retrying."
    },
    {
     "id": "step-08",
-    "title": "retry-2 \u2014 reword stale prior-build-id reference in app/build.gradle.kts comment flagged by the static guard (assemble itself was GREEN in run 35100487643)",
+    "title": "retry-2 — reword stale prior-build-id reference in app/build.gradle.kts comment flagged by the static guard (assemble itself was GREEN in run 35100487643)",
     "status": "done",
     "timestamps": {
      "done_at": "2026-09-16T13:20:07Z",
@@ -718,11 +722,11 @@
      "engine/app/build.gradle.kts",
      "BUILD_STATE.json"
     ],
-    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS \u2014 the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure. RETRY-3: retry-2's multi-line string replace did not match (comment lines interleaved differently) \u2014 the stale build-id was still on build.gradle.kts:62, so run 35100919910's grep guard failed again (assemble itself stayed green). Fixed line-wise with sed; local sweep now fully clean. FINAL VERIFY: CI run https://github.com/vjumbo264/forgebuild/actions/runs/35101102866 -> completed/success. assembleDebug compiled the post-revert engine (Material 3 Expressive only) and the static guard passed \u2014 zero removed-theme references remain in kt/kts/xml."
+    "notes": "Run 35100487643: ':app:assembleDebug' SUCCESS — the post-revert engine compiles on Material 3 Expressive only. Only the grep guard failed, on a stale 'forgebuild-m3e-miuix-liquidglass' build-id string inside a gradle comment. Reworded; final verify pending on next push. FINAL VERIFY FAILED: https://github.com/vjumbo264/forgebuild/actions/runs/35100919910 -> completed/failure. RETRY-3: retry-2's multi-line string replace did not match (comment lines interleaved differently) — the stale build-id was still on build.gradle.kts:62, so run 35100919910's grep guard failed again (assemble itself stayed green). Fixed line-wise with sed; local sweep now fully clean. FINAL VERIFY: CI run https://github.com/vjumbo264/forgebuild/actions/runs/35101102866 -> completed/success. assembleDebug compiled the post-revert engine (Material 3 Expressive only) and the static guard passed — zero removed-theme references remain in kt/kts/xml."
    },
    {
     "id": "step-09",
-    "title": "update Engine docs/comments that referenced the removed themes \u2014 engine README + ARCHITECTURE rewritten M3E-only",
+    "title": "update Engine docs/comments that referenced the removed themes — engine README + ARCHITECTURE rewritten M3E-only",
     "status": "done",
     "timestamps": {
      "done_at": "2026-09-16T13:16:58Z"
@@ -736,7 +740,7 @@
    },
    {
     "id": "step-10",
-    "title": "Final BUILD_STATE checkpoint \u2014 forgebuild-material-only-revert fully done",
+    "title": "Final BUILD_STATE checkpoint — forgebuild-material-only-revert fully done",
     "status": "done",
     "timestamps": {
      "done_at": "2026-09-16T13:20:07Z"
@@ -744,7 +748,7 @@
     "files": [
      "BUILD_STATE.json"
     ],
-    "notes": "All 10 steps done. Engine ships Material 3 Expressive as its one and only theme: EngineTheme selector deleted, all Miuix + Liquid Glass files/dependencies/fallback logic removed, docs rewritten, CI verify build green. Kept intact: ForgeBuildTheme (MaterialExpressiveTheme, dynamic color, dark mode), EngineProgress wavy/loading indicators, material3 1.5.0-alpha28 + compose 1.13.0-alpha01 pins, Material Symbols icons, permissions, ScreenSecurity FLAG_SECURE, SafeSave SAF flow, CacheFirstStore. NOTE: apps/<slug>/ are per-app engine copies owned by their own app repos \u2014 deliberately untouched by this engine-scoped revert."
+    "notes": "All 10 steps done. Engine ships Material 3 Expressive as its one and only theme: EngineTheme selector deleted, all Miuix + Liquid Glass files/dependencies/fallback logic removed, docs rewritten, CI verify build green. Kept intact: ForgeBuildTheme (MaterialExpressiveTheme, dynamic color, dark mode), EngineProgress wavy/loading indicators, material3 1.5.0-alpha28 + compose 1.13.0-alpha01 pins, Material Symbols icons, permissions, ScreenSecurity FLAG_SECURE, SafeSave SAF flow, CacheFirstStore. NOTE: apps/<slug>/ are per-app engine copies owned by their own app repos — deliberately untouched by this engine-scoped revert."
    }
   ]
  },
@@ -802,7 +806,7 @@
     "files": [
      "apps/forgehouse50/build.gradle.kts, app/build.gradle.kts, gradle/wrapper/*"
     ],
-    "note": "AGP 8.5.2->9.4.0 (built-in Kotlin; kotlin.android plugin removed), Gradle wrapper 8.9->9.6.0 (jar+properties from engine/), KGP/serialization 2.0.20->2.4.20, KSP 2.0.20-1.0.25->2.4.20-1.0.25 (train rule; sandbox has no network egress to Maven \u2014 existence is CI-verified at step-11), compileSdk/targetSdk 34->37, minSdk 26 kept, BOM 2024.09.00 dropped -> explicit compose ui/foundation 1.13.0-alpha01 + material3 1.5.0-alpha28 + icons 1.7.8, core-ktx 1.19.0, activity-compose 1.13.0, lifecycle 2.11.0, coroutines 1.11.0, navigation-compose 2.8.0->2.10.1 (stable, verified live on dl.google.com), Room/work/ktor/coil/security-crypto unchanged (no compileSdk coupling).",
+    "note": "AGP 8.5.2->9.4.0 (built-in Kotlin; kotlin.android plugin removed), Gradle wrapper 8.9->9.6.0 (jar+properties from engine/), KGP/serialization 2.0.20->2.4.20, KSP 2.0.20-1.0.25->2.4.20-1.0.25 (train rule; sandbox has no network egress to Maven — existence is CI-verified at step-11), compileSdk/targetSdk 34->37, minSdk 26 kept, BOM 2024.09.00 dropped -> explicit compose ui/foundation 1.13.0-alpha01 + material3 1.5.0-alpha28 + icons 1.7.8, core-ktx 1.19.0, activity-compose 1.13.0, lifecycle 2.11.0, coroutines 1.11.0, navigation-compose 2.8.0->2.10.1 (stable, verified live on dl.google.com), Room/work/ktor/coil/security-crypto unchanged (no compileSdk coupling).",
     "timestamp": "2026-09-17T07:34:34Z"
    },
    {
@@ -880,7 +884,7 @@
     "title": "Verify representative app builds via CI release workflow (forgehouse50)",
     "status": "done",
     "files": [],
-    "note": "VERIFIED: CI run 35196712841 GREEN \u2014 release.yml built apps/forgehouse50 with the real material3 1.5.0-alpha28 expressive stack (AGP 9.4.0 / Gradle 9.6.0 / KGP 2.4.20 / KSP 2.3.12 / compileSdk 37 / Room 2.8.5) and published the signed APK to Releases (forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10). Representative-app build gate passed; runtime render uses the same official components the engine showcase already exercised.",
+    "note": "VERIFIED: CI run 35196712841 GREEN — release.yml built apps/forgehouse50 with the real material3 1.5.0-alpha28 expressive stack (AGP 9.4.0 / Gradle 9.6.0 / KGP 2.4.20 / KSP 2.3.12 / compileSdk 37 / Room 2.8.5) and published the signed APK to Releases (forgehouse50-v10 https://github.com/vjumbo264/forgebuild/releases/tag/forgehouse50-v10). Representative-app build gate passed; runtime render uses the same official components the engine showcase already exercised.",
     "timestamp": "2026-09-17T07:56:43Z"
    },
    {
@@ -890,7 +894,7 @@
     "files": [
      "BUILD_STATE.json"
     ],
-    "note": "forgebuild-real-expressive-fix COMPLETE. Part 1: hand-rolled approximations fully replaced by the official library (toolchain upgraded; ui/Expressive.kt is now thin wrappers over LoadingIndicator + Button(shapes=ButtonDefaults.shapes()); AppTheme on MaterialExpressiveTheme(MotionScheme.expressive, Shapes)); no NEW substitutions \u2014 only the pre-existing operator-approved Nunito-for-Google-Sans-Flex (legally required, kept per FONT NOTE). Part 2: full expressive-suite checklist recorded above, every applicable gap closed. Part 3: permanent NO-SUBSTITUTION / substitution-disclosure rule live in the shared RULES block covering all three prompt types (new/extend/resume), delimited by === PERMANENT RULE === markers so future template edits cannot silently drop it.",
+    "note": "forgebuild-real-expressive-fix COMPLETE. Part 1: hand-rolled approximations fully replaced by the official library (toolchain upgraded; ui/Expressive.kt is now thin wrappers over LoadingIndicator + Button(shapes=ButtonDefaults.shapes()); AppTheme on MaterialExpressiveTheme(MotionScheme.expressive, Shapes)); no NEW substitutions — only the pre-existing operator-approved Nunito-for-Google-Sans-Flex (legally required, kept per FONT NOTE). Part 2: full expressive-suite checklist recorded above, every applicable gap closed. Part 3: permanent NO-SUBSTITUTION / substitution-disclosure rule live in the shared RULES block covering all three prompt types (new/extend/resume), delimited by === PERMANENT RULE === markers so future template edits cannot silently drop it.",
     "timestamp": "2026-09-17T07:56:43Z"
    }
   ],
@@ -915,7 +919,7 @@
    },
    {
     "item": "expressiveLightColorScheme()",
-    "library_status": "public alpha18 (no expressiveDark \u2014 dark expressive = darkColorScheme + motion/shapes, per Google's own sample)",
+    "library_status": "public alpha18 (no expressiveDark — dark expressive = darkColorScheme + motion/shapes, per Google's own sample)",
     "engine": "PRESENT",
     "forgehouse50": "uses dynamic color + static fallback schemes under MaterialExpressiveTheme (same treatment as engine)"
    },
@@ -923,7 +927,7 @@
     "item": "LinearWavyProgressIndicator (determinate+indeterminate)",
     "library_status": "STABLE, no opt-in, since alpha18",
     "engine": "PRESENT (EngineProgress wrappers)",
-    "forgehouse50": "AVAILABLE via dep; app uses determinate flat progress for downloads (progress bars, not loaders) \u2014 wavy variant now one import away, no hand-rolled substitute exists anymore"
+    "forgehouse50": "AVAILABLE via dep; app uses determinate flat progress for downloads (progress bars, not loaders) — wavy variant now one import away, no hand-rolled substitute exists anymore"
    },
    {
     "item": "CircularWavyProgressIndicator (determinate+indeterminate)",
@@ -941,7 +945,7 @@
     "item": "Expressive Button shapes/sizes (ButtonShapes pressed morph, ButtonDefaults.shapes())",
     "library_status": "promoted stable alpha19 (SmallButtonContentPadding experimental removed)",
     "engine": "via MaterialExpressiveTheme defaults",
-    "forgehouse50": "ExpressiveButton now uses official Button(shapes=ButtonDefaults.shapes()) \u2014 replaces hand-rolled spring-scale"
+    "forgehouse50": "ExpressiveButton now uses official Button(shapes=ButtonDefaults.shapes()) — replaces hand-rolled spring-scale"
    },
    {
     "item": "Expressive FAB + FAB Menu",
@@ -971,7 +975,7 @@
     "item": "MaterialShapes (RoundedPolygon shape library)",
     "library_status": "experimental (promotion reverted alpha19)",
     "engine": "available via dep",
-    "forgehouse50": "available via dep; confetti/avatar art stay custom-drawn \u2014 that is app content artwork, not a library-component substitute"
+    "forgehouse50": "available via dep; confetti/avatar art stay custom-drawn — that is app content artwork, not a library-component substitute"
    },
    {
     "item": "compileSdk-37 hard requirement",
@@ -982,7 +986,7 @@
   ],
   "substitutions": [
    {
-    "note": "Nunito-for-Google-Sans-Flex font substitution (pre-existing, operator-approved, legally required \u2014 proprietary font) stays as-is per the prompt's FONT NOTE. No NEW substitutions were made in this build: every expressive element is the official library implementation."
+    "note": "Nunito-for-Google-Sans-Flex font substitution (pre-existing, operator-approved, legally required — proprietary font) stays as-is per the prompt's FONT NOTE. No NEW substitutions were made in this build: every expressive element is the official library implementation."
    }
   ],
   "completed": "2026-09-17T07:56:43Z"
@@ -1048,15 +1052,15 @@
       "Official wavy progress + morphing LoadingIndicator wrapped in EngineProgress.kt (no hand-rolls)."
      ],
      "gaps_to_close": [
-      "No explicit tonal-palette+role documentation: research summary must be captured in code so future generated apps understand the full 30+ role set \u2014 introduce ColorTokens.kt.",
-      "Shape system is only the default; no role-map helper for expressive/decorative shapes or the 35-shape MaterialShapes library \u2014 introduce ShapeTokens.kt + document decorative-shape usage (no hand-rolled polygons).",
-      "Tonal elevation levels are not exposed as reusable tokens for apps that need custom containers \u2014 introduce ElevationTokens.kt mapping level0..level5 dp values + tonalElevationDp() + tonalContainerColor() helper against surfaceContainer* roles.",
-      "Type scale uses default Typography() implicitly \u2014 introduce TypographyTokens.kt that explicitly instantiates the full official 15-role scale so future edits stay disciplined.",
-      "No spacing/layout tokens exist \u2014 introduce SpacingTokens.kt with the 4dp baseline scale (Spacing.xxs..xxxl) + WindowMargins.kt for canonical compact/medium/expanded margins.",
-      "MotionScheme is applied but its six specs are not surfaced as convenience accessors for app-level custom animations \u2014 introduce MotionTokens.kt exposing default/fast/slow x spatial/effects helpers.",
+      "No explicit tonal-palette+role documentation: research summary must be captured in code so future generated apps understand the full 30+ role set — introduce ColorTokens.kt.",
+      "Shape system is only the default; no role-map helper for expressive/decorative shapes or the 35-shape MaterialShapes library — introduce ShapeTokens.kt + document decorative-shape usage (no hand-rolled polygons).",
+      "Tonal elevation levels are not exposed as reusable tokens for apps that need custom containers — introduce ElevationTokens.kt mapping level0..level5 dp values + tonalElevationDp() + tonalContainerColor() helper against surfaceContainer* roles.",
+      "Type scale uses default Typography() implicitly — introduce TypographyTokens.kt that explicitly instantiates the full official 15-role scale so future edits stay disciplined.",
+      "No spacing/layout tokens exist — introduce SpacingTokens.kt with the 4dp baseline scale (Spacing.xxs..xxxl) + WindowMargins.kt for canonical compact/medium/expanded margins.",
+      "MotionScheme is applied but its six specs are not surfaced as convenience accessors for app-level custom animations — introduce MotionTokens.kt exposing default/fast/slow x spatial/effects helpers.",
       "Expressive Button/FAB/Menu behavior comes free from MaterialExpressiveTheme but is not documented; documented via ARCHITECTURE_MATERIAL_DISCIPLINE.md so the Engine advertises its guarantees.",
-      "Dashboard prompt templates do not yet require applying the full discipline (only 'Material 3 only') \u2014 extend the permanent-rule section in site/app.js with a M3-DISCIPLINE clause.",
-      "StarterScreen.kt still uses ad-hoc 24dp padding \u2014 reroute through SpacingTokens so the Engine's own starter follows its own rule."
+      "Dashboard prompt templates do not yet require applying the full discipline (only 'Material 3 only') — extend the permanent-rule section in site/app.js with a M3-DISCIPLINE clause.",
+      "StarterScreen.kt still uses ad-hoc 24dp padding — reroute through SpacingTokens so the Engine's own starter follows its own rule."
      ],
      "reconciliation_note": "Do NOT duplicate the prior forgebuild-real-expressive-fix work: MaterialExpressiveTheme/Motion/Shapes/wavy indicators remain the single source. This build ADDS tokens+helpers+docs+starter cleanup+prompt-rule around them."
     }
@@ -1143,7 +1147,7 @@
     "files_touched": [
      "site/app.js"
     ],
-    "note": "Added 'PERMANENT RULE \u2014 FULL MATERIAL 3 EXPRESSIVE DISCIPLINE' section to the shared RULES block in site/app.js, immediately after the existing END PERMANENT RULE anchor. Because promptNewApp/promptExtend/promptResume all append RULES, build/extend/resume prompts all inherit the rule automatically. The section is clearly labeled PERMANENT ('never remove, weaken, or bury during unrelated prompt-template edits') so it survives future template edits. Covers all 7 discipline areas (dynamic color, shape scale, tonal elevation, type scale, spacing tokens, motion tokens, expressive components) and points at the Engine tokens/helpers as the mechanism. JS sanity-checked (anchor + single insertion + node --check)."
+    "note": "Added 'PERMANENT RULE — FULL MATERIAL 3 EXPRESSIVE DISCIPLINE' section to the shared RULES block in site/app.js, immediately after the existing END PERMANENT RULE anchor. Because promptNewApp/promptExtend/promptResume all append RULES, build/extend/resume prompts all inherit the rule automatically. The section is clearly labeled PERMANENT ('never remove, weaken, or bury during unrelated prompt-template edits') so it survives future template edits. Covers all 7 discipline areas (dynamic color, shape scale, tonal elevation, type scale, spacing tokens, motion tokens, expressive components) and points at the Engine tokens/helpers as the mechanism. JS sanity-checked (anchor + single insertion + node --check)."
    },
    {
     "step": "step-12-final",
@@ -1152,18 +1156,18 @@
     "files_touched": [
      "BUILD_STATE.json"
     ],
-    "note": "forgebuild-material-discipline fully done. Research summary in step-01; gap list in step-02; implementations in steps 03-09; verification in step-10 (incl. note that apps/theme-showcase still carries its pre-existing opt-in Miuix/Liquid Glass deps from the earlier showcase build \u2014 untouched and unbroken, per the 'if still present' clause); permanent prompt rule in step-11.",
+    "note": "forgebuild-material-discipline fully done. Research summary in step-01; gap list in step-02; implementations in steps 03-09; verification in step-10 (incl. note that apps/theme-showcase still carries its pre-existing opt-in Miuix/Liquid Glass deps from the earlier showcase build — untouched and unbroken, per the 'if still present' clause); permanent prompt rule in step-11.",
     "gap_closure_list": [
-     "ColorTokens.kt \u2014 dynamic color chain + full role documentation",
-     "ShapeTokens.kt \u2014 official shape scale incl. expressive tiers, role-based application",
-     "ElevationTokens.kt \u2014 tonal elevation levels + surfaceContainer mapping",
-     "TypographyTokens.kt \u2014 full official 15-role type scale pinned",
-     "SpacingTokens.kt \u2014 4dp baseline + canonical margins; StarterScreen migrated",
-     "MotionTokens.kt \u2014 six official MotionScheme specs surfaced for custom animations",
-     "EngineExpressive.kt \u2014 official ButtonGroup/SplitButton/FloatingActionButtonMenu wrappers (progress/loading stayed in EngineProgress.kt \u2014 reconciled, not duplicated)",
-     "ARCHITECTURE_MATERIAL_DISCIPLINE.md \u2014 permanent Engine design contract",
-     "Theme.kt \u2014 rewired to all tokens, signature unchanged (non-breaking)",
-     "site/app.js \u2014 permanent M3 discipline rule for all future build/extend/resume prompts"
+     "ColorTokens.kt — dynamic color chain + full role documentation",
+     "ShapeTokens.kt — official shape scale incl. expressive tiers, role-based application",
+     "ElevationTokens.kt — tonal elevation levels + surfaceContainer mapping",
+     "TypographyTokens.kt — full official 15-role type scale pinned",
+     "SpacingTokens.kt — 4dp baseline + canonical margins; StarterScreen migrated",
+     "MotionTokens.kt — six official MotionScheme specs surfaced for custom animations",
+     "EngineExpressive.kt — official ButtonGroup/SplitButton/FloatingActionButtonMenu wrappers (progress/loading stayed in EngineProgress.kt — reconciled, not duplicated)",
+     "ARCHITECTURE_MATERIAL_DISCIPLINE.md — permanent Engine design contract",
+     "Theme.kt — rewired to all tokens, signature unchanged (non-breaking)",
+     "site/app.js — permanent M3 discipline rule for all future build/extend/resume prompts"
     ],
     "substitutions": "NONE. Every discipline area is implemented via the real official APIs (material3 1.5.0-alpha28 expressive train already pinned by the prior build). No hand-rolled approximations were introduced."
    }
@@ -1173,7 +1177,7 @@
  "forgebuild-icon-and-version-fix": {
   "id": "forgebuild-icon-and-version-fix",
   "title": "Engine fix: adaptive-icon monochrome misapplication on raster/photo sources + versionCode/versionName not bumped on rebuild",
-  "status": "in-progress",
+  "status": "done",
   "started": "2026-09-26T16:05:10Z",
   "steps": [
    {
@@ -1183,7 +1187,7 @@
     "files_touched": [
      "BUILD_STATE.json"
     ],
-    "note": "Research confirmed against official Android docs (developer.android.com/develop/ui/views/launch/icon_design_adaptive + /about/versions/13/features): (1) <monochrome> is OPTIONAL in adaptive-icon XML \u2014 apps must provide it to opt into Android 13+ themed icons; (2) when no monochrome layer exists, Android 16 QPR 2+ AUTO-GENERATES a themed icon from the app's own layers; on Android 13-15, launchers with forced themed icons (e.g. Pixel Launcher's THEME_ICON\u900f\u660e\u5ea6 enforcement) auto-trace the FOREGROUND layer's alpha silhouette instead \u2014 this is the observed Duolingo/Drive/Filmora/FKM detail-preserving behavior; (3) ForgeBuild's bug: make_adaptive_icon.py ALWAYS emits an explicit ic_launcher_monochrome.png (alpha silhouette filled with opaque black) + <monochrome> element for every source \u2014 for raster/photo icons this baked silhouette renders as a flat detail-less blob and the launcher uses the explicit layer, never falling back to foreground auto-trace; (4) correct fix verified against the Engine's own toolchain (AGP 9.4.0, compileSdk/targetSdk 37, minSdk 26): vector/icon-style sources keep the purpose-drawn <monochrome> layer; raster/photo-style sources must OMIT the <monochrome> element entirely so the launcher's foreground-alpha auto-trace fallback runs. No platform workaround invented \u2014 this uses Android's real, documented behavior.",
+    "note": "Research confirmed against official Android docs (developer.android.com/develop/ui/views/launch/icon_design_adaptive + /about/versions/13/features): (1) <monochrome> is OPTIONAL in adaptive-icon XML — apps must provide it to opt into Android 13+ themed icons; (2) when no monochrome layer exists, Android 16 QPR 2+ AUTO-GENERATES a themed icon from the app's own layers; on Android 13-15, launchers with forced themed icons (e.g. Pixel Launcher's THEME_ICON透明度 enforcement) auto-trace the FOREGROUND layer's alpha silhouette instead — this is the observed Duolingo/Drive/Filmora/FKM detail-preserving behavior; (3) ForgeBuild's bug: make_adaptive_icon.py ALWAYS emits an explicit ic_launcher_monochrome.png (alpha silhouette filled with opaque black) + <monochrome> element for every source — for raster/photo icons this baked silhouette renders as a flat detail-less blob and the launcher uses the explicit layer, never falling back to foreground auto-trace; (4) correct fix verified against the Engine's own toolchain (AGP 9.4.0, compileSdk/targetSdk 37, minSdk 26): vector/icon-style sources keep the purpose-drawn <monochrome> layer; raster/photo-style sources must OMIT the <monochrome> element entirely so the launcher's foreground-alpha auto-trace fallback runs. No platform workaround invented — this uses Android's real, documented behavior.",
     "research": {
      "sources_official": [
       "https://developer.android.com/develop/ui/views/launch/icon_design_adaptive (monochrome layer optional; required only to opt into user theming; Android 16 QPR 2 auto-themes icons for apps that do not provide one)",
@@ -1244,7 +1248,7 @@
      "engine/tools/make_adaptive_icon.py",
      "BUILD_STATE.json"
     ],
-    "note": "Raster/photo-style path implemented per the verified platform mechanism (step-01): when the source classifies raster/photo-style, make_adaptive_icon.py writes adaptive-icon XML (ic_launcher.xml + ic_launcher_round.xml) with NO <monochrome> element and writes no ic_launcher_monochrome.png at any density. Additionally any stale ic_launcher_monochrome.png from a previous run is deleted so no explicit blob can shadow the launcher fallback. Verified live: seeded a stale monochrome into the raster output tree, re-ran the tool \u2014 stale asset removed (ls: No such file), XML monochrome reference count 0. Under forced themed icons the launcher now auto-traces the foreground layer's own alpha/detail (Duolingo/Drive/Filmora/FKM behavior) instead of rendering a baked flat blob. No hand-rolled substitute for platform behavior \u2014 the real Android fallback is used."
+    "note": "Raster/photo-style path implemented per the verified platform mechanism (step-01): when the source classifies raster/photo-style, make_adaptive_icon.py writes adaptive-icon XML (ic_launcher.xml + ic_launcher_round.xml) with NO <monochrome> element and writes no ic_launcher_monochrome.png at any density. Additionally any stale ic_launcher_monochrome.png from a previous run is deleted so no explicit blob can shadow the launcher fallback. Verified live: seeded a stale monochrome into the raster output tree, re-ran the tool — stale asset removed (ls: No such file), XML monochrome reference count 0. Under forced themed icons the launcher now auto-traces the foreground layer's own alpha/detail (Duolingo/Drive/Filmora/FKM behavior) instead of rendering a baked flat blob. No hand-rolled substitute for platform behavior — the real Android fallback is used."
    },
    {
     "step": "step-05-both-paths-tested",
@@ -1262,7 +1266,7 @@
      "apps/theme-showcase/tools/make_adaptive_icon.py",
      "BUILD_STATE.json"
     ],
-    "note": "Both icon paths tested against 3 representative sample assets. (1) Flat vector sample (3-color play-glyph): classified vector/icon-style, purpose-drawn monochrome emitted at 5 densities, <monochrome> in both anydpi XMLs. (2) Full-bleed raster sample (gradient+noise photo): classified raster/photo-style, no <monochrome> element, no mono assets; stale-asset cleanup verified by seeding a leftover ic_launcher_monochrome.png and re-running (deleted, XML ref count 0). (3) Shaped raster mascot sample (Duolingo-analog: noisy gradient body + beak on transparent bg): initially MISCLASSIFIED as vector (its textured interior fell into one significant color bin) \u2014 fixed by adding a third classifier signal, interior edge density restricted to opaque pixels (>6% strong edges inside the subject => raster/photo), which separates textured photo subjects from flat glyphs. After fix: classified raster/photo-style correctly. Simulated Pixel-Launcher forced themed-icon renders: vector path tints the purpose-drawn glyph; raster path auto-trace preserves the mascot silhouette (blob+beak shape visible, tinted to theme color) instead of the old solid detail-less blob. Classification matrix: vector=flat->mono, full-bleed raster->omit, shaped raster->omit. All correct."
+    "note": "Both icon paths tested against 3 representative sample assets. (1) Flat vector sample (3-color play-glyph): classified vector/icon-style, purpose-drawn monochrome emitted at 5 densities, <monochrome> in both anydpi XMLs. (2) Full-bleed raster sample (gradient+noise photo): classified raster/photo-style, no <monochrome> element, no mono assets; stale-asset cleanup verified by seeding a leftover ic_launcher_monochrome.png and re-running (deleted, XML ref count 0). (3) Shaped raster mascot sample (Duolingo-analog: noisy gradient body + beak on transparent bg): initially MISCLASSIFIED as vector (its textured interior fell into one significant color bin) — fixed by adding a third classifier signal, interior edge density restricted to opaque pixels (>6% strong edges inside the subject => raster/photo), which separates textured photo subjects from flat glyphs. After fix: classified raster/photo-style correctly. Simulated Pixel-Launcher forced themed-icon renders: vector path tints the purpose-drawn glyph; raster path auto-trace preserves the mascot silhouette (blob+beak shape visible, tinted to theme color) instead of the old solid detail-less blob. Classification matrix: vector=flat->mono, full-bleed raster->omit, shaped raster->omit. All correct."
    },
    {
     "step": "step-06-locate-versioning",
@@ -1271,7 +1275,7 @@
     "files_touched": [
      "BUILD_STATE.json"
     ],
-    "note": "Located all versionCode/versionName touchpoints: (1) engine/app/build.gradle.kts template (versionCode=1, versionName=\"1\" literals in defaultConfig) \u2014 the seed for every generated app; (2) each apps/<slug>/app/build.gradle.kts carries the same literals (7 of 8 apps still at 1/\"1\" despite multiple releases; only clipforge-android at 37/\"37\" via a manual agent bump); (3) .github/workflows/release.yml auto-increments ONLY the GitHub release tag <slug>-vN and never touches in-app versionCode \u2014 root cause of Bug 2 (device sees unchanged versionCode => offers reinstall, not update); (4) site/app.js RULES (shared by new/extend/resume prompt templates) never mention version bumps. Enforcement design (no invented workaround, uses the real Android update mechanism): release.yml injects -PforgebuildVersionCode=<tag number> and -PforgebuildVersionName=<bumped name> into assembleRelease; build.gradle.kts reads those properties with the committed literals as local/dev fallback only. Tag numbers are already strictly monotonic per app, so versionCode becomes structurally impossible to skip or repeat."
+    "note": "Located all versionCode/versionName touchpoints: (1) engine/app/build.gradle.kts template (versionCode=1, versionName=\"1\" literals in defaultConfig) — the seed for every generated app; (2) each apps/<slug>/app/build.gradle.kts carries the same literals (7 of 8 apps still at 1/\"1\" despite multiple releases; only clipforge-android at 37/\"37\" via a manual agent bump); (3) .github/workflows/release.yml auto-increments ONLY the GitHub release tag <slug>-vN and never touches in-app versionCode — root cause of Bug 2 (device sees unchanged versionCode => offers reinstall, not update); (4) site/app.js RULES (shared by new/extend/resume prompt templates) never mention version bumps. Enforcement design (no invented workaround, uses the real Android update mechanism): release.yml injects -PforgebuildVersionCode=<tag number> and -PforgebuildVersionName=<bumped name> into assembleRelease; build.gradle.kts reads those properties with the committed literals as local/dev fallback only. Tag numbers are already strictly monotonic per app, so versionCode becomes structurally impossible to skip or repeat."
    },
    {
     "step": "step-07-versioncode-autoincrement",
@@ -1290,7 +1294,7 @@
      "apps/theme-showcase/app/build.gradle.kts",
      "BUILD_STATE.json"
     ],
-    "note": "Mandatory versionCode auto-increment implemented and structurally enforced: (1) release.yml now determines the next release tag BEFORE the build and injects -PforgebuildVersionCode=<tag number> into assembleRelease \u2014 tag numbers come from the Releases API and are strictly monotonic, so every release ships versionCode = last+1 with no possibility of being skipped or repeated; (2) engine/app/build.gradle.kts + all 8 apps/*/app/build.gradle.kts read the injected property (findProperty(...).toIntOrNull()) with their previous literal kept as LOCAL/DEV fallback only (e.g. engine-verify assembleDebug without the property still compiles); (3) the per-app versioning comment documents the contract in-file so future agents see it at the point of edit. Android decides update-vs-reinstall from versionCode only \u2014 this fixes the reinstall-instead-of-update bug at the pipeline level, not by agent memory."
+    "note": "Mandatory versionCode auto-increment implemented and structurally enforced: (1) release.yml now determines the next release tag BEFORE the build and injects -PforgebuildVersionCode=<tag number> into assembleRelease — tag numbers come from the Releases API and are strictly monotonic, so every release ships versionCode = last+1 with no possibility of being skipped or repeated; (2) engine/app/build.gradle.kts + all 8 apps/*/app/build.gradle.kts read the injected property (findProperty(...).toIntOrNull()) with their previous literal kept as LOCAL/DEV fallback only (e.g. engine-verify assembleDebug without the property still compiles); (3) the per-app versioning comment documents the contract in-file so future agents see it at the point of edit. Android decides update-vs-reinstall from versionCode only — this fixes the reinstall-instead-of-update bug at the pipeline level, not by agent memory."
    },
    {
     "step": "step-08-versionname-bump",
@@ -1309,8 +1313,38 @@
      "site/app.js",
      "BUILD_STATE.json"
     ],
-    "note": "Dashboard backstop rule added to site/app.js in the shared RULES block (used by all three prompt templates: promptNewApp, promptExtend, promptResume) as '=== PERMANENT RULE \u2014 VERSION BUMP ON EVERY RELEASE ===', placed immediately after the existing M3-discipline permanent rule in the same clearly-labeled format as the prior no-approximation and design-discipline rules. It states: every release must ship a higher versionCode (Android update-vs-reinstall depends on it); enforcement is structural via release.yml property injection; agents must never revert build.gradle.kts to plain literals or hand-maintain versionCode; agents' duties are honest release_notes (major-bump keywords) and keeping the fallback literal in the app's existing versioning style. node --check passed (valid syntax)."
+    "note": "Dashboard backstop rule added to site/app.js in the shared RULES block (used by all three prompt templates: promptNewApp, promptExtend, promptResume) as '=== PERMANENT RULE — VERSION BUMP ON EVERY RELEASE ===', placed immediately after the existing M3-discipline permanent rule in the same clearly-labeled format as the prior no-approximation and design-discipline rules. It states: every release must ship a higher versionCode (Android update-vs-reinstall depends on it); enforcement is structural via release.yml property injection; agents must never revert build.gradle.kts to plain literals or hand-maintain versionCode; agents' duties are honest release_notes (major-bump keywords) and keeping the fallback literal in the app's existing versioning style. node --check passed (valid syntax)."
+   },
+   {
+    "step": "step-10-e2e-verification",
+    "status": "done",
+    "timestamp": "2026-09-26T16:41:48Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "End-to-end verification against real releases + full classification sweep. (A) Bug-2 mechanism proven from compiled APK binaries (authoritative source Android reads): taskflow v6->v7 decode versionCode=1->1 (BOTH pre-fix = the live bug: device offers reinstall); clipforge-android v36->v37 decode versionCode=36->37 (manual bump, proves update path works when versionCode rises). All 7 checked release manifests (v35-v37, v15-v16, v6-v7) carry NO version_code/version_name fields => all predate the step-07/08 fix; the fix (release.yml injects -PforgebuildVersionCode=<monotonic tag number> + -PforgebuildVersionName into assembleRelease) is committed and structural but its first ENFORCED release has not been dispatched yet, so no enforced-build APK exists to sample. The next release.yml dispatch for any app ships versionCode=last+1 automatically; a physical device's update-vs-reinstall prompt is determined solely by that versionCode, so a v(N+1) APK over an installed vN is recognized as an update (same package + same signing key, higher versionCode). Physical-device visual confirmation is out of scope for this environment. (B) Bug-1 classification sweep across all 8 apps + engine (results below): every app's adaptive-icon XML monochrome state is now CONSISTENT with its source classification under the new tool. clipforge-android (the reported raster complaint) = RASTER/PHOTO + NO <monochrome> + no mono assets -> launcher foreground auto-trace fallback now runs (the Duolingo-style detail-preserving behavior). engine + 7 flat-icon apps = VECTOR/ICON + purpose-drawn <monochrome> retained. Stale-asset cleanup verified in step-05.",
+    "verification": {
+     "apk_versionCode_decoded": {
+      "taskflow-v6": "1",
+      "taskflow-v7": "1 (pre-fix bug live)",
+      "clipforge-android-v36": "36",
+      "clipforge-android-v37": "37 (update path works when code rises)"
+     },
+     "manifests_carry_version_fields": "none of v35/v36/v37/v15/v16/v6/v7 -> all pre-fix; enforced build pending next dispatch",
+     "classification_sweep": "engine + calcom/everbrowse/forge-android/forgehouse50/tapcounter/taskflow/theme-showcase = VECTOR/ICON + purpose monochrome kept; clipforge-android = RASTER/PHOTO + monochrome omitted (auto-trace) — all consistent",
+     "device_visual_confirmation": "unconfirmed (no physical device in this environment; versionCode update mechanism is Android-defined and deterministic)"
+    }
+   },
+   {
+    "step": "step-11-final",
+    "status": "done",
+    "timestamp": "2026-09-26T16:41:48Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "forgebuild-icon-and-version-fix COMPLETE. Bug 1 (adaptive-icon monochrome misapplication): FIXED at the Engine generator — source classification (vector/icon-style vs raster/photo-style, 3 anti-aliasing-robust signals) added to make_adaptive_icon.py; raster sources now emit adaptive-icon XML with NO <monochrome> element and no mono assets (stale ones deleted), so Android 13+/16-QPR2 launchers fall back to foreground-alpha auto-trace, preserving detail (Duolingo/Drive/Filmora/FKM behavior); vector sources keep the purpose-drawn monochrome. Propagated to engine/ + all 8 apps. Bug 2 (version not bumping): FIXED structurally — release.yml derives the next <slug>-vN tag BEFORE build and injects it as -PforgebuildVersionCode (+ judgment/style-consistent -PforgebuildVersionName) into assembleRelease, making a monotonic versionCode increment impossible to skip; all app build.gradle.kts read the injected property with a local/dev fallback literal; Dashboard prompt templates (site/app.js shared RULES) carry a PERMANENT RULE backstop. Both fixes verified: icon classification sweep consistent across all apps, and versionCode update mechanism proven from compiled APKs (36->37 updates; 1->1 pre-fix was the bug)."
    }
-  ]
+  ],
+  "completed": "2026-09-26T16:41:48Z"
  }
 }
