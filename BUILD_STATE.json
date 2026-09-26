@@ -1217,6 +1217,24 @@
      "BUILD_STATE.json"
     ],
     "note": "Added source-image classification to make_adaptive_icon.py: is_raster_like() probes a 144px downscale for distinct opaque color count (>64 => raster/photo) and luminance edge density (>20% => raster/photo). Default --monochrome auto uses the classification; force/skip overrides added. Raster/photo path omits the <monochrome> element AND deletes any stale ic_launcher_monochrome.png from earlier runs so the launcher auto-trace fallback runs. Change applied in engine/ and propagated byte-identical to all 8 apps/*/tools copies."
+   },
+   {
+    "step": "step-03-vector-path",
+    "status": "done",
+    "timestamp": "2026-09-26T16:13:21Z",
+    "files_touched": [
+     "engine/tools/make_adaptive_icon.py",
+     "apps/calcom/tools/make_adaptive_icon.py",
+     "apps/clipforge-android/tools/make_adaptive_icon.py",
+     "apps/everbrowse/tools/make_adaptive_icon.py",
+     "apps/forge-android/tools/make_adaptive_icon.py",
+     "apps/forgehouse50/tools/make_adaptive_icon.py",
+     "apps/tapcounter/tools/make_adaptive_icon.py",
+     "apps/taskflow/tools/make_adaptive_icon.py",
+     "apps/theme-showcase/tools/make_adaptive_icon.py",
+     "BUILD_STATE.json"
+    ],
+    "note": "Vector/icon-style path verified unchanged-in-intent and now correct: caught and fixed a real misclassification (anti-aliased flat art produced 259 post-resize shades, over the raw 64-color limit). Replaced raw distinct-color count with anti-aliasing-robust significant-color bins (4 bits/channel, bin significant if >0.5% of pixels; >24 significant bins => raster). Vector sample (flat play-glyph, 3 colors) now classifies vector/icon-style: purpose-drawn ic_launcher_monochrome.png emitted at all 5 densities and <monochrome> element present in ic_launcher.xml + ic_launcher_round.xml. Raster sample (gradient/photo-style) classifies raster/photo-style correctly."
    }
   ]
  }
