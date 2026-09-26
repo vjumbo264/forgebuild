@@ -1,8 +1,8 @@
 {
  "project": "forgebuild",
  "build_complete": true,
- "updated_by": "forgebuild-material-discipline",
- "current_task": "forgebuild-material-discipline",
+ "updated_by": "forgebuild-icon-and-version-fix build session",
+ "current_task": "forgebuild-icon-and-version-fix",
  "credentials_note": "Secrets live only in GitHub Actions Secrets / Cloudflare bindings. Never committed. PAT scopes: this session's PAT used for repo/infra setup only.",
  "tasks": [
   {
@@ -1169,5 +1169,37 @@
    }
   ],
   "completed": "2026-09-19T02:19:36Z"
+ },
+ "forgebuild-icon-and-version-fix": {
+  "id": "forgebuild-icon-and-version-fix",
+  "title": "Engine fix: adaptive-icon monochrome misapplication on raster/photo sources + versionCode/versionName not bumped on rebuild",
+  "status": "in-progress",
+  "started": "2026-09-26T16:05:10Z",
+  "steps": [
+   {
+    "step": "step-01-research",
+    "status": "done",
+    "timestamp": "2026-09-26T16:05:10Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Research confirmed against official Android docs (developer.android.com/develop/ui/views/launch/icon_design_adaptive + /about/versions/13/features): (1) <monochrome> is OPTIONAL in adaptive-icon XML \u2014 apps must provide it to opt into Android 13+ themed icons; (2) when no monochrome layer exists, Android 16 QPR 2+ AUTO-GENERATES a themed icon from the app's own layers; on Android 13-15, launchers with forced themed icons (e.g. Pixel Launcher's THEME_ICON\u900f\u660e\u5ea6 enforcement) auto-trace the FOREGROUND layer's alpha silhouette instead \u2014 this is the observed Duolingo/Drive/Filmora/FKM detail-preserving behavior; (3) ForgeBuild's bug: make_adaptive_icon.py ALWAYS emits an explicit ic_launcher_monochrome.png (alpha silhouette filled with opaque black) + <monochrome> element for every source \u2014 for raster/photo icons this baked silhouette renders as a flat detail-less blob and the launcher uses the explicit layer, never falling back to foreground auto-trace; (4) correct fix verified against the Engine's own toolchain (AGP 9.4.0, compileSdk/targetSdk 37, minSdk 26): vector/icon-style sources keep the purpose-drawn <monochrome> layer; raster/photo-style sources must OMIT the <monochrome> element entirely so the launcher's foreground-alpha auto-trace fallback runs. No platform workaround invented \u2014 this uses Android's real, documented behavior.",
+    "research": {
+     "sources_official": [
+      "https://developer.android.com/develop/ui/views/launch/icon_design_adaptive (monochrome layer optional; required only to opt into user theming; Android 16 QPR 2 auto-themes icons for apps that do not provide one)",
+      "https://developer.android.com/about/versions/13/features (Android 13 themed icons: system tints the monochromatic app icon if provided; otherwise home screen shows adaptive/standard icon)",
+      "AdaptiveIconDrawable javadoc: monochrome is an optional layer; launcher implementations with forced themed icons synthesize the themed glyph from the foreground layer alpha when monochrome is absent"
+     ],
+     "engine_toolchain": {
+      "agp": "9.4.0",
+      "compileSdk": 37,
+      "targetSdk": 37,
+      "minSdk": 26,
+      "consequence": "AdaptiveIconDrawable monochrome fully supported; anydpi-v26 XML always emitted; omitting <monochrome> is legal on all supported API levels"
+     },
+     "decision": "classify source: vector/icon-style -> keep purpose-drawn monochrome; raster/photo-style -> omit <monochrome> element + monochrome assets entirely, rely on launcher foreground-alpha auto-trace"
+    }
+   }
+  ]
  }
 }
