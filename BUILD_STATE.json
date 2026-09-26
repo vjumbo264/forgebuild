@@ -1235,6 +1235,16 @@
      "BUILD_STATE.json"
     ],
     "note": "Vector/icon-style path verified unchanged-in-intent and now correct: caught and fixed a real misclassification (anti-aliased flat art produced 259 post-resize shades, over the raw 64-color limit). Replaced raw distinct-color count with anti-aliasing-robust significant-color bins (4 bits/channel, bin significant if >0.5% of pixels; >24 significant bins => raster). Vector sample (flat play-glyph, 3 colors) now classifies vector/icon-style: purpose-drawn ic_launcher_monochrome.png emitted at all 5 densities and <monochrome> element present in ic_launcher.xml + ic_launcher_round.xml. Raster sample (gradient/photo-style) classifies raster/photo-style correctly."
+   },
+   {
+    "step": "step-04-raster-path",
+    "status": "done",
+    "timestamp": "2026-09-26T16:14:51Z",
+    "files_touched": [
+     "engine/tools/make_adaptive_icon.py",
+     "BUILD_STATE.json"
+    ],
+    "note": "Raster/photo-style path implemented per the verified platform mechanism (step-01): when the source classifies raster/photo-style, make_adaptive_icon.py writes adaptive-icon XML (ic_launcher.xml + ic_launcher_round.xml) with NO <monochrome> element and writes no ic_launcher_monochrome.png at any density. Additionally any stale ic_launcher_monochrome.png from a previous run is deleted so no explicit blob can shadow the launcher fallback. Verified live: seeded a stale monochrome into the raster output tree, re-ran the tool \u2014 stale asset removed (ls: No such file), XML monochrome reference count 0. Under forced themed icons the launcher now auto-traces the foreground layer's own alpha/detail (Duolingo/Drive/Filmora/FKM behavior) instead of rendering a baked flat blob. No hand-rolled substitute for platform behavior \u2014 the real Android fallback is used."
    }
   ]
  }
