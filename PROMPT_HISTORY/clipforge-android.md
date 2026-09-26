@@ -1505,3 +1505,23 @@ Five separate issues. Investigate each directly in the app's real code before fi
 **5. Tasks are not expiring/being cleaned up — they persist indefinitely in the app instead of eventually disappearing.** Investigate whether there is already supposed to be a cleanup/expiry mechanism for old jobs somewhere in the backend (check `.github/workflows/cleanup.yml` and whatever it's supposed to do) that simply isn't running, isn't being reflected in the app, or was never actually wired up to affect what the app displays — versus there having never been a real expiry mechanism to begin with. Fix whichever is actually true: if a backend cleanup process exists but isn't working or isn't reflected in the app, fix it end to end so tasks the backend considers expired/cleaned up actually stop appearing in the app; if no real expiry mechanism exists at all, build one (a sensible default — your judgment on the exact age/criteria, documented clearly in `BUILD_STATE.json`'s notes and `ARCHITECTURE.md` — for when a completed or failed task's data is cleaned up and removed from view) rather than leaving tasks accumulating forever.
 
 Verify all five independently and report which of items 1 and 2 turned out to be (regression vs. incomplete prior fix vs. new/different cause) specifically, since that context matters for confidence in the fix.
+
+---
+
+## 2026-09-26 — EXTEND/UPDATE instruction (backend repo: motionssalt/clipforge; credential redacted — never committed)
+
+> Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = [REDACTED — operator-supplied credential, intentionally not committed]
+
+### Priority 1 — the phantom Super Series anchor task that never resolves
+
+Once a Super Series starts, a task appears alongside the real running part, showing "ongoing." As the series progresses, this task's label keeps updating to match whatever part is CURRENTLY running (Part 1, then Part 2, ... up to the final part) — it is "personating" the current part. Once the series genuinely finishes, this task still shows the final part's name, still marked "ongoing," forever. Third time this specific symptom reported — trace to actual root cause, no surface patch.
+
+Confirmed from real repo data: for the `hyakkano7` series, the job folders that exist are `jobs/hyakkano7-p1` through `jobs/hyakkano7-p5` — there is NO `jobs/hyakkano7/` folder. Investigate: (1) where the app decides the "anchor row" vs per-part rows and whether it reads a real anchor status file or derives the row from the latest part's status; (2) what SHOULD happen to the anchor's own job entry once Stage A produces the super-plan (status.json complete at that point?) — read `scripts/super_chain/super.js`'s `buildSuperState` and status-writes at plan acceptance; (3) if anchor status is correctly complete but the client shows a live "ongoing" row, fix the client list rendering so the anchor row is sourced from its own status and never re-labeled by parts; (4) if the anchor status is genuinely never marked complete / the folder never existed, determine why and fix the true side (backend lifecycle or client rendering of a phantom anchor). End state: exactly the real jobs, each with its own correct independent status — no self-re-labeling row, nothing stuck "ongoing" after the series finishes. Verify with a real multi-part Super Series run at each part transition and after final completion.
+
+### Priority 2 — tasks not expiring after 48 hours
+
+Tasks over a week old still visible despite expected 48h expiry. Investigate `.github/workflows/cleanup.yml`: (1) is cleanup actually running on schedule (recent Actions history — running, erroring, mis-scheduled?); (2) what "expire" means (delete job folder, delete release, mark status.json hidden) and whether the app's task list respects the signal (may be related to Priority 1); (3) fix whichever part is broken and verify real jobs older than 48h are gone from the repo after cleanup runs and no longer shown in the app.
+
+### Priority 3 — log view must show a genuine rolling window of 3–4 steps, not get stuck on the first step
+
+The step-by-step log view should show the CURRENTLY active step plus ~3-4 preceding ones, scrolling forward as the pipeline progresses — not the full list, and not stuck on the first step. Currently stuck on the first/startup step, never advancing. Likely same stale-data category as Priority 1. Fix so the visible window tracks the CURRENT active step in real time (steps 2, 3, 4...) for ordinary tasks and Super Series parts. Verify against a real running task start-to-finish. Priorities 1 and 3 may share a root cause — but verify each explicitly and separately regardless.
