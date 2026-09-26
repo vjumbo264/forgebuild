@@ -1263,6 +1263,15 @@
      "BUILD_STATE.json"
     ],
     "note": "Both icon paths tested against 3 representative sample assets. (1) Flat vector sample (3-color play-glyph): classified vector/icon-style, purpose-drawn monochrome emitted at 5 densities, <monochrome> in both anydpi XMLs. (2) Full-bleed raster sample (gradient+noise photo): classified raster/photo-style, no <monochrome> element, no mono assets; stale-asset cleanup verified by seeding a leftover ic_launcher_monochrome.png and re-running (deleted, XML ref count 0). (3) Shaped raster mascot sample (Duolingo-analog: noisy gradient body + beak on transparent bg): initially MISCLASSIFIED as vector (its textured interior fell into one significant color bin) \u2014 fixed by adding a third classifier signal, interior edge density restricted to opaque pixels (>6% strong edges inside the subject => raster/photo), which separates textured photo subjects from flat glyphs. After fix: classified raster/photo-style correctly. Simulated Pixel-Launcher forced themed-icon renders: vector path tints the purpose-drawn glyph; raster path auto-trace preserves the mascot silhouette (blob+beak shape visible, tinted to theme color) instead of the old solid detail-less blob. Classification matrix: vector=flat->mono, full-bleed raster->omit, shaped raster->omit. All correct."
+   },
+   {
+    "step": "step-06-locate-versioning",
+    "status": "done",
+    "timestamp": "2026-09-26T16:20:21Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Located all versionCode/versionName touchpoints: (1) engine/app/build.gradle.kts template (versionCode=1, versionName=\"1\" literals in defaultConfig) \u2014 the seed for every generated app; (2) each apps/<slug>/app/build.gradle.kts carries the same literals (7 of 8 apps still at 1/\"1\" despite multiple releases; only clipforge-android at 37/\"37\" via a manual agent bump); (3) .github/workflows/release.yml auto-increments ONLY the GitHub release tag <slug>-vN and never touches in-app versionCode \u2014 root cause of Bug 2 (device sees unchanged versionCode => offers reinstall, not update); (4) site/app.js RULES (shared by new/extend/resume prompt templates) never mention version bumps. Enforcement design (no invented workaround, uses the real Android update mechanism): release.yml injects -PforgebuildVersionCode=<tag number> and -PforgebuildVersionName=<bumped name> into assembleRelease; build.gradle.kts reads those properties with the committed literals as local/dev fallback only. Tag numbers are already strictly monotonic per app, so versionCode becomes structurally impossible to skip or repeat."
    }
   ]
  }
