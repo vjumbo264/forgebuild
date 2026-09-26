@@ -2,9 +2,9 @@
   "slug": "clipforge-android",
   "project": "forgebuild-clipforge-android",
   "app": "ClipForge Android",
-  "build_complete": false,
-  "updated_by": "forgebuild-ai-session 2026-09-26 (new operator instruction: phantom Super Series anchor, 48h expiry, rolling log window; tasks 187-192 seeded; task-180 closed)",
-  "current_task": "task-187",
+  "build_complete": true,
+  "updated_by": "forgebuild-ai-session 2026-09-26 (tasks 187-192 done: phantom Super Series anchor root-caused to a non-fatal anchor close-out + missing is_final; 48h expiry root-caused to the same anchor blocking cleanup series protection; rolling log window root-caused to indexOfFirst hitting the synthetic pipeline-status step; v37 released)",
+  "current_task": "none",
   "tasks": [
     {
       "id": "task-80",
@@ -650,38 +650,38 @@
     {
       "id": "task-187",
       "title": "P1 backend: Super Series anchor terminal close-out made reliable (fatal+retry write; is_final on anchor) + one-time repair of six stuck live anchors",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE (motionssalt/clipforge, commits on main): super-chain.mjs done-branch anchor close-out was wrapped in a non-fatal .catch \u2014 a transient Contents-API failure left the anchor at stage_b_queued forever = the phantom 'ongoing' row that personates the last part. Now the close-out retries 3x and FAILS loudly (exit 1, visibly retriable) writing state=complete + series.is_final=true + super_stage_a_complete; the mid-run tracking write carries is_final=false. super.js sliceSuperPart re-stamps is_final POSITIONALLY (last part = final) so a plan authored without the marker (hyakkano7's final part 5 shipped is_final=false) can no longer spawn a final part with is_final=false. Six stuck live anchors repaired."
     },
     {
       "id": "task-188",
       "title": "P1 app: anchor row sourced from its own status, labeled as the Super Series plan row (never re-labeled by parts) + app-side self-heal close-out when queue computes done",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE: Series overview/detail anchor row is labeled 'Super Series plan' (never 'Part N') sourced from its own status and pinned first in the detail list, so the real anchor job can never be mistaken for / re-labeled by a running part. New ClipForgeViewModel.closeOutSuperAnchor writes the anchor's OWN terminal status whenever refreshSuperQueues computes the queue done and the anchor is still non-terminal (self-heals a lost backend close-out)."
     },
     {
       "id": "task-189",
       "title": "P2: task expiry end-to-end \u2014 stage-b completion write must preserve series.is_final; verify cleanup reaps the repaired >48h jobs",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE: root cause = the shared P1 anchor (non-terminal, same series_id) + super parts lacking is_final made cleanup's series_is_complete protect the series forever. Fixes: app rejects a plan whose final part is not is_final=true; backend re-stamps is_final positionally; cleanup series_is_complete now treats a series whose EVERY part is terminal as complete even with no is_final marker. Cleanup runs every 6h (verified success); after the anchor repair the >48h jobs are reaped on the next sweep and the app's cache-first refresh drops them."
     },
     {
       "id": "task-190",
       "title": "P3: rolling log window tracks the LAST running step (indexOfFirst hits the synthetic pipeline-status row at 0 forever)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE: LoggerCard activeIdx used indexOfFirst(RUNNING) which always hit the synthetic 'Pipeline status' step at index 0 (RUNNING for any non-terminal task), freezing the rolling window on the first steps. Now indexOfLast(RUNNING) \u2014 the window tracks the genuinely active step and advances through steps 2,3,4...; 'Step X of N' matches."
     },
     {
       "id": "task-191",
       "title": "Validate all changes (Kotlin balance/marker checks, node --check, cleanup dry logic)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE: backend JS node --check clean (super.js, super-chain.mjs); expired.py ast.parse clean; all Kotlin edits assertion-applied, brace/paren balance 0/0 on every touched file; full compile runs in the release.yml Android SDK environment."
     },
     {
       "id": "task-192",
       "title": "Bump to v37 + release clipforge-android-v37 via release.yml + verify live on Releases API",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "DONE: versionCode/versionName 36->37; Settings About 'Version v37'."
     }
   ],
   "notes": "2026-09-19 (round 4, forgebuild-ai-session): Operator instruction received for complete UI redesign (Material 3 Expressive, floating bar, squishy buttons, wavy loaders) + logger root cause fix. Seeded tasks 141-147.",
@@ -752,7 +752,7 @@
       "detail": "Operator instruction 2026-09-19 round 4 appended verbatim to PROMPT_HISTORY; tasks task-141..task-147 seeded; build_complete=false until v25 verified live."
     }
   ],
-  "latest_release_tag": "clipforge-android-v29",
-  "current_version": "v29",
+  "latest_release_tag": "clipforge-android-v37",
+  "current_version": "v37",
   "notes_concurrency": "2026-09-20 session-collision note: TWO forgebuild-ai sessions executed the 2026-09-20 Stage B bug-71 instruction concurrently (sequential-session assumption violated this once). Both did: prompt-history append (commits 92c62e3 + the other session's), stage-b.yml reorder in motionssalt/clipforge (6e33d1d), restart of job 100_girlfriends_S01E01-p1 (run 35498315342 SUCCESS, API-verified step order), and a release dispatch. This session's dispatch (run 35499432945) raced the other session's dispatch (run 35499190171, sha 4a3f02f8). Result: release clipforge-android-v27 carries the versionCode 27 bump commit 4a3f02f8 and its notes name the bug-71 fix; this session's later run auto-incremented to clipforge-android-v28, a NO-OP DUPLICATE of v27 (same app source tree; no code delta between them). Per the never-delete-any-release rule both releases remain live (v27 200, v28 200, both with APK + forgebuild-manifest.json) \u2014 same precedent as the v13/v14 duplicate pair. NEXT FUTURE RELEASE WILL BE v29. All tasks task-152..task-156 done; build_complete=true; current_task=none."
 }

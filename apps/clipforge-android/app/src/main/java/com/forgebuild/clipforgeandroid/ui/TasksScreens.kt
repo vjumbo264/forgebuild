@@ -733,7 +733,11 @@ private fun LoggerCard(vm: ClipForgeViewModel, logs: List<ClipForgeViewModel.Log
     // Issue 3: rolling window — the active step plus the three preceding ones.
     // Full per-step detail lives in the Raw Console view; the step view renders
     // plain non-interactive rows only.
-    val activeIdx = logs.indexOfFirst { it.level == ClipForgeViewModel.LogLevel.RUNNING }
+    // Priority 3 root-cause fix: indexOfFirst(RUNNING) always returned 0, because the
+    // synthetic "Pipeline status" step sits at index 0 and is RUNNING for the whole
+    // non-terminal life of the task — the window stayed frozen on the first steps.
+    // Track the LAST running step (the genuinely active one) so the window advances.
+    val activeIdx = logs.indexOfLast { it.level == ClipForgeViewModel.LogLevel.RUNNING }
         .let { if (it >= 0) it else logs.lastIndex }
     val windowStart = (activeIdx - 3).coerceAtLeast(0)
     val visibleSteps = if (logs.isEmpty()) logs else logs.subList(windowStart, (activeIdx + 1).coerceAtMost(logs.size))

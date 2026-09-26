@@ -139,6 +139,18 @@ object SuperSeries {
             }
         }
 
+        // Priority 2 root-cause hardening (hyakkano7): the FINAL part is positional —
+        // it MUST be marked is_final = true. When it is not, cleanup's series guard can
+        // never see the series finish (no part ever reports is_final) and the finished
+        // series is pinned in the repo/app forever. Reject such a plan up front with an
+        // actionable error instead of silently spawning a final part with is_final=false.
+        val lastPartFinal = run {
+            val lp = parts.opt(parts.length() - 1)
+            (lp as? JSONObject)?.optJSONObject("series")?.opt("is_final") == true
+        }
+        if (!lastPartFinal) {
+            errors.add("The final part (parts[${'$'}{parts.length() - 1}]) must be marked series.is_final = true.")
+        }
         if (finalCount != 1) {
             errors.add("Exactly one part must be marked series.is_final = true.")
         } else {

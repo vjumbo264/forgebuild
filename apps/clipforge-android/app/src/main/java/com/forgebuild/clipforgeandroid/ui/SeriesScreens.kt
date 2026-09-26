@@ -137,7 +137,7 @@ fun SeriesScreen(
                                                 .padding(vertical = SpacingTokens.Spacing.xxs),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
-                                            Text("Part ${part.part}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                                            Text(if (part.jobId == superQueues[seriesId]?.anchorJobId) "Super Series plan" else "Part ${part.part}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                                             TextActionButton(
                                                 label = Pipeline.describe(part.state),
                                                 onClick = { onSelectTask(part.jobId) },
@@ -169,7 +169,8 @@ fun SeriesDetailScreen(
 
     val downloads = remember(seriesId) { vm.seriesDownloads(seriesId) }
     val seriesParts = remember(tasks, seriesId) {
-        tasks.filter { it.seriesEnabled && it.seriesId == seriesId }.sortedBy { it.part }
+        tasks.filter { it.seriesEnabled && it.seriesId == seriesId }
+            .sortedWith(compareBy({ if (it.jobId == superQueue?.anchorJobId) 0 else 1 }, { it.part }))
     }
 
     Scaffold(
@@ -211,7 +212,7 @@ fun SeriesDetailScreen(
             items(seriesParts, key = { it.jobId }) { part ->
                 CfCard(onClick = { onSelectTask(part.jobId) }) {
                     Column(verticalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
-                        Text("Part ${part.part}", style = MaterialTheme.typography.titleSmall)
+                        Text(if (part.jobId == superQueue?.anchorJobId) "Super Series plan" else "Part ${part.part}", style = MaterialTheme.typography.titleSmall)
                         CfChip(label = Pipeline.describe(part.state), color = cfStateColor(part.state))
                         if (part.message.isNotBlank()) {
                             Text(part.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -1677,8 +1677,31 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
         }
         when (val advance = SuperSeries.superQueueAdvance(state) { statuses[it] }) {
             is SuperSeries.Advance.Queue -> dispatchSuperPart(c, state, advance)
-            else -> Unit // halted / waiting / done: nothing for the app to dispatch
+            // Priority 1 app-side self-heal: when every spawned part is complete but the
+            // anchor was never closed (its terminal status write was lost), the queue
+            // computes 'done' while the anchor still shows a non-terminal tracking state.
+            // Close the anchor from its OWN queue truth — never from a part's status.
+            is SuperSeries.Advance.Done -> closeOutSuperAnchor(c, anchorJobId, state)
+            else -> Unit // halted / waiting: nothing for the app to dispatch
         }
+    }
+
+    /** Priority 1: write the anchor's terminal status when the series is genuinely done. */
+    private suspend fun closeOutSuperAnchor(c: GitHubClient, anchorJobId: String, state: JSONObject) {
+        val cur = c.readFile("jobs/" + anchorJobId + "/status.json")?.let { JSONObject(it.first) }
+        if (cur?.optString("state") == "complete") return // already closed — nothing to do
+        val totalParts = state.optInt("total_parts")
+        val seriesId = state.optString("series_id")
+        c.putFile("jobs/" + anchorJobId + "/status.json", JSONObject()
+            .put("version", 1).put("job_id", anchorJobId).put("mode", "manual")
+            .put("state", "complete")
+            .put("message", "Super Series complete — all " + totalParts + " parts rendered.")
+            .put("updated_at_epoch", nowEpoch())
+            .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
+                .put("part", totalParts).put("start_seconds", 0).put("is_final", true))
+            .put("super_stage_a_complete", true)
+            .toString(2).toByteArray(),
+            "clipforge: super series " + seriesId + " complete — anchor " + anchorJobId + " closed (app reconcile)")
     }
 
     /** Slice + write the part's production.json, mark anchor + part status, and dispatch Stage B. */
@@ -1734,7 +1757,8 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             .put("updated_at_epoch", nowEpoch())
             .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
                 .put("part", advance.part)
-                .put("start_seconds", advance.plan.optJSONObject("series")?.optInt("start_seconds", 0) ?: 0))
+                .put("start_seconds", advance.plan.optJSONObject("series")?.optInt("start_seconds", 0) ?: 0)
+                .put("is_final", advance.plan.optJSONObject("series")?.optBoolean("is_final", false) == true))
             .toString(2).toByteArray(),
             "clipforge: queue super series part ${advance.part} ($partJobId)")
         // Record the spawn in the durable state (same crash-safe order as
@@ -1760,7 +1784,7 @@ class ClipForgeViewModel(val app: Application) : AndroidViewModel(app) {
             .put("message", "Super Series part ${advance.part}/${state.optInt("total_parts")} dispatched ($partJobId). The chain updates this anchor when the part completes.")
             .put("updated_at_epoch", nowEpoch())
             .put("series", JSONObject().put("enabled", true).put("series_id", seriesId)
-                .put("part", advance.part).put("start_seconds", 0))
+                .put("part", advance.part).put("start_seconds", 0).put("is_final", false))
             .put("active_part_job_id", partJobId)
             .toString(2).toByteArray(),
             "clipforge: super series part ${advance.part} dispatched ($partJobId)")

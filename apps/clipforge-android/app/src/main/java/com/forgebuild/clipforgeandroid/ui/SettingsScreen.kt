@@ -520,7 +520,7 @@ fun SettingsScreen(vm: ClipForgeViewModel, onOpenMusic: () -> Unit) {
 
             // ---- About + diagnostics ----
             CfSection(title = "About ClipForge Android") {
-                Text("Version v35", style = MaterialTheme.typography.bodyMedium)
+                Text("Version v37", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "A ForgeBuild client for the ClipForge pipeline. It drives your GitHub clone: video tasks, production plans, music, narrator voices, series and Zernio publishing.",
                     style = MaterialTheme.typography.bodySmall,
