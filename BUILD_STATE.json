@@ -1199,6 +1199,24 @@
      },
      "decision": "classify source: vector/icon-style -> keep purpose-drawn monochrome; raster/photo-style -> omit <monochrome> element + monochrome assets entirely, rely on launcher foreground-alpha auto-trace"
     }
+   },
+   {
+    "step": "step-02-classification",
+    "status": "done",
+    "timestamp": "2026-09-26T16:08:47Z",
+    "files_touched": [
+     "engine/tools/make_adaptive_icon.py",
+     "apps/calcom/tools/make_adaptive_icon.py",
+     "apps/clipforge-android/tools/make_adaptive_icon.py",
+     "apps/everbrowse/tools/make_adaptive_icon.py",
+     "apps/forge-android/tools/make_adaptive_icon.py",
+     "apps/forgehouse50/tools/make_adaptive_icon.py",
+     "apps/tapcounter/tools/make_adaptive_icon.py",
+     "apps/taskflow/tools/make_adaptive_icon.py",
+     "apps/theme-showcase/tools/make_adaptive_icon.py",
+     "BUILD_STATE.json"
+    ],
+    "note": "Added source-image classification to make_adaptive_icon.py: is_raster_like() probes a 144px downscale for distinct opaque color count (>64 => raster/photo) and luminance edge density (>20% => raster/photo). Default --monochrome auto uses the classification; force/skip overrides added. Raster/photo path omits the <monochrome> element AND deletes any stale ic_launcher_monochrome.png from earlier runs so the launcher auto-trace fallback runs. Change applied in engine/ and propagated byte-identical to all 8 apps/*/tools copies."
    }
   ]
  }
