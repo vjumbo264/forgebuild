@@ -1525,3 +1525,15 @@ Tasks over a week old still visible despite expected 48h expiry. Investigate `.g
 ### Priority 3 — log view must show a genuine rolling window of 3–4 steps, not get stuck on the first step
 
 The step-by-step log view should show the CURRENTLY active step plus ~3-4 preceding ones, scrolling forward as the pipeline progresses — not the full list, and not stuck on the first step. Currently stuck on the first/startup step, never advancing. Likely same stale-data category as Priority 1. Fix so the visible window tracks the CURRENT active step in real time (steps 2, 3, 4...) for ordinary tasks and Super Series parts. Verify against a real running task start-to-finish. Priorities 1 and 3 may share a root cause — but verify each explicitly and separately regardless.
+
+## 2026-09-26 — Engine fix rebuild (forgebuild-icon-and-version-fix)
+Operator instruction (engine-level fix build): fix adaptive-icon monochrome
+misapplication for raster/photo-style icons + enforce versionCode/versionName
+bump on rebuild. Applied to this app as the representative verification build:
+removed the placeholder/blank ic_launcher_monochrome.png assets and dropped the
+<monochrome> element from mipmap-anydpi-v26/ic_launcher.xml + ic_launcher_round.xml
+(ClipForge's artwork is raster/illustrated — under forced themed icons the
+launcher now auto-traces the foreground layer's alpha, preserving detail,
+instead of rendering the old flat blob). Release dispatched to verify the new
+structural version-bump contract (release.yml injects versionCode = tag number
+and derived versionName into the APK).
