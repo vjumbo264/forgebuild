@@ -1300,6 +1300,16 @@
      "BUILD_STATE.json"
     ],
     "note": "Judgment-based versionName bump implemented in release.yml (Derive next versionName step) and validated by 5-case bash simulation: (1) one-part '37' + minor notes -> '38' (clipforge's existing integer style preserved); (2) two-part '1.4' + notes containing 'redesign' -> '2.0' (major bump, style kept two-part); (3) three-part '1.0.0' + minor -> '1.0.1' (patch position, style kept three-part); (4) legacy plain-literal '1.2' + minor -> '1.3'; (5) missing/unparseable -> '2'. Scheme follows each app's existing style (never switches 2-part to 3-part or vice versa); major bumps trigger on release-notes keywords (major/redesign/rewrite/overhaul/rebrand) as the deterministic proxy for the agent's judgment, since release_notes are written by the building agent. versionName is injected into the build via -PforgebuildVersionName and recorded in forgebuild-manifest.json alongside version_code."
+   },
+   {
+    "step": "step-09-dashboard-prompt-rule",
+    "status": "done",
+    "timestamp": "2026-09-26T16:25:22Z",
+    "files_touched": [
+     "site/app.js",
+     "BUILD_STATE.json"
+    ],
+    "note": "Dashboard backstop rule added to site/app.js in the shared RULES block (used by all three prompt templates: promptNewApp, promptExtend, promptResume) as '=== PERMANENT RULE \u2014 VERSION BUMP ON EVERY RELEASE ===', placed immediately after the existing M3-discipline permanent rule in the same clearly-labeled format as the prior no-approximation and design-discipline rules. It states: every release must ship a higher versionCode (Android update-vs-reinstall depends on it); enforcement is structural via release.yml property injection; agents must never revert build.gradle.kts to plain literals or hand-maintain versionCode; agents' duties are honest release_notes (major-bump keywords) and keeping the fallback literal in the app's existing versioning style. node --check passed (valid syntax)."
    }
   ]
  }

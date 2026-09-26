@@ -198,6 +198,32 @@ premium, recognizably-Google Material You app, the discipline is not applied —
 fix it via the tokens/helpers above, not by styling around them.
 === END PERMANENT RULE (M3 DISCIPLINE) ===
 
+=== PERMANENT RULE — VERSION BUMP ON EVERY RELEASE (mandatory, never remove) ===
+This section is a PERMANENT part of the ForgeBuild contract, alongside the
+no-approximation and M3-discipline rules above. It applies to every build
+(new app, extend/update, resume) and must never be removed, weakened, or
+buried during unrelated prompt-template edits.
+
+Every new release of an app MUST ship with a HIGHER versionCode than the
+previous release, and a sensibly bumped versionName. Android decides
+update-vs-reinstall from versionCode ONLY: if it is unchanged, a device that
+already has the app offers "reinstall", not "update", and the user loses
+the upgrade path.
+
+Enforcement is structural, not agent-memory: the release workflow
+(.github/workflows/release.yml) derives the release tag number from the
+GitHub Releases API and injects it into the build as -PforgebuildVersionCode,
+and derives/injects -PforgebuildVersionName. app/build.gradle.kts reads those
+properties; its versionCode/versionName literals are the LOCAL/DEV FALLBACK
+ONLY. NEVER revert app/build.gradle.kts back to plain literals and NEVER
+try to hand-maintain versionCode yourself — the workflow owns it. The build
+agent's only duties: (1) write release_notes that describe the actual scope of
+the change honestly (the workflow uses major/redesign/rewrite/overhaul/rebrand
+keywords in the notes to choose a major versionName bump), and (2) keep the
+fallback literal in the app's existing versioning style (do not switch an app
+from two-part to three-part or back arbitrarily).
+=== END PERMANENT RULE (VERSION BUMP) ===
+
 SIGNING & RELEASES: release signing secrets (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD) already exist as GitHub Actions secrets on ${OWNER}/${REPO} — reuse them; only regenerate if explicitly told. To release: dispatch the "Build & Release App APK" workflow (Actions > workflow_dispatch, or POST /repos/${OWNER}/${REPO}/actions/workflows/release.yml/dispatches with ref=main and inputs app_path="apps/<slug>", release_notes). The workflow builds the folder, auto-increments the tag as <slug>-vN, and creates a GitHub Release on this repo with the APK + forgebuild-manifest.json. Never overwrite an existing release/tag — versions are <slug>-v1, <slug>-v2, ... monotonically.
 
 STOPPING: only stop at a genuine execution boundary after committing/pushing an updated apps/<slug>/BUILD_STATE.json whose notes say exactly what is done, what remains, and the exact next operation — or when the release is fully verified live on the GitHub Releases API.`;
