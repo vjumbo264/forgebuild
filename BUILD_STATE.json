@@ -1291,6 +1291,15 @@
      "BUILD_STATE.json"
     ],
     "note": "Mandatory versionCode auto-increment implemented and structurally enforced: (1) release.yml now determines the next release tag BEFORE the build and injects -PforgebuildVersionCode=<tag number> into assembleRelease \u2014 tag numbers come from the Releases API and are strictly monotonic, so every release ships versionCode = last+1 with no possibility of being skipped or repeated; (2) engine/app/build.gradle.kts + all 8 apps/*/app/build.gradle.kts read the injected property (findProperty(...).toIntOrNull()) with their previous literal kept as LOCAL/DEV fallback only (e.g. engine-verify assembleDebug without the property still compiles); (3) the per-app versioning comment documents the contract in-file so future agents see it at the point of edit. Android decides update-vs-reinstall from versionCode only \u2014 this fixes the reinstall-instead-of-update bug at the pipeline level, not by agent memory."
+   },
+   {
+    "step": "step-08-versionname-bump",
+    "status": "done",
+    "timestamp": "2026-09-26T16:24:37Z",
+    "files_touched": [
+     "BUILD_STATE.json"
+    ],
+    "note": "Judgment-based versionName bump implemented in release.yml (Derive next versionName step) and validated by 5-case bash simulation: (1) one-part '37' + minor notes -> '38' (clipforge's existing integer style preserved); (2) two-part '1.4' + notes containing 'redesign' -> '2.0' (major bump, style kept two-part); (3) three-part '1.0.0' + minor -> '1.0.1' (patch position, style kept three-part); (4) legacy plain-literal '1.2' + minor -> '1.3'; (5) missing/unparseable -> '2'. Scheme follows each app's existing style (never switches 2-part to 3-part or vice versa); major bumps trigger on release-notes keywords (major/redesign/rewrite/overhaul/rebrand) as the deterministic proxy for the agent's judgment, since release_notes are written by the building agent. versionName is injected into the build via -PforgebuildVersionName and recorded in forgebuild-manifest.json alongside version_code."
    }
   ]
  }
