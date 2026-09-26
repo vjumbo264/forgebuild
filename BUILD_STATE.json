@@ -1245,6 +1245,24 @@
      "BUILD_STATE.json"
     ],
     "note": "Raster/photo-style path implemented per the verified platform mechanism (step-01): when the source classifies raster/photo-style, make_adaptive_icon.py writes adaptive-icon XML (ic_launcher.xml + ic_launcher_round.xml) with NO <monochrome> element and writes no ic_launcher_monochrome.png at any density. Additionally any stale ic_launcher_monochrome.png from a previous run is deleted so no explicit blob can shadow the launcher fallback. Verified live: seeded a stale monochrome into the raster output tree, re-ran the tool \u2014 stale asset removed (ls: No such file), XML monochrome reference count 0. Under forced themed icons the launcher now auto-traces the foreground layer's own alpha/detail (Duolingo/Drive/Filmora/FKM behavior) instead of rendering a baked flat blob. No hand-rolled substitute for platform behavior \u2014 the real Android fallback is used."
+   },
+   {
+    "step": "step-05-both-paths-tested",
+    "status": "done",
+    "timestamp": "2026-09-26T16:18:20Z",
+    "files_touched": [
+     "engine/tools/make_adaptive_icon.py",
+     "apps/calcom/tools/make_adaptive_icon.py",
+     "apps/clipforge-android/tools/make_adaptive_icon.py",
+     "apps/everbrowse/tools/make_adaptive_icon.py",
+     "apps/forge-android/tools/make_adaptive_icon.py",
+     "apps/forgehouse50/tools/make_adaptive_icon.py",
+     "apps/tapcounter/tools/make_adaptive_icon.py",
+     "apps/taskflow/tools/make_adaptive_icon.py",
+     "apps/theme-showcase/tools/make_adaptive_icon.py",
+     "BUILD_STATE.json"
+    ],
+    "note": "Both icon paths tested against 3 representative sample assets. (1) Flat vector sample (3-color play-glyph): classified vector/icon-style, purpose-drawn monochrome emitted at 5 densities, <monochrome> in both anydpi XMLs. (2) Full-bleed raster sample (gradient+noise photo): classified raster/photo-style, no <monochrome> element, no mono assets; stale-asset cleanup verified by seeding a leftover ic_launcher_monochrome.png and re-running (deleted, XML ref count 0). (3) Shaped raster mascot sample (Duolingo-analog: noisy gradient body + beak on transparent bg): initially MISCLASSIFIED as vector (its textured interior fell into one significant color bin) \u2014 fixed by adding a third classifier signal, interior edge density restricted to opaque pixels (>6% strong edges inside the subject => raster/photo), which separates textured photo subjects from flat glyphs. After fix: classified raster/photo-style correctly. Simulated Pixel-Launcher forced themed-icon renders: vector path tints the purpose-drawn glyph; raster path auto-trace preserves the mascot silhouette (blob+beak shape visible, tinted to theme color) instead of the old solid detail-less blob. Classification matrix: vector=flat->mono, full-bleed raster->omit, shaped raster->omit. All correct."
    }
   ]
  }
