@@ -13,8 +13,13 @@ android {
         applicationId = "com.forgebuild.tapcounter"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1"
+        // FORGEBUILD VERSIONING CONTRACT: release.yml injects -PforgebuildVersionCode=
+        // <release tag number> and -PforgebuildVersionName into every release build, so
+        // versionCode increments automatically and monotonically; Android decides
+        // update-vs-reinstall from versionCode ONLY. Literals below are the LOCAL/DEV
+        // FALLBACK ONLY (used when the properties are absent).
+        versionCode = (project.findProperty("forgebuildVersionCode") as? String)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("forgebuildVersionName") as? String) ?: "1"
         vectorDrawables { useSupportLibrary = true }
     }
 

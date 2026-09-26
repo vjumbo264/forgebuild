@@ -1272,6 +1272,25 @@
      "BUILD_STATE.json"
     ],
     "note": "Located all versionCode/versionName touchpoints: (1) engine/app/build.gradle.kts template (versionCode=1, versionName=\"1\" literals in defaultConfig) \u2014 the seed for every generated app; (2) each apps/<slug>/app/build.gradle.kts carries the same literals (7 of 8 apps still at 1/\"1\" despite multiple releases; only clipforge-android at 37/\"37\" via a manual agent bump); (3) .github/workflows/release.yml auto-increments ONLY the GitHub release tag <slug>-vN and never touches in-app versionCode \u2014 root cause of Bug 2 (device sees unchanged versionCode => offers reinstall, not update); (4) site/app.js RULES (shared by new/extend/resume prompt templates) never mention version bumps. Enforcement design (no invented workaround, uses the real Android update mechanism): release.yml injects -PforgebuildVersionCode=<tag number> and -PforgebuildVersionName=<bumped name> into assembleRelease; build.gradle.kts reads those properties with the committed literals as local/dev fallback only. Tag numbers are already strictly monotonic per app, so versionCode becomes structurally impossible to skip or repeat."
+   },
+   {
+    "step": "step-07-versioncode-autoincrement",
+    "status": "done",
+    "timestamp": "2026-09-26T16:24:14Z",
+    "files_touched": [
+     ".github/workflows/release.yml",
+     "engine/app/build.gradle.kts",
+     "apps/calcom/app/build.gradle.kts",
+     "apps/clipforge-android/app/build.gradle.kts",
+     "apps/everbrowse/app/build.gradle.kts",
+     "apps/forge-android/app/build.gradle.kts",
+     "apps/forgehouse50/app/build.gradle.kts",
+     "apps/tapcounter/app/build.gradle.kts",
+     "apps/taskflow/app/build.gradle.kts",
+     "apps/theme-showcase/app/build.gradle.kts",
+     "BUILD_STATE.json"
+    ],
+    "note": "Mandatory versionCode auto-increment implemented and structurally enforced: (1) release.yml now determines the next release tag BEFORE the build and injects -PforgebuildVersionCode=<tag number> into assembleRelease \u2014 tag numbers come from the Releases API and are strictly monotonic, so every release ships versionCode = last+1 with no possibility of being skipped or repeated; (2) engine/app/build.gradle.kts + all 8 apps/*/app/build.gradle.kts read the injected property (findProperty(...).toIntOrNull()) with their previous literal kept as LOCAL/DEV fallback only (e.g. engine-verify assembleDebug without the property still compiles); (3) the per-app versioning comment documents the contract in-file so future agents see it at the point of edit. Android decides update-vs-reinstall from versionCode only \u2014 this fixes the reinstall-instead-of-update bug at the pipeline level, not by agent memory."
    }
   ]
  }

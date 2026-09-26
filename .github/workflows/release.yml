@@ -35,6 +35,54 @@ jobs:
           echo "SLUG=${APP_PATH#apps/}" >> "$GITHUB_ENV"
           echo "Building app slug: ${APP_PATH#apps/}"
 
+      # VERSIONING CONTRACT (mandatory): the tag number IS the APK versionCode.
+      # It is derived BEFORE the build and injected into Gradle below, so every
+      # release ships a versionCode that is +1 over the last release — Android
+      # decides update-vs-reinstall from versionCode only, so this is what makes
+      # every rebuild an UPDATE on-device. Structurally impossible to skip.
+      - name: Determine next version tag (<slug>-vN)
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LAST=$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq ".[].tag_name" | grep -oP "^${SLUG}-v\K[0-9]+$" | sort -n | tail -1 || true)
+          NEXT=$(( ${LAST:-0} + 1 ))
+          TAG="${SLUG}-v${NEXT}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "code=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Latest existing tag for '$SLUG': v${LAST:-0} -> releasing $TAG (versionCode=$NEXT)"
+
+      - name: Derive next versionName (judgment-based, style-consistent)
+        id: vername
+        run: |
+          GRADLE_FILE="$APP_PATH/app/build.gradle.kts"
+          # current versionName: plain literal form, or the contract fallback literal
+          CUR=$(grep -oP 'versionName\s*=\s*"\K[^"]+' "$GRADLE_FILE" | head -1 || true)
+          if [ -z "$CUR" ]; then
+            CUR=$(grep -oP 'forgebuildVersionName"\) as\? String\) \?: "\K[^"]+' "$GRADLE_FILE" | head -1 || true)
+          fi
+          NOTES="${{ github.event.inputs.release_notes || github.event.head_commit.message }}"
+          MAJOR=0
+          if echo "$NOTES" | grep -qiE 'major|redesign|rewrite|overhaul|rebrand'; then MAJOR=1; fi
+          NEXT_NAME=$(python3 - "$CUR" "$MAJOR" << 'PYEOF'
+          import sys, re
+          cur, major = sys.argv[1], sys.argv[2] == "1"
+          parts = re.findall(r'\d+', cur)
+          if not parts:
+              print("2")
+          elif major:
+              print(str(int(parts[0]) + 1) + "".join(".0" for _ in parts[1:]))
+          elif len(parts) == 1:
+              print(str(int(parts[0]) + 1))
+          else:
+              parts[-1] = str(int(parts[-1]) + 1)
+              print(".".join(parts))
+          PYEOF
+          )
+          echo "name=$NEXT_NAME" >> "$GITHUB_OUTPUT"
+          echo "versionName: '${CUR:-none}' -> '$NEXT_NAME' (major=$MAJOR)"
+
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
 
@@ -53,19 +101,10 @@ jobs:
         run: |
           cd "$APP_PATH"
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon
-
-      - name: Determine next version tag (<slug>-vN)
-        id: meta
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          LAST=$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
-            --jq ".[].tag_name" | grep -oP "^${SLUG}-v\K[0-9]+$" | sort -n | tail -1 || true)
-          NEXT=$(( ${LAST:-0} + 1 ))
-          TAG="${SLUG}-v${NEXT}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Latest existing tag for '$SLUG': v${LAST:-0} -> releasing $TAG"
+          ./gradlew :app:assembleRelease --no-daemon \
+            -PforgebuildVersionCode="${{ steps.meta.outputs.code }}" \
+            -PforgebuildVersionName="${{ steps.vername.outputs.name }}"
+          echo "APK versionCode=${{ steps.meta.outputs.code }} versionName=${{ steps.vername.outputs.name }}"
 
       - name: Write app manifest (metadata)
         run: |
@@ -73,8 +112,10 @@ jobs:
           NAME=$(grep -oP '(?<=<string name="app_name">)[^<]+' "$APP_PATH/app/src/main/res/values/strings.xml" || echo "App")
           PERMS=$(grep -oP 'android:name="android.permission.\K[^"]+' "$APP_PATH/app/src/main/AndroidManifest.xml" | sort -u | paste -sd, - || true)
           NOTES="${{ github.event.inputs.release_notes || github.event.head_commit.message }}"
-          printf '{\n  "app_name": "%s",\n  "app_slug": "%s",\n  "package": "%s",\n  "version_tag": "%s",\n  "permissions": "%s",\n  "version_notes": "%s",\n  "built_by": "forgebuild single-repo release workflow"\n}\n' \
-            "$NAME" "$SLUG" "$PKG" "${{ steps.meta.outputs.tag }}" "$PERMS" "$NOTES" > forgebuild-manifest.json
+          printf '{\n  "app_name": "%s",\n  "app_slug": "%s",\n  "package": "%s",\n  "version_tag": "%s",\n  "version_code": %s,\n  "version_name": "%s",\n  "permissions": "%s",\n  "version_notes": "%s",\n  "built_by": "forgebuild single-repo release workflow"\n}\n' \
+            "$NAME" "$SLUG" "$PKG" "${{ steps.meta.outputs.tag }}" \
+            "${{ steps.meta.outputs.code }}" "${{ steps.vername.outputs.name }}" \
+            "$PERMS" "$NOTES" > forgebuild-manifest.json
 
       - name: Rename APK
         run: cp "$APP_PATH/app/build/outputs/apk/release/app-release.apk" "app-${{ steps.meta.outputs.tag }}.apk"

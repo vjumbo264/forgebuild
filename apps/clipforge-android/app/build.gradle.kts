@@ -15,8 +15,13 @@ android {
         applicationId = "com.forgebuild.clipforgeandroid"
         minSdk = 26
         targetSdk = 37
-        versionCode = 37
-        versionName = "37"
+        // FORGEBUILD VERSIONING CONTRACT: release.yml injects -PforgebuildVersionCode=
+        // <release tag number> and -PforgebuildVersionName into every release build, so
+        // versionCode increments automatically and monotonically; Android decides
+        // update-vs-reinstall from versionCode ONLY. Literals below are the LOCAL/DEV
+        // FALLBACK ONLY (used when the properties are absent).
+        versionCode = (project.findProperty("forgebuildVersionCode") as? String)?.toIntOrNull() ?: 37
+        versionName = (project.findProperty("forgebuildVersionName") as? String) ?: "37"
         vectorDrawables { useSupportLibrary = true }
     }
 

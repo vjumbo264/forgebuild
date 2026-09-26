@@ -16,8 +16,16 @@ android {
         applicationId = "com.forgebuild.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1"
+        // FORGEBUILD VERSIONING CONTRACT (mandatory — do not hand-edit to "fix" a release):
+        // .github/workflows/release.yml injects -PforgebuildVersionCode=<release tag number>
+        // and -PforgebuildVersionName=<name> into every release build, so versionCode
+        // increments automatically and monotonically (the tag number is derived from the
+        // Releases API and can never repeat). Android decides update-vs-reinstall from
+        // versionCode ONLY, so this is what makes every rebuild an UPDATE on-device.
+        // The literals below are the LOCAL/DEV FALLBACK ONLY (used when the properties
+        // are absent, e.g. engine-verify assembleDebug).
+        versionCode = (project.findProperty("forgebuildVersionCode") as? String)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("forgebuildVersionName") as? String) ?: "1"
         vectorDrawables { useSupportLibrary = true }
     }
 
