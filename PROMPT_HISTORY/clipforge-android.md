@@ -1537,3 +1537,22 @@ launcher now auto-traces the foreground layer's alpha, preserving detail,
 instead of rendering the old flat blob). Release dispatched to verify the new
 structural version-bump contract (release.yml injects versionCode = tag number
 and derived versionName into the APK).
+
+
+## 2026-10-08 — EXTEND/UPDATE instruction (Add public-YouTube-video source support to ClipForge)
+
+> Repo: https://github.com/motionssalt/clipforge — GITHUB_PAT = [REDACTED — operator-supplied credential, intentionally not committed]
+> CLOUDFLARE_API_TOKEN = [REDACTED — operator-supplied credential, intentionally not committed]
+> CLOUDFLARE_ACCOUNT_ID = [REDACTED — operator-supplied credential, intentionally not committed]
+> TELEGRAM_BOT_TOKEN = [REDACTED — operator-supplied credential, intentionally not committed]
+
+### TASK: Add public-YouTube-video source support to ClipForge
+
+Let the user paste a **public YouTube video link** as a source, and have Stage A download it and continue exactly like any other source (transcribe, scene-detect, analysis bundle, release, Stage B and so on). Series mode, Super Series mode, Stage B source re-fetch, and publishing must all keep working with YouTube sources.
+
+Scope:
+- Public, single videos only: youtube.com/watch?v=..., youtu.be/..., youtube.com/shorts/..., m.youtube.com, music.youtube.com (video pages). Strip playlist/radio parameters (list=, index=, start_radio=) and use only the one video.
+- NOT in scope: playlists/channels as batch input, livestreams still live, private/members-only/paywalled videos, DRM content, downloading other sites. TikTok, Instagram, Facebook, X/Twitter, Vimeo, Reddit stay disabled as they are today.
+- Use yt-dlp (open source, free). Do not scrape YouTube by hand.
+- Runner strategy for YouTube bot-checks: latest yt-dlp, player clients fallback, optional YOUTUBE_COOKIES and YOUTUBE_PROXY_URL, clear actionable error messages, 1080p cap, 12 GiB limit.
+- Update dashboard wizard, labels, docs, tests, and Android client (SourceClassifier, NewTaskWizard, error and label messaging).
