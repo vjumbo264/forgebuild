@@ -288,3 +288,13 @@ Four issues, one of which (cache-first/stale-UI) is a correctness bug, not a vis
 - ISSUE 2 — PREMIUM VISUAL PASS (HOME SCREEN AND APP-WIDE), REAL FONT FIX. Elevated visual confidence matching reference mockup: soft shadows/elevation, generous corner radii, bold large numerals for stats (points, days, streak), clean full-width pill action rows (icon chip + label + chevron) app-wide. Re-verify body font weight and ensure Regular/Medium (400-500)+ legibility.
 - ISSUE 3 — WIDGET VISUAL REDESIGN (CLEAN, MATERIAL-STYLE). Material 3 widget styling, GlanceTheme/dynamic color, clear visual hierarchy, redesigned shape/layout (top day/progress, middle key verse, bottom action), cache-first data guarantee.
 - ISSUE 4 — REPLACE THEMED-ICON SILHOUETTE WITH NEW ATTACHED VERSION. Replace monochrome layer with new clean v2 silhouette, safe-zone fitted, verify themed icons.
+
+---
+
+## 2026-10-08 — EXTEND / UPDATE: Plus Jakarta Sans font swap, widget button crop fix, full dynamic theming (dark mode), expressive wavy progress bar
+
+Operator feedback:
+1. Font replacement: Change font entirely rather than tweaking Nunito. Adopt Plus Jakarta Sans (premium geometric humanist font, clean weights, crisp legibility).
+2. Widget button crop fix: Bottom of 'Start Reading' button is cut off on 2-cell launcher heights. Tighten vertical padding, collapse empty verse space, reduce button height to compact 38dp, and ensure comfortable bottom clearance.
+3. Full dynamic theme: Widget was stuck in light mode. Provide complete Material You dynamic theming across values/, values-night/, values-v31/, and values-night-v31/ using system dynamic colors so dark mode renders with deep dark surfaces and system wallpaper accents.
+4. Expressive wavy progress bar: Style widget progress bar with Material 3 Expressive wavy progress treatment.
