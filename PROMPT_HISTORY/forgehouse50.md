@@ -298,3 +298,58 @@ Operator feedback:
 2. Widget button crop fix: Bottom of 'Start Reading' button is cut off on 2-cell launcher heights. Tighten vertical padding, collapse empty verse space, reduce button height to compact 38dp, and ensure comfortable bottom clearance.
 3. Full dynamic theme: Widget was stuck in light mode. Provide complete Material You dynamic theming across values/, values-night/, values-v31/, and values-night-v31/ using system dynamic colors so dark mode renders with deep dark surfaces and system wallpaper accents.
 4. Expressive wavy progress bar: Style widget progress bar with Material 3 Expressive wavy progress treatment.
+
+
+---
+
+## 2026-10-08 — EXTEND / UPDATE: Widget Layout/Theme Bugs, Fake Progress Bar, Icon Zoom/Shape Issues, Leaderboard Redesign
+
+# ForgeHouse 50 Android App — Widget Layout/Theme Bugs, Fake Progress Bar, Icon Zoom/Shape Issues, Leaderboard Redesign
+
+## Scope
+
+Five issues, visible directly in the operator's attached screenshots.
+Reference them by number in your own verification evidence.
+
+The operator has attached five images:
+1-2. Widget screenshots at two different sizes, showing the "Continue" button cropped at the bottom edge of the widget card, and a wavy progress indicator beneath the chapter title that is visibly static (not actually animating/moving) and doesn't match Material 3 Expressive's real wavy progress indicator's appearance.
+3. The app's standard (non-themed) launcher icon as it currently renders — visibly over-zoomed/cropped compared to its intended design (flame/house/globe/"50" shape cut off at edges).
+4. The app's themed-icon (Android 13+ monochrome) variant as it currently renders — using a harsh-edged square card shape with a visible hard background edge.
+5. A third widget screenshot (same cropping/static-wave issues as 1-2, for confirmation across more than one instance).
+
+═══════════════════════════════════════════════════════════
+ISSUE 1 — WIDGET: "CONTINUE" BUTTON CROPPED AT CARD EDGE
+═══════════════════════════════════════════════════════════
+Fix padding/sizing so button renders fully with comfortable padding on all sides, never touching or clipped by card edge at every supported widget size.
+
+═══════════════════════════════════════════════════════════
+ISSUE 2 — WIDGET: FAKE/STATIC WAVY PROGRESS BAR
+═══════════════════════════════════════════════════════════
+Android App Widgets via RemoteViews do not support custom animated loops for determinate progress. Replace the fake static wave approximation with a clean, supported Material 3 progress bar styled cleanly, and document this platform constraint honestly in BUILD_STATE.json.
+
+═══════════════════════════════════════════════════════════
+ISSUE 3 — WIDGET: BROKEN LAYOUT ON RESIZE (ELEMENTS BUNCH TO ONE SIDE)
+═══════════════════════════════════════════════════════════
+Fix layout reflow/adaptation across Android's supported widget size range (prevent squeezed "ForgeH
+ouse
+50" header wrapping, distribute elements proportionally across widths and heights).
+
+═══════════════════════════════════════════════════════════
+ISSUE 4 — WIDGET: NO DARK THEME SUPPORT
+═══════════════════════════════════════════════════════════
+Wire widget theme/color scheme to follow system dark/light and dynamic Material You wallpaper colors cleanly.
+
+═══════════════════════════════════════════════════════════
+ISSUE 5 — STANDARD ICON OVER-ZOOMED/CROPPED
+═══════════════════════════════════════════════════════════
+Scale foreground layer properly within Android's adaptive icon safe zone (~66% diameter) centered on brand background, ensuring the complete mark is never clipped under any mask shape.
+
+═══════════════════════════════════════════════════════════
+ISSUE 6 — THEMED ICON: UGLY HARD-EDGED SQUARE CARD
+═══════════════════════════════════════════════════════════
+Rebuild monochrome silhouette layer so it contains ONLY the glyph shape with transparent surrounding area (zero card/background artifact), allowing launcher mask to define outer bounds.
+
+═══════════════════════════════════════════════════════════
+ISSUE 7 — LEADERBOARD UI NEEDS A REDESIGN
+═══════════════════════════════════════════════════════════
+Redesign Leaderboard UI with premium visual language: card-ized elevated rank rows, segmented pill category tabs, bold rank and score typography, elevated top-3 podium hero treatment, prominent "You" standing highlight.
