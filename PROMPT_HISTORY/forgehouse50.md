@@ -269,3 +269,22 @@ correction session. Refinement, not a full correction.
 - ISSUE 5 — Reapply the app icon from the operator-supplied source image:
   full adaptive set (background, foreground, monochrome themed layer per the
   established pattern) plus legacy fallback; verify themed icons on and off.
+
+---
+
+## 2026-10-07 — EXTEND / UPDATE: ForgeHouse 50 Android App — Premium Visual Pass, Critical Cache-First Fix, Widget Redesign, Icon Silhouette Swap
+(Credential values redacted per contract; never committed.)
+
+# ForgeHouse 50 Android App — Premium Visual Pass, Critical Cache-First Fix, Widget Redesign, Icon Silhouette Swap
+
+## Scope
+Four issues, one of which (cache-first/stale-UI) is a correctness bug, not a visual preference, and should be treated with proportionate urgency.
+
+## Attached files
+1. `forgehouse50-icon-silhouette-v2.png` — clean source for monochrome/themed-icon silhouette layer.
+2. Screenshot of AI-generated mockup of premium Home screen — mood/quality reference (soft shadows/elevation, generous corner radii, bold large numerals, full-width pill action rows with icon chip + label + chevron, comfortable spacing). Dynamic Material You theme preserved.
+
+- ISSUE 1 — CRITICAL: APP (AND WIDGET) SHOW STALE/DEFAULT DATA BEFORE SNAPPING TO REAL DATA. Cache-first with background refresh violation: audit all screens (Home, Read, Notes, Progress, Leaderboard, Profile, admin, quiz) and widget. Persistent local caching rendered immediately on screen composition with zero default/placeholder flash, background refresh reconciles smoothly. Verify offline/airplane-mode reopen.
+- ISSUE 2 — PREMIUM VISUAL PASS (HOME SCREEN AND APP-WIDE), REAL FONT FIX. Elevated visual confidence matching reference mockup: soft shadows/elevation, generous corner radii, bold large numerals for stats (points, days, streak), clean full-width pill action rows (icon chip + label + chevron) app-wide. Re-verify body font weight and ensure Regular/Medium (400-500)+ legibility.
+- ISSUE 3 — WIDGET VISUAL REDESIGN (CLEAN, MATERIAL-STYLE). Material 3 widget styling, GlanceTheme/dynamic color, clear visual hierarchy, redesigned shape/layout (top day/progress, middle key verse, bottom action), cache-first data guarantee.
+- ISSUE 4 — REPLACE THEMED-ICON SILHOUETTE WITH NEW ATTACHED VERSION. Replace monochrome layer with new clean v2 silhouette, safe-zone fitted, verify themed icons.
