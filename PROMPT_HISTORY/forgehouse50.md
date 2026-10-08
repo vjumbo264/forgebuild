@@ -353,3 +353,229 @@ Rebuild monochrome silhouette layer so it contains ONLY the glyph shape with tra
 ISSUE 7 — LEADERBOARD UI NEEDS A REDESIGN
 ═══════════════════════════════════════════════════════════
 Redesign Leaderboard UI with premium visual language: card-ized elevated rank rows, segmented pill category tabs, bold rank and score typography, elevated top-3 podium hero treatment, prominent "You" standing highlight.
+
+---
+
+## 2026-10-08 — EXTEND / UPDATE: Streak Calculation Bug, Reader UI Enhancement, Widget Cropping, Support Message, Progress-Screen Review Access
+
+# ForgeHouse 50 Android App — Streak Calculation Bug, Reader UI Enhancement, Widget Cropping, Support Message, Progress-Screen Review Access
+
+## Scope
+
+Five issues. One (the streak bug) is a correctness/trust issue affecting
+the leaderboard's Consistency category for every user and should be
+treated as the highest priority in this session, similar to how the
+cache-first bug was prioritized in an earlier session.
+
+Read the Android app's current build-state file fully before starting.
+
+# CREDENTIALS
+[REDACTED PER FORGEBUILD CREDENTIAL DISCIPLINE]
+
+═══════════════════════════════════════════════════════════
+ISSUE 1 — CRITICAL: STREAK DOES NOT RESET AFTER INACTIVITY
+═══════════════════════════════════════════════════════════
+
+The operator has not opened/used the app in over a week, yet their streak
+still shows 6 (presumably its value from their last active day), when it
+should have reset to 0 once a day was missed without being completed (or,
+depending on how catch-up interacts with streak — see below — at minimum
+it should not simply remain frozen at its old value indefinitely while the
+user is inactive).
+
+**This directly affects the Leaderboard's Consistency category for every
+user** — if streaks aren't being correctly recalculated/reset, that entire
+leaderboard category is currently showing inaccurate data app-wide, not
+just for this one operator account.
+
+- Find the actual streak-calculation logic (backend, since this should be
+  server-authoritative data consumed by both the leaderboard and the
+  Android app, not something computed client-side-only) and determine
+  why it isn't correctly decrementing/resetting when a user goes
+  inactive. Likely causes: streak is only ever recalculated/updated at the
+  moment a user actively completes a day (incrementing it), with no
+  corresponding check that runs independently to detect and reset a
+  broken streak when time passes without completion — i.e. the "reset"
+  half of the logic may simply not exist at all, only the "increment"
+  half.
+- Define and implement the correct rule clearly: a user's current streak
+  should reflect genuinely consecutive completed reading days. If a
+  calendar day passes (per the project's established West Africa Time day
+  boundary) where the user did not complete that day's reading
+  (accounting correctly for the catch-up mechanic from an earlier
+  session — a user actively working through a catch-up backlog should
+  likely not have their streak zeroed out simply because they're
+  catching up, since catch-up exists specifically to let someone recover
+  without being doubly punished; your judgment on the precise
+  interaction, but document it clearly, and at minimum: a user who is
+  neither caught up nor actively working through catch-up — i.e.
+  genuinely inactive, not opening the app at all, like the operator's own
+  week-long absence — must have their streak correctly reflect that
+  lapse, not remain frozen at an old value).
+- Since this can't rely solely on "check streak when the user opens the
+  app" (a user who never reopens the app would never trigger a
+  recalculation, and their streak would remain stale in the database
+  indefinitely, which matches exactly what's being observed here),
+  implement this as a proper server-side check — either computed
+  on-the-fly whenever streak is read/displayed (comparing last-completed-
+  day against the current real date rather than trusting a stored streak
+  number blindly), or via a scheduled job that periodically recalculates
+  stale streaks, your judgment on which fits this stack better, but the
+  critical requirement is that streak must be correct whenever it's
+  displayed, regardless of whether the user themselves has opened the app
+  recently.
+- Verify live: using a real test account with a known streak and a known
+  gap in activity (simulate/adjust test data as needed to test without
+  waiting in real time), confirm the displayed streak correctly reflects
+  the actual consecutive-completion history, confirm it correctly resets
+  after a genuine gap, and confirm this is reflected both in the app and
+  on the Leaderboard's Consistency category.
+
+═══════════════════════════════════════════════════════════
+ISSUE 2 — WIDGET BUTTON STILL INTERMITTENTLY CROPPED
+═══════════════════════════════════════════════════════════
+
+The prior session's fix for the widget's cropped "Continue" button
+improved things but didn't fully resolve it — it's now cropped only
+sometimes rather than every time, which suggests the fix addressed a
+fixed-size case but not a dynamic one.
+
+- Investigate what varies between the cropped and non-cropped occurrences
+  — the most likely culprit given "sometimes" rather than "always": the
+  widget's content height varies based on real data (e.g. longer book/
+  chapter range text wrapping to an extra line, catch-up-mode text being
+  present or absent, varying verse-snippet text length) and the layout's
+  sizing doesn't correctly account for this variable content height when
+  reserving space for the button — i.e. the previous fix likely added
+  fixed padding/sizing that works for the shorter/common case but not
+  when upstream content pushes the button lower than that fixed
+  assumption accounts for.
+- Fix this properly using genuinely flexible/responsive layout sizing
+  (e.g. ensuring the container truly wraps its full content including the
+  button with appropriate weight/sizing rather than any fixed height
+  assumption) so the button is never cropped regardless of how much space
+  the content above it actually takes up.
+- Verify live across multiple real data scenarios specifically chosen to
+  stress this (a long book/chapter range name, catch-up mode active vs.
+  not, different verse-snippet lengths) rather than just one scenario,
+  since the bug is data-dependent and a single successful screenshot
+  doesn't prove it's fixed.
+
+═══════════════════════════════════════════════════════════
+ISSUE 3 — READER PAGE: FULL UI ENHANCEMENT + CLEARLY VISIBLE FOOTNOTE MARKER
+═══════════════════════════════════════════════════════════
+
+Two related requests: the footnote marker (implemented in an earlier
+session) is currently too subtle to notice — it reads as part of the
+regular verse text rather than as an interactive element — and more
+broadly, the operator wants the entire Reading/reader screen brought up to
+the same premium visual quality already applied to other screens in
+recent sessions (Home, Leaderboard).
+
+- **Footnote marker visibility**: redesign the marker itself to be
+  unmistakably interactive — e.g. a small filled circular or pill-shaped
+  chip (using the app's accent color) containing a numeral or a small
+  footnote/asterisk-style icon, visually distinct from the surrounding
+  verse text (different color, subtle background, slightly raised/
+  superscript position) rather than rendering as plain inline text that
+  blends in. It should be immediately obvious at a glance, even to a
+  first-time user, that it's tappable.
+- **Reader screen premium visual pass**: apply the same visual language
+  established in recent sessions (soft elevation where appropriate,
+  confident typography, generous spacing, clean use of the app's dynamic
+  Material 3 Expressive theme) to the reading screen's chapter text
+  container, the translation selector, the Previous/Next chapter controls
+  (keep these calmer/non-squiggle per the earlier specific instruction
+  that still applies), the font-size controls, and the footnote expanded-
+  panel styling — this is the screen users spend the most time on and
+  should feel at least as polished as the Home and Leaderboard screens
+  now do, not left behind as the plainest-looking part of the app.
+- Verify live with real screenshots showing: a verse with a visible,
+  clearly-tappable footnote marker, the marker's expanded panel open, and
+  the overall chapter-reading view reflecting the enhanced visual
+  treatment.
+
+═══════════════════════════════════════════════════════════
+ISSUE 4 — SUPPORT LINK SHOULD OPEN WHATSAPP WITH A PRE-FILLED MESSAGE
+═══════════════════════════════════════════════════════════
+
+The "Support ForgeHouse Global" action correctly opens a direct WhatsApp
+chat with the admin's number, but currently opens an empty chat requiring
+the user to compose their own opening message.
+
+- Update the `wa.me` deep link to include a pre-filled message using the
+  `text` query parameter (e.g.
+  `https://wa.me/2349139095481?text=<url-encoded message>`), so the
+  chat opens with a ready-to-send (but still editable/sendable-as-is by
+  the user) message already composed — something like "Hi, I'd like to
+  support ForgeHouse 50" (your judgment on the exact friendly wording, but
+  keep it short and clearly support/donation-intent-signaling), correctly
+  URL-encoded so spaces and punctuation don't break the link.
+- Verify live: tap the support action on a real device with WhatsApp
+  installed and confirm it opens a chat with the admin's number with the
+  intended message already populated in the text field, ready to send.
+
+═══════════════════════════════════════════════════════════
+ISSUE 5 — CRITICAL: ALL-CHAPTERS-VIEWED GATE IS NOT ACTUALLY ENFORCED — USERS CAN SKIP READING ENTIRELY
+═══════════════════════════════════════════════════════════
+
+**This is the opposite problem from how it may initially read — it is a
+missing-enforcement bug, not an over-application of an existing gate.**
+The "must view every chapter before the finish/mark-complete action is
+enabled" requirement specified in an earlier session is not actually
+being enforced for an active, not-yet-completed reading day. Concretely:
+if a user opens a reading day — including, specifically, by navigating in
+via the Progress screen — they are able to go straight to marking the day
+complete without having genuinely viewed all (or, apparently, in the worst
+case, any) of that day's assigned chapters. This is a real, exploitable
+gap: a user who discovers this can skip reading entirely and still receive
+full credit/points for a day they never actually read, which undermines
+the entire purpose of the original gate and, by extension, the integrity
+of the leaderboard.
+
+- Re-inspect the actual current mark-complete/finish-reading button logic
+  for an active reading day and determine why the all-chapters-viewed
+  check isn't actually blocking anything right now. Likely causes: the
+  "chapters viewed" tracking state isn't being correctly initialized/
+  checked for every entry path into the reading screen (e.g. it may only
+  be correctly wired when a user reaches the reading screen via the
+  normal Today/Continue flow, but not when reached via the Progress
+  screen's "open a specific day" navigation — if Progress-screen entry
+  skips whatever view-tracking initialization the normal flow sets up,
+  the gate would have nothing to check against and may be failing open
+  — i.e. defaulting to "allowed" — rather than correctly defaulting to
+  "blocked until proven viewed"); or the gate's condition check itself has
+  a logic bug (e.g. checking against the wrong day's assignment, an
+  off-by-one in chapter count, or a check that's present in the UI layer
+  but not actually enforced server-side, meaning a user could bypass it
+  entirely via a direct API call even if the button is visually disabled
+  in the normal app flow).
+- Fix this as a genuine, robust gate: for any active, not-yet-completed
+  reading day, regardless of which screen/entry point the user used to
+  reach that day's reading content, the mark-complete/finish action must
+  remain disabled until every chapter in that day's assignment has
+  actually been viewed (per the viewed-detection logic already specified
+  in the original gate's build session). Critically, **enforce this
+  server-side as well as in the UI** — the backend's day-completion
+  endpoint should itself validate that all chapters were genuinely viewed
+  (or at minimum, validate some genuine server-recorded evidence of
+  reading activity for that day) before accepting a completion request,
+  not rely solely on a client-side disabled button that a modified or
+  directly-called API request could bypass.
+- This gate applies specifically to completing an active, not-yet-done
+  reading day — it should not block a user from freely browsing/
+  re-reading chapters from an already-completed day via Progress for
+  review purposes (that remains fine, since there's no completion action
+  to gate on an already-completed day in the first place) — the fix here
+  is strictly about closing the gap that currently lets an active,
+  incomplete day be marked complete without genuine full reading.
+- Verify live, concretely proving the exploit is closed: as a test user,
+  open an active reading day via the Progress screen entry point
+  specifically (since this is the path the operator identified as
+  currently vulnerable), view only one chapter (not all of them), and
+  confirm the mark-complete action is genuinely disabled/blocked — both
+  visually in the UI and by attempting the underlying API call directly if
+  feasible in your test environment, to confirm server-side enforcement
+  too. Then view every remaining chapter and confirm the action correctly
+  becomes available only once all have genuinely been viewed.
+
