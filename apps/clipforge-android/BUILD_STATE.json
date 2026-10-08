@@ -4,7 +4,7 @@
   "app": "ClipForge Android",
   "build_complete": false,
   "updated_by": "forgebuild-ai-session 2026-09-26 (tasks 187-192 done: phantom Super Series anchor root-caused to a non-fatal anchor close-out + missing is_final; 48h expiry root-caused to the same anchor blocking cleanup series protection; rolling log window root-caused to indexOfFirst hitting the synthetic pipeline-status step; v37 released)",
-  "current_task": "task-194",
+  "current_task": "task-195",
   "tasks": [
     {
       "id": "task-80",
@@ -692,13 +692,13 @@
     {
       "id": "task-194",
       "title": "Backend (motionssalt/clipforge) & Workflows: finish task-05..task-09 (workflows yt-dlp & secrets, dashboard wizard & labels, unit tests, docs)",
-      "status": "in_progress",
-      "notes": "Finishing motionssalt/clipforge YouTube support: stage-a.yml/stage-b.yml yt-dlp + secrets, site/js wizard.js classification & labels, tests and docs."
+      "status": "done",
+      "notes": "Completed motionssalt/clipforge YouTube support: installed yt-dlp in stage-a.yml/stage-b.yml, added YOUTUBE_COOKIES/YOUTUBE_PROXY_URL/CLIPFORGE_YT_MAX_HEIGHT secrets, updated site/js wizard.js classifier/normalization/labels, added 25 unit tests (all 46 tests green), updated README and HELP_GUIDE docs, marked YOUTUBE_SOURCE_BUILD_STATE.json complete and pushed to main."
     },
     {
       "id": "task-195",
       "title": "Android app (apps/clipforge-android): update SourceClassifier & NewTaskWizard for YouTube source kind, URL normalization, labels and error messages",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Remove YouTube from DISABLED_SOCIAL_HOSTS in SourceClassifier.kt; implement YouTube URL parsing and normalization to canonical watch?v=...; update NewTaskWizard chips, placeholders, and error messages."
     },
     {
