@@ -137,13 +137,13 @@ fun NewTaskWizard(vm: ClipForgeViewModel, onDone: () -> Unit) {
 
             CfSection(
                 title = "Video source",
-                subtitle = "Paste any link — the type is detected automatically — or upload a .torrent file.",
+                subtitle = "Paste a public YouTube link, direct video URL, Drive, magnet, or upload a .torrent file.",
             ) {
                 OutlinedTextField(
                     value = sourceValue,
                     onValueChange = { sourceValue = it },
                     label = { Text("Link") },
-                    placeholder = { Text("https://… | Google Drive | magnet:?xt=… | t.me/channel/123") },
+                    placeholder = { Text("https://www.youtube.com/watch?v=… · https://… · Drive · magnet:?…") },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 detectedSourceKind?.let { detected ->
