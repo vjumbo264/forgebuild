@@ -579,3 +579,182 @@ of the leaderboard.
   too. Then view every remaining chapter and confirm the action correctly
   becomes available only once all have genuinely been viewed.
 
+## 2026-10-08 — Operator: Unify Reading Screens, Footnote Polish, Streak/Catch-Up Fix
+
+Full instruction text below; credential values (GITHUB_PAT, CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, TELEGRAM_BOT_TOKEN) were provided in the operator prompt but are REDACTED here per the contract's never-commit-credentials rule:
+
+"""
+# ForgeHouse 50 Android App — Unify Reading Screens, Footnote Polish, Streak/Catch-Up Fix
+
+## Scope
+
+Four issues. The first is structurally significant (two divergent Reading-
+screen implementations currently coexist) and should be understood and
+fixed at that level, not patched per-entry-point.
+
+Read the Android app's current build-state file fully before starting.
+
+# CREDENTIALS
+
+[REDACTED — provided in operator prompt; never committed]
+
+═══════════════════════════════════════════════════════════
+ISSUE 1 — TWO DIVERGENT READING-SCREEN IMPLEMENTATIONS EXIST; UNIFY INTO ONE
+═══════════════════════════════════════════════════════════
+
+The operator reports that the enhanced/premium reader UI (from the prior
+session's reader visual-pass work) only appears when the Reading screen is
+opened via the Progress screen or via the home-screen widget — opening it
+normally from the Home screen still shows the old, pre-enhancement UI.
+**This means two separate Reading-screen composables/implementations
+currently exist in the codebase**, and only one of them received the
+recent enhancements (footnote marker redesign, premium visual pass,
+Issue 5's completion-gate fix from the prior session, etc.) — the other,
+older implementation is still being used by at least the main Home-screen
+entry point and was never updated, or was never actually replaced/removed
+when the new one was built.
+
+- Investigate directly: find every navigation entry point that leads to
+  the Reading screen (Home/"Continue" action, Progress screen's per-day
+  review access, the widget's tap action, and any catch-up-specific entry
+  point) and trace which actual composable/screen implementation each one
+  navigates to. Confirm the operator's report — that Home-screen entry
+  uses a different (older) implementation than Progress/widget entry.
+- **The correct fix is consolidation, not a third patch layered on top**:
+  there should be exactly one Reading-screen implementation in the
+  codebase, containing all of the enhancements and fixes already built
+  across recent sessions (premium visual pass, redesigned footnote marker,
+  the all-chapters-viewed completion gate with its server-side
+  enforcement, per-chapter pagination, font-size controls, the
+  Progress-review-vs-active-day mode distinction). Every entry point
+  (Home, Progress, widget, catch-up) must navigate to this single
+  implementation, passing in whatever context/parameters that entry point
+  needs (which day, which chapter, review-mode vs. active-mode) rather
+  than each entry point having its own separate screen.
+- Delete the old, now-redundant Reading-screen implementation entirely
+  once the single unified version is confirmed to correctly handle every
+  entry point's needs — do not leave dead/unused duplicate code behind.
+- Verify live: open the Reading screen via all four entry points (Home,
+  Progress, widget, and an active catch-up session) on a real/emulated
+  device, and confirm all four show the identical, fully-enhanced UI with
+  no visual or functional divergence between them.
+
+═══════════════════════════════════════════════════════════
+ISSUE 2 — FOOTNOTE MARKER: REMOVE TEXT, ICON ONLY
+═══════════════════════════════════════════════════════════
+
+The operator likes the redesigned footnote marker overall but wants its
+text label removed, leaving only the icon.
+
+- Locate the current footnote marker component (the small chip/indicator
+  built in the prior premium-visual-pass session) and remove any text
+  label it currently includes, leaving only the icon element — sized and
+  positioned the same way it currently is otherwise (small, immediately
+  after the relevant verse text, clearly tappable), just without the
+  accompanying text.
+- Ensure the icon alone remains clearly legible/tappable at its current
+  size without the text — if removing the text makes the marker feel too
+  small or ambiguous on its own, a modest size increase for the icon
+  itself is reasonable, your judgment, but don't reintroduce text to
+  compensate.
+- Verify live with a real screenshot showing the icon-only marker next to
+  a footnoted verse.
+
+═══════════════════════════════════════════════════════════
+ISSUE 3 — REMOVE CROSS-CHAPTER ALPHABETIC FOOTNOTE LETTERING
+═══════════════════════════════════════════════════════════
+
+The current footnote implementation apparently labels footnotes with
+sequential letters that continue incrementing across the whole chapter
+(first footnote in the chapter is "A," the next one anywhere later in the
+same chapter is "B," and so on). The operator doesn't want this running
+cross-chapter/cross-verse lettering scheme at all.
+
+- Remove the alphabetic (or any other sequential, chapter-wide) labeling
+  scheme entirely — individual footnotes should not be identified by a
+  letter/number that increments across the whole chapter.
+- **For a single verse with more than one footnote specifically**, there
+  should still be some simple way to visually separate the multiple
+  footnotes from each other within that verse's expanded footnote panel
+  (per the original footnote spec: multiple footnotes for one verse
+  appear together under that verse's one marker) — but this separation
+  should be local to that verse only (e.g. the footnotes simply listed as
+  distinct items/paragraphs within the panel, perhaps with a small visual
+  divider between them, or a minimal non-alphabetic marker like a bullet
+  or a small numeral that only distinguishes footnotes *within that one
+  verse's panel* — 1, 2, 3 starting fresh for each verse rather than
+  continuing from the previous footnoted verse's count elsewhere in the
+  chapter), not a running identifier tied to the whole chapter.
+- Verify live: find a verse with a single footnote and confirm no
+  letter/number labeling appears at all; find (or construct test data
+  for) a verse with two or more footnotes and confirm they're clearly
+  visually separated within that verse's panel without any chapter-wide
+  running label scheme.
+
+═══════════════════════════════════════════════════════════
+ISSUE 4 — CRITICAL: CATCH-UP DAYS MUST NOT INCREASE STREAK
+═══════════════════════════════════════════════════════════
+
+**This resolves, definitively, the "your judgment" note left open in a
+prior session's streak-fix prompt** — the operator has now explicitly
+specified the correct rule: completing a catch-up day (a backlog day being
+recovered, per the earlier catch-up mechanic) must **never** increase a
+user's streak counter. Streak specifically measures consecutive genuine
+activity — i.e. a user actually opening the app and reading on the actual
+current calendar day, in real time, without gaps — not the act of clearing
+a backlog of previously-missed days after the fact.
+
+- Locate wherever streak is incremented upon day completion (likely the
+  same points/completion logic touched by the earlier streak-reset fix)
+  and add an explicit check: if the reading day being completed is a
+  catch-up/backlog day (i.e. its assigned reading-day number is earlier
+  than the user's actual current real-time position per their own
+  per-user calendar — meaning it was missed and is now being recovered,
+  not completed on its originally-scheduled real day) rather than the
+  user's genuinely current day, completing it must award all of its normal
+  points exactly as already specified (reading, quiz score, etc.) but must
+  **not** increment the streak counter.
+- Confirm the inverse remains true and unaffected: completing a day that
+  genuinely is the user's current real-time day (whether that's normal
+  single-day completion, or the final "caught up, now current" day at the
+  end of a catch-up sequence) correctly increments streak exactly as
+  before — this fix narrows what counts toward streak, it doesn't change
+  how streak increments for genuinely current-day completion.
+- This interacts with, but doesn't replace, the earlier streak-reset-on-
+  inactivity fix — that fix handles resetting streak to 0 after a genuine
+  gap; this fix handles not artificially inflating streak back up via
+  catch-up completions once a user does return and starts recovering
+  their backlog. Both rules apply together: going inactive resets streak
+  toward 0, and working through catch-up afterward doesn't rebuild that
+  streak number — only resuming genuine day-by-day current activity does,
+  starting fresh from that point.
+- Verify live: as a test user with a multi-day backlog, complete two
+  catch-up days and confirm streak does not increase from either
+  completion; then complete a day that is genuinely their current
+  real-time day and confirm streak correctly increments at that point.
+
+═══════════════════════════════════════════════════════════
+TASK LIST
+═══════════════════════════════════════════════════════════
+
+Append a `reader_unify_footnote_streak_v1` section to the Android app's
+build-state file with one task per issue above (four issues total). Issue
+1 is structurally significant and should be treated as its own
+investigation-then-consolidation effort (trace entry points → confirm
+divergence → consolidate → delete dead code → verify all entry points)
+rather than a quick patch. Issue 4 is a second critical correctness item
+alongside Issue 1's structural fix — both affect data integrity/UI
+consistency for every user, not just cosmetic preference, and should be
+prioritized accordingly. For each task: inspect → implement → verify
+live/on-device with real evidence → commit → push → update the build-state
+file → move to the next task without stopping to ask for confirmation.
+Mark the section complete only once all four issues are independently,
+genuinely verified as fixed with real on-device evidence for each,
+including Issue 1's explicit four-entry-point verification and Issue 4's
+explicit catch-up-vs-current-day streak verification.
+
+═══════════════════════════════════════════════════════════
+END OF PROMPT
+═══════════════════════════════════════════════════════════
+"""
+
