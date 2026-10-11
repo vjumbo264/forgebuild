@@ -28,7 +28,7 @@ jobs:
 
       - name: Validate app folder
         run: |
-          if ! echo "$APP_PATH" | grep -qE '^apps/[a-z0-9][a-z0-9-]*$'; then
+          if ! echo "$APP_PATH" | grep -qE "^apps/[a-z0-9][a-z0-9-]*$"; then
             echo "app_path must look like apps/<slug> (got: $APP_PATH)"; exit 1
           fi
           [ -f "$APP_PATH/settings.gradle.kts" ] || { echo "no Gradle project at $APP_PATH"; exit 1; }
@@ -68,7 +68,7 @@ jobs:
           NEXT_NAME=$(python3 - "$CUR" "$MAJOR" << 'PYEOF'
           import sys, re
           cur, major = sys.argv[1], sys.argv[2] == "1"
-          parts = re.findall(r'\d+', cur)
+          parts = re.findall(r"\d+", cur)
           if not parts:
               print("2")
           elif major:
@@ -106,6 +106,19 @@ jobs:
             -PforgebuildVersionName="${{ steps.vername.outputs.name }}"
           echo "APK versionCode=${{ steps.meta.outputs.code }} versionName=${{ steps.vername.outputs.name }}"
 
+      # Part 5: Release Hardening - apksigner verify --verbose
+      - name: Verify APK signing with apksigner
+        run: |
+          APK="$APP_PATH/app/build/outputs/apk/release/app-release.apk"
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found in $ANDROID_HOME/build-tools"
+            exit 1
+          fi
+          echo "Verifying APK signing: $APK with $APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          echo "apksigner verification PASSED successfully!"
+
       - name: Write app manifest (metadata)
         run: |
           PKG=$(grep -oP 'applicationId = "\K[^"]+' "$APP_PATH/app/build.gradle.kts")
@@ -117,16 +130,52 @@ jobs:
             "${{ steps.meta.outputs.code }}" "${{ steps.vername.outputs.name }}" \
             "$PERMS" "$NOTES" > forgebuild-manifest.json
 
-      - name: Rename APK
-        run: cp "$APP_PATH/app/build/outputs/apk/release/app-release.apk" "app-${{ steps.meta.outputs.tag }}.apk"
+      - name: Rename APK & Compute checksum
+        id: checksum
+        run: |
+          APK_NAME="app-${{ steps.meta.outputs.tag }}.apk"
+          cp "$APP_PATH/app/build/outputs/apk/release/app-release.apk" "$APK_NAME"
+          SHA=$(sha256sum "$APK_NAME" | awk '{print $1}')
+          SIZE=$(stat -c%s "$APK_NAME" || stat -f%z "$APK_NAME")
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+          echo "Release APK SHA-256: $SHA ($SIZE bytes)"
 
       - name: Create GitHub Release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: ${{ steps.meta.outputs.tag }}
-          body: ${{ github.event.inputs.release_notes || github.event.head_commit.message }}
+          body: |
+            ${{ github.event.inputs.release_notes || github.event.head_commit.message }}
+
+            **Verified Artifacts:**
+            - `app-${{ steps.meta.outputs.tag }}.apk` (${{ steps.checksum.outputs.size }} bytes)
+            - SHA-256: `${{ steps.checksum.outputs.sha }}`
           files: |
             app-${{ steps.meta.outputs.tag }}.apk
             forgebuild-manifest.json
           generate_release_notes: false
+
+      # Part 5: Download back asset & verify SHA-256 and size match local file
+      - name: Download back asset & verify SHA-256 and byte size
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          ASSET="app-${TAG}.apk"
+          echo "Downloading asset $ASSET back from release $TAG..."
+          gh release download "$TAG" -p "$ASSET" -O "downloaded-$ASSET" --clobber
+          DL_SHA=$(sha256sum "downloaded-$ASSET" | awk '{print $1}')
+          DL_SIZE=$(stat -c%s "downloaded-$ASSET" || stat -f%z "downloaded-$ASSET")
+          echo "Downloaded SHA-256: $DL_SHA ($DL_SIZE bytes)"
+          if [ "$DL_SHA" != "${{ steps.checksum.outputs.sha }}" ]; then
+            echo "ERROR: Downloaded SHA-256 ($DL_SHA) does not match local SHA-256 (${{ steps.checksum.outputs.sha }})"
+            exit 1
+          fi
+          if [ "$DL_SIZE" != "${{ steps.checksum.outputs.size }}" ]; then
+            echo "ERROR: Downloaded size ($DL_SIZE) does not match local size (${{ steps.checksum.outputs.size }})"
+            exit 1
+          fi
+          echo "SUCCESS: Verified downloaded asset matches local release APK perfectly!"
