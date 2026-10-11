@@ -758,3 +758,88 @@ END OF PROMPT
 ═══════════════════════════════════════════════════════════
 """
 
+
+
+## 2026-10-11 — EXTEND / UPDATE: Translation Chips Not Scrollable (Surgical Fix)
+
+# ForgeHouse 50 Android App — Translation Chips Not Scrollable (Surgical Fix)
+
+## Repository and project background
+
+The ForgeHouse 50 Android app is built with the operator's tool ForgeBuild. Its source lives in the repository `https://github.com/vjumbo264/forgebuild.git` under `apps/<slug>/` (find the folder for the ForgeHouse 50 app by inspecting `apps/`). Releases are tagged `<slug>-vN` (for example `forgehouse50-v12`); the next release must use the next number after the highest existing `<slug>-vN` tag. The web programme and backend live in a different repository, `vjumbo264/forgehouse50`; **do not touch it**.
+
+ForgeHouse 50 is a church New Testament reading programme: 260 chapters across 50 reading days. The app has a reader screen with a translation selector: bundled KJV plus downloadable translation bundles (for example AMP, CEV, GW, TLB, NIV and more, plus VOICE). The reader supports normal days and catch-up sessions (a "Catch-up · Days 9 + 10" screen with a Day 9 / Day 10 switcher).
+
+You are an independent AI session with no memory of earlier sessions. The repository, git history and `BUILD_STATE.json` are the project's memory.
+
+## The bug (evidence from the operator's phone)
+
+On the reader screen in **dark mode**, in the catch-up view (title "Catch-up · Days 9 + 10", chapter Luke 5, Day 9 selected):
+
+1. The translation chips row shows KJV, AMP, CEV, GW, TLB (selected), NIV, and the row is cut off at the right edge of the screen. More downloaded translations exist, but **the row cannot be scrolled**, so the operator cannot reach the rest of the downloaded versions or select them.
+2. A thin **vertical scrollbar indicator** is drawn at the right edge of the chips area, next to the chips. That means the chips container is a vertical scroller (or sits inside one), not a horizontal one.
+3. Below the chips there is a large **empty gap** (roughly the height of two more chip rows) before the "Previous / Luke 5 / Next" row. It looks like the chips wrap into additional rows that are clipped or hidden inside a fixed-height container.
+
+In short: the chip list is wrapped or clipped in a fixed-height, vertically scrolling or clipping container, so overflow chips are unreachable.
+
+## Hard rules for this fix
+
+- **Surgical change only.** Fix the translation chips container and nothing else. Do not restructure the reader layout, the top bar, the bottom bar, the footnote UI, the quiz entry, or the navigation. A previous large layout rewrite broke the reading page, so no layout refactors are allowed.
+- Do not change behaviour: which translations are listed, their order, selection logic, downloading, caching, or the catch-up and quiz rules.
+- Do not touch `vjumbo264/forgehouse50`, other apps under `apps/`, or the signing/keystore configuration.
+- No emojis, no new dependencies, no new permissions.
+
+## Required behaviour
+
+1. The translation chips are a **single horizontally scrolling row** (one line, never wrapping). Swiping left/right scrolls through every available translation, with no vertical scrollbar and no clipped overflow.
+2. The row's height wraps the chips exactly. Remove any fixed height or hard-coded min height that caused the empty gap, so the "Previous / chapter / Next" row sits right under the chips with the app's normal spacing.
+3. When the selected translation changes (or the screen opens with a translation already selected), the row **scrolls the selected chip into view**, so a chip far to the right is visible when selected.
+4. Horizontal swipes on the chips must not be swallowed by the reader's own vertical scroll, and the reader's vertical scroll must still work normally when swiping on the chapter text.
+5. Show a soft fade or partial-chip cut at the right edge only if it already matches the app's existing style. It is optional. The key point is that the cut-off chip is draggable and reachable.
+6. Apply the same fix **everywhere the same chips row is used**: the normal reading-day reader (for example Day 4 / Matthew 19), the catch-up reader, and any other screen that reuses the translation selector. Find all usages in the code (search for the translation chip composable/view and its callers) and make sure they share one fixed implementation instead of leaving one copy broken.
+7. Works in light and dark themes, at font-size A- and A+, and with large numbers of translations (test with at least 10 downloaded).
+
+## Likely cause (verify in the code, do not assume)
+
+The chips are probably in a `FlowRow`, a `Column`, or a `Row` with a fixed height or `verticalScroll` modifier, or inside a container with `height(...)`/`heightIn(...)` plus `verticalScroll`. The expected fix, in Jetpack Compose terms, is to use `LazyRow` (or `Row` with `Modifier.horizontalScroll(rememberScrollState())`), with `horizontalArrangement = Arrangement.spacedBy(...)`, no fixed height, and a `LaunchedEffect(selected)` that calls `animateScrollToItem` (or `animateScrollTo`) for the selected chip. If the app is not written in Compose, apply the equivalent: a `HorizontalScrollView` (or `RecyclerView` with a horizontal `LinearLayoutManager`) with `wrap_content` height. Read the actual code first and follow its existing patterns.
+
+## Evidence standard (mandatory)
+
+Do not mark anything done from reading source code. You must prove it on a running build:
+
+- Build a debug build and run it in an emulator (or a device if available) with at least 10 translations downloaded or injected (use whatever mechanism the app already has for downloaded bundles; for testing only, you may register extra fake entries in a debug-only path that you remove afterwards).
+- Capture real screenshots: (a) catch-up reader in dark mode with chips scrolled to the far right and the last chip selected; (b) the same screen in light mode; (c) the normal reading-day reader in dark mode; (d) before/after of the empty gap (the Previous/Next row directly under the chips).
+- Record a short screen recording or a sequence of screenshots proving a horizontal swipe on the chips reveals the last chip, and a vertical swipe on the chapter text still scrolls the chapter.
+- Save evidence under `evidence/version_chips_scroll_fix/` in the repo (screenshots only, kept small).
+
+If you cannot run an emulator in your environment, say so in `BUILD_STATE.json`, do the code fix and a Gradle build, and mark the task `"status": "blocked_on_visual_verification"` rather than claiming it is verified.
+
+## Release
+
+After the fix is verified, bump the app's version code and name, build a signed release APK using the signing setup already configured in the repo (never print or commit any keystore or password), publish it as a GitHub release tagged with the next `<slug>-vN`, and attach the APK. Release notes: "Fixed translation list not scrolling on the reader screen."
+
+## Persistent-session rules
+
+- `BUILD_STATE.json` in the repo is the source of truth. If this fix has no section yet, append `"reader_version_chips_scroll_fix"` with the tasks below, all `"pending"`, commit and push that seed before anything else.
+- After **every** step: update `BUILD_STATE.json`, commit, push, and verify the push succeeded before the next step. Builders often die before committing, so commit very frequently.
+- Never reset or delete existing sections of `BUILD_STATE.json`. Never redo tasks marked `"done"` with a commit sha.
+- Never stop to ask the operator. If something is unspecified, make the most reasonable engineering decision, document the assumption in the task's `notes`, and continue.
+- Never print, log or commit credentials. Placeholders:
+
+```
+GITHUB_PAT = <PLACEHOLDER>
+CLOUDFLARE_API_TOKEN = <PLACEHOLDER>   (not needed for this task)
+CLOUDFLARE_ACCOUNT_ID = <PLACEHOLDER>  (not needed for this task)
+```
+
+## Task list (under `reader_version_chips_scroll_fix`)
+
+- c01: Clone `vjumbo264/forgebuild`, locate the ForgeHouse 50 app, seed the section in `BUILD_STATE.json`, commit and push.
+- c02: Find every usage of the translation chips row. Record the file paths and the container structure responsible for the bug in `notes`.
+- c03: Implement the single horizontal, non-wrapping, wrap-height chips row as one shared component, and replace every usage. Include scroll-selected-into-view.
+- c04: Build debug, run on emulator with 10+ translations, capture evidence screenshots and the swipe proof.
+- c05: Check that nothing else changed visually (top bar, bottom bar, Previous/Next row, chapter text, footnote and quiz buttons) by comparing screenshots against the originals.
+- c06: Bump the version, build the release APK, publish the GitHub release with the next `<slug>-vN` tag.
+- c07: Final commit and push. Set `reader_version_chips_scroll_fix.work_complete` to `true`, summarising what changed, the files touched, and the release tag.
+
+END OF PROMPT
