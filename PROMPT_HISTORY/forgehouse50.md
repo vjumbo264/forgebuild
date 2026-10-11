@@ -843,3 +843,136 @@ CLOUDFLARE_ACCOUNT_ID = <PLACEHOLDER>  (not needed for this task)
 - c07: Final commit and push. Set `reader_version_chips_scroll_fix.work_complete` to `true`, summarising what changed, the files touched, and the release tag.
 
 END OF PROMPT
+
+
+## 2026-10-11 — Admin: Delete Users + New Generated Admin Login (Build Contract)
+
+# ForgeHouse 50 — Admin: Delete Users + New Generated Admin Login (Build Contract)
+
+## Repositories
+
+- Backend and website: `https://github.com/vjumbo264/forgehouse50.git` (Cloudflare Pages + Functions + D1, live at `forgehouse50.pages.dev`).
+- Android app (built with the operator's tool ForgeBuild): `https://github.com/vjumbo264/forgebuild.git`, source under `apps/<slug>/` (find the ForgeHouse 50 app by inspecting `apps/`). Releases are tagged `<slug>-vN`; the next release uses the next number after the highest existing `<slug>-vN` tag.
+
+Both repositories already exist and are live. This is a follow-on session. You are one of many independent AI sessions with no memory of earlier ones; the repositories, git history and each repo's `BUILD_STATE.json` are the project's memory.
+
+## Project background
+
+ForgeHouse 50 is a church New Testament reading programme: 260 chapters across 50 reading days. Users sign up with email plus a 6-digit OTP sent by Brevo from one verified Gmail sender. The website and the Android app are thin clients of the same Cloudflare backend, so backend rules are enforced server-side. Programme facts that matter here:
+
+- Admin screens exist: Start Programme (10-day join window), End Testing Phase & Reset, award/remove points, badges, participant list. **Admins can never see users' private notes.**
+- Tuesdays and Fridays are not reading days. Day boundaries use WAT (Africa/Lagos).
+- Leaderboard Overall = raw total points; users appear from day 3.
+- Existing real participants and testing leftovers (for example several "Test P." accounts) are in D1. The operator is a participant himself (Victor Fubara, on the leaderboard with real points).
+- A website rebuild may be in progress on a branch called `site-v2` (a from-scratch frontend with the same backend). Check `BUILD_STATE.json` and the branches before editing the web frontend (see Part C).
+
+## What the operator wants
+
+1. **Admins can delete users** (from the admin area, in both the website and the Android app).
+2. **The admin login must change to a new, generated login that is not the operator's email**, so he can hand it to his pastor. Right now admin access is tied to the operator's own email account (email + OTP).
+
+# ABSOLUTE RULES
+
+- **The repository is the source of truth.** Inspect → determine state → do the next unfinished task → commit → push → continue. Never stop merely because part of this is already done. Never ask the operator anything; decide, document the assumption in `BUILD_STATE.json` notes, and continue.
+- **Never reset `BUILD_STATE.json`.** Append a new section `admin_delete_and_login_v1` (tasks below, all `"pending"`) in each repo you touch, commit and push the seed first. Never delete earlier sections or redo tasks marked `"done"` with a commit sha.
+- **Per-step protocol:** perform step → validate → update `BUILD_STATE.json` → commit → push → verify the push → next step. Commit and push very frequently, since builders often die before committing.
+- **Surgical changes only.** Do not restructure existing screens, navigation, the reader, quiz, leaderboard logic or any programme rule. Backend changes are additive (new endpoints, new tables or columns via a new migration). A previous large layout rewrite broke a screen, so no refactors.
+- **No emojis** in UI or copy.
+- **Credentials:** use placeholders and never print, log or commit them:
+
+```
+GITHUB_PAT = <PLACEHOLDER>
+CLOUDFLARE_API_TOKEN = <PLACEHOLDER>
+CLOUDFLARE_ACCOUNT_ID = <PLACEHOLDER>
+TELEGRAM_BOT_TOKEN = <PLACEHOLDER>
+BREVO = <PLACEHOLDER>
+```
+
+The one deliberate exception is the generated admin password in Part B, covered by its own rule.
+
+- **Evidence standard:** nothing is "done" from reading source. Prove behaviour with real requests against the deployed preview/production (curl output saved, trimmed of secrets) and real screenshots of the website (390x844 and 1280x800) and the Android app on an emulator. If something cannot be visually verified in your environment, mark it `"blocked_on_visual_verification"`, never "done".
+- Delete only users you created yourself for testing. Never delete a real participant while testing.
+
+# PART A — Admin can delete users
+
+## Backend (additive)
+
+Add admin-only endpoints (match the existing admin auth and routing style; inspect the existing admin endpoints first):
+
+- `POST /api/admin/users/:id/delete` (or `DELETE /api/admin/users/:id`, follow the existing convention).
+- Optional bulk: `POST /api/admin/users/delete` with a list of ids (max 50 per request). Use one DB batch per user.
+
+Rules the server must enforce (never trust the client):
+
+1. Only a valid admin session may call it. Others get 403.
+2. An admin **cannot delete themselves or any admin account**. Return a clear error.
+3. Require a confirmation field in the request that matches the target user (for example the user's display name or id), so a stray tap cannot delete someone.
+4. Deletion is **permanent and complete**. Discover the schema (read `migrations/` and run a table listing) and delete everything that references the user, in a safe order, including at least: reading progress, notes, bookmarks, highlights, user badges, points and point history, quiz attempts and answers, catch-up records, streak data, per-user calendars, audio progress (if the table still exists), sessions, OTP codes, device/notification tokens, leaderboard snapshots, and the user row itself. Do not leave orphan rows. Wrap per-user deletion in a single `db.batch([...])` so it is atomic.
+5. The deleted user's sessions must stop working immediately (their next request returns the normal "signed out" response). If they sign up again later they get a fresh account.
+6. Admins never see private notes. The delete flow must not read or display note contents.
+7. Add an audit table in a new migration, `admin_audit` (`id`, `admin_id`, `action`, `target_user_id`, `target_display_name`, `created_at`), and write one row per deletion. Never store notes, emails of third parties beyond what the participant list already shows, or passwords.
+8. After deletion, leaderboard and participant counts are recomputed on the next request (no stale cache). Verify this with a real before/after request.
+
+## UI (website and Android app)
+
+- In the admin participant list, each non-admin row gets a "Delete" action (menu or button, consistent with the existing admin styling; admin rows have no delete action).
+- Tapping it opens a confirmation dialog that names the person, states that it permanently removes their progress, points, notes and badges and cannot be undone, and requires typing the person's name (or a short confirm word) before the red "Delete permanently" button enables.
+- After success: remove the row, show a short confirmation, and refresh the list and counts. On failure show the server's real message (never a generic "Request failed").
+- Optional but welcome: a "Select" mode for deleting several test users at once, using the bulk endpoint.
+
+# PART B — New generated admin login (not the operator's email)
+
+## Design
+
+Admin access moves to a **dedicated admin credential: username + generated strong password**, independent of email OTP. The pastor logs in with that username and password; no email or OTP is needed for admin.
+
+Requirements:
+
+1. **Generate** a new admin account in a one-off script `tools/rotate-admin.mjs` (run with the Cloudflare API token against D1; works with `--remote`). The script creates (or replaces) the single admin credential:
+   - Username: a generated, readable handle such as `fh50-admin-xxxxxx` (6 random characters, lowercase letters and digits).
+   - Password: cryptographically random, at least 20 characters, mixed case, digits and a few safe symbols, with no ambiguous characters (no `0/O`, `1/l/I`). Use `crypto.randomBytes` (or WebCrypto), never `Math.random`.
+2. **Store only a hash**: PBKDF2-SHA256 with a per-credential random salt, using WebCrypto in the Worker (use an iteration count that fits Cloudflare's free-tier CPU limit, around 100,000, and record the chosen number in `BUILD_STATE.json`). Store salt, iterations and hash. Never store or log the plaintext.
+3. **Login endpoint** `POST /api/admin/login` with `{ username, password }`:
+   - Constant-time comparison; the same generic error for unknown username and wrong password.
+   - **Brute-force protection**: after 5 failed attempts for a username or from one IP, lock out for 15 minutes (track in D1; no KV). Return a clear "Too many attempts, try again later" message with the retry time.
+   - On success issue an admin session in the same mechanism the app already uses (httpOnly secure cookie for the website, the existing token style for the app), with a **12-hour expiry**.
+   - Admin sessions grant only admin endpoints; they are not participant accounts and have no points, streak or leaderboard presence.
+4. **Retire the email-based admin path.** Remove the admin role from the operator's email-based participant account (he stays a normal participant with all his points, progress and leaderboard entry intact; verify his totals are unchanged before and after). Make sure **no email OTP login can ever grant admin rights** after this change. Delete any hard-coded admin-email checks and any `ADMIN_EMAIL`-style configuration that grants admin, and remove references to it from `README.md`/`ARCHITECTURE.md`.
+5. **Change password**: in the admin area add a "Change password" screen (current password + new password with a minimum length of 12 and a basic strength check). On success, invalidate all other admin sessions. This lets the pastor replace the generated password with his own.
+6. **Recoverability**: because the generated password is shown only once, `tools/rotate-admin.mjs` can be re-run at any time to generate a fresh credential and invalidate all old admin sessions. Document this in `README.md` (placeholders only, never real values).
+7. **Admin login screen** (website and Android app): a small "Admin sign in" link at the bottom of the normal login screen, opening a plain username + password form with a show/hide toggle, matching the existing visual style. No emojis. Do not alter the normal participant login flow.
+8. Keep every existing admin capability working with the new session (Start Programme, End Testing Phase & Reset, award/remove points, badges, participant list, and the new delete). Verify each with a real request.
+
+## Delivering the generated credential (explicit exception to the credential rule)
+
+The operator needs the generated username and password so he can give them to his pastor. Therefore:
+
+- Generate it in your session, print the **plaintext username and password exactly once**, inside your **final response to the operator**, in a clearly labelled block, with a one-line reminder to hand it to the pastor and have him change the password after the first login.
+- **Never** write the plaintext password to any file, commit, log, `BUILD_STATE.json`, README, issue, comment or screenshot. Do not echo it in the shell history of any step that is saved as evidence; redact it from any saved output. `BUILD_STATE.json` may record only the username, the hash algorithm, the iteration count, and the date it was rotated.
+- If your session may end before the final response, rotate the credential as the **last** task, so the printed password is the live one. If it is somehow lost, the operator can re-run the rotate script (documented in README) and nothing else breaks.
+
+# PART C — Clients
+
+- **Android app** (`forgebuild`, `apps/<slug>/`): add the admin sign-in screen, the delete flow with confirmation, and change-password. Reuse the app's existing networking, theme (Material 3 Expressive, dynamic colour) and admin screens. Build, run on an emulator, capture screenshots of: admin sign-in, participant list with the delete action, the confirmation dialog, the post-delete list and the change-password screen. Then bump the version, build the signed release APK with the signing already configured (never print or commit keystores or passwords), and publish a GitHub release with the next `<slug>-vN` tag. Release notes: "Admin can delete users; new admin sign-in."
+- **Website** (`forgehouse50`): check the state of the web frontend before editing.
+  - If the `site-v2` rebuild has **already been merged to `main`**, implement the admin pieces in the new frontend, following its design tokens and components.
+  - If `site-v2` exists but is **not yet merged**, implement them on `site-v2` (the new frontend). If the old frontend is still the live one and the rebuild has not started, implement them on the old frontend with the smallest possible change, and record in `BUILD_STATE.json` that the same admin UI must be carried into the rebuild. Never duplicate or break the backend contract.
+  - The backend must be correct and tested regardless of the frontend state, because the Android app depends on it.
+- Run the backend change against the **preview** deployment first (Cloudflare Pages preview on a feature branch) and apply the new D1 migration to production only after the preview tests pass. Record `git diff --stat` for `functions/` and `migrations/`.
+
+# TASK LIST (under `admin_delete_and_login_v1`, in each repo you touch)
+
+- a01: Clone both repos, inspect admin code, schema, existing admin auth, branches (`site-v2`), and the current frontend state. Seed the section, commit and push.
+- a02: Write the migration (`admin_audit`, admin credential table, login attempt tracking) and the user-deletion routine. Include a cascade check script that lists every table with a user reference and reports orphans.
+- a03: Implement `POST /api/admin/users/:id/delete` (and bulk) with all server rules. Test against preview with self-created test users: delete works, cascade leaves zero orphans, admins and self cannot be deleted, wrong confirmation is rejected, deleted user's session dies, leaderboard and participant counts update.
+- a04: Implement `POST /api/admin/login`, hashing, lockout, 12-hour sessions, change-password, and the "no email path grants admin" guarantee. Test: correct login, wrong password, lockout after 5 failures, expired session, change-password invalidates other sessions, OTP login for the operator's email no longer yields admin.
+- a05: Confirm every existing admin function works with the new admin session (real requests for each).
+- a06: Android app: admin sign-in, delete flow with confirmation, change-password. Emulator screenshots.
+- a07: Website: the same admin UI (per Part C rules). Screenshots at 390x844 and 1280x800, light and dark.
+- a08: Apply the migration to production, confirm the operator's participant account lost admin rights but kept all points and progress (compare before and after totals), and that existing participants are untouched.
+- a09: Update `README.md` and `ARCHITECTURE.md` (admin login model, rotate script usage with placeholders, deletion rules). Remove all references to the old email-based admin.
+- a10: Publish the Android release (`<slug>-vN`) with the APK attached.
+- a11: Delete every test user and test artifact you created (use the new delete endpoint to prove it works), confirm the participant list contains only real users.
+- a12: Rotate the admin credential as the very last step (`tools/rotate-admin.mjs --remote`), record only non-secret metadata in `BUILD_STATE.json`, set `admin_delete_and_login_v1.work_complete` to `true`, push, and print the one-time credential block in the final response as described above.
+
+END OF PROMPT
