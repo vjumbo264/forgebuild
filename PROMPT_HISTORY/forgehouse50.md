@@ -976,3 +976,98 @@ The operator needs the generated username and password so he can give them to hi
 - a12: Rotate the admin credential as the very last step (`tools/rotate-admin.mjs --remote`), record only non-secret metadata in `BUILD_STATE.json`, set `admin_delete_and_login_v1.work_complete` to `true`, push, and print the one-time credential block in the final response as described above.
 
 END OF PROMPT
+
+# 2026-10-12 — ForgeHouse 50 — Batch Fixes: Notes Auto-fill, Offline Translations List, Admin Dashboard Redesign + Batch Delete (Build Contract)
+
+## Repositories
+
+- Android app (built with the operator's tool ForgeBuild): `https://github.com/vjumbo264/forgebuild.git`, source under `apps/<slug>/` (find the ForgeHouse 50 app by inspecting `apps/`). Releases are tagged `<slug>-vN`; the next release uses the next number after the highest existing `<slug>-vN` tag.
+- Backend and website: `https://github.com/vjumbo264/forgehouse50.git` (Cloudflare Pages + Functions + D1, live at `forgehouse50.pages.dev`).
+
+Both repositories exist and are live. This is a follow-on session. You are one of many independent AI sessions with no memory of earlier ones. The repositories, git history and each repo's `BUILD_STATE.json` are the project's memory.
+
+## Project background
+
+ForgeHouse 50 is a church New Testament reading programme: 260 chapters across 50 reading days. The Android app and the website are thin clients of one Cloudflare backend. The app has bundled KJV plus downloadable translations, a reader, personal notes (private to the user), a Profile screen, and an Admin area reached through a dedicated admin sign-in (username + password, no email). Admins never see users' private notes. A previous session already added: admin delete-user endpoints, `admin_audit`, the dedicated admin credential and login, and change-password. The operator's pastor will use the admin area.
+
+## Evidence from the operator's phone (dark theme, Android)
+
+1. **New note screen** shows: Type chips (Observation, Question, Insight, Prayer, Application), a "Note (private to you)" text box, three empty fields "Book", "Chapter", "Verse", and a Save note button. Pastor feedback: the book (and chapter and verse) should appear automatically, and when a person highlights a verse they have a question about, it should also appear automatically.
+2. **Profile → "Offline Bible translations"** lists every downloaded translation with a red trash icon beside each (Amplified, CEV, GOD'S WORD, Living Bible, NIV, NKJV, NLV, NLT, The Message, The Passion Translation, The Voice, ...). A "Manage versions" tab already exists where deleting belongs. Pastor feedback: the list should display the translations but not allow deleting here.
+3. **Admin → Participants tab**: the tabs are Stats, Participants (the label wraps onto two lines, "Participant / s"), Programme, Password. Each participant row shows only a given name (for example "Victor", "David", "Julia Chinemerem" with some rows missing surnames, so duplicates like two "Victor"s and two "David"s cannot be told apart), then "pts · days · notes · member", then text buttons "Points" and "Delete". Deleting asks the admin to type the person's full name, which is annoying. There is no batch delete. The operator says the dashboard UI/UX is not nice.
+
+# ABSOLUTE RULES
+
+- **The repository is the source of truth.** Inspect → determine state → do the next unfinished task → commit → push → continue. Never stop merely because part of this is done. Never ask the operator anything; decide, document the assumption in `BUILD_STATE.json` notes, and continue.
+- **Never reset `BUILD_STATE.json`.** Append a new section `batch_fixes_oct12_v1` (tasks below, all `"pending"`) in each repo you touch; commit and push the seed first. Never delete earlier sections or redo tasks marked `"done"` with a commit sha.
+- **Per-step protocol:** perform step → validate → update `BUILD_STATE.json` → commit → push → verify the push → next step. Commit and push very frequently; builders often die before committing.
+- **Scoped changes.** Touch only the screens named here: New note, the Profile offline-translations list, and the Admin area. Do not restructure the reader, quiz, leaderboard, navigation, or any programme rule. A previous large layout rewrite broke the reading page, so no refactors outside these screens. Backend changes are additive and backward-compatible only.
+- **No emojis** in UI or copy.
+- **Never print, store or commit the admin password.** Do not rotate the admin credential in this session; it is already set. Do not touch the admin credential table except through the existing change-password flow when testing (use a throwaway test admin you create and delete, never the real one).
+- **Environment reality:** you (the builder) have **no Android emulator and no device**. Apps can only be built, and tests only run, on **GitHub Actions** in the `forgebuild` repo (use the existing workflow, or add one). Do not claim anything about how a screen looks from reading source.
+- Delete only users you created for testing. Never delete a real participant.
+
+# PART 1 — New note auto-fill
+Goal: when a note is created from reading, Book, Chapter and Verse are filled in for the user.
+1. Entry from the reader (the pencil icon in the reader's top bar, or the Notes action there): pre-fill **Book** and **Chapter** with the chapter currently open in the reader (the exact chapter on screen, including in catch-up sessions where two days are open: use the chapter being viewed). Pre-fill **Verse** with the verse or verse range the user has selected or highlighted if any; otherwise leave Verse empty but focusable.
+2. Entry from a highlighted verse: when a user selects or highlights a verse (or several) in the reader, show the existing action for notes ("Add note") if present, or add one in the same style. Opening it pre-fills Book, Chapter and Verse (a range like `3-5` for several consecutive verses). If the highlight flow already has a "question" style or the user marks it as a question, preselect the **Question** type chip; otherwise leave the type unselected or on the existing default.
+3. Show the pre-filled reference clearly. Make Book/Chapter/Verse remain **editable**, but replace free typing with **pickers limited to valid values** if that is easy in the existing UI (book list in canonical order, chapter list sized to the chosen book, verse list sized to the chosen chapter); if pickers would be a large change, keep text fields but validate against real book/chapter/verse counts and show a friendly error instead of saving an impossible reference.
+4. Entry from "My notes" or anywhere with no reading context: fall back to the user's **current reading day first chapter** if there is one, otherwise leave empty; the user can pick.
+5. Saved notes keep the same stored shape and stay private; do not change the notes API contract. Notes created this way must show their reference in "My notes" exactly like manual notes.
+6. Test every entry point: from a normal day reader, from catch-up (check both Day tabs give the right chapter), from a verse highlight (single verse and a range), and from My notes.
+
+# PART 2 — Profile: offline translations list is display-only
+1. In **Profile → Offline Bible translations**, remove the trash/delete icon and any delete action or long-press delete from every row. Keep the name, "260 chapters · size", and the existing header text ("King James Version is bundled with the app — always available offline" and the total storage used).
+2. Rows should not look tappable-to-delete. If useful, add one line under the header: "Manage downloads in Manage versions." (match the app's wording for that tab; find its real name in the code), with an optional tap-through to that tab if navigation to it already exists.
+3. Deleting a downloaded translation must still be possible in the "Manage versions" tab. Verify it still works after your change, and that the storage total updates there and in Profile.
+
+# PART 3 — Admin dashboard redesign, full names, easier delete, batch delete
+## Backend (additive, backward-compatible)
+- The admin participant list endpoint must return each participant's **full name** (given name + surname, as entered at registration), avatar id, total points, days completed, notes **count** only (never note contents), status, a short tag (the last 4 characters of the user id), created date, and whatever it already returns. Add fields; do not remove or rename existing ones. Do not return emails unless the existing list already did.
+- Deletion confirmation contract: the server must stop requiring the user's typed name. For a single delete accept `{ confirm: true }`. For a batch delete accept `{ ids: [...], confirm_word: "DELETE" }` (case-insensitive compare, 1 to 50 ids). Keep the old name-matching confirmation accepted for backward compatibility so older app builds still work.
+- Keep every existing server rule: admin session required, admins and the caller can never be deleted, atomic cascade delete per user with zero orphans (no leftover rows in any child table), immediate invalidation of the deleted user's sessions, one `admin_audit` row per deleted user, no note contents read or displayed. A batch must report per-id results (deleted, skipped with reason, failed) and never fail the whole batch because of one bad id.
+- If a batch endpoint does not exist yet, add `POST /api/admin/users/delete` now.
+- Run changes against a Cloudflare Pages preview first; apply any new migration to production only after the preview tests pass. Record `git diff --stat` for `functions/` and `migrations/`.
+
+## Android app: Admin UI/UX
+Keep the app's existing look and theme (Material 3 Expressive, dynamic colour, the current dark and light themes). Fix the following and polish the Admin area as a whole:
+1. **Tabs:** Stats, Participants, Programme, Password must fit on one line each with no wrapping. Use a scrollable tab row, shorter labels where needed (keep "Participants"), and a clear selected indicator.
+2. **Participants tab layout:**
+   - Header: "Participants" with the count ("7 participants"), a search field (filters by full name), and a sort control (Points high to low, Newest, Name A to Z, Days completed).
+   - Each person is a **card**: avatar, **full name** on one or two lines (wrap long names, never truncate to the given name), then a secondary line "886 pts · 8 days · 0 notes" and a small short tag (for example `#9ae4`), so same-named people can be told apart. Rows must be comfortably tappable (minimum 48dp targets).
+   - Actions move off the row: one overflow menu (three dots) per card with "Award or remove points" (the existing Points action) and "Delete". Do not leave a bare red "Delete" text button on every row.
+   - Empty state when the search returns nothing, and a loading state with a skeleton or progress indicator.
+   - After any action show a snackbar with the result (not a permanent line of text at the top).
+3. **Single delete:** choosing Delete opens a dialog that names the person ("Delete Victor Fubara?"), states in one or two lines that it permanently removes their progress, points, notes and badges and cannot be undone, with a Cancel button and a red "Delete permanently" button. No typing required. Show a progress state on the button while deleting and surface the server's real error message on failure.
+4. **Batch delete:** a "Select" action in the header turns on selection mode: checkboxes on every card, a contextual top bar showing "N selected", a "Select all" toggle, and a **"Select inactive accounts"** shortcut that selects everyone with 0 points, 0 days and 0 notes (this is a selection helper only; it never deletes by itself, and it must show the resulting count). A bottom action bar shows "Delete (N)". Tapping it opens one dialog listing the count and the first few names ("and 4 more"), with a single text field where the admin types the word `DELETE` once to enable the red button. After completion show a result summary ("12 deleted, 1 skipped") and refresh the list and counts. Exit selection mode on completion or back.
+5. **Stats, Programme, Password tabs:** keep their functions and server calls unchanged, but tidy spacing, typography and button hierarchy to match the new cards.
+6. Make the screens correct in dark and light themes, at normal and large system font sizes, and with 0, 1 and 40+ participants.
+
+## Website admin (only if it exists)
+If the website's admin area exists in the current live frontend (or on the `site-v2` branch if the rebuild is in progress and not merged), apply the same changes: full names, search and sort, cards, no-typing single delete, select mode with batch delete, tab polish.
+
+# PART 4 — Admin sign-in is easy to find
+1. Make "Admin sign in" a clearly visible secondary button or link in the login screen, always reachable (scrollable content with proper insets so the keyboard never hides it), with an unambiguous label.
+2. If a user enters something that does not look like an email (no `@`) in the participant Email field and submits, show a hint under the field: "Looks like an admin username. Use Admin sign in." with a tap target that opens the admin form with the value copied across.
+3. Do the same on the website login if it has an admin sign-in.
+
+# PART 5 — Release hardening
+1. In the release build, ensure **signing is the very last step** (zipalign before signing; nothing modifies the APK after `apksigner sign`).
+2. Run `apksigner verify --verbose` on the final APK in the build and fail the build if it does not pass.
+3. After publishing the GitHub release, **download the asset back** from the release URL and confirm its SHA-256 and byte size match the local file. Add the SHA-256 and size to the release notes.
+4. Never print or commit keystores or passwords.
+
+# TASK LIST (under `batch_fixes_oct12_v1`)
+- b01: Clone both repos, inspect the app (notes screen, reader selection/highlight code, Profile translations section, Admin screens), the admin endpoints, schema, branches (`site-v2`), and the web admin state. Seed the section in each repo, commit and push.
+- b02: Part 1 — implement note auto-fill for all entry points; unit tests for each entry point; screenshots only if the Actions emulator works.
+- b03: Part 2 — make the Profile translations list display-only; verify through code and tests that delete still works in Manage versions; screenshots only if the Actions emulator works.
+- b04: Part 3 backend — full names and short tag in the participant list, `confirm: true` single delete, batch delete with `confirm_word`, per-id results. Test on preview with self-created test users: cascade leaves zero orphans, bad ids are skipped without failing the batch, admins and self are protected, the old name-confirm still works, audit rows written.
+- b05: Part 3 Android — tabs, participant cards, search/sort, overflow menu, single-delete dialog, select mode, batch delete, snackbars, tidy of the other tabs. Unit/UI tests for sorting, search and selection logic; screenshots (dark and light, large font, 0/1/40+ participants) only if the Actions emulator works, otherwise list the screens in `needs_operator_visual_check`.
+- b06: Part 3 website admin (if present, per rules above).
+- b07: Part 4 — admin sign-in visibility and hint, app and website.
+- b08: Apply any new migration to production after preview passes; confirm real participants are untouched (compare participant count, total points and leaderboard order before and after).
+- b09: Update `README.md` and `ARCHITECTURE.md` for the changed delete confirmation contract, batch endpoint and participant-list fields.
+- b10: Part 5 — signing and verification steps, bump the version, publish the next `<slug>-vN` release, attach the APK, verify the downloaded asset's SHA-256 and size, add them to the release notes. Release notes: "Notes auto-fill book/chapter/verse; translations list display-only; admin dashboard redesign with full names and batch delete; easier admin sign-in."
+- b11: Delete every test user and artifact you created (use the new batch delete to prove it), confirm the participant list contains only real users.
+- b12: Final commit and push; set `batch_fixes_oct12_v1.work_complete` to `true` with a summary of what changed, files touched and the release tag.
+END OF PROMPT
