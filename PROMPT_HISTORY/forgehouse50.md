@@ -1071,3 +1071,55 @@ If the website's admin area exists in the current live frontend (or on the `site
 - b11: Delete every test user and artifact you created (use the new batch delete to prove it), confirm the participant list contains only real users.
 - b12: Final commit and push; set `batch_fixes_oct12_v1.work_complete` to `true` with a summary of what changed, files touched and the release tag.
 END OF PROMPT
+
+
+## 2026-10-14 — Priority Batch: Programme Window Integrity, Site Repair, Forgot Password, Update Prompt + Changelog, Small-Screen Scaling, Floating Nav
+
+# ForgeHouse 50 — Priority Batch: Programme Window Integrity, Site Repair, Forgot Password, Update Prompt + Changelog, Small-Screen Scaling, Floating Nav (Build Contract)
+
+## Repositories
+
+- Backend and website: `https://github.com/vjumbo264/forgehouse50.git` (Cloudflare Pages + Functions + D1, live at `forgehouse50.pages.dev`).
+- Android app, built with the operator's tool ForgeBuild: `https://github.com/vjumbo264/forgebuild.git`, source under `apps/<slug>/` (find the ForgeHouse 50 app by inspecting `apps/`). Releases are tagged `<slug>-vN`; each new release uses the next number after the highest existing `<slug>-vN` tag.
+
+Both repositories exist and are live with **real users who have already joined**. You are one of many independent AI sessions with no memory of earlier ones. The repositories, git history and each repo's `BUILD_STATE.json` are the project's memory.
+
+## Project background
+
+ForgeHouse 50 is a church New Testament reading programme: 260 chapters in 50 reading days. Users register with given name, surname, an illustration avatar, email and a password, verified by a 6-digit email OTP (Brevo, one verified sender); they sign in with email + password. The Android app and the website are thin clients of one Cloudflare backend (D1). Programme rules, all enforced server-side:
+
+- Day boundaries use WAT (Africa/Lagos). Each user has a personal 50-day calendar starting on their own Day 1. Tuesdays and Fridays are not reading days (fasting and prayer).
+- Finishing a day requires viewing every chapter of that day. Daily quiz: one attempt, no retry, no timer, proportional points, never blocks finishing.
+- Catch-up: at most 2 days per session, oldest first; catch-up days never increase the streak. Read-ahead: at most 1 day. Streak resets on inactivity.
+- Leaderboard: Overall is raw cumulative points; every category has its own metric; users appear from their personal day 3; the final top 3 by raw points are celebrated when the programme ends.
+- Admin: a dedicated admin login (username + password, separate from participant email login), a Programme tab with **Start Programme** (opens a **10-day join window**) and **End Testing Phase & Reset** (wipes all non-admin users), participant list with Points, single delete and batch delete, and Change password. Admins never see private notes. Scripture comes from the church's VerseWell project (`versewell.pages.dev`) and downloadable translation bundles; KJV is bundled in the app; the audio feature was removed.
+
+## Current situation (as reported by the operator on Wednesday 2026-10-14)
+
+1. **The admin forgot to run End Testing Phase & Reset, and started the programme anyway, on Monday 2026-10-12.** New real users have joined since. **Nothing may be reset or deleted.** The join window must now close on schedule: 10 days counted from the Monday start, so **8 days remain as of Wednesday** (including today).
+2. **The website is broken:** scriptures do not load, nothing works, it looks nothing like the app, and the planned landing page does not exist.
+3. Users who forget their password have no way back in.
+4. The Android app has no update prompt and no changelog.
+5. On small or low-density phones the app UI looks far too large.
+6. The Android bottom navigation (a floating pill bar with all labels always visible) should be replaced with the dynamic expanding style described in Item 6.
+
+# ABSOLUTE RULES
+
+- **The repository is the source of truth.** Inspect -> determine state -> do the next unfinished step -> commit -> push -> verify -> continue. Never stop merely because part of this is done. Never ask the operator anything; decide, document the assumption in `BUILD_STATE.json` notes, and continue.
+- **ONE WORK ITEM AT A TIME.** The work items below are ordered by importance and criticality. Do them strictly in order. **Never work on two items at once**, except where an item explicitly marks a *paired* fix (only Item 4: the update prompt and the changelog are one paired item). An item may not start until the previous item has `"status": "done"`, its commit is pushed, and the push is verified. Record this in `BUILD_STATE.json` as a `gate` per item. Never start the next item "while waiting" for something.
+- **COMMIT AND PUSH BEFORE EVERY NEXT STEP.** Per-step protocol: perform step -> validate -> update `BUILD_STATE.json` -> commit -> push -> verify the push succeeded -> only then the next step. Builders often die before committing, so commit and push very frequently, at least after every sub-step listed in an item.
+- **Never reset `BUILD_STATE.json`.** Append a new section `ops_batch_oct14_v1` in each repo you touch (all items `"pending"`), commit and push the seed first. Never delete earlier sections or redo tasks marked `"done"` with a commit sha.
+- **NEVER RESET, WIPE OR DELETE PRODUCTION DATA.** Do not call End Testing Phase & Reset, do not delete users, do not edit users' points or progress, do not restart or move the programme start. Production access is read-only except for explicitly named additive migrations. Test only on a Pages preview deployment or with test users you create yourself and delete yourself.
+- **Frozen backend contract.** Backend changes are additive and backward-compatible (new endpoints, new columns/tables through a new migration). The Android app depends on the existing API.
+- **No emojis** in UI or copy.
+
+# TASK LIST (under `ops_batch_oct14_v1`; items strictly in order, each gated on the previous being done and pushed)
+
+- w0: Clone both repos, inspect state, seed the section in each (items `w1` to `w6` all `"pending"`, with `gate`), commit and push.
+- w1: Item 1 — programme window and end-date integrity, reset guard, read-only audit, tests, preview, production deploy.
+- w2: Item 2 — website: 2a foundations, 2b data layer and scripture, 2c landing + `/api/app-release`, 2d app parity, 2e navigation to spec, 2f PWA + service-worker migration, 2g verify and merge. Each sub-step committed and pushed before the next.
+- w3: Item 3 — forgot password: backend, then app, then website, each pushed before the next.
+- w4: Item 4 — update prompt + changelog (the only paired item), release workflow changes, release.
+- w5: Item 5 — minimum UI size on small and low-density screens.
+- w6: Item 6 — dynamic floating navigation; final release; final verification of all items; set `ops_batch_oct14_v1.work_complete` to `true` in each repo and push.
+
