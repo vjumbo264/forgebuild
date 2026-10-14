@@ -35,6 +35,17 @@ jobs:
           echo "SLUG=${APP_PATH#apps/}" >> "$GITHUB_ENV"
           echo "Building app slug: ${APP_PATH#apps/}"
 
+      - name: Validate changelog
+        run: |
+          CHANGELOG_PATH="$APP_PATH/changelog.json"
+          if [ -f "$CHANGELOG_PATH" ]; then
+            if grep -iE 'admin|delete user' "$CHANGELOG_PATH"; then
+              echo "ERROR: Changelog must never contain 'admin' or 'delete user'!"
+              exit 1
+            fi
+            echo "Changelog CI validation passed: no prohibited admin or user-deletion references found."
+          fi
+
       # VERSIONING CONTRACT (mandatory): the tag number IS the APK versionCode.
       # It is derived BEFORE the build and injected into Gradle below, so every
       # release ships a versionCode that is +1 over the last release — Android
@@ -141,6 +152,39 @@ jobs:
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
           echo "Release APK SHA-256: $SHA ($SIZE bytes)"
 
+      - name: Generate release.json
+        run: |
+          CHANGELOG_PATH="$APP_PATH/changelog.json"
+          python3 - "$CHANGELOG_PATH" "${{ steps.vername.outputs.name }}" "${{ steps.meta.outputs.code }}" "${{ steps.checksum.outputs.sha }}" "${{ steps.checksum.outputs.size }}" << 'PY_GEN'
+          import sys, json, os
+          changelog_path = sys.argv[1]
+          ver_name = sys.argv[2]
+          ver_code = int(sys.argv[3])
+          sha256 = sys.argv[4]
+          size_bytes = int(sys.argv[5])
+
+          items = []
+          if os.path.exists(changelog_path):
+              with open(changelog_path, 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+                  if isinstance(data, list) and len(data) > 0:
+                      items = data[0].get("items", [])
+
+          release_data = {
+              "versionName": ver_name,
+              "versionCode": ver_code,
+              "sha256": sha256,
+              "sizeBytes": size_bytes,
+              "changelog": items
+          }
+
+          with open("release.json", "w", encoding="utf-8") as f:
+              json.dump(release_data, f, indent=2)
+
+          print("Generated release.json successfully:")
+          print(json.dumps(release_data, indent=2))
+          PY_GEN
+
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
@@ -150,12 +194,20 @@ jobs:
           body: |
             ${{ github.event.inputs.release_notes || github.event.head_commit.message }}
 
+            **Release Metadata:**
+            - Version Name: `${{ steps.vername.outputs.name }}`
+            - Version Code: `${{ steps.meta.outputs.code }}`
+            - SHA-256: `${{ steps.checksum.outputs.sha }}`
+            - Size: `${{ steps.checksum.outputs.size }}` bytes
+
             **Verified Artifacts:**
             - `app-${{ steps.meta.outputs.tag }}.apk` (${{ steps.checksum.outputs.size }} bytes)
-            - SHA-256: `${{ steps.checksum.outputs.sha }}`
+            - `release.json`
+            - `forgebuild-manifest.json`
           files: |
             app-${{ steps.meta.outputs.tag }}.apk
             forgebuild-manifest.json
+            release.json
           generate_release_notes: false
 
       # Part 5: Download back asset & verify SHA-256 and size match local file
