@@ -1184,3 +1184,21 @@ A contract named `ops_batch_oct14_v1` (programme window, website rebuild, forgot
 - f6: Item 6 — Android nav slide animation and swipe between tabs, final release; verify every item once more against production; set `fixes_oct15_v1.work_complete` to `true` in each repo and push.
 
 - f7: Item 7 — Profile pictures: 7a backend, 7b Android app (release), 7c website, 7d admin moderation.
+
+
+## Session 7 (2026-10-15) — EXTEND/UPDATE: Fixes Batch 2 (Oct 15): Blank Website, Missing Chapter Bug, Continuous Reader Rebuild, Site Parity with VerseWell, Updater, Public Observations and Questions, Announcements, UI Refinement
+
+Full instruction received from operator:
+- Repositories: Backend and website (vjumbo264/forgehouse50), Android app (vjumbo264/forgebuild, apps/forgehouse50), Scripture source (VerseWell, vjumbo264/versewell).
+- Rules: One item at a time strictly in order (g0 to g10). Commit and push before every next step. Never reset BUILD_STATE.json, never delete production data, frozen backend contract, no emojis in UI, never mention admin area in user-facing text.
+- Items:
+  * Item 1: Blank website fix (live diagnosis, root cause fix, self-healing service worker, boot guard, post-deploy smoke test).
+  * Item 2: Reported blocker: chapter 6 missing after chapter 5 (diagnose, fix, regression/schedule tests, bundle audit).
+  * Item 3: Reader rebuild: 3a timer correctness and persistence, 3b layout: full-height reading behind floating bars, continuous scroll, progress bar, chapter X of Y, 3c persistence across menus and app exits, 3d compact top panel, less prominent chapter intro, encouragement messages (5-30 min), release.
+  * Item 4: Verse-level headings fixed at source (VerseWell or backend/client fallback) and in both clients.
+  * Item 5: Website parity: VerseWell only (remove public-domain Bible API), downloaded-only switcher, reader parity, timer, profile pictures, nav contrast.
+  * Item 6: Updater: keep downloaded APK, Profile update row status, hideable download, wavy progress.
+  * Item 7: Support screen message (Help us get ForgeHouse 50 on Play Store).
+  * Item 8: Observation and Question notes: 8a premium UI with pickers, 8b community sharing with anonymity, admin replies, WhatsApp formatting copy.
+  * Item 9: Announcements: backend, admin UI, client cards and history.
+  * Item 10: UI refinement pass across all touched screens; release.
