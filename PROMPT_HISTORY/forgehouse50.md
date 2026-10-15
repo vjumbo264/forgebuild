@@ -1123,3 +1123,62 @@ ForgeHouse 50 is a church New Testament reading programme: 260 chapters in 50 re
 - w5: Item 5 — minimum UI size on small and low-density screens.
 - w6: Item 6 — dynamic floating navigation; final release; final verification of all items; set `ops_batch_oct14_v1.work_complete` to `true` in each repo and push.
 
+
+
+---
+
+## 2026-10-15 — Fixes Batch (Oct 15): Fake Data on the Site, Reading Completion + Offline Timer, Web Nav Contrast, Admin Reset/Oversight, Notes Visibility, Android Nav Animation + Swipe (Build Contract)
+
+# ForgeHouse 50 — Fixes Batch (Oct 15): Fake Data on the Site, Reading Completion + Offline Timer, Web Nav Contrast, Admin Reset/Oversight, Notes Visibility, Android Nav Animation + Swipe (Build Contract)
+
+## Repositories
+
+- Backend and website: `https://github.com/vjumbo264/forgehouse50.git` (Cloudflare Pages + Functions + D1, live at `forgehouse50.pages.dev`).
+- Android app, built with the operator's tool ForgeBuild: `https://github.com/vjumbo264/forgebuild.git`, source under `apps/<slug>/` (find the ForgeHouse 50 app by inspecting `apps/`). Releases are tagged `<slug>-vN`; each new release uses the next number after the highest existing `<slug>-vN` tag.
+
+Both repositories exist and are live with **real users who are mid-programme**. You are one of many independent AI sessions with no memory of earlier ones. The repositories, git history and each repo's `BUILD_STATE.json` are the project's memory.
+
+## Project background
+
+ForgeHouse 50 is a church New Testament reading programme: 260 chapters in 50 reading days. Users register with given name, surname, avatar, email and password (email OTP verified through Brevo) and sign in with email + password. The Android app and the website are thin clients of one Cloudflare backend (D1). Rules enforced server-side:
+
+- Day boundaries use WAT (Africa/Lagos). Each user has a personal 50-day calendar from their own Day 1. Tuesdays and Fridays are not reading days.
+- Daily quiz: one attempt, no retry, no timer, proportional points, never blocks finishing the day.
+- Catch-up: at most 2 days per session, oldest first; catch-up days never increase the streak. Read-ahead: at most 1 day. Streak resets on inactivity.
+- Leaderboard: Overall is raw cumulative points; each category has its own metric (including a **Reading time** category); users appear from their personal day 3.
+- Admin: a dedicated admin login (username + password, separate from participant login); admin area with Stats, Participants (search, sort, cards, single delete, batch delete), Programme (the programme has **already been started on 2026-10-12 and must never be reset**), Password.
+- The reader screen shows a translation selector, A- / A+, chapter Previous/Next, a bottom bar with **Reading complete** and **Quiz**, and notes (Observation, Question, Insight, Prayer, Application, with Book/Chapter/Verse).
+
+## Other contracts that may exist
+
+A contract named `ops_batch_oct14_v1` (programme window, website rebuild, forgot password, update prompt, small-screen scaling, floating nav) may be in progress or finished in these repos. Read its state in each `BUILD_STATE.json` first. **Do not redo anything it marks done, and do not undo it.** This contract's items are narrow fixes; apply each to whatever is currently live. If a `site-v2` branch exists and has diverged from `main`, make each web fix on `main` and bring the same change into `site-v2` (cherry-pick or re-apply) so it is not lost, and record that in `BUILD_STATE.json`. Where this contract and the other one overlap (the nav), **this contract's specification wins**.
+
+## What the operator reported (Thursday 2026-10-15)
+
+1. **Website nav:** in light mode the selected floating-nav tab's label (and icon) is white on a near-white pill and cannot be read. The reverse may also be true in dark mode.
+2. **Website shows the wrong users:** he can log in, but the users shown on the site are not the users in the real app. It looks like synthetic data.
+3. **Reading completion:** remove the "chapter 1 of 2 / chapter 2 of 3 viewed" check, because it is unreliable. When a user reaches the **final chapter** of their reading, they must be able to tap **Mark complete**.
+4. **Reading timer:** users complain the reading time does not match reality. It must count from the phone's own clock even when offline, and the real reading time must be sent when the user completes their reading. The admin must be able to see it. A **5-minute minimum** reading time before marking complete is approved.
+5. **Admin oversight and fairness:** the admin must be able to see each user's reading time, see all **Observation** and **Question** notes (including existing ones), and **reset a user's latest reading day** so they have to read and take the quiz again, with that day's points reversed exactly. Lowering points by hand is unfair because it does not undo what the day originally gave, which can make the competition unwinnable for others.
+6. **Android floating nav:** switching tabs has no slide animation (only the selected pill's width springs), and the requested horizontal swiping between tabs was not added.
+
+# ABSOLUTE RULES
+
+- **The repository is the source of truth.** Inspect → determine state → do the next unfinished step → commit → push → verify → continue. Never stop merely because part of this is done. Never ask the operator anything; decide, document the assumption in `BUILD_STATE.json` notes, and continue.
+- **ONE ITEM AT A TIME, strictly in order.** The items below are ordered by importance and criticality. Never start an item until the previous one has `"status": "done"`, its commit is pushed and the push verified (`gate` in `BUILD_STATE.json`). Work inside one item only on the sub-steps listed for it; Item 2 is a *related group* (its sub-steps share the completion flow) and Item 4 pairs the reading-time view with the day reset (they share the same data). Nothing else may be combined.
+- **COMMIT AND PUSH BEFORE EVERY NEXT STEP.** Per-step protocol: perform step → validate → update `BUILD_STATE.json` → commit → push → verify the push → only then the next step. Commit and push after every sub-step. Builders often die before committing.
+- **Never reset `BUILD_STATE.json`.** Append `fixes_oct15_v1` (items `f1` to `f6`, all `"pending"`, with `gate`) in each repo you touch, commit and push the seed first. Never delete earlier sections or redo tasks marked `"done"` with a commit sha.
+- **NEVER RESET, WIPE OR DELETE REAL PRODUCTION DATA.** No End Testing Phase & Reset (it is disabled for the live programme; keep it disabled), no deleting users, no editing real users' points, progress or notes. Production access is **read-only** except for the explicitly named additive migrations, applied only after preview tests pass. Test on a Pages preview with test users you create and delete yourself.
+- **Frozen backend contract:** backend changes are additive and backward-compatible. Older Android builds are in users' hands and must keep working (see Item 2 for the legacy rule).
+- **No emojis** in UI or copy. Never mention the admin area in user-facing text, release notes or the changelog.
+- **Credentials** are placeholders; never print, log or commit them. Never touch, print or store the admin password or its hash.
+
+# TASK LIST (under `fixes_oct15_v1`; strictly in order, each gated on the previous being done and pushed)
+
+- f0: Clone both repos, read `BUILD_STATE.json` (including `ops_batch_oct14_v1`), seed `fixes_oct15_v1` in each repo with `gate`, commit and push.
+- f1: Item 1 — website data audit, root cause, fix, equality proof against the app's data.
+- f2: Item 2 — reading completion, offline timer, 5-minute minimum: 2a backend, 2b Android (then release), 2c website.
+- f3: Item 3 — website nav contrast fix plus automated contrast checks in both themes.
+- f4: Item 4 — admin reading-time view and reset latest day (paired), backend then Android then website.
+- f5: Item 5 — admin Observation/Question notes view, honest wording and one-time notice, release.
+- f6: Item 6 — Android nav slide animation and swipe between tabs, final release; verify every item once more against production; set `fixes_oct15_v1.work_complete` to `true` in each repo and push.
