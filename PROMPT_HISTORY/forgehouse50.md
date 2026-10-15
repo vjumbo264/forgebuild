@@ -1182,3 +1182,5 @@ A contract named `ops_batch_oct14_v1` (programme window, website rebuild, forgot
 - f4: Item 4 — admin reading-time view and reset latest day (paired), backend then Android then website.
 - f5: Item 5 — admin Observation/Question notes view, honest wording and one-time notice, release.
 - f6: Item 6 — Android nav slide animation and swipe between tabs, final release; verify every item once more against production; set `fixes_oct15_v1.work_complete` to `true` in each repo and push.
+
+- f7: Item 7 — Profile pictures: 7a backend, 7b Android app (release), 7c website, 7d admin moderation.
