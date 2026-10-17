@@ -1230,3 +1230,16 @@ Tasks:
 - h7: Item 7: complete changelog and "What's new".
 - h8: Item 8: final release, deploy and verification.
 - h9: Item 9: UI refinement pass. Working session: write UI_PASS_HANDOFF.md, set h9 to pending_fresh_session, stop and report. Dedicated fresh session: do only this task (h9a to h9j).
+
+## Session 10 (2026-10-17) — DEDICATED FRESH SESSION: UI Refinement Pass (Task h9)
+Started Task h9 (UI Refinement Pass):
+- h9a: Read UI_PASS_HANDOFF.md, audit scope, seed sub-tasks in BUILD_STATE.json.
+- h9b: Before screenshots across all screens and evidence/ui_pass_v1/ui_audit.md.
+- h9c: Design language into DESIGN_SYSTEM.md and shared tokens/components.
+- h9d: Reader refinement (app and website).
+- h9e: Today (home) and its cards refinement.
+- h9f: Bible translations screen visual harmonization.
+- h9g: Notes, send states, Community and Announcement histories.
+- h9h: Profile, What's new, Leaderboard, Progress, auth screens, nav.
+- h9i: Admin screens and Quote Image share UI.
+- h9j: Regression run, contrast checks, before/after evidence, app release, website deploy, smoke test, and complete.
