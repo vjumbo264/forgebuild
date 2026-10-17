@@ -1202,3 +1202,16 @@ Full instruction received from operator:
   * Item 8: Observation and Question notes: 8a premium UI with pickers, 8b community sharing with anonymity, admin replies, WhatsApp formatting copy.
   * Item 9: Announcements: backend, admin UI, client cards and history.
   * Item 10: UI refinement pass across all touched screens; release.
+
+
+## Session 8 (2026-10-17) — RESUME: Fixes Batch 2, RESUME VERSION (Oct 17)
+Release Pending Work (g4a), Second Admin Account (g4b), Website Parity with Catch-up & No Read Tab (g5), Updater (g6), Support (g7), Notes Always Sent to Leaders & Community Replies (g8), Announcements (g9), UI Refinement (g10).
+Tasks:
+- g4a: Item A: release the Android app now (forgehouse50-v27, carries g2, g3, g4 app work)
+- g4b: Item B: create operator second admin account (victor-admin, PBKDF2 salt/hash, one-time credentials delivery)
+- g5: Item 5: website parity (VerseWell only, downloaded-only switcher, continuous reader, timer, profile pictures, contrast, catch-up mode, remove Read tab from nav)
+- g6: Item 6: updater (keep APK, Profile status, hideable download, wavy progress)
+- g7: Item 7: support message (both clients)
+- g8: Item 8: notes UI with pickers (8a), always-sent-to-leaders inbox, replies, community card, WhatsApp copy (8b)
+- g9: Item 9: announcements (backend, admin UI, client cards and history)
+- g10: Item 10: UI refinement pass, final releases, verify every item against production.
