@@ -1215,3 +1215,18 @@ Tasks:
 - g8: Item 8: notes UI with pickers (8a), always-sent-to-leaders inbox, replies, community card, WhatsApp copy (8b)
 - g9: Item 9: announcements (backend, admin UI, client cards and history)
 - g10: Item 10: UI refinement pass, final releases, verify every item against production.
+
+
+## Session 9 (2026-10-17) — EXTEND/UPDATE: Fixes Batch (Oct 17): Translations Repair, Reader Redesign, Updater and Home Install Card, Full Changelog, Notes Shared with Leaders, Send Feedback and Timestamps, Dynamic Home, Branded Quote Images (Build Contract)
+
+### Tasks
+- h0: Clone both repos, read BUILD_STATE.json files, seed fixes_oct17_v1 with gate, commit and push.
+- h1: Item 1: translations repair: 1a format break and tolerant parser and old-build compatibility, 1b switching works, 1c single translations screen with live progress; release the app.
+- h2: Item 2: reader redesign: 2a header, 2b bottom dock, 2c counters, 2d tests and website parity.
+- h3: Item 3: updater with two modes, resilient install state machine, home card.
+- h4: Item 4: Prayer and Application to leaders, send feedback states, timestamps (4a, 4b, 4c).
+- h5: Item 5: dynamic home screen.
+- h6: Item 6: branded quote images.
+- h7: Item 7: complete changelog and "What's new".
+- h8: Item 8: final release, deploy and verification.
+- h9: Item 9: UI refinement pass. Working session: write UI_PASS_HANDOFF.md, set h9 to pending_fresh_session, stop and report. Dedicated fresh session: do only this task (h9a to h9j).
