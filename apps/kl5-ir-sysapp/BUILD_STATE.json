@@ -4,11 +4,12 @@
   "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
   "status": "in_progress",
-  "last_completed_step": "step-1",
-  "next_step": "step-2",
+  "last_completed_step": "step-2",
+  "next_step": "step-3",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
+    "App display name: KL5 IR & SysApp",
     "Hooking mechanism: LSPosed Xposed API 82/93 scoping system_server / android",
     "IR strategy: JNI bridge linking android.hardware.ir@1.0 HIDL with graceful fallback and logcat tag MOTIONSALT-Hook",
     "SysApp strategy: Scoped hooks on PackageInstallerSession and InstallPackageHelper targeting only system-flagged packages"
@@ -16,21 +17,25 @@
   "blockers": [],
   "files_touched": [
     "PROMPT_HISTORY/kl5-ir-sysapp.md",
-    "apps/kl5-ir-sysapp/BUILD_STATE.json"
+    "apps/kl5-ir-sysapp/BUILD_STATE.json",
+    "apps/kl5-ir-sysapp/app/build.gradle.kts",
+    "apps/kl5-ir-sysapp/app/src/main/res/values/strings.xml",
+    "apps/kl5-ir-sysapp/app/src/main/AndroidManifest.xml",
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/MainActivity.kt"
   ],
-  "current_task": "step-1",
+  "current_task": "step-2",
   "tasks": [
     {
       "id": "step-1",
       "title": "Choose the slug, copy engine content, seed PROMPT_HISTORY and BUILD_STATE.json, push-access proof",
-      "status": "in_progress",
-      "notes": "Selected slug kl5-ir-sysapp, copied engine, initial commit & push"
+      "status": "done",
+      "notes": "Selected slug kl5-ir-sysapp, copied engine, initial commit & push verified on origin/main"
     },
     {
       "id": "step-2",
       "title": "Set identity (package/app_name) in app/build.gradle.kts and strings.xml",
-      "status": "pending",
-      "notes": "Configure package com.motionsalt.kl5irsysapp and app name 'KL5 IR & SysApp Hooks'"
+      "status": "done",
+      "notes": "Configured package com.motionsalt.kl5irsysapp and app name 'KL5 IR & SysApp' in build.gradle.kts, strings.xml, manifest, and moved MainActivity"
     },
     {
       "id": "step-3",
@@ -66,7 +71,11 @@
   "history": [
     {
       "session": "session-init",
-      "event": "step-1 start: slug selected, seeded initial build state"
+      "event": "step-1 done: slug selected, seeded initial build state and pushed to main"
+    },
+    {
+      "session": "session-init",
+      "event": "step-2 done: configured package com.motionsalt.kl5irsysapp and app name KL5 IR & SysApp"
     }
   ]
 }

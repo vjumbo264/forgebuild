@@ -1,4 +1,4 @@
-package com.forgebuild.app
+package com.motionsalt.kl5irsysapp
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
