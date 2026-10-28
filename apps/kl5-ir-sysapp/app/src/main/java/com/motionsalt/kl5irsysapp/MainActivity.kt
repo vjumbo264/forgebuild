@@ -82,7 +82,7 @@ fun MainScreen() {
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
-                .padding(horizontal = SpacingTokens.contentMargin(), vertical = 16.dp),
+                .padding(horizontal = SpacingTokens.Spacing.md, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. LSPosed Module Status Card
