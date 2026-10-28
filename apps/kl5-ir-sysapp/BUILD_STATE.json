@@ -1,0 +1,72 @@
+{
+  "slug": "kl5-ir-sysapp",
+  "project": "kl5-lsposed-ir-sysapp",
+  "build_complete": false,
+  "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
+  "status": "in_progress",
+  "last_completed_step": "step-1",
+  "next_step": "step-2",
+  "decisions_made": [
+    "Permanent slug chosen: kl5-ir-sysapp",
+    "Application package: com.motionsalt.kl5irsysapp",
+    "Hooking mechanism: LSPosed Xposed API 82/93 scoping system_server / android",
+    "IR strategy: JNI bridge linking android.hardware.ir@1.0 HIDL with graceful fallback and logcat tag MOTIONSALT-Hook",
+    "SysApp strategy: Scoped hooks on PackageInstallerSession and InstallPackageHelper targeting only system-flagged packages"
+  ],
+  "blockers": [],
+  "files_touched": [
+    "PROMPT_HISTORY/kl5-ir-sysapp.md",
+    "apps/kl5-ir-sysapp/BUILD_STATE.json"
+  ],
+  "current_task": "step-1",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Choose the slug, copy engine content, seed PROMPT_HISTORY and BUILD_STATE.json, push-access proof",
+      "status": "in_progress",
+      "notes": "Selected slug kl5-ir-sysapp, copied engine, initial commit & push"
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity (package/app_name) in app/build.gradle.kts and strings.xml",
+      "status": "pending",
+      "notes": "Configure package com.motionsalt.kl5irsysapp and app name 'KL5 IR & SysApp Hooks'"
+    },
+    {
+      "id": "step-3",
+      "title": "Generate adaptive icon layers via tools/make_adaptive_icon.py",
+      "status": "pending",
+      "notes": "Create custom hardware IR emitter & system shield icon artwork and run generator"
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm repo-level signing secrets exist",
+      "status": "pending",
+      "notes": "Verify GitHub Actions secrets KEYSTORE_BASE64 etc."
+    },
+    {
+      "id": "step-5",
+      "title": "Implement LSPosed module (XposedInit, SysAppHooks, IrBridgeHooks, JNI native bridge, companion UI)",
+      "status": "pending",
+      "notes": "Build Xposed hooks for package install gates and HIDL IR bridge"
+    },
+    {
+      "id": "step-6",
+      "title": "Validate build configuration and dispatch release.yml for kl5-ir-sysapp-v1",
+      "status": "pending",
+      "notes": "Trigger workflow_dispatch on GitHub Actions and monitor release build"
+    },
+    {
+      "id": "step-7",
+      "title": "Verify live release and APK asset via GitHub Releases API, mark build_complete true",
+      "status": "pending",
+      "notes": "Confirm release asset app-kl5-ir-sysapp-v1.apk exists and is valid"
+    }
+  ],
+  "history": [
+    {
+      "session": "session-init",
+      "event": "step-1 start: slug selected, seeded initial build state"
+    }
+  ]
+}
