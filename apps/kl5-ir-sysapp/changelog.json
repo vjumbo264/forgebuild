@@ -1,0 +1,11 @@
+[
+  {
+    "version": "1.0",
+    "items": [
+      "Initial release of KL5 IR & SysApp LSPosed module for TECNO KL5 Android 17 GSI",
+      "ConsumerIrService HIDL bridge restoring hardware IR blaster detection and transmission",
+      "System-app install gate hooks (unknown sources, same versionCode, downgrade, reboot scan preservation)",
+      "Material 3 Expressive companion UI with copyable verification commands"
+    ]
+  }
+]

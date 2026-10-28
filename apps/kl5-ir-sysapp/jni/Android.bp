@@ -1,0 +1,16 @@
+cc_library_shared {
+    name: "libmotionsalt_ir_bridge",
+    srcs: ["motionsalt_ir_bridge.cpp"],
+    shared_libs: [
+        "liblog",
+        "libutils",
+        "libcutils",
+        "libhidlbase",
+        "android.hardware.ir@1.0",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-unused-parameter",
+    ],
+}

@@ -4,31 +4,45 @@
   "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
   "status": "in_progress",
-  "last_completed_step": "step-4",
-  "next_step": "step-5",
+  "last_completed_step": "step-5",
+  "next_step": "step-6",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
     "App display name: KL5 IR & SysApp",
     "Adaptive icon: custom hardware IR diode + shield artwork generated into mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi layers via tools/make_adaptive_icon.py",
     "Confirmed repo-level signing secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in vjumbo264/forgebuild",
-    "Hooking mechanism: LSPosed Xposed API 82/93 scoping system_server / android",
-    "IR strategy: JNI bridge linking android.hardware.ir@1.0 HIDL with graceful fallback and logcat tag MOTIONSALT-Hook",
-    "SysApp strategy: Scoped hooks on PackageInstallerSession and InstallPackageHelper targeting only system-flagged packages"
+    "Hooking mechanism: LSPosed Xposed API (compileOnly de.robv.android.xposed:api:82 via https://api.xposed.info/) scoping system_server / android",
+    "SysApp strategy: Scoped hooks on PackageInstallerSession.validateApkInstallLocked, InstallPackageHelper.preparePackage, InstallPackageHelper.verifyReplacingVersionCode, and PackageManagerService boot scan logic targeting only system-flagged packages",
+    "IR strategy: Real frozen android.hardware.ir@1.0::IConsumerIr HIDL interface utilized; dual-mode implementation with full C++ JNI source (motionsalt_ir_bridge.cpp, Android.bp, Android.mk) and in-process Java HwBinder IPC (HidlIrBridge.kt) ensuring native and non-NDK runtime execution",
+    "Honesty disclosure: Native JNI source provided and verified against frozen HIDL 1.0 specifications; since cloud CI runner does not bundle AOSP platform HIDL client libraries (libhidlbase/android.hardware.ir@1.0), the runtime uses Java HwBinder IPC directly within system_server, avoiding fabricated binaries",
+    "Companion UI: Material 3 Expressive UI displaying live LSPosed hook status, install gate architecture, IR bridge parameters, and copyable on-device testing commands"
   ],
   "blockers": [],
   "files_touched": [
     "PROMPT_HISTORY/kl5-ir-sysapp.md",
     "apps/kl5-ir-sysapp/BUILD_STATE.json",
+    "apps/kl5-ir-sysapp/README.md",
+    "apps/kl5-ir-sysapp/settings.gradle.kts",
+    "apps/kl5-ir-sysapp/changelog.json",
     "apps/kl5-ir-sysapp/app/build.gradle.kts",
-    "apps/kl5-ir-sysapp/app/src/main/res/values/strings.xml",
+    "apps/kl5-ir-sysapp/app/proguard-rules.pro",
     "apps/kl5-ir-sysapp/app/src/main/AndroidManifest.xml",
+    "apps/kl5-ir-sysapp/app/src/main/assets/xposed_init",
+    "apps/kl5-ir-sysapp/app/src/main/res/values/strings.xml",
+    "apps/kl5-ir-sysapp/app/src/main/res/values/arrays.xml",
     "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/MainActivity.kt",
-    "apps/kl5-ir-sysapp/tools/artwork/icon_fg.png",
-    "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
-    "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/XposedInit.kt",
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/SysAppHooks.kt",
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/IrBridgeHooks.kt",
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/HidlIrBridge.kt",
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/NativeIrBridge.kt",
+    "apps/kl5-ir-sysapp/jni/motionsalt_ir_bridge.cpp",
+    "apps/kl5-ir-sysapp/jni/Android.bp",
+    "apps/kl5-ir-sysapp/jni/Android.mk",
+    "apps/kl5-ir-sysapp/tools/artwork/icon_fg.png"
   ],
-  "current_task": "step-4",
+  "current_task": "step-5",
   "tasks": [
     {
       "id": "step-1",
@@ -57,8 +71,8 @@
     {
       "id": "step-5",
       "title": "Implement LSPosed module (XposedInit, SysAppHooks, IrBridgeHooks, JNI native bridge, companion UI)",
-      "status": "pending",
-      "notes": "Build Xposed hooks for package install gates and HIDL IR bridge"
+      "status": "done",
+      "notes": "Implemented XposedInit entry point, SysAppHooks (unknown sources, same version, downgrade, boot scan), IrBridgeHooks (ConsumerIrService constructor, hasIrEmitter, getCarrierFrequencies, transmit), HidlIrBridge (HwBinder IPC), NativeIrBridge JNI C++ code, and Material 3 Expressive companion UI"
     },
     {
       "id": "step-6",
@@ -89,6 +103,10 @@
     {
       "session": "session-init",
       "event": "step-4 done: confirmed repo-level signing secrets exist"
+    },
+    {
+      "session": "session-init",
+      "event": "step-5 done: implemented LSPosed hooks, HIDL bridge, native JNI source, and M3 companion app"
     }
   ]
 }
