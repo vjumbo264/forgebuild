@@ -21,7 +21,7 @@
             android:value="93" />
         <meta-data
             android:name="xposedscope"
-            android:resource="@array/xposed_scope" />
+            android:value="android;system" />
 
         <activity
             android:name="com.motionsalt.kl5irsysapp.MainActivity"

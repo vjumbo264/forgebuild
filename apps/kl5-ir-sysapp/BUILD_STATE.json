@@ -1,11 +1,11 @@
 {
   "slug": "kl5-ir-sysapp",
   "project": "kl5-lsposed-ir-sysapp",
-  "build_complete": true,
+  "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
-  "status": "done",
-  "last_completed_step": "step-7",
-  "next_step": "none",
+  "status": "in_progress",
+  "last_completed_step": "step-8",
+  "next_step": "step-9",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
@@ -17,7 +17,8 @@
     "IR strategy: Real frozen android.hardware.ir@1.0::IConsumerIr HIDL interface utilized; dual-mode implementation with full C++ JNI source (motionsalt_ir_bridge.cpp, Android.bp, Android.mk) and in-process Java HwBinder IPC (HidlIrBridge.kt) ensuring native and non-NDK runtime execution",
     "Honesty disclosure: Native JNI source provided and verified against frozen HIDL 1.0 specifications; since cloud CI runner does not bundle AOSP platform HIDL client libraries (libhidlbase/android.hardware.ir@1.0), the runtime uses Java HwBinder IPC directly within system_server, avoiding fabricated binaries",
     "Companion UI: Material 3 Expressive UI displaying live LSPosed hook status, install gate architecture, IR bridge parameters, and copyable on-device testing commands",
-    "Release verification: kl5-ir-sysapp-v1 built and published by workflow run 40756439859; app-kl5-ir-sysapp-v1.apk (1,077,643 bytes) verified live with HTTP 200 via GitHub Releases API"
+    "Release verification: kl5-ir-sysapp-v1 built and published by workflow run 40756439859; app-kl5-ir-sysapp-v1.apk (1,077,643 bytes) verified live with HTTP 200 via GitHub Releases API",
+    "Update #2 scope fix: Correct Xposed scope declaration using android:value=\"android;system\" in AndroidManifest.xml, res/values/arrays.xml with system and android, res/raw/keep.xml to protect array resource, META-INF/xposed/scope.list with system/android, and update XposedInit.kt to handle both android and system package names and system_server processName"
   ],
   "blockers": [],
   "files_touched": [
@@ -41,9 +42,12 @@
     "apps/kl5-ir-sysapp/jni/motionsalt_ir_bridge.cpp",
     "apps/kl5-ir-sysapp/jni/Android.bp",
     "apps/kl5-ir-sysapp/jni/Android.mk",
-    "apps/kl5-ir-sysapp/tools/artwork/icon_fg.png"
+    "apps/kl5-ir-sysapp/tools/artwork/icon_fg.png",
+    "apps/kl5-ir-sysapp/app/src/main/res/raw/keep.xml",
+    "apps/kl5-ir-sysapp/app/src/main/resources/META-INF/xposed/scope.list",
+    "apps/kl5-ir-sysapp/app/src/main/resources/META-INF/xposed/module.prop"
   ],
-  "current_task": "step-7",
+  "current_task": "step-9",
   "tasks": [
     {
       "id": "step-1",
@@ -86,6 +90,24 @@
       "title": "Verify live release and APK asset via GitHub Releases API, mark build_complete true",
       "status": "done",
       "notes": "Verified release kl5-ir-sysapp-v1 live on GitHub Releases API with published assets: app-kl5-ir-sysapp-v1.apk (1,077,643 bytes, HTTP 200), forgebuild-manifest.json, and release.json. build_complete set to true"
+    },
+    {
+      "id": "step-8",
+      "title": "Fix LSPosed module scope declaration (manifest metadata, arrays.xml, keep.xml, META-INF scope.list, XposedInit package match)",
+      "status": "done",
+      "notes": "Implemented scope fix: manifest meta-data xposedscope set to android;system, res/values/arrays.xml updated with android and system, res/raw/keep.xml added for R8 protection, META-INF/xposed/scope.list and module.prop with staticScope=true added, and XposedInit widened to match android, system, and system_server processName"
+    },
+    {
+      "id": "step-9",
+      "title": "Validate build configuration and APK packaging locally (verify AXML metadata, assets/xposed_init, META-INF scope files)",
+      "status": "in_progress",
+      "notes": "Verify build passes assembleRelease, inspect resulting APK with python AXML parser to confirm xposedscope string attribute and asset entries"
+    },
+    {
+      "id": "step-10",
+      "title": "Dispatch release.yml workflow for kl5-ir-sysapp-v2 and verify live release and APK asset via GitHub Releases API",
+      "status": "pending",
+      "notes": "Trigger release workflow on vjumbo264/forgebuild, monitor until completed, verify kl5-ir-sysapp-v2 tag and APK download HTTP 200, update build_complete true"
     }
   ],
   "history": [
@@ -116,6 +138,14 @@
     {
       "session": "session-init",
       "event": "step-7 done: live release kl5-ir-sysapp-v1 verified with APK (1,077,643 bytes); build_complete true"
+    },
+    {
+      "session": "session-update-2",
+      "event": "Seeded tasks step-8, step-9, step-10 for LSPosed scope declaration fix"
+    },
+    {
+      "session": "session-update-2",
+      "event": "step-8 done: corrected Xposed scope declarations and widened process matching"
     }
   ]
 }

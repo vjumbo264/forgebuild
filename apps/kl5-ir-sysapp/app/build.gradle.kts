@@ -13,8 +13,8 @@ android {
         minSdk = 26
         targetSdk = 37
 
-        versionCode = (project.findProperty("forgebuildVersionCode") as? String)?.toIntOrNull() ?: 1
-        versionName = (project.findProperty("forgebuildVersionName") as? String) ?: "1"
+        versionCode = (project.findProperty("forgebuildVersionCode") as? String)?.toIntOrNull() ?: 2
+        versionName = (project.findProperty("forgebuildVersionName") as? String) ?: "2"
 
         vectorDrawables { useSupportLibrary = true }
     }

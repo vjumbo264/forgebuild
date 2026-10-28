@@ -1,5 +1,14 @@
 [
   {
+    "version": "2.0",
+    "items": [
+      "Fix LSPosed scope declaration: switch xposedscope manifest meta-data to direct string value (android;system)",
+      "Add dual-scope string-array (android, system) and res/raw/keep.xml protection against R8 shrinking",
+      "Add META-INF/xposed/scope.list and module.prop (staticScope=true) for modern LSPosed/Vector manager recognition",
+      "Widen XposedInit package match to accept android, system, and system_server processName with thread-safe idempotency guard"
+    ]
+  },
+  {
     "version": "1.0",
     "items": [
       "Initial release of KL5 IR & SysApp LSPosed module for TECNO KL5 Android 17 GSI",
