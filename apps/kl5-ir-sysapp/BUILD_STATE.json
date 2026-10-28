@@ -4,13 +4,14 @@
   "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
   "status": "in_progress",
-  "last_completed_step": "step-3",
-  "next_step": "step-4",
+  "last_completed_step": "step-4",
+  "next_step": "step-5",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
     "App display name: KL5 IR & SysApp",
     "Adaptive icon: custom hardware IR diode + shield artwork generated into mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi layers via tools/make_adaptive_icon.py",
+    "Confirmed repo-level signing secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist in vjumbo264/forgebuild",
     "Hooking mechanism: LSPosed Xposed API 82/93 scoping system_server / android",
     "IR strategy: JNI bridge linking android.hardware.ir@1.0 HIDL with graceful fallback and logcat tag MOTIONSALT-Hook",
     "SysApp strategy: Scoped hooks on PackageInstallerSession and InstallPackageHelper targeting only system-flagged packages"
@@ -27,7 +28,7 @@
     "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
     "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
   ],
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -50,8 +51,8 @@
     {
       "id": "step-4",
       "title": "Confirm repo-level signing secrets exist",
-      "status": "pending",
-      "notes": "Verify GitHub Actions secrets KEYSTORE_BASE64 etc."
+      "status": "done",
+      "notes": "Verified KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist as repository secrets on vjumbo264/forgebuild via GitHub API"
     },
     {
       "id": "step-5",
@@ -84,6 +85,10 @@
     {
       "session": "session-init",
       "event": "step-3 done: generated adaptive icon layers with safe-zoned artwork"
+    },
+    {
+      "session": "session-init",
+      "event": "step-4 done: confirmed repo-level signing secrets exist"
     }
   ]
 }
