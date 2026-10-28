@@ -4,12 +4,13 @@
   "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
   "status": "in_progress",
-  "last_completed_step": "step-2",
-  "next_step": "step-3",
+  "last_completed_step": "step-3",
+  "next_step": "step-4",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
     "App display name: KL5 IR & SysApp",
+    "Adaptive icon: custom hardware IR diode + shield artwork generated into mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi layers via tools/make_adaptive_icon.py",
     "Hooking mechanism: LSPosed Xposed API 82/93 scoping system_server / android",
     "IR strategy: JNI bridge linking android.hardware.ir@1.0 HIDL with graceful fallback and logcat tag MOTIONSALT-Hook",
     "SysApp strategy: Scoped hooks on PackageInstallerSession and InstallPackageHelper targeting only system-flagged packages"
@@ -21,9 +22,12 @@
     "apps/kl5-ir-sysapp/app/build.gradle.kts",
     "apps/kl5-ir-sysapp/app/src/main/res/values/strings.xml",
     "apps/kl5-ir-sysapp/app/src/main/AndroidManifest.xml",
-    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/MainActivity.kt"
+    "apps/kl5-ir-sysapp/app/src/main/java/com/motionsalt/kl5irsysapp/MainActivity.kt",
+    "apps/kl5-ir-sysapp/tools/artwork/icon_fg.png",
+    "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "apps/kl5-ir-sysapp/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
   ],
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -40,8 +44,8 @@
     {
       "id": "step-3",
       "title": "Generate adaptive icon layers via tools/make_adaptive_icon.py",
-      "status": "pending",
-      "notes": "Create custom hardware IR emitter & system shield icon artwork and run generator"
+      "status": "done",
+      "notes": "Generated safe-zoned adaptive icon with custom IR emitter and shield artwork via tools/make_adaptive_icon.py across all densities"
     },
     {
       "id": "step-4",
@@ -76,6 +80,10 @@
     {
       "session": "session-init",
       "event": "step-2 done: configured package com.motionsalt.kl5irsysapp and app name KL5 IR & SysApp"
+    },
+    {
+      "session": "session-init",
+      "event": "step-3 done: generated adaptive icon layers with safe-zoned artwork"
     }
   ]
 }
