@@ -1,7 +1,5 @@
 package com.motionsalt.kl5irsysapp
 
-import android.os.IHwBinder
-import android.os.IHwInterface
 import java.lang.reflect.Method
 
 /**
