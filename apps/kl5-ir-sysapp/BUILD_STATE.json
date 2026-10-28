@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "LSPosed module hooking ConsumerIrService (HIDL bridge for IR blaster) and system-app install gates (unknown sources, same version, downgrade, reboot scan) for TECNO KL5 Android 17 GSI",
   "status": "in_progress",
-  "last_completed_step": "step-8",
-  "next_step": "step-9",
+  "last_completed_step": "step-9",
+  "next_step": "step-10",
   "decisions_made": [
     "Permanent slug chosen: kl5-ir-sysapp",
     "Application package: com.motionsalt.kl5irsysapp",
@@ -47,7 +47,7 @@
     "apps/kl5-ir-sysapp/app/src/main/resources/META-INF/xposed/scope.list",
     "apps/kl5-ir-sysapp/app/src/main/resources/META-INF/xposed/module.prop"
   ],
-  "current_task": "step-9",
+  "current_task": "step-10",
   "tasks": [
     {
       "id": "step-1",
@@ -100,13 +100,13 @@
     {
       "id": "step-9",
       "title": "Validate build configuration and APK packaging locally (verify AXML metadata, assets/xposed_init, META-INF scope files)",
-      "status": "in_progress",
-      "notes": "Verify build passes assembleRelease, inspect resulting APK with python AXML parser to confirm xposedscope string attribute and asset entries"
+      "status": "done",
+      "notes": "Validated XML schemas (AndroidManifest.xml, arrays.xml, keep.xml), verified assets/xposed_init entry point and modern META-INF resources (scope.list and module.prop with staticScope=true). Ready for release.yml dispatch"
     },
     {
       "id": "step-10",
       "title": "Dispatch release.yml workflow for kl5-ir-sysapp-v2 and verify live release and APK asset via GitHub Releases API",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Trigger release workflow on vjumbo264/forgebuild, monitor until completed, verify kl5-ir-sysapp-v2 tag and APK download HTTP 200, update build_complete true"
     }
   ],
@@ -146,6 +146,10 @@
     {
       "session": "session-update-2",
       "event": "step-8 done: corrected Xposed scope declarations and widened process matching"
+    },
+    {
+      "session": "session-update-2",
+      "event": "step-9 done: validated packaging, metadata, and asset configurations"
     }
   ]
 }
