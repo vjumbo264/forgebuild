@@ -372,7 +372,7 @@ fun OtgHeroCard(
             Button(
                 onClick = onToggle,
                 enabled = !isBusy,
-                modifier = Modifier.clip(MaterialTheme.shapes.large),
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isEnabled) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primary,
                     contentColor = if (isEnabled) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimary
@@ -398,7 +398,7 @@ fun HardwareStatusBar(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        modifier = Modifier.clip(MaterialTheme.shapes.large),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(
@@ -483,7 +483,7 @@ fun ConnectedDevicesCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        modifier = Modifier.clip(MaterialTheme.shapes.large),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(
@@ -565,7 +565,7 @@ fun DiscoveredNodesSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        modifier = Modifier.clip(MaterialTheme.shapes.large),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(modifier = Modifier.padding(SpacingTokens.Spacing.md)) {
@@ -693,7 +693,7 @@ fun LogsSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        modifier = Modifier.clip(MaterialTheme.shapes.large),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(modifier = Modifier.padding(SpacingTokens.Spacing.md)) {
@@ -769,7 +769,7 @@ fun AutomationSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        modifier = Modifier.clip(MaterialTheme.shapes.large),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Column(
