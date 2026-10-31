@@ -1,0 +1,77 @@
+{
+  "slug": "otg-enabler",
+  "project": "forgebuild-otg-enabler",
+  "build_complete": false,
+  "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
+  "status": "in_progress",
+  "last_completed_step": "step-1",
+  "next_step": "step-2",
+  "decisions_made": [
+    "Permanent slug chosen: otg-enabler",
+    "Application package: com.forgebuild.otgenabler",
+    "App display name: OTG Enabler",
+    "Targeting modern Android SDK (minSdk 26, targetSdk 37, compileSdk 37) to eliminate 'SDK version too low' install errors on modern devices",
+    "Multi-strategy root engine covering Transsion/Infinix/Tecno (/sys/devices/platform/tran_battery/OTG_CTL), MediaTek power_supply/usb/otg_switch, dual_role_usb DFP mode, modern usb_role host mode, Type-C port manager (TCPM/UCSI), Qualcomm/DWC3/Chipidea host registers, OEM system properties (persist.sys.oem.otg_support), and dynamic sysfs node auto-discovery"
+  ],
+  "blockers": [],
+  "files_touched": [
+    "PROMPT_HISTORY/otg-enabler.md",
+    "apps/otg-enabler/BUILD_STATE.json"
+  ],
+  "current_task": "step-2",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Choose the slug, copy engine content into apps/otg-enabler, seed PROMPT_HISTORY and BUILD_STATE.json, push-access proof",
+      "status": "done",
+      "notes": "Permanent slug otg-enabler chosen, engine copied to apps/otg-enabler, PROMPT_HISTORY/otg-enabler.md created, initial push proof"
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity in apps/otg-enabler (package com.forgebuild.otgenabler, app_name OTG Enabler, build.gradle.kts)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-3",
+      "title": "Generate adaptive icon via tools/make_adaptive_icon.py with custom USB OTG artwork",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement enhanced root USB OTG enabler engine & Material 3 Expressive UI",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-6",
+      "title": "Validate build configuration and dispatch release.yml workflow for otg-enabler-v1",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Verify release otg-enabler-v1 and APK asset on GitHub Releases API, mark build_complete: true",
+      "status": "pending",
+      "notes": ""
+    }
+  ],
+  "history": [
+    {
+      "session": "session-1",
+      "event": "Step 1 initiated: chose slug otg-enabler, copied engine, seeded PROMPT_HISTORY and BUILD_STATE.json"
+    },
+    {
+      "session": "session-1",
+      "event": "step-1 done: slug chosen, engine copied, PROMPT_HISTORY and BUILD_STATE.json seeded"
+    }
+  ],
+  "notes": "Step 1 in progress"
+}
