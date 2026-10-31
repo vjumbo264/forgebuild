@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "locate-project",
-  "next_step": "write-helper-with-readback",
+  "last_completed_step": "write-helper-with-readback",
+  "next_step": "fix-scanner-exclude-dummy-readonly",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -38,9 +38,10 @@
     "apps/otg-enabler/app/src/main/res/drawable/ic_tile_otg.xml",
     "apps/otg-enabler/app/src/main/res/values/strings.xml",
     "apps/otg-enabler/app/proguard-rules.pro",
-    "apps/otg-enabler/README.md"
+    "apps/otg-enabler/README.md",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgCoreLogic.kt"
   ],
-  "current_task": "write-helper-with-readback",
+  "current_task": "fix-scanner-exclude-dummy-readonly",
   "tasks": [
     {
       "id": "step-1",
@@ -135,9 +136,13 @@
     {
       "session": "session-2",
       "event": "v2 update initiated: located apps/otg-enabler, appended PROMPT_HISTORY/otg-enabler.md, seeded v2 steps in BUILD_STATE.json"
+    },
+    {
+      "session": "session-2",
+      "event": "write-helper-with-readback done: implemented OtgCoreLogic (SysfsReadbackParser, UsbSysfsParser, DmesgDiffHelper, OtgStateEvaluator) and RootCommander safeWriteSysfs/Prop/Setting with tee errno capture, 200ms readback delay, and structured logging"
     }
   ],
-  "notes": "Located apps/otg-enabler (v1 released). Key findings from codebase audit: (1) v1 scanner used `find /sys/class -type f` without `-L`, missing symlinked class subdirs (`/sys/class/usb_role/*`, `/sys/class/typec/*`, `/sys/class/power_supply/*`, `/sys/class/regulator/*`) and including read-only `dummy_udc`; (2) v1 used mksh builtin `echo` without `tee`/stderr capture or readback verification; (3) v1 UsbMonitor parsed `lsusb` lines without filtering Linux Foundation 1d6b root hubs. Proceeding to step `write-helper-with-readback`.",
+  "notes": "Completed write-helper-with-readback. RootCommander now provides safeWriteSysfs, safeWriteProp, and safeWriteSetting running via `su -c` with concurrent stdout/stderr capture, pre-write existence/permission/writability/cat checks, `tee` write so kernel errno (EOPNOTSUPP/EINVAL/EACCES) is always captured, 200ms delay, readback verification parsing `[host] device` selector syntax, and structured Root Logs entries. Next: fix-scanner-exclude-dummy-readonly.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -149,7 +154,7 @@
     },
     {
       "id": "write-helper-with-readback",
-      "done": false
+      "done": true
     },
     {
       "id": "fix-scanner-exclude-dummy-readonly",
@@ -188,5 +193,5 @@
       "done": false
     }
   ],
-  "last_commit": "bb9987e6cbcf499b3b904ca8c81e1344adf3fb07"
+  "last_commit": "38bfd1daf70077a1cf521242db301f4d9187b402"
 }
