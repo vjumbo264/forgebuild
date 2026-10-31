@@ -1,11 +1,11 @@
 {
   "slug": "otg-enabler",
   "project": "OTG Enabler",
-  "build_complete": false,
+  "build_complete": true,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
-  "status": "in_progress",
-  "last_completed_step": "remove-wrong-oem-props",
-  "next_step": "build-apk",
+  "status": "done",
+  "last_completed_step": "build-apk",
+  "next_step": "none",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -18,7 +18,8 @@
     "v2: Symlink-aware OtgScanner traverses /sys/class/{usb_role,typec,dual_role_usb,power_supply,regulator,extcon}, /sys/devices/platform, and /sys/kernel/debug, completely excludes dummy_udc, classifies read-only nodes as `info only` without echo buttons, and caches via Engine CacheFirstStore",
     "v2: Ordered apply feeds scanner results into role switch -> Type-C/TCPC -> MTK charger/regulator VBUS boost, captures before/after filtered dmesg diff, polls /sys/bus/usb/devices ignoring 1d6b root hubs, and reports honest VERIFIED / PARTIAL / FAILED states",
     "v2: Disable restores only recorded changed values (never touches unverified read-only extcon0/state); SELinux permissive and legacy OEM tweaks are opt-in toggles off by default",
-    "v2: Added Copy diagnostics export + SafeSave SAF file export + per-dialog ScreenSecurity + JUnit4 unit tests (junit:junit:4.13.2 testImplementation only, zero APK size impact, wired to run before assembleRelease)"
+    "v2: Added Copy diagnostics export + SafeSave SAF file export + per-dialog ScreenSecurity + JUnit4 unit tests (junit:junit:4.13.2 testImplementation only, zero APK size impact, wired to run before assembleRelease)",
+    "Built, signed, and verified otg-enabler-v2 via GitHub Actions run 41224346709 (app-otg-enabler-v2.apk, 1321451 bytes, sha256=e0d82e7b7e09298f3298374b311afe7b40a7399e51d181d3552a238fcb64affe). Previous release otg-enabler-v1 verified untouched."
   ],
   "blockers": [],
   "files_touched": [
@@ -51,7 +52,7 @@
     "apps/otg-enabler/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIcons.kt",
     "apps/otg-enabler/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIconsGenerated.kt"
   ],
-  "current_task": "build-apk",
+  "current_task": "none",
   "tasks": [
     {
       "id": "step-1",
@@ -110,7 +111,7 @@
     {
       "id": "v2-step-3",
       "title": "Dispatch release.yml workflow for otg-enabler-v2 and verify signed APK live on GitHub Releases API",
-      "status": "in_progress",
+      "status": "done",
       "notes": "Pending code completion and unit test validation."
     }
   ],
@@ -171,9 +172,14 @@
       "timestamp": "2026-10-31T17:23:17Z",
       "step": "build-apk-kdoc-fix",
       "summary": "Fixed Kotlin nested block-comment (`/*`) inside KDoc comments in OtgCoreLogic.kt and UsbMonitor.kt (`/sys/bus/usb/devices/<entry>`) before re-dispatching v2 release workflow."
+    },
+    {
+      "timestamp": "2026-10-31T17:27:53Z",
+      "step": "build-apk",
+      "summary": "Built, signed, and verified otg-enabler-v2 via GitHub Actions run 41224346709 (app-otg-enabler-v2.apk, 1321451 bytes, sha256=e0d82e7b7e09298f3298374b311afe7b40a7399e51d181d3552a238fcb64affe). Previous release otg-enabler-v1 verified untouched."
     }
   ],
-  "notes": "All code changes and unit tests for otg-enabler-v2 are complete and pushed. Added testImplementation('junit:junit:4.13.2') (test-only, zero bytes in APK) and wired assembleRelease -> testDebugUnitTest so CI verifies all unit tests before packaging the signed APK. Dispatching release.yml workflow next. | Fixed Kotlin nested block-comment (`/*`) inside KDoc comments in OtgCoreLogic.kt and UsbMonitor.kt (`/sys/bus/usb/devices/<entry>`) before re-dispatching v2 release workflow.",
+  "notes": "All code changes and unit tests for otg-enabler-v2 are complete and pushed. Added testImplementation('junit:junit:4.13.2') (test-only, zero bytes in APK) and wired assembleRelease -> testDebugUnitTest so CI verifies all unit tests before packaging the signed APK. Dispatching release.yml workflow next. | Fixed Kotlin nested block-comment (`/*`) inside KDoc comments in OtgCoreLogic.kt and UsbMonitor.kt (`/sys/bus/usb/devices/<entry>`) before re-dispatching v2 release workflow. | Built, signed, and verified otg-enabler-v2 via GitHub Actions run 41224346709 (app-otg-enabler-v2.apk, 1321451 bytes, sha256=e0d82e7b7e09298f3298374b311afe7b40a7399e51d181d3552a238fcb64affe). Previous release otg-enabler-v1 verified untouched.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -221,9 +227,11 @@
     },
     {
       "id": "build-apk",
-      "done": false
+      "done": true
     }
   ],
-  "last_commit": "de74c7d358dc2cd2b62d98418b9774fd0e39acf6",
-  "updated_at": "2026-10-31T17:23:17Z"
+  "last_commit": "c362b03454d99d2cff982077e8691a5943c9b770",
+  "updated_at": "2026-10-31T17:27:53Z",
+  "latest_release_tag": "otg-enabler-v2",
+  "latest_apk_url": "https://github.com/vjumbo264/forgebuild/releases/download/otg-enabler-v2/app-otg-enabler-v2.apk"
 }
