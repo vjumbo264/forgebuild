@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "step-1",
-  "next_step": "step-2",
+  "last_completed_step": "step-2",
+  "next_step": "step-3",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -16,9 +16,13 @@
   "blockers": [],
   "files_touched": [
     "PROMPT_HISTORY/otg-enabler.md",
-    "apps/otg-enabler/BUILD_STATE.json"
+    "apps/otg-enabler/BUILD_STATE.json",
+    "apps/otg-enabler/app/build.gradle.kts",
+    "apps/otg-enabler/app/src/main/res/values/strings.xml",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/MainActivity.kt",
+    "apps/otg-enabler/changelog.json"
   ],
-  "current_task": "step-2",
+  "current_task": "step-3",
   "tasks": [
     {
       "id": "step-1",
@@ -29,8 +33,8 @@
     {
       "id": "step-2",
       "title": "Set identity in apps/otg-enabler (package com.forgebuild.otgenabler, app_name OTG Enabler, build.gradle.kts)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Package set to com.forgebuild.otgenabler, app_name set to OTG Enabler, changelog.json seeded"
     },
     {
       "id": "step-3",
@@ -71,6 +75,10 @@
     {
       "session": "session-1",
       "event": "step-1 done: slug chosen, engine copied, PROMPT_HISTORY and BUILD_STATE.json seeded"
+    },
+    {
+      "session": "session-1",
+      "event": "step-2 done: package com.forgebuild.otgenabler and app name OTG Enabler configured"
     }
   ],
   "notes": "Step 1 in progress"

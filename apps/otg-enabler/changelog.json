@@ -1,0 +1,12 @@
+[
+  {
+    "version": "1.0",
+    "items": [
+      "Modernized USB OTG Enabler root tool targeting Android SDK 37 (resolves SDK version too low error)",
+      "Multi-strategy OTG host enabler supporting Transsion/Tecno/Infinix, MediaTek, Dual-Role USB (DFP), Modern USB Role Switch, TCPM Type-C, Qualcomm DWC3, and OEM system properties",
+      "Dynamic sysfs node scanning & live root shell diagnostic terminal",
+      "Live connected USB peripheral monitor using UsbManager & sysfs",
+      "Material 3 Expressive UI with live hardware status, quick actions, and SELinux permissive helper"
+    ]
+  }
+]
