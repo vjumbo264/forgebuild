@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "step-3",
-  "next_step": "step-4",
+  "last_completed_step": "step-4",
+  "next_step": "step-5",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -25,7 +25,7 @@
     "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
     "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
   ],
-  "current_task": "step-4",
+  "current_task": "step-5",
   "tasks": [
     {
       "id": "step-1",
@@ -48,8 +48,8 @@
     {
       "id": "step-4",
       "title": "Confirm repo-level signing secrets exist (KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Confirmed repo-level secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist on vjumbo264/forgebuild"
     },
     {
       "id": "step-5",
@@ -86,6 +86,10 @@
     {
       "session": "session-1",
       "event": "step-3 done: adaptive icon artwork created and compiled into res mipmap tiers"
+    },
+    {
+      "session": "session-1",
+      "event": "step-4 done: confirmed repo-level signing secrets exist on vjumbo264/forgebuild"
     }
   ],
   "notes": "Step 1 in progress"
