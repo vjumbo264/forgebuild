@@ -1,6 +1,17 @@
 [
   {
-    "version": "1.0",
+    "version": "3",
+    "items": [
+      "Verified root write helper with tee stderr errno capture, 200ms post-write readback, and bracketed [host] role parser",
+      "Symlink-aware sysfs & debugfs scanner excluding dummy_udc and marking read-only attributes as info only",
+      "Ordered verified apply pipeline feeding scan results into USB role switch, Type-C/TCPC, and MTK charger/regulator 5V VBUS boost",
+      "Honest Verified / Partial / Failed status reporting (never claims 5V VBUS unless hardware readback confirms sourcing)",
+      "Real /sys/bus/usb/devices peripheral detection ignoring Linux Foundation 1d6b root hubs and usbN bus hubs",
+      "Recorded pre-write value restoration on disable, opt-in SELinux permissive restore, and one-tap Copy diagnostics export"
+    ]
+  },
+  {
+    "version": "2",
     "items": [
       "Modernized USB OTG Enabler root tool targeting Android SDK 37 (resolves SDK version too low error)",
       "Multi-strategy OTG host enabler supporting Transsion/Tecno/Infinix, MediaTek, Dual-Role USB (DFP), Modern USB Role Switch, TCPM Type-C, Qualcomm DWC3, and OEM system properties",

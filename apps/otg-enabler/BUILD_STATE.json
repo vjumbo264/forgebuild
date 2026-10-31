@@ -13,7 +13,12 @@
     "Targeting modern Android SDK (minSdk 26, targetSdk 37, compileSdk 37) to eliminate 'SDK version too low' install errors on modern devices",
     "Multi-strategy root engine covering Transsion/Infinix/Tecno (/sys/devices/platform/tran_battery/OTG_CTL), MediaTek power_supply/usb/otg_switch, dual_role_usb DFP mode, modern usb_role host mode, Type-C port manager (TCPM/UCSI), Qualcomm/DWC3/Chipidea host registers, OEM system properties (persist.sys.oem.otg_support), and dynamic sysfs node auto-discovery",
     "Release otg-enabler-v1 successfully compiled and published via GitHub Actions run 41219902728",
-    "Release assets app-otg-enabler-v1.apk, release.json, and forgebuild-manifest.json verified live with valid download URLs and checksums"
+    "Release assets app-otg-enabler-v1.apk, release.json, and forgebuild-manifest.json verified live with valid download URLs and checksums",
+    "v2: Single safe write helper (RootCommander.safeWriteSysfs/Prop/Setting) uses `tee` so kernel write() errno (EOPNOTSUPP/EINVAL/EACCES) is always captured, waits 200ms, and verifies readback with bracketed `[host] device` active-token parsing",
+    "v2: Symlink-aware OtgScanner traverses /sys/class/{usb_role,typec,dual_role_usb,power_supply,regulator,extcon}, /sys/devices/platform, and /sys/kernel/debug, completely excludes dummy_udc, classifies read-only nodes as `info only` without echo buttons, and caches via Engine CacheFirstStore",
+    "v2: Ordered apply feeds scanner results into role switch -> Type-C/TCPC -> MTK charger/regulator VBUS boost, captures before/after filtered dmesg diff, polls /sys/bus/usb/devices ignoring 1d6b root hubs, and reports honest VERIFIED / PARTIAL / FAILED states",
+    "v2: Disable restores only recorded changed values (never touches unverified read-only extcon0/state); SELinux permissive and legacy OEM tweaks are opt-in toggles off by default",
+    "v2: Added Copy diagnostics export + SafeSave SAF file export + per-dialog ScreenSecurity + JUnit4 unit tests (junit:junit:4.13.2 testImplementation only, zero APK size impact, wired to run before assembleRelease)"
   ],
   "blockers": [],
   "files_touched": [
@@ -41,9 +46,12 @@
     "apps/otg-enabler/README.md",
     "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgCoreLogic.kt",
     "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgScanner.kt",
-    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/DiagnosticsExporter.kt"
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/DiagnosticsExporter.kt",
+    "apps/otg-enabler/app/src/test/java/com/forgebuild/otgenabler/OtgCoreLogicTest.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIcons.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/engine/ui/icons/EngineIconsGenerated.kt"
   ],
-  "current_task": "ui-states-and-unit-tests",
+  "current_task": "build-apk",
   "tasks": [
     {
       "id": "step-1",
@@ -96,13 +104,13 @@
     {
       "id": "v2-step-2",
       "title": "Implement verified sysfs/prop/settings write helper with readback, symlink-aware scanner, MTK/TCPC VBUS handling, dmesg diff, recorded restore, real USB sysfs detection, diagnostics export, and JUnit4 tests",
-      "status": "in_progress",
-      "notes": "Starting write-helper-with-readback and pure logic implementation."
+      "status": "done",
+      "notes": "All v2 core logic, UI updates, Engine standing helpers (CacheFirstStore, SafeSave, ScreenSecurity), EngineIcons, changelog.json, and JUnit4 tests implemented and pushed."
     },
     {
       "id": "v2-step-3",
       "title": "Dispatch release.yml workflow for otg-enabler-v2 and verify signed APK live on GitHub Releases API",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Pending code completion and unit test validation."
     }
   ],
@@ -154,9 +162,13 @@
     {
       "session": "session-2",
       "event": "Completed verified ordered apply (scanner->apply), MTK/TCPC/regulator VBUS handling & strict verification, dmesg before/after diff, recorded-value restore, OEM prop cleanup, and DiagnosticsExporter"
+    },
+    {
+      "session": "session-2",
+      "event": "UI states (Verified/Partial/Failed), info-only sysfs nodes, Copy/Save diagnostics, BroadcastReceiver+timer USB polling, and JUnit4 unit tests committed and pushed"
     }
   ],
-  "notes": "Completed feed-scan-into-apply, vbus-handling-and-verification, dmesg-capture-before-after, restore-using-recorded-values, remove-wrong-oem-props, and DiagnosticsExporter. Next: update OtgEnablerScreen UI for Verified/Partial/Failed states, info-only nodes (no echo buttons), Copy/Save diagnostics buttons, BroadcastReceiver + timer USB refresh, and JUnit4 tests.",
+  "notes": "All code changes and unit tests for otg-enabler-v2 are complete and pushed. Added testImplementation('junit:junit:4.13.2') (test-only, zero bytes in APK) and wired assembleRelease -> testDebugUnitTest so CI verifies all unit tests before packaging the signed APK. Dispatching release.yml workflow next.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -207,5 +219,5 @@
       "done": false
     }
   ],
-  "last_commit": "2f42a4e2075e9f54879a6babd3e7f3d18789e3e5"
+  "last_commit": "a67995bd8550f2c21c8a366bf27e3328590fdd19"
 }

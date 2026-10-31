@@ -50,10 +50,53 @@ internal object EngineIconsGenerated {
             .addPath(PathParser().parsePathString("M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
+
     val DesktopWindows: ImageVector by lazy {
         ImageVector.Builder(name = "DesktopWindows", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f)
             .addPath(PathParser().parsePathString("M21,2H3c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h7v2H8v2h8v-2h-2v-2h7c1.1,0 2,-0.9 2,-2V4c0,-1.1 -0.9,-2 -2,-2zM21,14H3V4h18v10z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Refresh: ImageVector by lazy {
+        ImageVector.Builder(name = "Refresh", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val ContentCopy: ImageVector by lazy {
+        ImageVector.Builder(name = "ContentCopy", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Save: ImageVector by lazy {
+        ImageVector.Builder(name = "Save", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Check: ImageVector by lazy {
+        ImageVector.Builder(name = "Check", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Warning: ImageVector by lazy {
+        ImageVector.Builder(name = "Warning", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z").toNodes(), fill = SolidColor(Color.Black))
+            .build()
+    }
+
+    val Info: ImageVector by lazy {
+        ImageVector.Builder(name = "Info", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f)
+            .addPath(PathParser().parsePathString("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z").toNodes(), fill = SolidColor(Color.Black))
             .build()
     }
 }
