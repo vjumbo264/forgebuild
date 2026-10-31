@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "step-2",
-  "next_step": "step-3",
+  "last_completed_step": "step-3",
+  "next_step": "step-4",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -20,9 +20,12 @@
     "apps/otg-enabler/app/build.gradle.kts",
     "apps/otg-enabler/app/src/main/res/values/strings.xml",
     "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/MainActivity.kt",
-    "apps/otg-enabler/changelog.json"
+    "apps/otg-enabler/changelog.json",
+    "apps/otg-enabler/tools/artwork/icon_fg.png",
+    "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
   ],
-  "current_task": "step-3",
+  "current_task": "step-4",
   "tasks": [
     {
       "id": "step-1",
@@ -39,8 +42,8 @@
     {
       "id": "step-3",
       "title": "Generate adaptive icon via tools/make_adaptive_icon.py with custom USB OTG artwork",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Adaptive icon artwork created and generated into mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi layers via tools/make_adaptive_icon.py"
     },
     {
       "id": "step-4",
@@ -79,6 +82,10 @@
     {
       "session": "session-1",
       "event": "step-2 done: package com.forgebuild.otgenabler and app name OTG Enabler configured"
+    },
+    {
+      "session": "session-1",
+      "event": "step-3 done: adaptive icon artwork created and compiled into res mipmap tiers"
     }
   ],
   "notes": "Step 1 in progress"
