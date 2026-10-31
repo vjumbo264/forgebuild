@@ -4,7 +4,7 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "fix-scanner-exclude-dummy-readonly",
+  "last_completed_step": "real-device-detection-ignore-root-hubs",
   "next_step": "feed-scan-into-apply",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
@@ -145,9 +145,13 @@
     {
       "session": "session-2",
       "event": "fix-scanner-exclude-dummy-readonly done: added symlink-aware OtgScanner with CacheFirstStore, regulator name discovery, dummy_udc exclusion, and 7-category writable vs info-only classification"
+    },
+    {
+      "session": "session-2",
+      "event": "real-device-detection-ignore-root-hubs done: UsbMonitor now reads /sys/bus/usb/devices/* directly and filters 1d6b Linux Foundation root hubs and usbN bus hubs"
     }
   ],
-  "notes": "Completed fix-scanner-exclude-dummy-readonly. OtgScanner traverses symlinked /sys/class/{usb_role,typec,dual_role_usb,power_supply,regulator,extcon}, /sys/devices/platform (usb/otg/typec/tcpc/pd/vbus/charger/mtu3/musb), and /sys/kernel/debug, completely excludes dummy_udc, classifies read-only attributes as `info only` (isWritable=false), and persists scan results via Engine CacheFirstStore. Next: feed-scan-into-apply, vbus-handling-and-verification, dmesg-capture-before-after, restore-using-recorded-values, remove-wrong-oem-props.",
+  "notes": "Completed real-device-detection-ignore-root-hubs. UsbMonitor no longer runs `lsusb`; it inspects `/sys/bus/usb/devices/*` (idVendor, idProduct, bDeviceClass, manufacturer, product, interface classes) and ignores VID 0x1D6B root hubs, usbN root entries, and `:` interface descriptors, returning 0 attached devices when nothing is plugged in. Next: verified apply + VBUS + dmesg + restore + OEM cleanup.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -183,7 +187,7 @@
     },
     {
       "id": "real-device-detection-ignore-root-hubs",
-      "done": false
+      "done": true
     },
     {
       "id": "diagnostics-export",
@@ -198,5 +202,5 @@
       "done": false
     }
   ],
-  "last_commit": "8c13c775a1815902a63063a6fcf2c0946525d968"
+  "last_commit": "4914bb8c1596f420c7ce91cdd881fdf6e3a14f3c"
 }
