@@ -166,9 +166,14 @@
     {
       "session": "session-2",
       "event": "UI states (Verified/Partial/Failed), info-only sysfs nodes, Copy/Save diagnostics, BroadcastReceiver+timer USB polling, and JUnit4 unit tests committed and pushed"
+    },
+    {
+      "timestamp": "2026-10-31T17:23:17Z",
+      "step": "build-apk-kdoc-fix",
+      "summary": "Fixed Kotlin nested block-comment (`/*`) inside KDoc comments in OtgCoreLogic.kt and UsbMonitor.kt (`/sys/bus/usb/devices/<entry>`) before re-dispatching v2 release workflow."
     }
   ],
-  "notes": "All code changes and unit tests for otg-enabler-v2 are complete and pushed. Added testImplementation('junit:junit:4.13.2') (test-only, zero bytes in APK) and wired assembleRelease -> testDebugUnitTest so CI verifies all unit tests before packaging the signed APK. Dispatching release.yml workflow next.",
+  "notes": "All code changes and unit tests for otg-enabler-v2 are complete and pushed. Added testImplementation('junit:junit:4.13.2') (test-only, zero bytes in APK) and wired assembleRelease -> testDebugUnitTest so CI verifies all unit tests before packaging the signed APK. Dispatching release.yml workflow next. | Fixed Kotlin nested block-comment (`/*`) inside KDoc comments in OtgCoreLogic.kt and UsbMonitor.kt (`/sys/bus/usb/devices/<entry>`) before re-dispatching v2 release workflow.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -219,5 +224,6 @@
       "done": false
     }
   ],
-  "last_commit": "a67995bd8550f2c21c8a366bf27e3328590fdd19"
+  "last_commit": "de74c7d358dc2cd2b62d98418b9774fd0e39acf6",
+  "updated_at": "2026-10-31T17:23:17Z"
 }

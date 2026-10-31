@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Enumerates attached USB accessories from `/sys/bus/usb/devices/*` and `UsbManager`,
+ * Enumerates attached USB accessories from `/sys/bus/usb/devices/<entry>` and `UsbManager`,
  * strictly ignoring Linux Foundation root hubs (`1d6b`), `usbN` root hub bus entries,
  * and `:` interface subdirectories (Section 6.5).
  */

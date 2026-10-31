@@ -424,7 +424,7 @@ object UsbSysfsParser {
     }
 
     /**
-     * Parses tab-delimited output from /sys/bus/usb/devices/* inspection:
+     * Parses tab-delimited output from /sys/bus/usb/devices/<entry> inspection:
      * ENTRY\t<name>\t<idVendor>\t<idProduct>\t<bDeviceClass>\t<manufacturer>\t<product>\t<speed>\t<ifClasses>
      */
     fun parseSysfsDevicesDump(dump: String): List<ConnectedUsbDevice> {
