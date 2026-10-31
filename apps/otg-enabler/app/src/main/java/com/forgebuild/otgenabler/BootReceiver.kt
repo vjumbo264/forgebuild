@@ -15,12 +15,16 @@ class BootReceiver : BroadcastReceiver() {
             val prefs = context.getSharedPreferences("otg_enabler_prefs", Context.MODE_PRIVATE)
             val autoEnable = prefs.getBoolean("auto_enable_on_boot", false)
             val wasEnabled = prefs.getBoolean("is_otg_enabled", false)
-
             if (autoEnable && wasEnabled) {
+                val pending = goAsync()
                 val controller = OtgController(context.applicationContext)
                 CoroutineScope(Dispatchers.IO).launch {
-                    RootCommander.log(LogType.INFO, "Reapplying USB OTG Host mode after boot completion...")
-                    controller.enableOtg()
+                    try {
+                        RootCommander.log(LogType.INFO, "BootReceiver: re-running verified OTG apply...")
+                        controller.enableOtg()
+                    } finally {
+                        pending.finish()
+                    }
                 }
             }
         }

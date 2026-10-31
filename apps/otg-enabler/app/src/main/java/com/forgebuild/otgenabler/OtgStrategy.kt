@@ -9,62 +9,50 @@ enum class OtgStrategy(
     UNIVERSAL_AUTO(
         id = "auto",
         title = "Universal Smart Auto-Detect",
-        description = "Probes all known sysfs nodes across all vendors and executes optimal host triggers",
-        chipVendor = "All Chipsets"
+        description = "Ordered verified probe: USB role switch -> Type-C / TCPC -> Charger & Regulator 5V VBUS boost",
+        chipVendor = "All SoCs & GSIs"
+    ),
+    MTK_TCPC_VBUS(
+        id = "mtk_tcpc",
+        title = "MediaTek + TCPC / Charger VBUS",
+        description = "mt_usb / musb / mtu3 host role + rt-pd-manager / TCPC + MTK charger & usb-otg-vbus regulator",
+        chipVendor = "MediaTek (mt6768 / Helio / Dimensity)"
+    ),
+    USB_ROLE_TYPEC(
+        id = "usb_role_typec",
+        title = "USB Role Switch + Type-C PD",
+        description = "/sys/class/usb_role/*/role + /sys/class/typec/port* data_role & power_role + VBUS check",
+        chipVendor = "Generic GKI / Type-C"
     ),
     TRANSSION_BATTERY(
         id = "transsion",
         title = "Transsion / Tecno / Infinix",
-        description = "Original upstream method: /sys/devices/platform/tran_battery/OTG_CTL (MTK/Transsion)",
-        chipVendor = "MediaTek / Transsion"
-    ),
-    MTK_POWER_SUPPLY(
-        id = "mtk",
-        title = "MediaTek OTG Switch",
-        description = "/sys/class/power_supply/usb/otg_switch and /sys/devices/platform/mt_usb/otg_mode",
-        chipVendor = "MediaTek"
+        description = "tran_battery OTG_CTL / otg_ctl boost switch + MediaTek USB host role switch",
+        chipVendor = "Infinix / Tecno / Itel"
     ),
     DUAL_ROLE_DFP(
         id = "dual_role",
-        title = "Linux Dual-Role Framework",
-        description = "/sys/class/dual_role_usb/*/mode (forces DFP host and source power roles)",
-        chipVendor = "Standard Linux Dual-Role"
-    ),
-    USB_ROLE_HOST(
-        id = "usb_role",
-        title = "Modern USB Role Switch",
-        description = "/sys/class/usb_role/*/role (mainline kernel 5.x/6.x USB role controller)",
-        chipVendor = "Kernel 5.4+ / AOSP"
-    ),
-    TYPEC_TCPM(
-        id = "typec",
-        title = "Type-C Port Manager (TCPM)",
-        description = "/sys/class/typec/port0/data_role and power_role (USB-PD / Type-C)",
-        chipVendor = "Type-C USB-PD"
+        title = "Linux Dual-Role USB (DFP)",
+        description = "/sys/class/dual_role_usb/* dfp + host + source role switches & VBUS verification",
+        chipVendor = "Dual-Role Subsystems"
     ),
     QUALCOMM_DWC3(
         id = "qualcomm",
         title = "Qualcomm / DWC3 Controller",
-        description = "/sys/devices/platform/soc/*.dwc3/otg_mode and ci_hdrc host role registers",
+        description = "DWC3 / msm_otg / debugfs host mode registers + Type-C & VBUS regulator controls",
         chipVendor = "Qualcomm Snapdragon"
     ),
     EXTCON_CABLE(
         id = "extcon",
-        title = "Extcon Cable ID Emulator",
-        description = "/sys/class/extcon/*/state (simulates grounded OTG ID pin in hardware)",
-        chipVendor = "Qualcomm / MTK / Samsung"
-    ),
-    OEM_PROPERTIES(
-        id = "oem_props",
-        title = "OEM System Properties",
-        description = "OnePlus/Oppo/Realme persist.sys.oem.otg_support & global otg_state",
-        chipVendor = "BBK / OnePlus / Oppo"
+        title = "Extcon Cable ID Override",
+        description = "Writes USB-HOST=1 only to verified writable /sys/class/extcon/*/state nodes",
+        chipVendor = "Writable Extcon Drivers"
     ),
     AGGRESSIVE_ALL(
         id = "aggressive",
-        title = "Aggressive All-In-One Force",
-        description = "Applies every single known sysfs node, role switch, and property trigger",
-        chipVendor = "Maximum Compatibility"
+        title = "Aggressive All-In-One Hardware Sweep",
+        description = "Tries every writable scanned OTG/role/TCPC/charger/regulator node and hardware fallback",
+        chipVendor = "Maximum Hardware Coverage"
     );
 
     companion object {

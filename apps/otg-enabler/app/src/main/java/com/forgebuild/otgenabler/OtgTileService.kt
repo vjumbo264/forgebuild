@@ -34,10 +34,29 @@ class OtgTileService : TileService() {
 
     private fun updateTileState() {
         val tile = qsTile ?: return
-        val enabled = controller.isOtgEnabled.value
-        tile.state = if (enabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = "USB OTG"
-        tile.subtitle = if (enabled) "Enabled (Host)" else "Disabled"
+        val state = controller.verificationState.value
+        when (state) {
+            OtgVerificationState.VERIFIED -> {
+                tile.state = Tile.STATE_ACTIVE
+                tile.label = "USB OTG"
+                tile.subtitle = "Verified (Host + VBUS)"
+            }
+            OtgVerificationState.PARTIAL -> {
+                tile.state = Tile.STATE_ACTIVE
+                tile.label = "USB OTG"
+                tile.subtitle = "Partial (No VBUS)"
+            }
+            OtgVerificationState.FAILED -> {
+                tile.state = Tile.STATE_INACTIVE
+                tile.label = "USB OTG"
+                tile.subtitle = "Failed"
+            }
+            OtgVerificationState.DISABLED -> {
+                tile.state = Tile.STATE_INACTIVE
+                tile.label = "USB OTG"
+                tile.subtitle = "Disabled"
+            }
+        }
         tile.updateTile()
     }
 }

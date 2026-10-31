@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "real-device-detection-ignore-root-hubs",
-  "next_step": "feed-scan-into-apply",
+  "last_completed_step": "remove-wrong-oem-props",
+  "next_step": "build-apk",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -40,9 +40,10 @@
     "apps/otg-enabler/app/proguard-rules.pro",
     "apps/otg-enabler/README.md",
     "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgCoreLogic.kt",
-    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgScanner.kt"
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgScanner.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/DiagnosticsExporter.kt"
   ],
-  "current_task": "feed-scan-into-apply",
+  "current_task": "ui-states-and-unit-tests",
   "tasks": [
     {
       "id": "step-1",
@@ -149,9 +150,13 @@
     {
       "session": "session-2",
       "event": "real-device-detection-ignore-root-hubs done: UsbMonitor now reads /sys/bus/usb/devices/* directly and filters 1d6b Linux Foundation root hubs and usbN bus hubs"
+    },
+    {
+      "session": "session-2",
+      "event": "Completed verified ordered apply (scanner->apply), MTK/TCPC/regulator VBUS handling & strict verification, dmesg before/after diff, recorded-value restore, OEM prop cleanup, and DiagnosticsExporter"
     }
   ],
-  "notes": "Completed real-device-detection-ignore-root-hubs. UsbMonitor no longer runs `lsusb`; it inspects `/sys/bus/usb/devices/*` (idVendor, idProduct, bDeviceClass, manufacturer, product, interface classes) and ignores VID 0x1D6B root hubs, usbN root entries, and `:` interface descriptors, returning 0 attached devices when nothing is plugged in. Next: verified apply + VBUS + dmesg + restore + OEM cleanup.",
+  "notes": "Completed feed-scan-into-apply, vbus-handling-and-verification, dmesg-capture-before-after, restore-using-recorded-values, remove-wrong-oem-props, and DiagnosticsExporter. Next: update OtgEnablerScreen UI for Verified/Partial/Failed states, info-only nodes (no echo buttons), Copy/Save diagnostics buttons, BroadcastReceiver + timer USB refresh, and JUnit4 tests.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -171,19 +176,19 @@
     },
     {
       "id": "feed-scan-into-apply",
-      "done": false
+      "done": true
     },
     {
       "id": "vbus-handling-and-verification",
-      "done": false
+      "done": true
     },
     {
       "id": "dmesg-capture-before-after",
-      "done": false
+      "done": true
     },
     {
       "id": "restore-using-recorded-values",
-      "done": false
+      "done": true
     },
     {
       "id": "real-device-detection-ignore-root-hubs",
@@ -191,16 +196,16 @@
     },
     {
       "id": "diagnostics-export",
-      "done": false
+      "done": true
     },
     {
       "id": "remove-wrong-oem-props",
-      "done": false
+      "done": true
     },
     {
       "id": "build-apk",
       "done": false
     }
   ],
-  "last_commit": "4914bb8c1596f420c7ce91cdd881fdf6e3a14f3c"
+  "last_commit": "2f42a4e2075e9f54879a6babd3e7f3d18789e3e5"
 }
