@@ -31,9 +31,12 @@ data class SafeWriteResult(
 
     fun toStructuredLog(): String {
         val status = if (ok) "OK" else "FAIL"
-        val errPart = if (stderr.isNotBlank()) " | err="${stderr.replace("\n", " ").trim()}"" else ""
-        return "[$status] $path (${kind.label}) req="$requested" before="${before.replace("\n", " ").trim()}" " +
-            "after="${after.replace("\n", " ").trim()}" perms=$permissions writable=$writable exit=$exitCode$errPart"
+        val cleanBefore = before.replace('\n', ' ').replace('\r', ' ').trim()
+        val cleanAfter = after.replace('\n', ' ').replace('\r', ' ').trim()
+        val cleanErr = stderr.replace('\n', ' ').replace('\r', ' ').trim()
+        val errPart = if (cleanErr.isNotBlank()) " | err=\"$cleanErr\"" else ""
+        return "[$status] $path (${kind.label}) req=\"$requested\" before=\"$cleanBefore\" " +
+            "after=\"$cleanAfter\" perms=$permissions writable=$writable exit=$exitCode$errPart"
     }
 }
 
@@ -44,7 +47,12 @@ enum class NodeCategory(val label: String) {
     VBUS_OTG_REGULATOR("vbus / otg regulator"),
     CHARGER_OTG("charger otg"),
     EXTCON("extcon"),
-    INFO_ONLY("info only")
+    INFO_ONLY("info only");
+
+    companion object {
+        fun fromNameOrDefault(name: String): NodeCategory =
+            entries.firstOrNull { it.name == name || it.label.equals(name, ignoreCase = true) } ?: INFO_ONLY
+    }
 }
 
 data class DiscoveredNode(
@@ -53,13 +61,17 @@ data class DiscoveredNode(
     val permissions: String,
     val isWritable: Boolean,
     val category: NodeCategory,
-    val detailHint: String = ""
+    val detailHint: String = "",
+    val realPath: String = path
 ) {
     val candidateType: String
         get() = if (detailHint.isNotBlank()) "${category.label} ($detailHint)" else category.label
 
     val activeValue: String
         get() = SysfsReadbackParser.extractActiveValue(currentValue)
+
+    val isControllable: Boolean
+        get() = isWritable && category != NodeCategory.INFO_ONLY
 }
 
 enum class OtgVerificationState {
@@ -116,7 +128,12 @@ object SysfsReadbackParser {
      */
     fun extractActiveValue(raw: String): String {
         val trimmed = raw.trim()
-        if (trimmed.isEmpty() || trimmed == "(unreadable)" || trimmed == "(missing)" || trimmed == "(write-only)") {
+        if (trimmed.isEmpty() ||
+            trimmed == "(unreadable)" ||
+            trimmed == "(missing)" ||
+            trimmed == "(write-only)" ||
+            trimmed == "(empty)"
+        ) {
             return ""
         }
         val bracketMatch = bracketRegex.find(trimmed)
@@ -148,9 +165,14 @@ object SysfsReadbackParser {
         val req = requested.trim()
         val after = rawAfter.trim()
         if (req.isEmpty() || after.isEmpty()) return false
-        if (after == "(unreadable)" || after == "(missing)" || after == "(write-only)") return false
-        if (after.startsWith("cat:") || after.contains("Permission denied", ignoreCase = true) ||
-            after.contains("No such file", ignoreCase = true) || after.contains("Invalid argument", ignoreCase = true)
+        if (after == "(unreadable)" || after == "(missing)" || after == "(write-only)" || after == "(empty)") {
+            return false
+        }
+        if (after.startsWith("(unreadable:") ||
+            after.startsWith("cat:") ||
+            after.contains("Permission denied", ignoreCase = true) ||
+            after.contains("No such file", ignoreCase = true) ||
+            after.contains("Invalid argument", ignoreCase = true)
         ) {
             return false
         }
@@ -209,7 +231,7 @@ object SysfsReadbackParser {
     }
 
     /**
-     * Checks whether a sysfs ls -l permission string has any write bit (e.g. -rw-r--r--, --w-------)
+     * Checks whether a sysfs ls -lL permission string has any write bit (e.g. -rw-r--r--, --w-------)
      * and passes root write check. Read-only attributes (-r--r--r--) have no kernel .store handler
      * and cannot be written even by uid=0.
      */
@@ -231,13 +253,15 @@ object SysfsReadbackParser {
 
         val excludedSuffixes = listOf(
             "/uevent", "/modalias", "/subsystem", "/driver", "/of_node",
-            "/waiting_for_supplier", "/Avoid_reset_quirk".lowercase(),
+            "/waiting_for_supplier", "/avoid_reset_quirk",
             "/descriptors", "/bos", "/idvendor", "/idproduct", "/bcddevice",
             "/bdeviceclass", "/bdevicesubclass", "/bdeviceprotocol",
             "/bmaxpacketsize0", "/bnumconfigurations", "/bnuminterfaces",
             "/bmattributes", "/bmaxpower", "/urbnum", "/ltm_capable",
             "/removable", "/authorized", "/quirks", "/tx_lanes", "/rx_lanes",
-            "/devnum", "/busnum", "/devpath", "/version", "/maxchild"
+            "/devnum", "/busnum", "/devpath", "/version", "/maxchild",
+            "/type", "/usb_power_delivery_revision", "/usb_typec_revision",
+            "/waiting_for_supplier"
         )
         if (excludedSuffixes.any { p.endsWith(it) }) return true
 
@@ -251,7 +275,7 @@ object SysfsReadbackParser {
     }
 
     /**
-     * Categorizes a sysfs node into one of the 7 required categories.
+     * Categorizes a sysfs node into one of the 7 required categories (Section 6.2).
      * Any node that is not writable as root is strictly marked INFO_ONLY (read-only).
      */
     fun categorizeNode(
@@ -302,10 +326,79 @@ object SysfsReadbackParser {
 
         return baseCategory to regulatorName
     }
+
+    /**
+     * Parses tab-delimited scanner output lines:
+     * NODE\t<path>\t<realPath>\t<perms>\t<tw>\t<regName>\t<value>
+     * Deduplicates symlinked /sys/class vs /sys/devices paths (preferring /sys/class),
+     * excludes dummy_udc, and sorts writable controllable nodes before info-only nodes.
+     */
+    fun parseScannerDump(dump: String): List<DiscoveredNode> {
+        if (dump.isBlank()) return emptyList()
+        val byCanonical = linkedMapOf<String, DiscoveredNode>()
+
+        for (rawLine in dump.lines()) {
+            val line = rawLine.trimEnd()
+            if (!line.startsWith("NODE\t")) continue
+            val parts = line.split('\t')
+            if (parts.size < 6) continue
+
+            val path = parts[1].trim()
+            val realPath = parts[2].trim().ifBlank { path }
+            val perms = parts[3].trim().ifBlank { "-r--r--r--" }
+            val tw = parts[4].trim() == "1"
+            val regName = parts[5].trim()
+            val value = parts.getOrNull(6)?.trim().orEmpty().ifBlank { "(empty)" }
+
+            if (shouldExcludePath(path) || shouldExcludePath(realPath)) continue
+
+            val writable = isSysfsModeWritable(perms, rootTestWritable = tw)
+            val (category, hint) = categorizeNode(path, writable, regName)
+
+            val candidate = DiscoveredNode(
+                path = path,
+                currentValue = value.take(80),
+                permissions = perms,
+                isWritable = writable,
+                category = category,
+                detailHint = hint,
+                realPath = realPath
+            )
+
+            val existing = byCanonical[realPath]
+            if (existing == null) {
+                byCanonical[realPath] = candidate
+            } else {
+                // Prefer /sys/class/... canonical alias over deep /sys/devices/... path
+                val preferNew = !existing.path.startsWith("/sys/class/") && path.startsWith("/sys/class/")
+                if (preferNew) {
+                    byCanonical[realPath] = candidate
+                }
+            }
+        }
+
+        val categoryOrder = mapOf(
+            NodeCategory.ROLE_SWITCH to 0,
+            NodeCategory.TYPEC_DATA_ROLE to 1,
+            NodeCategory.TYPEC_POWER_ROLE to 2,
+            NodeCategory.CHARGER_OTG to 3,
+            NodeCategory.VBUS_OTG_REGULATOR to 4,
+            NodeCategory.EXTCON to 5,
+            NodeCategory.INFO_ONLY to 6
+        )
+
+        return byCanonical.values.sortedWith(
+            compareBy<DiscoveredNode>(
+                { if (it.isControllable) 0 else 1 },
+                { categoryOrder[it.category] ?: 99 },
+                { it.path }
+            )
+        )
+    }
 }
 
 object UsbSysfsParser {
-    private val usbRootNameRegex = Regex("^usb\d+$", RegexOption.IGNORE_CASE)
+    private val usbRootNameRegex = Regex("""^usb\d+$""", RegexOption.IGNORE_CASE)
 
     /**
      * Returns true if the /sys/bus/usb/devices entry is a Linux Foundation root hub (1d6b),
@@ -319,13 +412,9 @@ object UsbSysfsParser {
     ): Boolean {
         val cleanName = entryName.trim()
         if (cleanName.isEmpty()) return true
-        // Interface sub-entries like "1-0:1.0" or "1-1:1.0" are interfaces, not standalone devices
         if (cleanName.contains(":")) return true
-        // Linux Foundation VID 0x1D6B (root hubs 0x0001 / 0x0002 / 0x0003)
         if (vendorId == 0x1D6B) return true
-        // Root bus entries usb1, usb2, etc.
         if (usbRootNameRegex.matches(cleanName)) return true
-        // Hub class 09 on root bus entry names
         val cls = deviceClassHex.trim().lowercase().removePrefix("0x")
         if (cls == "09" && (cleanName.startsWith("usb", ignoreCase = true) || cleanName.endsWith("-0"))) {
             return true
@@ -336,15 +425,15 @@ object UsbSysfsParser {
 
     /**
      * Parses tab-delimited output from /sys/bus/usb/devices/* inspection:
-     * ENTRY	<name>	<idVendor>	<idProduct>	<bDeviceClass>	<manufacturer>	<product>	<speed>	<ifClasses>
+     * ENTRY\t<name>\t<idVendor>\t<idProduct>\t<bDeviceClass>\t<manufacturer>\t<product>\t<speed>\t<ifClasses>
      */
     fun parseSysfsDevicesDump(dump: String): List<ConnectedUsbDevice> {
         if (dump.isBlank()) return emptyList()
         val results = mutableListOf<ConnectedUsbDevice>()
         for (rawLine in dump.lines()) {
             val line = rawLine.trim()
-            if (!line.startsWith("ENTRY	")) continue
-            val parts = line.split('	')
+            if (!line.startsWith("ENTRY\t")) continue
+            val parts = line.split('\t')
             if (parts.size < 5) continue
 
             val entryName = parts[1].trim()
@@ -412,9 +501,6 @@ object UsbSysfsParser {
 }
 
 object DmesgDiffHelper {
-    /**
-     * Computes lines present in [after] that were added after the end of [before].
-     */
     fun computeNewLines(before: String, after: String, maxLines: Int = 80): List<String> {
         val beforeLines = before.lines().map { it.trimEnd() }.filter { it.isNotBlank() }
         val afterLines = after.lines().map { it.trimEnd() }.filter { it.isNotBlank() }

@@ -92,8 +92,8 @@ object RootCommander {
         _lastWriteResults.value = (_lastWriteResults.value + result).takeLast(200)
     }
 
-    private fun shellSingleQuote(raw: String): String {
-        return "'" + raw.replace("'", "'"'"'") + "'"
+    fun shellSingleQuote(raw: String): String {
+        return "'" + raw.replace("'", "'\"'\"'") + "'"
     }
 
     suspend fun checkRoot(forceRefresh: Boolean = false): RootStatus = withContext(Dispatchers.IO) {
@@ -178,11 +178,6 @@ object RootCommander {
 
     /**
      * THE SINGLE SAFE WRITE HELPER for sysfs nodes (Section 6.1).
-     * - Runs as root via su -c, capturing stdout, stderr, and exit code.
-     * - Records existence, permissions, writability as root, and current value before writing.
-     * - Uses `tee` so kernel write() errno (EINVAL, EOPNOTSUPP, EACCES, EBUSY) is always emitted to stderr.
-     * - Waits 200ms, reads back, and parses active value (including `[host] device` selector format).
-     * - Logs full structured result to Root Logs with real error text (never blank).
      */
     suspend fun safeWriteSysfs(
         path: String,
@@ -212,26 +207,19 @@ object RootCommander {
         }
 
         val qPath = shellSingleQuote(cleanPath)
-        val preCmd = """
-            P=$qPath
-            if [ ! -e "${'$'}P" ]; then
-              printf 'EXISTS=0
-'
-            else
-              PERMS=${'$'}(ls -ldL "${'$'}P" 2>/dev/null | awk '{print ${'$'}1}')
-              if [ -z "${'$'}PERMS" ]; then PERMS=${'$'}(ls -ld "${'$'}P" 2>/dev/null | awk '{print ${'$'}1}'); fi
-              if [ -w "${'$'}P" ]; then TW=1; else TW=0; fi
-              printf 'EXISTS=1
-PERMS=%s
-TW=%s
-BEFORE_BEGIN
-' "${'$'}PERMS" "${'$'}TW"
-              cat "${'$'}P" 2>&1 || printf '(unreadable)'
-              printf '
-BEFORE_END
-'
-            fi
-        """.trimIndent()
+        val preCmd = buildString {
+            append("P=").append(qPath).append('\n')
+            append("if [ ! -e \"\$P\" ]; then\n")
+            append("  printf 'EXISTS=0\\n'\n")
+            append("else\n")
+            append("  PERMS=\$(ls -ldL \"\$P\" 2>/dev/null | awk '{print \$1}')\n")
+            append("  if [ -z \"\$PERMS\" ]; then PERMS=\$(ls -ld \"\$P\" 2>/dev/null | awk '{print \$1}'); fi\n")
+            append("  if [ -w \"\$P\" ]; then TW=1; else TW=0; fi\n")
+            append("  printf 'EXISTS=1\\nPERMS=%s\\nTW=%s\\nBEFORE_BEGIN\\n' \"\$PERMS\" \"\$TW\"\n")
+            append("  cat \"\$P\" 2>&1 || printf '(unreadable)'\n")
+            append("  printf '\\nBEFORE_END\\n'\n")
+            append("fi\n")
+        }
 
         val preRes = execInternal(preCmd)
         val preOut = preRes.stdout
@@ -268,10 +256,8 @@ BEFORE_END
             ?.trim() == "1"
 
         val beforeRaw = preOut
-            .substringAfter("BEFORE_BEGIN
-", "")
-            .substringBefore("
-BEFORE_END", "")
+            .substringAfter("BEFORE_BEGIN\n", "")
+            .substringBefore("\nBEFORE_END", "")
             .trim()
             .ifBlank { "(empty)" }
 
@@ -296,19 +282,17 @@ BEFORE_END", "")
         }
 
         val qVal = shellSingleQuote(cleanReq)
-        val writeCmd = """
-            P=$qPath
-            V=$qVal
-            if command -v tee >/dev/null 2>&1; then
-              printf '%s
-' "${'$'}V" | tee "${'$'}P" >/dev/null
-            else
-              printf '%s
-' "${'$'}V" > "${'$'}P"
-            fi
-        """.trimIndent()
+        val writeCmd = buildString {
+            append("P=").append(qPath).append('\n')
+            append("V=").append(qVal).append('\n')
+            append("if command -v tee >/dev/null 2>&1; then\n")
+            append("  printf '%s\\n' \"\$V\" | tee \"\$P\" >/dev/null\n")
+            append("else\n")
+            append("  printf '%s\\n' \"\$V\" > \"\$P\"\n")
+            append("fi\n")
+        }
 
-        log(LogType.COMMAND, "write sysfs: $cleanPath <= "$cleanReq" (before="$beforeRaw", perms=$perms)")
+        log(LogType.COMMAND, "write sysfs: $cleanPath <= \"$cleanReq\" (before=\"$beforeRaw\", perms=$perms)")
         val writeRes = execInternal(writeCmd)
 
         if (readbackDelayMs > 0) {
@@ -333,14 +317,14 @@ BEFORE_END", "")
                 if (rawErr.isNotBlank() && !rawErr.startsWith("exit code")) {
                     "$rawErr (exit=${writeRes.exitCode})"
                 } else {
-                    "Kernel driver rejected write "$cleanReq" with exit=${writeRes.exitCode} (likely EOPNOTSUPP/EINVAL; readback="$afterRaw")"
+                    "Kernel driver rejected write \"$cleanReq\" with exit=${writeRes.exitCode} (likely EOPNOTSUPP/EINVAL; readback=\"$afterRaw\")"
                 }
             }
             !postRes.isSuccess -> {
                 "Write exited 0, but readback failed: ${postRes.combinedError}"
             }
             else -> {
-                "Readback mismatch: write exited 0, but node reads "$afterRaw" instead of "$cleanReq" (driver ignored write)"
+                "Readback mismatch: write exited 0, but node reads \"$afterRaw\" instead of \"$cleanReq\" (driver ignored write)"
             }
         }
 
@@ -378,7 +362,7 @@ BEFORE_END", "")
         val beforeRes = execInternal("getprop $qProp 2>&1")
         val beforeVal = beforeRes.stdout.trim()
 
-        log(LogType.COMMAND, "setprop $cleanProp "$cleanReq" (before="$beforeVal")")
+        log(LogType.COMMAND, "setprop $cleanProp \"$cleanReq\" (before=\"$beforeVal\")")
         val writeRes = execInternal("setprop $qProp $qVal")
         if (readbackDelayMs > 0) delay(readbackDelayMs)
 
@@ -389,7 +373,7 @@ BEFORE_END", "")
         val err = when {
             ok -> ""
             !writeRes.isSuccess -> "${writeRes.combinedError} (exit=${writeRes.exitCode})"
-            else -> "Prop readback mismatch: expected "$cleanReq", got "$afterVal""
+            else -> "Prop readback mismatch: expected \"$cleanReq\", got \"$afterVal\""
         }
 
         val result = SafeWriteResult(
@@ -429,7 +413,7 @@ BEFORE_END", "")
         val beforeRes = execInternal("settings get $qNs $qKey 2>&1")
         val beforeVal = beforeRes.stdout.trim()
 
-        log(LogType.COMMAND, "settings put $ns $cleanKey "$cleanReq" (before="$beforeVal")")
+        log(LogType.COMMAND, "settings put $ns $cleanKey \"$cleanReq\" (before=\"$beforeVal\")")
         val writeRes = execInternal("settings put $qNs $qKey $qVal")
         if (readbackDelayMs > 0) delay(readbackDelayMs)
 
@@ -440,7 +424,7 @@ BEFORE_END", "")
         val err = when {
             ok -> ""
             !writeRes.isSuccess -> "${writeRes.combinedError} (exit=${writeRes.exitCode})"
-            else -> "Setting readback mismatch: expected "$cleanReq", got "$afterVal""
+            else -> "Setting readback mismatch: expected \"$cleanReq\", got \"$afterVal\""
         }
 
         val result = SafeWriteResult(
@@ -513,10 +497,8 @@ BEFORE_END", "")
         return try {
             val process = ProcessBuilder("su").redirectErrorStream(false).start()
             DataOutputStream(process.outputStream).use { os ->
-                os.writeBytes("$command
-")
-                os.writeBytes("exit
-")
+                os.writeBytes("$command\n")
+                os.writeBytes("exit\n")
                 os.flush()
             }
             var stdout = ""

@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "write-helper-with-readback",
-  "next_step": "fix-scanner-exclude-dummy-readonly",
+  "last_completed_step": "fix-scanner-exclude-dummy-readonly",
+  "next_step": "feed-scan-into-apply",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -39,9 +39,10 @@
     "apps/otg-enabler/app/src/main/res/values/strings.xml",
     "apps/otg-enabler/app/proguard-rules.pro",
     "apps/otg-enabler/README.md",
-    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgCoreLogic.kt"
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgCoreLogic.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgScanner.kt"
   ],
-  "current_task": "fix-scanner-exclude-dummy-readonly",
+  "current_task": "feed-scan-into-apply",
   "tasks": [
     {
       "id": "step-1",
@@ -140,9 +141,13 @@
     {
       "session": "session-2",
       "event": "write-helper-with-readback done: implemented OtgCoreLogic (SysfsReadbackParser, UsbSysfsParser, DmesgDiffHelper, OtgStateEvaluator) and RootCommander safeWriteSysfs/Prop/Setting with tee errno capture, 200ms readback delay, and structured logging"
+    },
+    {
+      "session": "session-2",
+      "event": "fix-scanner-exclude-dummy-readonly done: added symlink-aware OtgScanner with CacheFirstStore, regulator name discovery, dummy_udc exclusion, and 7-category writable vs info-only classification"
     }
   ],
-  "notes": "Completed write-helper-with-readback. RootCommander now provides safeWriteSysfs, safeWriteProp, and safeWriteSetting running via `su -c` with concurrent stdout/stderr capture, pre-write existence/permission/writability/cat checks, `tee` write so kernel errno (EOPNOTSUPP/EINVAL/EACCES) is always captured, 200ms delay, readback verification parsing `[host] device` selector syntax, and structured Root Logs entries. Next: fix-scanner-exclude-dummy-readonly.",
+  "notes": "Completed fix-scanner-exclude-dummy-readonly. OtgScanner traverses symlinked /sys/class/{usb_role,typec,dual_role_usb,power_supply,regulator,extcon}, /sys/devices/platform (usb/otg/typec/tcpc/pd/vbus/charger/mtu3/musb), and /sys/kernel/debug, completely excludes dummy_udc, classifies read-only attributes as `info only` (isWritable=false), and persists scan results via Engine CacheFirstStore. Next: feed-scan-into-apply, vbus-handling-and-verification, dmesg-capture-before-after, restore-using-recorded-values, remove-wrong-oem-props.",
   "repo": "vjumbo264/forgebuild",
   "folder": "apps/otg-enabler",
   "release_tag_target": "otg-enabler-v2",
@@ -158,7 +163,7 @@
     },
     {
       "id": "fix-scanner-exclude-dummy-readonly",
-      "done": false
+      "done": true
     },
     {
       "id": "feed-scan-into-apply",
@@ -193,5 +198,5 @@
       "done": false
     }
   ],
-  "last_commit": "38bfd1daf70077a1cf521242db301f4d9187b402"
+  "last_commit": "8c13c775a1815902a63063a6fcf2c0946525d968"
 }
