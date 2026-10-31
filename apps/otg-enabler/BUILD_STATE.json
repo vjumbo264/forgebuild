@@ -4,8 +4,8 @@
   "build_complete": false,
   "goal": "Modernized root USB OTG enabler app with high-SDK support (API 35/37) and universal multi-strategy OTG kernel sysfs/SoC driver engine",
   "status": "in_progress",
-  "last_completed_step": "step-4",
-  "next_step": "step-5",
+  "last_completed_step": "step-5",
+  "next_step": "step-6",
   "decisions_made": [
     "Permanent slug chosen: otg-enabler",
     "Application package: com.forgebuild.otgenabler",
@@ -23,9 +23,22 @@
     "apps/otg-enabler/changelog.json",
     "apps/otg-enabler/tools/artwork/icon_fg.png",
     "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
-    "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
+    "apps/otg-enabler/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/RootCommander.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgStrategy.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgController.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/UsbMonitor.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/BootReceiver.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/OtgTileService.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/ui/OtgEnablerScreen.kt",
+    "apps/otg-enabler/app/src/main/java/com/forgebuild/otgenabler/MainActivity.kt",
+    "apps/otg-enabler/app/src/main/AndroidManifest.xml",
+    "apps/otg-enabler/app/src/main/res/drawable/ic_tile_otg.xml",
+    "apps/otg-enabler/app/src/main/res/values/strings.xml",
+    "apps/otg-enabler/app/proguard-rules.pro",
+    "apps/otg-enabler/README.md"
   ],
-  "current_task": "step-5",
+  "current_task": "step-6",
   "tasks": [
     {
       "id": "step-1",
@@ -54,8 +67,8 @@
     {
       "id": "step-5",
       "title": "Implement enhanced root USB OTG enabler engine & Material 3 Expressive UI",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented RootCommander, OtgStrategy (10 strategies), OtgController, UsbMonitor, BootReceiver, OtgTileService, and full Material 3 Expressive OtgEnablerScreen UI"
     },
     {
       "id": "step-6",
@@ -90,6 +103,10 @@
     {
       "session": "session-1",
       "event": "step-4 done: confirmed repo-level signing secrets exist on vjumbo264/forgebuild"
+    },
+    {
+      "session": "session-1",
+      "event": "step-5 done: implemented universal root USB OTG enabler engine and Material 3 Expressive UI"
     }
   ],
   "notes": "Step 1 in progress"
