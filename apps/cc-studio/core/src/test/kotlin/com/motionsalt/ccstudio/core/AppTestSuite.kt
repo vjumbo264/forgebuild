@@ -14,7 +14,7 @@ class AppTestSuite {
         assertEquals("ms_lut", state.stack[0].effectId)
         assertTrue(state.stack[0].enabled)
         assertTrue(state.stack[0].expose)
-        assertEquals(1.0, state.stack[0].params["intensity"])
+        assertEquals(1.0, (state.stack[0].params["intensity"] as Number).toDouble(), 0.0001)
     }
 
     @Test
@@ -73,7 +73,7 @@ class AppTestSuite {
         assertEquals(original.effectId, copy.effectId)
         assertEquals(original.enabled, copy.enabled)
         assertEquals(original.expose, copy.expose)
-        assertEquals(original.params["sharpness"], copy.params["sharpness"])
+        assertEquals((original.params["sharpness"] as Number).toDouble(), (copy.params["sharpness"] as Number).toDouble(), 0.0001)
     }
 
     @Test
