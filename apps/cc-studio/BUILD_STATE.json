@@ -1,9 +1,10 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": false,
+  "build_complete": true,
+  "status": "complete",
   "updated_by": "build-agent",
-  "current_task": "S8: Release cc-studio-v3",
+  "current_task": "Complete: cc-studio-v3 released",
   "repair2_queue": [
     {
       "id": "S1",
@@ -50,8 +51,8 @@
     {
       "id": "S8",
       "title": "Release and proof",
-      "status": "in_progress",
-      "notes": "Dispatching release.yml for cc-studio-v3 and attaching MOTIONSALT.kfpack."
+      "status": "done",
+      "notes": "Release cc-studio-v3 published and verified live on GitHub Releases with signed app-cc-studio-v3.apk and MOTIONSALT.kfpack."
     }
   ],
   "tasks": [
@@ -112,8 +113,8 @@
     {
       "id": "R10",
       "title": "Repair Round 2 (S1-S8)",
-      "status": "in_progress",
-      "notes": "Fixed frame import reactivity, connected live shader stack renderer to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics."
+      "status": "done",
+      "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3."
     }
   ],
   "notes": "MOTIONSALT CC Studio Repair 2: resolved frame import reactivity, connected live StackRenderer and 3D LUT evaluator to TuneStage viewer, completed 5 categories with Tritone and Tone effects, redesigned Permissions screen, added in-app Diagnostics."
