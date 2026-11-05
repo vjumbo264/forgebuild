@@ -72,7 +72,7 @@ class FitService : Service() {
                 val result = LutSolver.fit(pairs, gridSize) { prog ->
                     currentProgress = prog
                     updateNotification("Step ${prog.step}/${prog.totalSteps}: ${prog.stepName}", (prog.progressFraction * 100).toInt())
-                    withContext(Dispatchers.Main) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
                         progressListener?.invoke(prog)
                     }
                 }
