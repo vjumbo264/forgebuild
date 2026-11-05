@@ -4,6 +4,56 @@
   "build_complete": false,
   "updated_by": "build-agent",
   "current_task": "S8: Release cc-studio-v3",
+  "repair2_queue": [
+    {
+      "id": "S1",
+      "title": "Pixel-level proof harness and root-cause trace",
+      "status": "done",
+      "notes": "PixelProofHarnessTest verifies LUT intensity 0 vs 1, parameter changes, disable/enable, reorder, and view modes; offline & zero-stubs CI checks pass."
+    },
+    {
+      "id": "S2",
+      "title": "Frame import and reactive UI",
+      "status": "done",
+      "notes": "Reactive StateFlow project state, 4-source frame import (Gallery, Video, Camera, Files) with EXIF rotation and project-local copy, plus CropEditorDialog."
+    },
+    {
+      "id": "S3",
+      "title": "Fit produces a real LUT",
+      "status": "done",
+      "notes": "Foreground service runs LutSolver on pair images, saves 33x33x33 .cube LUT, and ColorMath.parseCube33 loads it in TuneStage."
+    },
+    {
+      "id": "S4",
+      "title": "Renderer applies the full stack",
+      "status": "done",
+      "notes": "StackRenderer evaluates fitted 3D LUT + enabled effects in order; all 8 view modes and press-and-hold Before verified by PixelProofHarnessTest."
+    },
+    {
+      "id": "S5",
+      "title": "Effect library completeness and the picker",
+      "status": "done",
+      "notes": "All 22 effects across 5 categories (Colour correction, Tone, Toning incl. ms_tritone, Detail, Look) registered from assets and verified by EffectsCatalogTest and kfpack_build.py."
+    },
+    {
+      "id": "S6",
+      "title": "Permissions rewrite",
+      "status": "done",
+      "notes": "Just-in-time runtime permissions at moment of use with explanation dialogs and fallbacks; honest 4-row Permissions screen in Settings."
+    },
+    {
+      "id": "S7",
+      "title": "Export carries the real result, plus Diagnostics screen",
+      "status": "done",
+      "notes": "Export packages real fitted LUT and shaders into .kfpack (validated with 0 errors); Settings > Diagnostics shows engine, shader, and LUT status with copy."
+    },
+    {
+      "id": "S8",
+      "title": "Release and proof",
+      "status": "in_progress",
+      "notes": "Dispatching release.yml for cc-studio-v3 and attaching MOTIONSALT.kfpack."
+    }
+  ],
   "tasks": [
     {
       "id": "R1",
