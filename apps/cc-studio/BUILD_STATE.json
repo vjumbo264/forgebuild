@@ -3,18 +3,18 @@
   "project": "forgebuild-cc-studio",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "R1",
+  "current_task": "R2",
   "tasks": [
     {
       "id": "R1",
       "title": "Honest audit (first)",
-      "status": "in_progress",
-      "notes": "Auditing every screen and control against section 6; writing docs/AUDIT.md and tracing Victor's six symptoms."
+      "status": "done",
+      "notes": "Completed comprehensive audit of cc-studio-v1 codebase. Traced all 6 reported symptoms to specific stubs and empty handlers in CcStudioApp.kt; wrote docs/AUDIT.md."
     },
     {
       "id": "R2",
       "title": "Verification harness (before fixing, so the fixes can be proven)",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "JVM tests for delete, add frame, view modes, effects stack, kfpack export validation, permissions, CI stub check, bundled demo generator."
     },
     {
