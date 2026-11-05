@@ -187,7 +187,7 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Successfully resolved slider precision & zero-increase bug, restored Keyflaw 1.4.9 main Glow effect, repaired .kfpack export with MediaStore Downloads path and Keyflower enable toggles, verified 0-error pack building, and published cc-studio-v6 live on GitHub Releases.",
+  "last_session_note": "Started update cycle for pass file export error, .kfpack format fix, tuned default state confirmation, and public repo visibility.",
   "current_phase": "complete",
   "pivot_queue": [
     {
@@ -272,7 +272,8 @@
   "decisions": [
     "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed.",
     "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases.",
-    "2026-11-05: Extend/Update contract applied. Operator requested fixing slider precision/offset/zero-increase bug, restoring missing main Glow effect, repairing export so files land visibly in Downloads with Keyflaw enable toggles and tuned controls."
+    "2026-11-05: Extend/Update contract applied. Operator requested fixing slider precision/offset/zero-increase bug, restoring missing main Glow effect, repairing export so files land visibly in Downloads with Keyflaw enable toggles and tuned controls.",
+    "2026-11-05: Operator reported kfpack export fails with missing/mismatched pass file, exports as zip instead of kfpack preventing import in editing app, needs confirmation that tuned parameters export as default state (e.g. sharpness 15% defaults to 15% in Keyflaw), and forgebuild repo must be made public with zero credential leaks."
   ],
   "known_issues": [
     "Android CI tests/debug build pass, but emulator/device acceptance and signed prerelease/final release remain unfinished.",
@@ -320,6 +321,36 @@
       "title": "Release cc-studio-v6",
       "status": "done",
       "notes": "Released cc-studio-v6 via release.yml workflow (run 42059941708, success). Verified live on GitHub Releases API with signed app-cc-studio-v6.apk (2,259,075 bytes), release.json, and forgebuild-manifest.json."
+    },
+    {
+      "id": "U6",
+      "title": "Fix missing or mismatched pass file in kfpack export",
+      "status": "in_progress",
+      "notes": "Load and bundle all pass shaders for multi-pass effects (diffusion, unsharp_mask, haze_flare, inner_glow) in EffectRepository and PackBuilder so all declared pass files exist in the archive."
+    },
+    {
+      "id": "U7",
+      "title": "Fix kfpack export file format, MIME type, and storage so it exports as .kfpack",
+      "status": "pending",
+      "notes": "Ensure exports save directly as .kfpack in Downloads and CC_Studio folder, prevent Android MediaProvider/DocumentsUI .zip renaming, configure proper file extension and octet-stream MIME."
+    },
+    {
+      "id": "U8",
+      "title": "Confirm and verify tuned parameter states export as default effect state",
+      "status": "pending",
+      "notes": "Confirm tuned parameter values (e.g. sharpness 15%) are written as the default value in effect.json, retain clean effect IDs and names, and retain enabled toggles."
+    },
+    {
+      "id": "U9",
+      "title": "Comprehensive validation & kfpack_build verification",
+      "status": "pending",
+      "notes": "Validate generated packs with tools/kfpack_build.py against 1.4.9 spec with multi-pass, verify precision headers, test pack merge and roundtrip."
+    },
+    {
+      "id": "U10",
+      "title": "Release cc-studio-v7 and make forgebuild repo public",
+      "status": "pending",
+      "notes": "Trigger release.yml workflow for apps/cc-studio, verify release live via GitHub API, verify zero credential leaks, and set repo visibility to public."
     }
   ]
 }

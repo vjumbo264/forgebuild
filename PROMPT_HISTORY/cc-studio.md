@@ -821,3 +821,14 @@ Bring back the glow effect and make sure that the exported pack is working prope
 
 https://cf.linkulu.com/dl/6aec2bebde32c56eaccc624d
 """
+
+
+---
+
+## 2026-11-05 — Fix kfpack pass file export error, export format as .kfpack, tuned defaults state, and make repo public
+
+"""
+I noticed a critical issue. I am unable to export the kfpack. It is saying "missing or mismatched pass file". Please fix that issue.
+
+The previous versions were exporting, but the only issue I had was that the kfpack device I was exporting was not importing properly into the editing app, and it was exporting it as a zip file, not a kfpack. So please fix the issue so that it can export properly. Also, help me confirm that when it is exporting, the same effects that I tuned is what shows up. I already implemented that before, but just help me confirm it. And additionally, the default state of the effect should be the state I exported it as. For example, if I set the sharpness to 15% and exported it, that means when someone uses the effect in the editing app, the default state should be that 15% unless they change it. Also make the forgebuild repo public again, ensure that there is no leaking creds.
+"""
