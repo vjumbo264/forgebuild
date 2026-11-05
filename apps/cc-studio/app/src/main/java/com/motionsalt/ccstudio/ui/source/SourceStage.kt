@@ -379,7 +379,7 @@ fun SourceStage(
     cropEditorPair?.let { (idx, isTarget) ->
         val pair = pairsList.getOrNull(idx)
         val frame = if (isTarget) pair?.target else pair?.base
-        if (frame != null) {
+        if (pair != null && frame != null) {
             CropEditorDialog(
                 frame = frame,
                 title = if (isTarget) "Target Frame Crop" else "Base Frame Crop",

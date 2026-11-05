@@ -103,7 +103,7 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(EngineIcons.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(EngineIcons.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
                             Text("Diagnostics & Engine Status", fontWeight = FontWeight.Bold)
                         }
