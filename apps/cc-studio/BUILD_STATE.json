@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T1: Study Keyflaw own implementation",
+  "current_task": "T2: Keyflaw effect host renderer (slice 1, part 1)",
   "repair2_queue": [
     {
       "id": "S1",
@@ -128,14 +128,14 @@
     {
       "id": "T1",
       "title": "Study Keyflaw own implementation",
-      "status": "in_progress",
-      "notes": "Unpacked Keyflaw 1.4.9 APK, analyzed DEX strings & classes, confirmed SuiteParser/SuiteModelFactory/SuiteRegistrar architecture, documenting KEYFLAW_HOST.md and NOT_IN_KEYFLAW.md."
+      "status": "done",
+      "notes": "Unpacked Keyflaw 1.4.9 APK, audited DEX & libkeyflow_identity.so, confirmed host contract and native-only effects; created KEYFLAW_HOST.md and NOT_IN_KEYFLAW.md with SHA256 hashes recorded."
     },
     {
       "id": "T2",
       "title": "Keyflaw effect host renderer (slice 1, part 1)",
-      "status": "pending",
-      "notes": "GLES 2.0/3.0 renderer loading effect folders directly, multi-pass FBO ping-pong, uniform mapping from effect.json, proper 3D LUT texture sampling with half-texel correction."
+      "status": "in_progress",
+      "notes": "Designing and building Keyflaw host GLES renderer with FBO ping-pong, uniform mapping from effect.json, proper 3D LUT sampling."
     },
     {
       "id": "T3",
@@ -186,5 +186,5 @@
       "notes": "Build and publish signed APK cc-studio-v4, publish sample .kfpack asset, upload before/after pixel proof images, set build_complete: true."
     }
   ],
-  "last_updated": "2026-11-05T11:03:12.296367+00:00"
+  "last_updated": "2026-11-05T11:04:07.307420+00:00"
 }
