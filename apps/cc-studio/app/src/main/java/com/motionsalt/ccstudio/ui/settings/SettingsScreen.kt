@@ -151,6 +151,20 @@ fun SettingsScreen(
                     }
                 }
             }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("No Permission Needed (Built-in Android Storage)", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        Text("• System File Picker (SAF Storage Access Framework)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• App-private storage for projects and fitted models", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• Offline foreground service for background solver execution", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("• Zero INTERNET permission declared or used anywhere", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
         }
     }
 

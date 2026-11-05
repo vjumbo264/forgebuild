@@ -439,15 +439,46 @@ private fun CropEditorDialog(
                     onValueChange = { bottom = it.coerceIn((top + 0.05f).coerceAtMost(1f), 1f) },
                     valueRange = 0.05f..1f
                 )
-                TextButton(
-                    onClick = {
-                        left = 0f
-                        top = 0f
-                        right = 1f
-                        bottom = 1f
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        onClick = {
+                            left = 0f
+                            top = 0f
+                            right = 1f
+                            bottom = 1f
+                        }
+                    ) {
+                        Text("Reset Crop")
                     }
-                ) {
-                    Text("Reset Crop")
+                    TextButton(
+                        onClick = {
+                            try {
+                                val bmp = BitmapFactory.decodeFile(frame.originalPath)
+                                if (bmp != null) {
+                                    val w = bmp.width
+                                    val h = bmp.height
+                                    val pixels = IntArray(w * h)
+                                    bmp.getPixels(pixels, 0, w, 0, 0, w, h)
+                                    val mFrame = com.motionsalt.ccstudio.core.MatchFrame(w, h, pixels.map { c ->
+                                        doubleArrayOf(
+                                            android.graphics.Color.red(c) / 255.0,
+                                            android.graphics.Color.green(c) / 255.0,
+                                            android.graphics.Color.blue(c) / 255.0
+                                        )
+                                    })
+                                    val bars = com.motionsalt.ccstudio.core.FrameAlignment.letterbox(mFrame)
+                                    if (bars.isNotEmpty()) {
+                                        val topBar = bars.firstOrNull { it.top == 0.0 }
+                                        val botBar = bars.firstOrNull { it.bottom == 1.0 }
+                                        if (topBar != null) top = topBar.bottom.toFloat()
+                                        if (botBar != null) bottom = botBar.top.toFloat()
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    ) {
+                        Text("Auto-detect Bars")
+                    }
                 }
             }
         },
