@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: add and run real-pair metric harness; faithfully port reference_match.py when provided",
+  "current_task": "T2: measure independent baseline on real pair and finish regression checkpoint; faithful port awaits reference_match.py",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "T2 scaffold: original 560x259 Gojo pair available. reference_match.py and SKILL.md absent from supplied files and repository trees; not claiming a faithful port. Establish independent CIEDE2000 baseline / alignment / held-out metrics before any replacement model or deletion of current runtime. Next operation: T2: add and run real-pair metric harness; faithfully port reference_match.py when provided",
+  "notes": "Added original 560x259 Gojo pair plus pure Kotlin CIEDE2000, honest threshold labels and exact regression gate. 20 published Sharma cases + symmetry, neutral, identity, percentile and label tests pass (3 JUnit tests). Not wired to UI and no fitted model claimed. reference_match.py remains absent. Next operation: T2: measure independent baseline on real pair and finish regression checkpoint; faithful port awaits reference_match.py",
   "reset_queue": [
     {
       "id": "T0",
@@ -206,7 +206,7 @@
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
       "status": "in_progress",
-      "notes": "T2 scaffold: original 560x259 Gojo pair available. reference_match.py and SKILL.md absent from supplied files and repository trees; not claiming a faithful port. Establish independent CIEDE2000 baseline / alignment / held-out metrics before any replacement model or deletion of current runtime."
+      "notes": "Added original 560x259 Gojo pair plus pure Kotlin CIEDE2000, honest threshold labels and exact regression gate. 20 published Sharma cases + symmetry, neutral, identity, percentile and label tests pass (3 JUnit tests). Not wired to UI and no fitted model claimed. reference_match.py remains absent."
     },
     {
       "id": "T3",
