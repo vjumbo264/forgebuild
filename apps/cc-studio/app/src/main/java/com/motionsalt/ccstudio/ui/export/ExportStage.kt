@@ -299,7 +299,13 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                 status = "Pack exported successfully to $savedDlPath (${bytes.size} bytes, ${project.tuneState.stack.size} effects wired)"
 
                 if (launchPicker) {
-                    save.launch(SafeSave.createDocumentIntent("${suite}.kfpack", "application/octet-stream"))
+                if (launchPicker) {
+                    tree?.let { uri ->
+                        val out = PackSave.createInTree(context, uri, "${suite}.kfpack", "application/octet-stream")
+                            ?: error("Cannot create pack in selected folder")
+                        write(out)
+                    } ?: save.launch(PackSave.createDocumentIntent("${suite}.kfpack", "application/octet-stream"))
+                }
                 }
             } catch (e: Exception) {
                 status = "Export error: ${e.message}"
