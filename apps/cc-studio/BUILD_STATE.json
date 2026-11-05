@@ -1,9 +1,9 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "build-agent",
-  "current_task": "R9",
+  "current_task": null,
   "tasks": [
     {
       "id": "R1",
@@ -56,9 +56,9 @@
     {
       "id": "R9",
       "title": "Release and proof (last)",
-      "status": "in_progress",
-      "notes": "Pushing repair commits to origin/main, validating CI workflow, and releasing cc-studio-v2."
+      "status": "done",
+      "notes": "Release cc-studio-v2 successfully created and verified on GitHub Releases with signed APK and MOTIONSALT.kfpack asset."
     }
   ],
-  "notes": "MOTIONSALT CC Studio v2 repair underway. No INTERNET permission. Full M3 Expressive discipline. SafeSave and ScreenSecurity helpers integrated."
+  "notes": "MOTIONSALT CC Studio v2 repair complete. Replaced all shell stubs with real working implementations. Zero network permissions verified by CI. All 6 symptoms resolved. Release cc-studio-v2 published."
 }
