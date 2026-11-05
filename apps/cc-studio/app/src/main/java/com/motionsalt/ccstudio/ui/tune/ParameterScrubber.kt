@@ -1,62 +1,206 @@
 package com.motionsalt.ccstudio.ui.tune
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.exponentialDecay
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.motionsalt.ccstudio.core.EffectParam
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlin.math.*
 import java.util.Locale
+import kotlin.math.round
 
-/** Operator-specified ruler fallback; values update on every move, not pointer release. */
+/**
+ * Professional Material 3 Slider control for effect parameters.
+ * - Accurate thumb positioning from min (0 / left) to max (right) without offset.
+ * - Live uniform updates on every drag movement.
+ * - Tap value badge to type exact numeric value.
+ * - Step snapping and fine-nudge controls.
+ * - Reset to default value on reset button or dialog.
+ */
 @Composable
-fun ParameterScrubber(param:EffectParam,externalValue:Float,onValue:(Float)->Unit) {
-    var value by remember(param.key){mutableFloatStateOf(externalValue)}
+fun ParameterScrubber(
+    param: EffectParam,
+    externalValue: Float,
+    onValue: (Float) -> Unit
+) {
+    val step = param.step.coerceAtLeast(0.0001f)
+    val minVal = param.min
+    val maxVal = if (param.max > param.min) param.max else param.min + 1.0f
+
+    var localValue by remember(param.key) { mutableFloatStateOf(externalValue.coerceIn(minVal, maxVal)) }
     val emit by rememberUpdatedState(onValue)
-    LaunchedEffect(externalValue){value=externalValue}
-    var typing by remember{mutableStateOf(false)};var text by remember{mutableStateOf("")}
-    val scope=rememberCoroutineScope();var fling by remember{mutableStateOf<Job?>(null)}
-    val step=param.step.coerceAtLeast(.00001f);val span=(param.max-param.min).coerceAtLeast(step)
-    val major=max(step,10f.pow(floor(log10(span/20)).toInt()))
-    fun change(v:Float) { val snapped=(round(v/step)*step).coerceIn(param.min,param.max);if(snapped!=value){value=snapped;emit(snapped)} }
-    val colors=MaterialTheme.colorScheme
-    Column {
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(param.label,style=MaterialTheme.typography.labelMedium);Text(String.format(Locale.US,"%.3f",value).trimEnd('0').trimEnd('.'),Modifier.clickable{text=value.toString();typing=true},color=colors.primary)}
-        Canvas(Modifier.fillMaxWidth().height(52.dp)
-            .pointerInput(param.key){detectTapGestures(onDoubleTap={fling?.cancel();change((param.defaultValue as? Number)?.toFloat()?:0f)},onLongPress={text=value.toString();typing=true})}
-            .pointerInput(param.key,param.min,param.max){
-                val tracker=VelocityTracker();var dy=0f;var distance=0f;var start=0f
-                detectDragGestures(onDragStart={fling?.cancel();tracker.resetTracking();dy=0f;distance=0f;start=value},onDrag={event,delta->
-                    event.consume();tracker.addPosition(event.uptimeMillis,event.position);dy+=delta.y;distance+=delta.x
-                    val fine=if(abs(dy)>24.dp.toPx())20f else 1f
-                    change(start-distance*major/(40.dp.toPx()*fine))
-                },onDragEnd={
-                    val velocity=tracker.calculateVelocity().x
-                    if(abs(velocity)>80f&&abs(dy)<24.dp.toPx()) {
-                        val old=value;val factor=major/40.dp.toPx()
-                        fling=scope.launch { Animatable(0f).animateDecay(velocity,exponentialDecay(frictionMultiplier=2.5f)){change(old-this.value*factor);if(value<=param.min||value>=param.max)throw kotlinx.coroutines.CancellationException("Scrubber reached bound")} }
-                    }
-                })
-            }) {
-            val spacing=40.dp.toPx();val center=size.width/2;val first=floor((value-size.width/spacing*major/2)/major).toInt()-1
-            val last=ceil((value+size.width/spacing*major/2)/major).toInt()+1
-            for(i in first..last){val tick=i*major;if(tick<param.min||tick>param.max)continue;val x=center+(tick-value)/major*spacing;drawLine(colors.onSurfaceVariant.copy(alpha=.65f),Offset(x,size.height*.4f),Offset(x,size.height*.82f),1.dp.toPx());for(j in 1..3){val xx=x+j*spacing/4;drawLine(colors.outline,Offset(xx,size.height*.6f),Offset(xx,size.height*.82f),1.dp.toPx())}}
-            drawLine(colors.primary,Offset(center,0f),Offset(center,size.height),2.dp.toPx())
+
+    LaunchedEffect(externalValue) {
+        val clamped = externalValue.coerceIn(minVal, maxVal)
+        if (clamped != localValue) {
+            localValue = clamped
         }
     }
-    if(typing)AlertDialog(onDismissRequest={typing=false},title={Text(param.label)},text={OutlinedTextField(text,{text=it},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),supportingText={Text("${param.min} to ${param.max}")})},confirmButton={TextButton(onClick={text.toFloatOrNull()?.takeIf{it.isFinite()}?.let{change(it);typing=false}}){Text("Apply")}},dismissButton={TextButton(onClick={typing=false}){Text("Cancel")}})
+
+    var typing by remember { mutableStateOf(false) }
+    var textInput by remember { mutableStateOf("") }
+
+    val defaultVal = (param.defaultValue as? Number)?.toFloat() ?: minVal
+
+    fun applySnapped(raw: Float) {
+        val stepsCount = round((raw - minVal) / step)
+        val snapped = (minVal + stepsCount * step).coerceIn(minVal, maxVal)
+        localValue = snapped
+        emit(snapped)
+    }
+
+    val formattedValue = remember(localValue, step) {
+        when {
+            step >= 1.0f -> String.format(Locale.US, "%.0f", localValue)
+            step >= 0.01f -> String.format(Locale.US, "%.2f", localValue)
+            step >= 0.001f -> String.format(Locale.US, "%.3f", localValue)
+            else -> String.format(Locale.US, "%.4f", localValue)
+        }
+    }
+
+    val colors = MaterialTheme.colorScheme
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = param.label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface
+            )
+
+            Surface(
+                shape = MaterialTheme.shapes.extraSmall,
+                color = colors.surfaceContainerHighest,
+                modifier = Modifier.clickable {
+                    textInput = formattedValue
+                    typing = true
+                }
+            ) {
+                Text(
+                    text = formattedValue,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.primary,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TextButton(
+                onClick = { applySnapped(localValue - step) },
+                enabled = localValue > minVal,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier
+                    .size(28.dp)
+                    .defaultMinSize(minWidth = 28.dp, minHeight = 28.dp)
+            ) {
+                Text(
+                    text = "−",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (localValue > minVal) colors.primary else colors.onSurfaceVariant.copy(alpha = 0.38f)
+                )
+            }
+
+            Slider(
+                value = localValue.coerceIn(minVal, maxVal),
+                onValueChange = { newVal ->
+                    localValue = newVal
+                    applySnapped(newVal)
+                },
+                valueRange = minVal..maxVal,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(36.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = colors.primary,
+                    activeTrackColor = colors.primary,
+                    inactiveTrackColor = colors.surfaceContainerHighest
+                )
+            )
+
+            TextButton(
+                onClick = { applySnapped(localValue + step) },
+                enabled = localValue < maxVal,
+                contentPadding = PaddingValues(0.dp),
+                modifier = Modifier
+                    .size(28.dp)
+                    .defaultMinSize(minWidth = 28.dp, minHeight = 28.dp)
+            ) {
+                Text(
+                    text = "+",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (localValue < maxVal) colors.primary else colors.onSurfaceVariant.copy(alpha = 0.38f)
+                )
+            }
+        }
+    }
+
+    if (typing) {
+        AlertDialog(
+            onDismissRequest = { typing = false },
+            title = { Text(param.label) },
+            text = {
+                OutlinedTextField(
+                    value = textInput,
+                    onValueChange = { textInput = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    label = { Text("Exact value") },
+                    supportingText = { Text("Allowed range: $minVal to $maxVal (default: $defaultVal)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        textInput.toFloatOrNull()?.let { entered ->
+                            applySnapped(entered)
+                            typing = false
+                        }
+                    }
+                ) {
+                    Text("Apply")
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            applySnapped(defaultVal)
+                            typing = false
+                        }
+                    ) {
+                        Text("Reset ($defaultVal)")
+                    }
+                    TextButton(onClick = { typing = false }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
 }

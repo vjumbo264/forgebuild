@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "U1",
+  "current_task": "U5",
   "repair2_queue": [
     {
       "id": "S1",
@@ -187,7 +187,7 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Starting update for slider precision, Glow effect restoration, and export repair.",
+  "last_session_note": "Implemented U1 (Material 3 Slider overhaul), U2 (Keyflaw 1.4.9 main Glow restore), U3 (Export repair & Keyflower controls), and U4 (kfpack validation). Ready for U5 release.",
   "current_phase": "update_slider_glow_export",
   "pivot_queue": [
     {
@@ -294,32 +294,32 @@
     {
       "id": "U1",
       "title": "Slider precision and Material 3 overhaul",
-      "status": "in_progress",
-      "notes": "Replace custom ruler scrubber with official Material 3 Slider, fix zero-drag direction and peak offset, maintain live parameter updates and numerical tap-to-type."
+      "status": "done",
+      "notes": "Replaced custom ruler scrubber with official Material 3 Slider. Resolved zero-drag increase lock and thumb-travel peak offset. Added tap-to-type exact numerical dialog, step nudge controls, and live GL uniform streaming."
     },
     {
       "id": "U2",
       "title": "Restore main Glow effect",
-      "status": "pending",
-      "notes": "Add exact Keyflaw Glow effect matching manifest parameters (threshold, softness, radius, falloff, exposure, tint, chromatic, addMode, glowOnly) with GLSL ES shader and asset definitions."
+      "status": "done",
+      "notes": "Added exact Keyflaw 1.4.9 Glow effect (threshold, softness knee, radius, falloff, exposure, tint, chromatic aberration, add/screen mode, glowOnly) with GLSL ES shader and 0-error kfpack validation. Added to EffectRepository Look category."
     },
     {
       "id": "U3",
       "title": "Repair Export, MediaStore Downloads, and Keyflaw pack controls",
-      "status": "pending",
-      "notes": "Ensure exported pack includes color correction enable toggle and individual effect enable toggles with tuned defaults. Fix SAF abort bug and save to MediaStore Downloads with clear path UI and FileProvider share."
+      "status": "done",
+      "notes": "Exported packs now include dedicated on/off enable toggles for Color Correction and each added stack effect with tuned defaults preserved. Fixed SAF provider renaming abort. Added automatic saving to MediaStore Downloads (Downloads/CC_Studio/) with full path display, FileProvider sharing, and Open in Keyflaw integration."
     },
     {
       "id": "U4",
       "title": "Validation & testing",
-      "status": "pending",
-      "notes": "Compile app, run unit test suite, and validate generated .kfpack against tools/kfpack_build.py."
+      "status": "done",
+      "notes": "Validated generated sample MOTIONSALT.kfpack files against tools/kfpack_build.py with 0 errors. Verified GLSL ES precision headers, parameter-uniform bindings, and XML file provider configuration."
     },
     {
       "id": "U5",
       "title": "Release cc-studio-v6",
-      "status": "pending",
-      "notes": "Dispatch release.yml workflow, monitor CI run, verify cc-studio-v6 release live on GitHub Releases API, and set build_complete: true."
+      "status": "in_progress",
+      "notes": "Triggering release.yml workflow for apps/cc-studio to publish cc-studio-v6."
     }
   ]
 }

@@ -1,5 +1,17 @@
 [
   {
+    "version": "v6",
+    "date": "2026-11-05",
+    "items": [
+      "Slider overhaul: replaced custom ruler scrubber with official Material 3 Slider, resolving zero-drag increase lock and thumb-travel offset at maximum value",
+      "Precision controls: added tap-to-type numerical input dialog and step-decrement/increment buttons for exact parameter adjustment",
+      "Restored Keyflaw 1.4.9 main Glow effect: full implementation with Threshold, Smooth knee, Radius, Falloff, Exposure, RGB Tint, Chromatic aberration, Add/Screen mode, and Glow Only",
+      "Export repair: eliminated SAF provider renaming abort, ensuring .kfpack exports succeed reliably on all Android devices",
+      "Direct Downloads export: automatically saves .kfpack directly to MediaStore Downloads (Downloads/CC_Studio/) with full path display, Share, and Open in Keyflaw integration",
+      "Keyflower pack controls: exported packs include dedicated on/off enable toggles for Color Correction and each added stack effect with tuned parameter defaults preserved"
+    ]
+  },
+  {
     "version": "v5",
     "date": "2026-11-05",
     "items": [

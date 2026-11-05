@@ -121,7 +121,7 @@ data class TuneState(
             return TuneState(version, list)
         }
 
-        fun primary() = StackItem(instanceId="colour-match-primary",effectId="colour_match",params=mutableMapOf("strength" to 1.0,"matrixEnabled" to 1.0,"curvesEnabled" to 1.0,"hueEnabled" to 1.0))
+        fun primary() = StackItem(instanceId="colour-match-primary",effectId="colour_match",params=mutableMapOf("enabled" to 1.0, "strength" to 1.0,"matrixEnabled" to 1.0,"curvesEnabled" to 1.0,"hueEnabled" to 1.0))
         fun defaultState() = TuneState(stack=mutableListOf(primary()))
     }
 }

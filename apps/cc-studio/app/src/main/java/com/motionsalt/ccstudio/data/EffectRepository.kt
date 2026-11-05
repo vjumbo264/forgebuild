@@ -27,7 +27,7 @@ class EffectRepository(private val context: Context) {
                     val obj = JSONObject(jsonStr)
                     val id = obj.getString("id")
                     val name = obj.getString("name")
-                    val category = when(id) { "sharpen","unsharp_mask" -> "Detail"; "gamma_exposure","brightness_contrast" -> "Tone"; "tritone","spectral_map" -> "Toning"; "diffusion","haze_flare","vignette","film_grain","inner_glow","chromatic_glow","glint_glare","edge_rays","defocus_prism" -> "Look"; else -> "Colour correction" }
+                    val category = when(id) { "sharpen","unsharp_mask" -> "Detail"; "gamma_exposure","brightness_contrast" -> "Tone"; "tritone","spectral_map" -> "Toning"; "glow","diffusion","haze_flare","vignette","film_grain","inner_glow","chromatic_glow","glint_glare","edge_rays","defocus_prism" -> "Look"; else -> "Colour correction" }
                     val description = obj.optString("description", "")
                     val expandBounds = obj.optDouble("expandBounds", 0.0).toFloat()
 

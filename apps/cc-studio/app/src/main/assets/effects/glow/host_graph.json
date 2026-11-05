@@ -1,0 +1,13 @@
+{
+  "passes": [
+    {
+      "file": "shader.glsl",
+      "scale": 1.0,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    }
+  ]
+}
