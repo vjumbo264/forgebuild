@@ -1,0 +1,64 @@
+{
+  "slug": "cc-studio",
+  "project": "forgebuild-cc-studio",
+  "build_complete": false,
+  "updated_by": "build-agent",
+  "current_task": "R1",
+  "tasks": [
+    {
+      "id": "R1",
+      "title": "Honest audit (first)",
+      "status": "in_progress",
+      "notes": "Auditing every screen and control against section 6; writing docs/AUDIT.md and tracing Victor's six symptoms."
+    },
+    {
+      "id": "R2",
+      "title": "Verification harness (before fixing, so the fixes can be proven)",
+      "status": "pending",
+      "notes": "JVM tests for delete, add frame, view modes, effects stack, kfpack export validation, permissions, CI stub check, bundled demo generator."
+    },
+    {
+      "id": "R3",
+      "title": "Delete projects",
+      "status": "pending",
+      "notes": "Implement project overflow delete with confirmation dialog, recursive folder deletion, and Delete all projects in Settings."
+    },
+    {
+      "id": "R4",
+      "title": "Add frames to pairs",
+      "status": "pending",
+      "notes": "Implement 4 image sources (Gallery, Video frame, Camera, Files), two-step base/target flow, file copying, crop/ignore-region, and fit gating."
+    },
+    {
+      "id": "R5",
+      "title": "Permissions",
+      "status": "pending",
+      "notes": "Just-in-time permission requests, explanation dialog, Settings Permissions screen, zero-network enforcement."
+    },
+    {
+      "id": "R6",
+      "title": "Add effects and the stack editor",
+      "status": "pending",
+      "notes": "Effect library loader, Add effect modal picker, stack reordering, full parameter controls (scalar, bool, choice, color), presets, undo/redo."
+    },
+    {
+      "id": "R7",
+      "title": "View modes and the viewer",
+      "status": "pending",
+      "notes": "8 view modes (Result, Wipe with flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), pan/zoom viewer, frame strip."
+    },
+    {
+      "id": "R8",
+      "title": "Fit stage and Export stage, end to end",
+      "status": "pending",
+      "notes": "Foreground service for fit solver with notification and metrics; 3 export modes (Add, Create new, Merge), MediaStore download saving, validation."
+    },
+    {
+      "id": "R9",
+      "title": "Release and proof (last)",
+      "status": "pending",
+      "notes": "Automated release cc-studio-v2 via release.yml with signed APK and valid MOTIONSALT.kfpack asset, final report to Victor."
+    }
+  ],
+  "notes": "MOTIONSALT CC Studio v2 repair underway. No INTERNET permission. Full M3 Expressive discipline. SafeSave and ScreenSecurity helpers integrated."
+}
