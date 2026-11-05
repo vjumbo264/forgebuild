@@ -1,8 +1,8 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": false,
-  "status": "in_progress",
+  "build_complete": true,
+  "status": "complete",
   "updated_by": "build-agent",
   "current_task": "U5",
   "repair2_queue": [
@@ -187,8 +187,8 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Implemented U1 (Material 3 Slider overhaul), U2 (Keyflaw 1.4.9 main Glow restore), U3 (Export repair & Keyflower controls), and U4 (kfpack validation). Ready for U5 release.",
-  "current_phase": "update_slider_glow_export",
+  "last_session_note": "Successfully resolved slider precision & zero-increase bug, restored Keyflaw 1.4.9 main Glow effect, repaired .kfpack export with MediaStore Downloads path and Keyflower enable toggles, verified 0-error pack building, and published cc-studio-v6 live on GitHub Releases.",
+  "current_phase": "complete",
   "pivot_queue": [
     {
       "id": "T0",
@@ -283,12 +283,12 @@
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
-  "last_verified_release": "cc-studio-v5",
+  "last_verified_release": "cc-studio-v6",
   "ci_verification": {
-    "id": 42044224862,
+    "id": 42059941708,
     "conclusion": "success",
-    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42044224862",
-    "head_sha": "b840368ce3af8ae6609cd1f5e8b35b83bd06be6b"
+    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42059941708",
+    "head_sha": "9fe003915b604af714fd1b5f162f837f43e65d59"
   },
   "update_queue": [
     {
@@ -318,8 +318,8 @@
     {
       "id": "U5",
       "title": "Release cc-studio-v6",
-      "status": "in_progress",
-      "notes": "Triggering release.yml workflow for apps/cc-studio to publish cc-studio-v6."
+      "status": "done",
+      "notes": "Released cc-studio-v6 via release.yml workflow (run 42059941708, success). Verified live on GitHub Releases API with signed app-cc-studio-v6.apk (2,259,075 bytes), release.json, and forgebuild-manifest.json."
     }
   ]
 }
