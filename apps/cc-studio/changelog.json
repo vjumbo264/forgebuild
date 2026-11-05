@@ -1,5 +1,19 @@
 [
   {
+    "version": "v2",
+    "date": "2026-11-05",
+    "items": [
+      "Complete overhaul of interactive UI: replaced all shell mockups and stubs with fully working controls",
+      "Source stage: real frame picking across Gallery, Video frame, Camera, and Files with local file copying, swap, crop editor, and fit gating",
+      "Projects list: real project deletion with confirmation dialog, recursive file cleanup, and Delete all projects in Settings",
+      "Tune stage: 8 active inspection view modes (Result with press-and-hold Before, Wipe with orientation flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes)",
+      "Stack editor: full 17-effect library picker, drag reordering, duplicate, delete, reset to defaults, undo/redo, and typed controls (slider, switch, dropdown, color)",
+      "Fit stage: foreground service look fitting with determinate 6-step progress, cancel, metrics (mean & p95 Delta E), and before/target/recreated/heatmap viewer",
+      "Export stage: seamless export to Downloads/MOTIONSALT/CC Studio/, pack collision resolution, and success sheet with Share and Open Keyflaw actions",
+      "Data & testing: built-in demo project generator with synthetic test charts, zero-stubs CI enforcement, and zero network permissions"
+    ]
+  },
+  {
     "version": "v1",
     "date": "2026-11-05",
     "items": [

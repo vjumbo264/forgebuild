@@ -1,5 +1,7 @@
 package com.motionsalt.ccstudio.core
 
+import java.io.ByteArrayOutputStream
+import java.util.Locale
 import kotlin.math.*
 
 data class PixelPair(
@@ -15,9 +17,9 @@ data class FittedTransform(
     val matrixOffset: FloatArray,
     val gridSize: Int,
     val residual: FloatArray,
-    val strength: Float
+    val strength: Float = 1.0f
 ) {
-    fun evaluate(r: Float, g: Float, b: Float): Triple<Float, Float, Float> {
+    fun evaluate(r: Float, g: Float, b: Float, customStrength: Float = strength): Triple<Float, Float, Float> {
         val cr = curveR[((r.coerceIn(0f, 1f) * 255f).roundToInt()).coerceIn(0, 255)]
         val cg = curveG[((g.coerceIn(0f, 1f) * 255f).roundToInt()).coerceIn(0, 255)]
         val cb = curveB[((b.coerceIn(0f, 1f) * 255f).roundToInt()).coerceIn(0, 255)]
@@ -31,6 +33,13 @@ data class FittedTransform(
         mb = mb.coerceIn(0f, 1f)
 
         val n = gridSize
+        if (n <= 1 || residual.isEmpty()) {
+            val outR = (r + (mr - r) * customStrength).coerceIn(0f, 1f)
+            val outG = (g + (mg - g) * customStrength).coerceIn(0f, 1f)
+            val outB = (b + (mb - b) * customStrength).coerceIn(0f, 1f)
+            return Triple(outR, outG, outB)
+        }
+
         val fx = (mr * (n - 1)).coerceIn(0f, (n - 1).toFloat())
         val fy = (mg * (n - 1)).coerceIn(0f, (n - 1).toFloat())
         val fz = (mb * (n - 1)).coerceIn(0f, (n - 1).toFloat())
@@ -48,6 +57,7 @@ data class FittedTransform(
 
         fun getRes(ix: Int, iy: Int, iz: Int): Triple<Float, Float, Float> {
             val idx = (iz * n * n + iy * n + ix) * 3
+            if (idx + 2 >= residual.size) return Triple(0f, 0f, 0f)
             return Triple(residual[idx], residual[idx + 1], residual[idx + 2])
         }
 
@@ -60,21 +70,66 @@ data class FittedTransform(
         val c011 = getRes(x0, y1, z1)
         val c111 = getRes(x1, y1, z1)
 
-        val c00 = Triple(c000.first * (1f - wx) + c100.first * wx, c000.second * (1f - wx) + c100.second * wx, c000.third * (1f - wx) + c100.third * wx)
-        val c10 = Triple(c010.first * (1f - wx) + c110.first * wx, c010.second * (1f - wx) + c110.second * wx, c010.third * (1f - wx) + c110.third * wx)
-        val c01 = Triple(c001.first * (1f - wx) + c101.first * wx, c001.second * (1f - wx) + c101.second * wx, c001.third * (1f - wx) + c101.third * wx)
-        val c11 = Triple(c011.first * (1f - wx) + c111.first * wx, c011.second * (1f - wx) + c111.second * wx, c011.third * (1f - wx) + c111.third * wx)
+        val c00 = Triple(
+            c000.first * (1f - wx) + c100.first * wx,
+            c000.second * (1f - wx) + c100.second * wx,
+            c000.third * (1f - wx) + c100.third * wx
+        )
+        val c10 = Triple(
+            c010.first * (1f - wx) + c110.first * wx,
+            c010.second * (1f - wx) + c110.second * wx,
+            c010.third * (1f - wx) + c110.third * wx
+        )
+        val c01 = Triple(
+            c001.first * (1f - wx) + c101.first * wx,
+            c001.second * (1f - wx) + c101.second * wx,
+            c001.third * (1f - wx) + c101.third * wx
+        )
+        val c11 = Triple(
+            c011.first * (1f - wx) + c111.first * wx,
+            c011.second * (1f - wx) + c111.second * wx,
+            c011.third * (1f - wx) + c111.third * wx
+        )
 
-        val c0 = Triple(c00.first * (1f - wy) + c10.first * wy, c00.second * (1f - wy) + c10.second * wy, c00.third * (1f - wy) + c10.third * wy)
-        val c1 = Triple(c01.first * (1f - wy) + c11.first * wy, c01.second * (1f - wy) + c11.second * wy, c01.third * (1f - wy) + c11.third * wy)
+        val c0 = Triple(
+            c00.first * (1f - wy) + c10.first * wy,
+            c00.second * (1f - wy) + c10.second * wy,
+            c00.third * (1f - wy) + c10.third * wy
+        )
+        val c1 = Triple(
+            c01.first * (1f - wy) + c11.first * wy,
+            c01.second * (1f - wy) + c11.second * wy,
+            c01.third * (1f - wy) + c11.third * wy
+        )
 
-        val res = Triple(c0.first * (1f - wz) + c1.first * wz, c0.second * (1f - wz) + c1.second * wz, c0.third * (1f - wz) + c1.third * wz)
+        val res = Triple(
+            c0.first * (1f - wz) + c1.first * wz,
+            c0.second * (1f - wz) + c1.second * wz,
+            c0.third * (1f - wz) + c1.third * wz
+        )
 
-        val outR = (mr + res.first * strength).coerceIn(0f, 1f)
-        val outG = (mg + res.second * strength).coerceIn(0f, 1f)
-        val outB = (mb + res.third * strength).coerceIn(0f, 1f)
+        val fittedR = (mr + res.first).coerceIn(0f, 1f)
+        val fittedG = (mg + res.second).coerceIn(0f, 1f)
+        val fittedB = (mb + res.third).coerceIn(0f, 1f)
 
-        return Triple(outR, outG, outB)
+        val finalR = (r + (fittedR - r) * customStrength).coerceIn(0f, 1f)
+        val finalG = (g + (fittedG - g) * customStrength).coerceIn(0f, 1f)
+        val finalB = (b + (fittedB - b) * customStrength).coerceIn(0f, 1f)
+
+        return Triple(finalR, finalG, finalB)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as FittedTransform
+        return gridSize == other.gridSize && strength == other.strength
+    }
+
+    override fun hashCode(): Int {
+        var result = gridSize
+        result = 31 * result + strength.hashCode()
+        return result
     }
 }
 
@@ -126,10 +181,101 @@ object ColorMath {
                 for (r in 0 until size) {
                     val rVal = r.toFloat() / (size - 1)
                     val out = transform.evaluate(rVal, gVal, bVal)
-                    sb.appendLine(String.format(java.util.Locale.US, "%.6f %.6f %.6f", out.first, out.second, out.third))
+                    sb.appendLine(String.format(Locale.US, "%.6f %.6f %.6f", out.first, out.second, out.third))
                 }
             }
         }
         return sb.toString()
+    }
+
+    /**
+     * Generates a HaldCLUT Level 8 (512x512) raw RGB buffer.
+     * Hald 8 has 8^3 = 512 pixels per row and 512 rows, representing a 64x64x64 color cube.
+     */
+    fun generateHald8RgbBytes(transform: FittedTransform): ByteArray {
+        val size = 512
+        val lutDim = 64 // 64^3 = 262,144 pixels = 512 * 512
+        val buffer = ByteArray(size * size * 3)
+
+        var idx = 0
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                val cubeIndex = y * size + x
+                val bIdx = cubeIndex / (lutDim * lutDim)
+                val rem = cubeIndex % (lutDim * lutDim)
+                val gIdx = rem / lutDim
+                val rIdx = rem % lutDim
+
+                val rIn = rIdx.toFloat() / (lutDim - 1)
+                val gIn = gIdx.toFloat() / (lutDim - 1)
+                val bIn = bIdx.toFloat() / (lutDim - 1)
+
+                val out = transform.evaluate(rIn, gIn, bIn)
+
+                buffer[idx++] = (out.first * 255f).roundToInt().coerceIn(0, 255).toByte()
+                buffer[idx++] = (out.second * 255f).roundToInt().coerceIn(0, 255).toByte()
+                buffer[idx++] = (out.third * 255f).roundToInt().coerceIn(0, 255).toByte()
+            }
+        }
+        return buffer
+    }
+
+    /**
+     * Creates an uncompressed or simple BMP/PNG file bytes for Hald 8 image.
+     */
+    fun generateHald8Bmp(transform: FittedTransform): ByteArray {
+        val width = 512
+        val height = 512
+        val rgbData = generateHald8RgbBytes(transform)
+
+        val rowSize = ((width * 3 + 3) / 4) * 4
+        val imageSize = rowSize * height
+        val fileSize = 54 + imageSize
+
+        val header = ByteArray(54)
+        header[0] = 'B'.code.toByte()
+        header[1] = 'M'.code.toByte()
+        writeInt(header, 2, fileSize)
+        writeInt(header, 10, 54)
+        writeInt(header, 14, 40)
+        writeInt(header, 18, width)
+        writeInt(header, 22, height)
+        writeShort(header, 26, 1)
+        writeShort(header, 28, 24)
+        writeInt(header, 34, imageSize)
+
+        val out = ByteArray(fileSize)
+        System.arraycopy(header, 0, out, 0, 54)
+
+        var destOffset = 54
+        for (y in height - 1 downTo 0) {
+            val srcRow = y * width * 3
+            for (x in 0 until width) {
+                val srcIdx = srcRow + x * 3
+                val r = rgbData[srcIdx]
+                val g = rgbData[srcIdx + 1]
+                val b = rgbData[srcIdx + 2]
+                out[destOffset++] = b
+                out[destOffset++] = g
+                out[destOffset++] = r
+            }
+            while (destOffset % 4 != 2) {
+                // padding
+                destOffset++
+            }
+        }
+        return out
+    }
+
+    private fun writeInt(arr: ByteArray, offset: Int, value: Int) {
+        arr[offset] = (value and 0xFF).toByte()
+        arr[offset + 1] = ((value shr 8) and 0xFF).toByte()
+        arr[offset + 2] = ((value shr 16) and 0xFF).toByte()
+        arr[offset + 3] = ((value shr 24) and 0xFF).toByte()
+    }
+
+    private fun writeShort(arr: ByteArray, offset: Int, value: Int) {
+        arr[offset] = (value and 0xFF).toByte()
+        arr[offset + 1] = ((value shr 8) and 0xFF).toByte()
     }
 }

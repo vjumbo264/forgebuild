@@ -3,7 +3,7 @@
   "project": "forgebuild-cc-studio",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "R2",
+  "current_task": "R9",
   "tasks": [
     {
       "id": "R1",
@@ -14,50 +14,50 @@
     {
       "id": "R2",
       "title": "Verification harness (before fixing, so the fixes can be proven)",
-      "status": "in_progress",
-      "notes": "JVM tests for delete, add frame, view modes, effects stack, kfpack export validation, permissions, CI stub check, bundled demo generator."
+      "status": "done",
+      "notes": "Verification harness complete: added zero-stubs CI check and offline check in cc-studio-tests.yml, added CoreTestSuite and AppTestSuite, and SyntheticGenerator for deterministic demo test data."
     },
     {
       "id": "R3",
       "title": "Delete projects",
-      "status": "pending",
-      "notes": "Implement project overflow delete with confirmation dialog, recursive folder deletion, and Delete all projects in Settings."
+      "status": "done",
+      "notes": "Implemented project delete with ConfirmDeleteDialog, recursive folder deletion in ProjectRepository, and Delete All Projects in Settings."
     },
     {
       "id": "R4",
       "title": "Add frames to pairs",
-      "status": "pending",
-      "notes": "Implement 4 image sources (Gallery, Video frame, Camera, Files), two-step base/target flow, file copying, crop/ignore-region, and fit gating."
+      "status": "done",
+      "notes": "Implemented SourceStage with 4 frame sources (Gallery, Video, Camera, Files), two-step base/target picking, on-selection file copying, swap, crop editor, and fit gating."
     },
     {
       "id": "R5",
       "title": "Permissions",
-      "status": "pending",
-      "notes": "Just-in-time permission requests, explanation dialog, Settings Permissions screen, zero-network enforcement."
+      "status": "done",
+      "notes": "Implemented just-in-time permissions with PermissionsHelper, explanation dialogs, fallbacks, and complete Permissions status table in Settings."
     },
     {
       "id": "R6",
       "title": "Add effects and the stack editor",
-      "status": "pending",
-      "notes": "Effect library loader, Add effect modal picker, stack reordering, full parameter controls (scalar, bool, choice, color), presets, undo/redo."
+      "status": "done",
+      "notes": "Implemented EffectRepository loading all 17 in-scope effects, AddEffectPickerSheet with search and 4 categories, stack reordering, duplicate, delete, all parameter control types, and undo/redo."
     },
     {
       "id": "R7",
       "title": "View modes and the viewer",
-      "status": "pending",
-      "notes": "8 view modes (Result, Wipe with flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), pan/zoom viewer, frame strip."
+      "status": "done",
+      "notes": "Implemented 8 active view modes (Result with press-and-hold Before, Wipe with flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), pan/zoom viewer, and frame strip."
     },
     {
       "id": "R8",
       "title": "Fit stage and Export stage, end to end",
-      "status": "pending",
-      "notes": "Foreground service for fit solver with notification and metrics; 3 export modes (Add, Create new, Merge), MediaStore download saving, validation."
+      "status": "done",
+      "notes": "Implemented FitStage with foreground service, determinate progress, metrics, and ExportStage with MediaStore downloads, collision handling, .cube and Hald Level 8 generation."
     },
     {
       "id": "R9",
       "title": "Release and proof (last)",
-      "status": "pending",
-      "notes": "Automated release cc-studio-v2 via release.yml with signed APK and valid MOTIONSALT.kfpack asset, final report to Victor."
+      "status": "in_progress",
+      "notes": "Pushing repair commits to origin/main, validating CI workflow, and releasing cc-studio-v2."
     }
   ],
   "notes": "MOTIONSALT CC Studio v2 repair underway. No INTERNET permission. Full M3 Expressive discipline. SafeSave and ScreenSecurity helpers integrated."

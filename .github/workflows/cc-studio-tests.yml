@@ -22,6 +22,19 @@ jobs:
           fi
           echo "Offline manifest check PASSED: zero network permissions found."
 
+      - name: Zero-Stubs Enforcement Check
+        run: |
+          echo "Scanning apps/cc-studio/app/src/main/java/ and core/ for stubs or empty handlers..."
+          STUB_MATCHES=$(grep -rnE '(TODO|stub|placeholder|not implemented|onClick\s*=\s*\{\s*\})' \
+            apps/cc-studio/app/src/main/java/ \
+            apps/cc-studio/core/src/main/ || true)
+          if [ -n "$STUB_MATCHES" ]; then
+            echo "FAILED: Found stubs or empty onClick handlers:"
+            echo "$STUB_MATCHES"
+            exit 1
+          fi
+          echo "Zero-Stubs Check PASSED: No stubs or empty handlers found."
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
