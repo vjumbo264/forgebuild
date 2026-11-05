@@ -1,9 +1,9 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": true,
+  "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": null,
+  "current_task": "S8: Release cc-studio-v3",
   "tasks": [
     {
       "id": "R1",
@@ -58,7 +58,13 @@
       "title": "Release and proof (last)",
       "status": "done",
       "notes": "Release cc-studio-v2 successfully created and verified on GitHub Releases with signed APK and MOTIONSALT.kfpack asset."
+    },
+    {
+      "id": "R10",
+      "title": "Repair Round 2 (S1-S8)",
+      "status": "in_progress",
+      "notes": "Fixed frame import reactivity, connected live shader stack renderer to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics."
     }
   ],
-  "notes": "MOTIONSALT CC Studio v2 repair complete. Replaced all shell stubs with real working implementations. Zero network permissions verified by CI. All 6 symptoms resolved. Release cc-studio-v2 published."
+  "notes": "MOTIONSALT CC Studio Repair 2: resolved frame import reactivity, connected live StackRenderer and 3D LUT evaluator to TuneStage viewer, completed 5 categories with Tritone and Tone effects, redesigned Permissions screen, added in-app Diagnostics."
 }

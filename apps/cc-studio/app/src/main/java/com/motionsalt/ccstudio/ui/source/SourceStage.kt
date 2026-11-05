@@ -1,7 +1,10 @@
 package com.motionsalt.ccstudio.ui.source
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,10 +28,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.motionsalt.ccstudio.data.*
 import java.io.File
-import java.io.InputStream
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,52 +42,62 @@ fun SourceStage(
     onContinueToFit: () -> Unit
 ) {
     val context = LocalContext.current
-    var pairs by remember { mutableStateOf(project.pairs.toList()) }
+
+    // Observe pairs directly via snapshot state list for instant reactivity
+    val pairsList = remember(project.id) {
+        mutableStateListOf<FramePair>().apply { addAll(project.pairs) }
+    }
+
     var showSourceSheet by remember { mutableStateOf(false) }
     var activeTargetPairIndex by remember { mutableStateOf<Int?>(null) }
     var isPickingTargetFrame by remember { mutableStateOf(false) } // false = base, true = target
     var cropEditorPair by remember { mutableStateOf<Pair<Int, Boolean>?>(null) } // pairIndex, isTarget
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var permissionExplanationDialog by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
 
-    fun refreshPairs() {
-        pairs = project.pairs.toList()
+    fun syncAndSave() {
+        project.pairs.clear()
+        project.pairs.addAll(pairsList)
         repository.saveProject(project)
     }
 
-    fun handleImageSelected(uri: Uri?) {
+    fun handleImageUri(uri: Uri?) {
         if (uri == null) return
         val targetIdx = activeTargetPairIndex ?: return
-        if (targetIdx !in project.pairs.indices) return
-
+        if (targetIdx !in pairsList.indices) return
         try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            if (inputStream != null) {
-                val ext = if (uri.toString().contains("png")) "png" else "jpg"
-                val copiedPath = repository.copyFileToProject(project.id, inputStream, "frame_${System.currentTimeMillis()}.$ext")
-                val frame = ImageFrame(copiedPath)
-
-                val pair = project.pairs[targetIdx]
-                if (isPickingTargetFrame) {
-                    pair.target = frame
-                } else {
-                    pair.base = frame
-                }
-                refreshPairs()
+            val destDir = File(context.filesDir, "projects/${project.id}/images")
+            val copiedPath = ImageUtils.importImageToProject(
+                context = context,
+                uri = uri,
+                destDir = destDir,
+                baseName = if (isPickingTargetFrame) "target" else "base"
+            )
+            val frame = ImageFrame(copiedPath)
+            val currentPair = pairsList[targetIdx]
+            val updatedPair = if (isPickingTargetFrame) {
+                currentPair.copy(target = frame)
+            } else {
+                currentPair.copy(base = frame)
             }
+            pairsList[targetIdx] = updatedPair
+            syncAndSave()
         } catch (e: Exception) {
             e.printStackTrace()
+            errorMessage = "Failed to import image: ${e.localizedMessage ?: "Unknown error"}"
         }
     }
 
     // Photo Picker launcher (Gallery)
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> handleImageSelected(uri) }
+        onResult = { uri -> handleImageUri(uri) }
     )
 
-    // Document/File picker launcher
+    // Document/File picker launcher (SAF)
     val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri -> handleImageSelected(uri) }
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri -> handleImageUri(uri) }
     )
 
     // Camera launcher
@@ -93,7 +106,7 @@ fun SourceStage(
         onResult = { bitmap ->
             if (bitmap != null) {
                 val targetIdx = activeTargetPairIndex ?: return@rememberLauncherForActivityResult
-                if (targetIdx in project.pairs.indices) {
+                if (targetIdx in pairsList.indices) {
                     val pDir = File(context.filesDir, "projects/${project.id}/images")
                     if (!pDir.exists()) pDir.mkdirs()
                     val destFile = File(pDir, "cam_${System.currentTimeMillis()}.jpg")
@@ -101,15 +114,36 @@ fun SourceStage(
                         bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
                     }
                     val frame = ImageFrame(destFile.absolutePath)
-                    val pair = project.pairs[targetIdx]
-                    if (isPickingTargetFrame) pair.target = frame else pair.base = frame
-                    refreshPairs()
+                    val currentPair = pairsList[targetIdx]
+                    val updatedPair = if (isPickingTargetFrame) currentPair.copy(target = frame) else currentPair.copy(base = frame)
+                    pairsList[targetIdx] = updatedPair
+                    syncAndSave()
                 }
             }
         }
     )
 
-    val completePairCount = pairs.count { it.isComplete }
+    // Permission launchers
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            // Open picker either way (graceful fallback)
+            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }
+    )
+
+    val requestCameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            if (granted) {
+                cameraLauncher.launch(null)
+            } else {
+                errorMessage = "Camera permission denied. You can pick photos from Gallery or Files."
+            }
+        }
+    )
+
+    val completePairCount = pairsList.count { it.isComplete }
     val canFit = completePairCount >= 1
 
     Column(
@@ -123,21 +157,20 @@ fun SourceStage(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Frame Pairs (${pairs.size})", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Frame Pairs (${pairsList.size})", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Pick base (ungraded) and target (graded) frame pairs.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             Button(
                 onClick = {
                     val newPair = FramePair(id = UUID.randomUUID().toString())
-                    project.pairs.add(newPair)
-                    refreshPairs()
+                    pairsList.add(newPair)
+                    syncAndSave()
                     // Immediately trigger base picking for the newly created pair
-                    activeTargetPairIndex = project.pairs.size - 1
+                    activeTargetPairIndex = pairsList.size - 1
                     isPickingTargetFrame = false
                     showSourceSheet = true
                 }
@@ -150,7 +183,7 @@ fun SourceStage(
 
         Spacer(Modifier.height(12.dp))
 
-        if (pairs.isEmpty()) {
+        if (pairsList.isEmpty()) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
@@ -173,7 +206,7 @@ fun SourceStage(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                itemsIndexed(pairs) { index, pair ->
+                itemsIndexed(pairsList, key = { _, pair -> pair.id }) { index, pair ->
                     PairCard(
                         pair = pair,
                         index = index,
@@ -189,20 +222,21 @@ fun SourceStage(
                         },
                         onSwap = {
                             val temp = pair.base
-                            pair.base = pair.target
-                            pair.target = temp
-                            refreshPairs()
+                            val updated = pair.copy(base = pair.target, target = temp)
+                            pairsList[index] = updated
+                            syncAndSave()
                         },
                         onToggleMode = {
-                            pair.mode = if (pair.mode == PairMode.SAME_FRAME) PairMode.DIFFERENT_SCENES else PairMode.SAME_FRAME
-                            refreshPairs()
+                            val nextMode = if (pair.mode == PairMode.SAME_FRAME) PairMode.DIFFERENT_SCENES else PairMode.SAME_FRAME
+                            pairsList[index] = pair.copy(mode = nextMode)
+                            syncAndSave()
                         },
                         onEditCrop = { isTarget ->
                             cropEditorPair = index to isTarget
                         },
                         onRemove = {
-                            project.pairs.removeAt(index)
-                            refreshPairs()
+                            pairsList.removeAt(index)
+                            syncAndSave()
                         }
                     )
                 }
@@ -245,11 +279,23 @@ fun SourceStage(
 
                 ListItem(
                     headlineContent = { Text("Gallery") },
-                    supportingContent = { Text("Standard system photo picker (no extra permissions needed)") },
+                    supportingContent = { Text("Device photo albums") },
                     leadingContent = { Icon(EngineIcons.Image, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Manifest.permission.READ_MEDIA_IMAGES
+                        } else {
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                        }
+                        val granted = ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+                        if (!granted) {
+                            permissionExplanationDialog = "CC Studio requests media access to quickly browse and import high-res frames from your gallery." to {
+                                requestPermissionLauncher.launch(perm)
+                            }
+                        } else {
+                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }
                     }
                 )
 
@@ -269,17 +315,24 @@ fun SourceStage(
                     leadingContent = { Icon(EngineIcons.Camera, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        cameraLauncher.launch(null)
+                        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                        if (!granted) {
+                            permissionExplanationDialog = "CC Studio requests camera access so you can snap live reference scenes or physical color charts." to {
+                                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                            }
+                        } else {
+                            cameraLauncher.launch(null)
+                        }
                     }
                 )
 
                 ListItem(
                     headlineContent = { Text("Files") },
-                    supportingContent = { Text("Pick from storage document tree") },
+                    supportingContent = { Text("Storage Access Framework document picker") },
                     leadingContent = { Icon(EngineIcons.Folder, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        filePickerLauncher.launch("image/*")
+                        filePickerLauncher.launch(arrayOf("image/*"))
                     }
                 )
 
@@ -288,8 +341,43 @@ fun SourceStage(
         }
     }
 
+    permissionExplanationDialog?.let { (explanation, onProceed) ->
+        AlertDialog(
+            onDismissRequest = { permissionExplanationDialog = null },
+            title = { Text("Permission Notice") },
+            text = { Text(explanation) },
+            confirmButton = {
+                Button(onClick = {
+                    val act = onProceed
+                    permissionExplanationDialog = null
+                    act()
+                }) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { permissionExplanationDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    errorMessage?.let { err ->
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Notice") },
+            text = { Text(err) },
+            confirmButton = {
+                Button(onClick = { errorMessage = null }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     cropEditorPair?.let { (idx, isTarget) ->
-        val pair = project.pairs.getOrNull(idx)
+        val pair = pairsList.getOrNull(idx)
         val frame = if (isTarget) pair?.target else pair?.base
         if (frame != null) {
             CropEditorDialog(
@@ -297,8 +385,12 @@ fun SourceStage(
                 title = if (isTarget) "Target Frame Crop" else "Base Frame Crop",
                 onDismiss = { cropEditorPair = null },
                 onSave = { updated ->
-                    if (isTarget) pair?.target = updated else pair?.base = updated
-                    refreshPairs()
+                    if (isTarget) {
+                        pairsList[idx] = pair.copy(target = updated)
+                    } else {
+                        pairsList[idx] = pair.copy(base = updated)
+                    }
+                    syncAndSave()
                     cropEditorPair = null
                 }
             )
@@ -395,76 +487,36 @@ fun FrameThumbnailBox(
                 .clickable { onPick() },
             contentAlignment = Alignment.Center
         ) {
-            if (frame != null && File(frame.filePath).exists()) {
-                val bitmap = remember(frame.filePath) {
-                    BitmapFactory.decodeFile(frame.filePath)
-                }
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = label,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+            val filePath = frame?.filePath
+            val bmp = remember(filePath, frame?.cropRect) {
+                if (filePath != null && File(filePath).exists()) {
+                    BitmapFactory.decodeFile(filePath)
+                } else null
+            }
+            if (bmp != null) {
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = label,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
                 IconButton(
                     onClick = onCrop,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .size(24.dp)
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                        .size(28.dp)
                 ) {
-                    Icon(EngineIcons.Crop, contentDescription = "Edit crop", tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(EngineIcons.Crop, contentDescription = "Crop frame", tint = Color.White, modifier = Modifier.size(16.dp))
                 }
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(EngineIcons.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Tap to add", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Tap to pick", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
-}
-
-@Composable
-fun CropEditorDialog(
-    frame: ImageFrame,
-    title: String,
-    onDismiss: () -> Unit,
-    onSave: (ImageFrame) -> Unit
-) {
-    var left by remember { mutableStateOf(frame.cropRect.left) }
-    var top by remember { mutableStateOf(frame.cropRect.top) }
-    var right by remember { mutableStateOf(frame.cropRect.right) }
-    var bottom by remember { mutableStateOf(frame.cropRect.bottom) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Ignore black bars or subtitles by adjusting the sampling bounds:", fontSize = 12.sp)
-                Text("Left: ${(left * 100).toInt()}%", fontSize = 12.sp)
-                Slider(value = left, onValueChange = { left = it.coerceAtMost(right - 0.1f) })
-                Text("Top: ${(top * 100).toInt()}%", fontSize = 12.sp)
-                Slider(value = top, onValueChange = { top = it.coerceAtMost(bottom - 0.1f) })
-                Text("Right: ${(right * 100).toInt()}%", fontSize = 12.sp)
-                Slider(value = right, onValueChange = { right = it.coerceAtLeast(left + 0.1f) })
-                Text("Bottom: ${(bottom * 100).toInt()}%", fontSize = 12.sp)
-                Slider(value = bottom, onValueChange = { bottom = it.coerceAtLeast(top + 0.1f) })
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(ImageFrame(frame.filePath, CropRect(left, top, right, bottom), frame.ignoreRects))
-                }
-            ) {
-                Text("Apply Crop")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }

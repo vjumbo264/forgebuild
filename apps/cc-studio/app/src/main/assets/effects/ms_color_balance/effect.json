@@ -1,7 +1,7 @@
 {
   "id": "ms_color_balance",
   "name": "Color Balance (Wheels)",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Lift, Gamma, Gain tri-zonal grading for shadows, midtones, and highlights.",
   "expandBounds": 0,
   "parameters": [

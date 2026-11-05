@@ -1,7 +1,7 @@
 {
   "id": "ms_tritone",
   "name": "Tritone Split Tone",
-  "category": "Look",
+  "category": "Toning",
   "description": "Cinema split-toning: separate COLOR controls for shadows, midtones, and highlights.",
   "expandBounds": 0,
   "parameters": [

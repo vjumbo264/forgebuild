@@ -153,9 +153,90 @@ fun TuneStage(
                 },
             contentAlignment = Alignment.Center
         ) {
-            val bitmap = remember(activeFramePath) {
+            // Load fitted transform if project has fit result
+            val lutTransform = remember(project.fitResult?.lutPath) {
+                val lutPath = project.fitResult?.lutPath
+                if (lutPath != null && File(lutPath).exists()) {
+                    try {
+                        ColorMath.parseCube33(File(lutPath).readText(java.nio.charset.StandardCharsets.UTF_8))
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
+            }
+
+            // Real-time stack rendering of the active frame through the complete effect stack
+            val bitmap = remember(activeFramePath, tuneStateJson, isPressingBefore, currentViewMode, wipeDividerFraction, isWipeVertical, diffGain, selectedChannel) {
                 if (activeFramePath != null && File(activeFramePath!!).exists()) {
-                    BitmapFactory.decodeFile(activeFramePath)
+                    val rawBmp = BitmapFactory.decodeFile(activeFramePath)
+                    if (rawBmp != null) {
+                        if (isPressingBefore) {
+                            rawBmp // True original before
+                        } else {
+                            val w = rawBmp.width
+                            val h = rawBmp.height
+                            val pixels = IntArray(w * h)
+                            rawBmp.getPixels(pixels, 0, w, 0, 0, w, h)
+                            val inBuf = StackRenderer.PixelBuffer(w, h, pixels)
+                            val outBuf = StackRenderer.render(inBuf, currentTuneState, lutTransform)
+
+                            // Apply ViewMode modifications
+                            when (currentViewMode) {
+                                ViewMode.WIPE -> {
+                                    val wipePixels = outBuf.pixels.clone()
+                                    for (y in 0 until h) {
+                                        for (x in 0 until w) {
+                                            val isBefore = if (isWipeVertical) {
+                                                (x.toFloat() / w) < wipeDividerFraction
+                                            } else {
+                                                (y.toFloat() / h) < wipeDividerFraction
+                                            }
+                                            if (isBefore) {
+                                                wipePixels[y * w + x] = pixels[y * w + x]
+                                            }
+                                        }
+                                    }
+                                    Bitmap.createBitmap(wipePixels, w, h, Bitmap.Config.ARGB_8888)
+                                }
+                                ViewMode.CHANNELS -> {
+                                    val chanPixels = IntArray(w * h)
+                                    for (i in 0 until (w * h)) {
+                                        val p = outBuf.pixels[i]
+                                        val a = (p ushr 24) and 0xFF
+                                        val r = (p ushr 16) and 0xFF
+                                        val g = (p ushr 8) and 0xFF
+                                        val b = p and 0xFF
+                                        chanPixels[i] = when (selectedChannel) {
+                                            1 -> (a shl 24) or (r shl 16) // R only
+                                            2 -> (a shl 24) or (g shl 8)  // G only
+                                            3 -> (a shl 24) or b          // B only
+                                            4 -> {
+                                                val luma = (0.2126f * r + 0.7152f * g + 0.0722f * b).toInt().coerceIn(0, 255)
+                                                (a shl 24) or (luma shl 16) or (luma shl 8) or luma
+                                            }
+                                            else -> p
+                                        }
+                                    }
+                                    Bitmap.createBitmap(chanPixels, w, h, Bitmap.Config.ARGB_8888)
+                                }
+                                ViewMode.DIFFERENCE -> {
+                                    val diffPixels = IntArray(w * h)
+                                    for (i in 0 until (w * h)) {
+                                        val pOrig = pixels[i]
+                                        val pProc = outBuf.pixels[i]
+                                        val rDiff = (Math.abs(((pProc ushr 16) and 0xFF) - ((pOrig ushr 16) and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
+                                        val gDiff = (Math.abs(((pProc ushr 8) and 0xFF) - ((pOrig ushr 8) and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
+                                        val bDiff = (Math.abs((pProc and 0xFF) - (pOrig and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
+                                        diffPixels[i] = (0xFF shl 24) or (rDiff shl 16) or (gDiff shl 8) or bDiff
+                                    }
+                                    Bitmap.createBitmap(diffPixels, w, h, Bitmap.Config.ARGB_8888)
+                                }
+                                else -> {
+                                    Bitmap.createBitmap(outBuf.pixels, w, h, Bitmap.Config.ARGB_8888)
+                                }
+                            }
+                        }
+                    } else null
                 } else null
             }
 
@@ -674,7 +755,7 @@ fun AddEffectPickerSheet(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
 
-    val categories = listOf("All", "Colour correction", "Tone", "Detail", "Look")
+    val categories = listOf("All", "Colour correction", "Tone", "Toning", "Detail", "Look")
 
     val filtered = effects.filter { eff ->
         val matchesCat = selectedCategory == "All" || eff.category.equals(selectedCategory, ignoreCase = true)

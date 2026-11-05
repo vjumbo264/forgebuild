@@ -1,0 +1,33 @@
+{
+  "id": "ms_duotone",
+  "name": "Duotone Gradient",
+  "category": "Toning",
+  "description": "Two-tone gradient mapping across shadows and highlights.",
+  "expandBounds": 0,
+  "parameters": [
+    {
+      "key": "shadowColor",
+      "label": "Shadows Color",
+      "type": "COLOR",
+      "default": "#001026",
+      "group": "Colors"
+    },
+    {
+      "key": "highlightColor",
+      "label": "Highlights Color",
+      "type": "COLOR",
+      "default": "#FFE4B5",
+      "group": "Colors"
+    },
+    {
+      "key": "blend",
+      "label": "Blend Amount",
+      "type": "SCALAR",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.01,
+      "group": "Blending"
+    }
+  ]
+}

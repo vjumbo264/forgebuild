@@ -1,7 +1,7 @@
 {
   "id": "ms_levels_curves",
   "name": "Levels & Tone Curves",
-  "category": "Warna",
+  "category": "Tone",
   "description": "Input black and white clipping points with non-linear midtone S-curve tuning.",
   "expandBounds": 0,
   "parameters": [

@@ -1,7 +1,7 @@
 {
   "id": "ms_hue_saturation",
   "name": "Hue, Saturation & Vibrance",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Angle hue rotation, chromatic saturation, and skin-tone protecting vibrance.",
   "expandBounds": 0,
   "parameters": [

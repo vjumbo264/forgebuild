@@ -94,13 +94,15 @@ class EffectRepository(private val context: Context) {
         return cachedEffects
     }
 
-    private fun mapCategory(raw: String): String {
-        return when (raw.lowercase()) {
+        private fun mapCategory(raw: String): String {
+        return when (raw.lowercase().trim()) {
             "warna", "colour", "color", "colour correction" -> "Colour correction"
-            "tone", "toning" -> "Tone"
+            "tone" -> "Tone"
+            "toning" -> "Toning"
             "detail", "detail & clarity" -> "Detail"
             "look", "cinematic", "stylize" -> "Look"
-            else -> "Colour correction"
+            else -> raw
         }
     }
+}
 }

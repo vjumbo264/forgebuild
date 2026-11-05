@@ -1,7 +1,7 @@
 {
   "id": "ms_white_balance",
   "name": "White Balance",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Calibrated color temperature (Warm/Amber vs Cool/Blue) and green/magenta tint.",
   "expandBounds": 0,
   "parameters": [

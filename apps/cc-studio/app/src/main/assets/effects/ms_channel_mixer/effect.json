@@ -1,7 +1,7 @@
 {
   "id": "ms_channel_mixer",
   "name": "Channel Mixer",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Full 3x3 matrix reassignment for deep anime infrared and stylistic looks.",
   "expandBounds": 0,
   "parameters": [

@@ -1,7 +1,7 @@
 {
   "id": "ms_lut",
   "name": "3D LUT Grade",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Applies the fitted multi-stage 3D color correction transform with intensity control.",
   "expandBounds": 0,
   "parameters": [

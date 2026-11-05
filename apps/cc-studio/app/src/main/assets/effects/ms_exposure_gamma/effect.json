@@ -1,7 +1,7 @@
 {
   "id": "ms_exposure_gamma",
   "name": "Exposure & Gamma",
-  "category": "Warna",
+  "category": "Tone",
   "description": "Photographic optical exposure stops with power-curve gamma and offset.",
   "expandBounds": 0,
   "parameters": [

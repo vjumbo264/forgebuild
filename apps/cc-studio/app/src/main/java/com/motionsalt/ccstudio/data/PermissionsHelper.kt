@@ -17,7 +17,8 @@ data class PermissionItem(
     val purpose: String,
     val whenRequested: String,
     val fallback: String,
-    val isGranted: Boolean
+    val isGranted: Boolean,
+    val statusText: String
 )
 
 object PermissionsHelper {
@@ -25,120 +26,90 @@ object PermissionsHelper {
     fun getPermissionList(context: Context): List<PermissionItem> {
         val list = mutableListOf<PermissionItem>()
 
-        // 1. Save to Downloads
-        val writeStorageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            true // MediaStore scoped storage requires no runtime permission
+        // 1. Photos & Videos
+        val mediaGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
         } else {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        val mediaPerm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
         }
         list.add(
             PermissionItem(
-                id = "save_downloads",
-                permission = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) Manifest.permission.WRITE_EXTERNAL_STORAGE else null,
-                name = "Save to Downloads",
-                purpose = "Save exported Keyflaw .kfpack and .cube LUTs to Downloads/MOTIONSALT/CC Studio/",
-                whenRequested = "First export",
-                fallback = "SAF Storage Access Framework folder picker",
-                isGranted = writeStorageGranted
+                id = "media",
+                permission = mediaPerm,
+                name = "Media (Photos & Videos)",
+                purpose = "Allow quick batch access to reference frames in device albums",
+                whenRequested = "When tapping Gallery or Video frame in Add pair",
+                fallback = "System Photo Picker works without granting runtime permission",
+                isGranted = mediaGranted,
+                statusText = if (mediaGranted) "Granted" else "Not granted (Optional)"
             )
         )
 
-        // 2. Custom Save Folder
+        // 2. Camera
+        val cameraGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         list.add(
             PermissionItem(
-                id = "saf_tree",
-                permission = null, // Handled via ACTION_OPEN_DOCUMENT_TREE
-                name = "Custom Save Folder",
-                purpose = "User-picked custom export folder via Storage Access Framework",
-                whenRequested = "Tapping Change folder in Export",
-                fallback = "Default Downloads/MOTIONSALT/CC Studio/ folder",
-                isGranted = true
+                id = "camera",
+                permission = Manifest.permission.CAMERA,
+                name = "Camera",
+                purpose = "Snap a live reference frame or color chart directly with phone camera",
+                whenRequested = "When tapping Camera in Add pair",
+                fallback = "Pick saved photos from Gallery or Files",
+                isGranted = cameraGranted,
+                statusText = if (cameraGranted) "Granted" else "Not granted"
             )
         )
 
-        // 3. Direct Folder Access (MANAGE_EXTERNAL_STORAGE)
-        val manageStorageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        // 3. Look Fitting Notifications (API 33+)
+        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        val notifStatus = when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> "Not needed on this Android version"
+            notifGranted -> "Granted"
+            else -> "Not granted"
+        }
+        list.add(
+            PermissionItem(
+                id = "notifications",
+                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.POST_NOTIFICATIONS else null,
+                name = "Solver Progress Notifications",
+                purpose = "Foreground notification showing background fitting progress",
+                whenRequested = "First time running Fit look",
+                fallback = "Solver runs with in-app live progress bar",
+                isGranted = notifGranted,
+                statusText = notifStatus
+            )
+        )
+
+        // 4. Direct Folder Access (MANAGE_EXTERNAL_STORAGE)
+        val manageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
             true
+        }
+        val manageStatus = when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.R -> "Not needed on this Android version"
+            manageGranted -> "Granted"
+            else -> "Not granted (Optional)"
         }
         list.add(
             PermissionItem(
                 id = "manage_storage",
                 permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Manifest.permission.MANAGE_EXTERNAL_STORAGE else null,
                 name = "Direct Folder Access",
-                purpose = "Directly overwrite existing exports and merge packs in Downloads without extra prompts",
+                purpose = "Directly overwrite and merge .kfpack packs in Downloads without extra confirmation prompts",
                 whenRequested = "When enabled in Settings > Direct folder access",
-                fallback = "Single file SAF picker",
-                isGranted = manageStorageGranted
-            )
-        )
-
-        // 4. Pick Frame Images
-        val imageGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-        list.add(
-            PermissionItem(
-                id = "pick_images",
-                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE,
-                name = "Pick Frames (Images)",
-                purpose = "Select Base and Target frames for color correction matching",
-                whenRequested = "Adding a pair from Gallery",
-                fallback = "System Photo Picker or Files picker",
-                isGranted = imageGranted
-            )
-        )
-
-        // 5. Pick Video Frame
-        val videoGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-        list.add(
-            PermissionItem(
-                id = "video_frame",
-                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_VIDEO else Manifest.permission.READ_EXTERNAL_STORAGE,
-                name = "Video Frame Extraction",
-                purpose = "Pick a video clip and scrub to grab a reference or target frame",
-                whenRequested = "Choosing Video frame source in Add pair",
-                fallback = "System Files picker",
-                isGranted = videoGranted
-            )
-        )
-
-        // 6. Camera Frame
-        val cameraGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        list.add(
-            PermissionItem(
-                id = "camera",
-                permission = Manifest.permission.CAMERA,
-                name = "Camera Frame",
-                purpose = "Snap a live reference or color chart directly with the phone camera",
-                whenRequested = "Choosing Camera source in Add pair",
-                fallback = "Gallery photo picker or Files picker",
-                isGranted = cameraGranted
-            )
-        )
-
-        // 7. Background Notifications
-        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-        list.add(
-            PermissionItem(
-                id = "notifications",
-                permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.POST_NOTIFICATIONS else null,
-                name = "Solver Notifications",
-                purpose = "Foreground service notification showing progress during multi-step look fitting",
-                whenRequested = "First time running Fit look",
-                fallback = "Solver runs in foreground screen with in-app progress",
-                isGranted = notifGranted
+                fallback = "Standard per-file SAF document picker",
+                isGranted = manageGranted,
+                statusText = manageStatus
             )
         )
 

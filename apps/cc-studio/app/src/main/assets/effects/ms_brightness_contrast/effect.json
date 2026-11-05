@@ -1,7 +1,7 @@
 {
   "id": "ms_brightness_contrast",
   "name": "Brightness & Contrast",
-  "category": "Warna",
+  "category": "Tone",
   "description": "Precise linear brightness pedestal and perceptual contrast expansion around mid-grey.",
   "expandBounds": 0,
   "parameters": [

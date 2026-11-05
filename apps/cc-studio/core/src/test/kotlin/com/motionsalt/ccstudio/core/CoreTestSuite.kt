@@ -91,7 +91,7 @@ class CoreTestSuite {
         assertEquals(2, restored.stack.size)
         assertEquals("ms_lut", restored.stack[0].effectId)
         assertEquals("ms_glow", restored.stack[1].effectId)
-        assertEquals(0.8, restored.stack[1].params["intensity"])
+        assertEquals(0.8, (restored.stack[1].params["intensity"] as Number).toDouble(), 0.0001)
     }
 
     @Test

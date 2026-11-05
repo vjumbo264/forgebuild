@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.forgebuild.engine.ui.components.EngineLinearWavyProgress
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.motionsalt.ccstudio.core.*
+import com.motionsalt.ccstudio.core.StackRenderer
 import com.motionsalt.ccstudio.data.FitResultData
 import com.motionsalt.ccstudio.data.ProjectData
 import com.motionsalt.ccstudio.data.ProjectRepository
@@ -246,7 +247,16 @@ fun FitStage(
                 val imagePath = when (selectedViewerTab) {
                     0 -> pair?.base?.filePath
                     1 -> pair?.target?.filePath
-                    2 -> pair?.target?.filePath // Recreated approximation
+                    2 -> {
+                        val resultsDir = File(context.filesDir, "projects/${project.id}/results")
+                        val recFile = resultsDir.listFiles()?.filter { it.name.startsWith("recreated_") }?.maxByOrNull { it.lastModified() }
+                        recFile?.absolutePath ?: pair?.target?.filePath
+                    }
+                    3 -> {
+                        val resultsDir = File(context.filesDir, "projects/${project.id}/results")
+                        val heatFile = resultsDir.listFiles()?.filter { it.name.startsWith("heatmap_") }?.maxByOrNull { it.lastModified() }
+                        heatFile?.absolutePath ?: pair?.base?.filePath
+                    }
                     else -> pair?.base?.filePath
                 }
 

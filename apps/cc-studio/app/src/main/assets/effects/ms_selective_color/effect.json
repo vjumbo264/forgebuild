@@ -1,7 +1,7 @@
 {
   "id": "ms_selective_color",
   "name": "Selective Colour",
-  "category": "Warna",
+  "category": "Colour correction",
   "description": "Isolate and shift specific hue ranges (e.g. skin tones, foliage, or sky).",
   "expandBounds": 0,
   "parameters": [

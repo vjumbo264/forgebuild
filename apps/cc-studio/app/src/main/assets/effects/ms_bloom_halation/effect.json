@@ -1,0 +1,46 @@
+{
+  "id": "ms_bloom_halation",
+  "name": "Bloom & Halation",
+  "category": "Look",
+  "description": "Analog film halation and soft optical bloom around specular highlights.",
+  "expandBounds": 0.15,
+  "parameters": [
+    {
+      "key": "threshold",
+      "label": "Bloom Threshold",
+      "type": "SCALAR",
+      "default": 0.7,
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.01,
+      "group": "Bloom"
+    },
+    {
+      "key": "bloomIntensity",
+      "label": "Bloom Intensity",
+      "type": "SCALAR",
+      "default": 0.5,
+      "min": 0.0,
+      "max": 2.0,
+      "step": 0.01,
+      "group": "Bloom"
+    },
+    {
+      "key": "halationColor",
+      "label": "Halation Tint",
+      "type": "COLOR",
+      "default": "#FF3311",
+      "group": "Halation"
+    },
+    {
+      "key": "halationIntensity",
+      "label": "Halation Intensity",
+      "type": "SCALAR",
+      "default": 0.35,
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.01,
+      "group": "Halation"
+    }
+  ]
+}
