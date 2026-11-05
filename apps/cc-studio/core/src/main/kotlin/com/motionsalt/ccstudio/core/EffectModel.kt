@@ -31,7 +31,8 @@ data class EffectDefinition(
     val expandBounds: Float = 0f,
     val parameters: List<EffectParam> = emptyList(),
     val passes: List<String> = emptyList(),
-    val shaderCode: String = ""
+    val shaderCode: String = "",
+    val passShaders: Map<String, String> = emptyMap()
 )
 
 data class StackItem(

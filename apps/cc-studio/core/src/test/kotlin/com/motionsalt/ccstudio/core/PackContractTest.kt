@@ -15,4 +15,44 @@ class PackContractTest {
     @Test fun scalarAndStageControlsRoundTrip(){val s=TuneState.defaultState();assertEquals("colour_match",s.stack.single().effectId);s.stack.single().params["strength"]=.47;val copy=TuneState.fromJsonString(s.toJsonString());assertEquals(.47,(copy.stack.single().params["strength"] as Number).toDouble(),0.0)}
     @Test fun shaderContainsOnlyInputSampler(){val source=MatchShader.source(ParametricMatch());assertEquals(1,Regex("uniform sampler2D").findAll(source).count());assertFalse(source.contains("uLut"));assertTrue(source.contains("uHueEnabled"))}
     @Test(expected=IllegalArgumentException::class)fun unsupportedGraphsNeverSilentlyExportFirstPass(){pack(listOf(MatchEffect.definition().copy(passes=listOf("pass1.glsl"))))}
+
+    @Test fun multiPassEffectsExportAllDeclaredPassShadersAndValidateSuccessfully() {
+        val passCode = "precision mediump float; uniform sampler2D uTexture; varying vec2 vTex; void main() { gl_FragColor = texture2D(uTexture, vTex); }"
+        val multi = EffectDefinition(
+            id = "test_multi",
+            name = "Test Multi",
+            category = "MOTIONSALT",
+            description = "Multi-pass test",
+            parameters = listOf(EffectParam("amount", "Amount", ParamType.SCALAR, 15.0, 0f, 100f, 1f)),
+            passes = listOf("shader.glsl", "pass_01.glsl"),
+            shaderCode = passCode,
+            passShaders = mapOf("pass_01.glsl" to passCode)
+        )
+        val b = pack(listOf(multi))
+        val files = entries(b)
+        assertTrue(files.containsKey("effects/test_multi/effect.json"))
+        assertTrue(files.containsKey("effects/test_multi/shader.glsl"))
+        assertTrue(files.containsKey("effects/test_multi/pass_01.glsl"))
+        val valResult = PackBuilder.validatePack(b.inputStream())
+        assertTrue("Pack validation failed: ${valResult.errors}", valResult.isValid)
+    }
+
+    @Test fun tunedParameterValuesExportAsDefaultState() {
+        val tuned = EffectDefinition(
+            id = "sharpen",
+            name = "Sharpen",
+            category = "MOTIONSALT",
+            description = "Sharpen",
+            parameters = listOf(EffectParam("amount", "Sharpen Amount", ParamType.SCALAR, 15.0, 0f, 4000f, 1f)),
+            shaderCode = "precision mediump float; uniform sampler2D uTexture; uniform float uAmount; varying vec2 vTex; void main() { gl_FragColor = texture2D(uTexture, vTex) * uAmount; }"
+        )
+        val b = pack(listOf(tuned))
+        val files = entries(b)
+        val effectJson = JSONObject(String(files.getValue("effects/sharpen/effect.json")))
+        val params = effectJson.getJSONArray("parameters")
+        val amountParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "amount" }
+        assertEquals(15.0, amountParam.getDouble("default"), 0.001)
+        val enableParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "enabled" }
+        assertEquals(1.0, enableParam.getDouble("default"), 0.001)
+    }
 }

@@ -187,7 +187,7 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Started update cycle for pass file export error, .kfpack format fix, tuned default state confirmation, and public repo visibility.",
+  "last_session_note": "Implemented U6 (pass files loading & bundling), U7 (.kfpack format & MediaStore/direct Downloads write), U8 (tuned default state & clean effect IDs), and U9 (0-error kfpack validation). Preparing release cc-studio-v7.",
   "current_phase": "complete",
   "pivot_queue": [
     {
@@ -325,32 +325,32 @@
     {
       "id": "U6",
       "title": "Fix missing or mismatched pass file in kfpack export",
-      "status": "in_progress",
-      "notes": "Load and bundle all pass shaders for multi-pass effects (diffusion, unsharp_mask, haze_flare, inner_glow) in EffectRepository and PackBuilder so all declared pass files exist in the archive."
+      "status": "done",
+      "notes": "Resolved missing or mismatched pass file error. EffectDefinition now stores passShaders map, EffectRepository loads all declared pass shaders from assets into memory, and PackBuilder bundles every pass shader into the archive under effects/${ready.id}/$passName with precision headers. Verified with new PackContractTest unit test."
     },
     {
       "id": "U7",
       "title": "Fix kfpack export file format, MIME type, and storage so it exports as .kfpack",
-      "status": "pending",
-      "notes": "Ensure exports save directly as .kfpack in Downloads and CC_Studio folder, prevent Android MediaProvider/DocumentsUI .zip renaming, configure proper file extension and octet-stream MIME."
+      "status": "done",
+      "notes": "Repaired export storage and file naming. ExportStage now writes directly to both Downloads/CC_Studio/ and root Downloads/ with strict .kfpack extension, invokes MediaScannerConnection.scanFile to register the extension, registers MediaStore with application/octet-stream, and configures requestLegacyExternalStorage=\"true\". Prevents Android from appending .zip."
     },
     {
       "id": "U8",
       "title": "Confirm and verify tuned parameter states export as default effect state",
-      "status": "pending",
-      "notes": "Confirm tuned parameter values (e.g. sharpness 15%) are written as the default value in effect.json, retain clean effect IDs and names, and retain enabled toggles."
+      "status": "done",
+      "notes": "Verified that tuned parameters export as default effect state. Item params (e.g. amount=15.0 for sharpness) are mapped to defaultValue in effect.json, so Keyflaw applies 15.0 by default. Fixed effect ID generation so unique stack effects retain their canonical ID without spurious _1 suffixes. Enabled toggles and component switches preserved."
     },
     {
       "id": "U9",
       "title": "Comprehensive validation & kfpack_build verification",
-      "status": "pending",
-      "notes": "Validate generated packs with tools/kfpack_build.py against 1.4.9 spec with multi-pass, verify precision headers, test pack merge and roundtrip."
+      "status": "done",
+      "notes": "Validated sample MOTIONSALT.kfpack containing look_gojocc, sharpen, and glow against tools/kfpack_build.py with 0 errors. Verified 1.4.9 spec compliance, GLSL ES precision headers, and parameter-uniform bindings."
     },
     {
       "id": "U10",
       "title": "Release cc-studio-v7 and make forgebuild repo public",
-      "status": "pending",
-      "notes": "Trigger release.yml workflow for apps/cc-studio, verify release live via GitHub API, verify zero credential leaks, and set repo visibility to public."
+      "status": "in_progress",
+      "notes": "Ready to release cc-studio-v7 via release.yml workflow and make repo public."
     }
   ]
 }

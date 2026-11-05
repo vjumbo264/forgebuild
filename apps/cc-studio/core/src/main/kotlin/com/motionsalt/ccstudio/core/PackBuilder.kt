@@ -167,6 +167,18 @@ precision mediump float;
         val ready = prepareEffect(effect)
         files["effects/${ready.id}/effect.json"] = effectJson(ready).toString(2).toByteArray(StandardCharsets.UTF_8)
         files["effects/${ready.id}/shader.glsl"] = ensurePrecisionHeader(ready.shaderCode).toByteArray(StandardCharsets.UTF_8)
+        for (passName in ready.passes) {
+            if (passName != "shader.glsl") {
+                val passCode = ready.passShaders[passName]
+                require(passCode != null) { "Missing pass file $passName for effect ${ready.id}" }
+                files["effects/${ready.id}/$passName"] = ensurePrecisionHeader(passCode).toByteArray(StandardCharsets.UTF_8)
+            }
+        }
+        ready.passShaders.forEach { (name, code) ->
+            if (name != "shader.glsl" && !files.containsKey("effects/${ready.id}/$name")) {
+                files["effects/${ready.id}/$name"] = ensurePrecisionHeader(code).toByteArray(StandardCharsets.UTF_8)
+            }
+        }
     }
 
     fun buildPack(suite: SuiteInfo, effects: List<EffectDefinition>, outputStream: OutputStream) {

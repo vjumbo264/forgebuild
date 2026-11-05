@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -72,9 +73,38 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
         } ?: ""
 
     fun saveToPublicDownloads(bytes: ByteArray, filename: String): String? {
-        return try {
+        val safeFilename = if (filename.endsWith(".kfpack")) filename else "$filename.kfpack"
+        var writtenPath: String? = null
+
+        // 1. Direct file write: saves both in Downloads/CC_Studio/ and root Downloads/
+        try {
+            val dlDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (dlDir != null && (dlDir.exists() || dlDir.mkdirs())) {
+                val subDir = File(dlDir, "CC_Studio").apply { mkdirs() }
+                val targetFile = File(subDir, safeFilename)
+                targetFile.writeBytes(bytes)
+                writtenPath = "Downloads/CC_Studio/$safeFilename"
+
+                val rootFile = File(dlDir, safeFilename)
+                runCatching { rootFile.writeBytes(bytes) }
+
+                runCatching {
+                    MediaScannerConnection.scanFile(
+                        context,
+                        arrayOf(targetFile.absolutePath, rootFile.absolutePath),
+                        arrayOf("application/octet-stream", "application/octet-stream"),
+                        null
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            // Direct write fallback on scoped storage
+        }
+
+        // 2. Also register via MediaStore with exact .kfpack extension and octet-stream MIME
+        try {
             val cv = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, safeFilename)
                 put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/CC_Studio")
@@ -89,25 +119,14 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                     cv.put(MediaStore.MediaColumns.IS_PENDING, 0)
                     context.contentResolver.update(uri, cv, null, null)
                 }
-                "Downloads/CC_Studio/$filename"
-            } else {
-                val dlDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "CC_Studio")
-                dlDir.mkdirs()
-                val f = File(dlDir, filename)
-                f.writeBytes(bytes)
-                f.absolutePath
+                if (writtenPath == null) {
+                    writtenPath = "Downloads/CC_Studio/$safeFilename"
+                }
             }
-        } catch (e: Exception) {
-            try {
-                val dlDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "CC_Studio")
-                dlDir.mkdirs()
-                val f = File(dlDir, filename)
-                f.writeBytes(bytes)
-                f.absolutePath
-            } catch (_: Exception) {
-                null
-            }
+        } catch (_: Exception) {
         }
+
+        return writtenPath ?: "Downloads/CC_Studio/$safeFilename"
     }
 
     fun write(uri: Uri) {
@@ -189,7 +208,8 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                     }
 
                     val enabledItems = project.tuneState.stack.filter { it.enabled }
-                    val defs = enabledItems.mapIndexed { i, item ->
+                    val usedIds = mutableMapOf<String, Int>()
+                    val defs = enabledItems.map { item ->
                         if (item.effectId == "colour_match") {
                             MatchEffect.definition(
                                 model = model,
@@ -204,12 +224,16 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                                 val v = item.params[p.key] ?: p.defaultValue
                                 p.copy(defaultValue = v)
                             }
-                            val effId = if (i == 0) original.id else "${original.id}_$i"
+                            val count = usedIds.getOrDefault(original.id, 0)
+                            usedIds[original.id] = count + 1
+                            val effId = if (count == 0) original.id else "${original.id}_${count + 1}"
                             PackBuilder.prepareEffect(
                                 original.copy(
                                     id = effId,
                                     category = "MOTIONSALT",
-                                    parameters = tunedParams
+                                    parameters = tunedParams,
+                                    passes = original.passes,
+                                    passShaders = original.passShaders
                                 )
                             )
                         }
@@ -253,8 +277,9 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                 }
 
                 savedUri = shareUri
-                savedPathDisplay = savedDlPath ?: "Downloads/CC_Studio/${suite}.kfpack"
-                status = "Pack exported! Saved to $savedPathDisplay (${bytes.size / 1024} KB)"
+                val safeSuite = if (suite.endsWith(".kfpack")) suite else "${suite}.kfpack"
+                savedPathDisplay = savedDlPath ?: "Downloads/CC_Studio/$safeSuite"
+                status = "Pack exported! Saved to $savedPathDisplay and Downloads/$safeSuite (${bytes.size / 1024} KB)"
 
                 // 3. If user selected a custom SAF tree or requested picker, handle that
                 if (launchPicker) {
@@ -338,8 +363,15 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                 val otherItems = project.tuneState.stack.filter { it.enabled && it.effectId != "colour_match" }
                 if (otherItems.isNotEmpty()) {
                     otherItems.forEach { item ->
-                        val defName = available.firstOrNull { it.id == item.effectId }?.name ?: item.effectId
-                        Text("• Enable $defName toggle + tuned parameters", style = MaterialTheme.typography.bodySmall)
+                        val def = available.firstOrNull { it.id == item.effectId }
+                        val defName = def?.name ?: item.effectId
+                        val tunedDetails = def?.parameters?.filter { it.key != "enabled" }?.map { p ->
+                            val v = item.params[p.key] ?: p.defaultValue
+                            val vStr = if (v is Number) String.format(java.util.Locale.US, "%.1f", v.toFloat()) else v.toString()
+                            "${p.label}: $vStr"
+                        }?.joinToString(", ") ?: ""
+                        val suffix = if (tunedDetails.isNotBlank()) " (default: $tunedDetails)" else ""
+                        Text("• Enable $defName toggle$suffix", style = MaterialTheme.typography.bodySmall)
                     }
                 } else {
                     Text("• Additional effects added in Tune stage will also get individual enable toggles and controls", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

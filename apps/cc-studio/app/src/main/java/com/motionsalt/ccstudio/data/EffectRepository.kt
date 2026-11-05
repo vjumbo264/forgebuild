@@ -68,6 +68,17 @@ class EffectRepository(private val context: Context) {
                         }
                     }
 
+                    val passesList = obj.optJSONArray("passes")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList()
+                    val passShaders = mutableMapOf<String, String>()
+                    for (passFile in passesList) {
+                        try {
+                            val passContent = context.assets.open("effects//").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                            passShaders[passFile] = passContent
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+
                     cachedEffects.add(
                         EffectDefinition(
                             id = id,
@@ -76,8 +87,9 @@ class EffectRepository(private val context: Context) {
                             description = description,
                             expandBounds = expandBounds,
                             parameters = paramsList,
-                            passes = obj.optJSONArray("passes")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
-                            shaderCode = glslStr
+                            passes = passesList,
+                            shaderCode = glslStr,
+                            passShaders = passShaders
                         )
                     )
                 } catch (e: Exception) {
