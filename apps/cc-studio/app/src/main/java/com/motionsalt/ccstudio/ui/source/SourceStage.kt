@@ -453,19 +453,21 @@ private fun CropEditorDialog(
                     TextButton(
                         onClick = {
                             try {
-                                val bmp = BitmapFactory.decodeFile(frame.originalPath)
+                                val bmp = BitmapFactory.decodeFile(frame.filePath)
                                 if (bmp != null) {
                                     val w = bmp.width
                                     val h = bmp.height
                                     val pixels = IntArray(w * h)
                                     bmp.getPixels(pixels, 0, w, 0, 0, w, h)
-                                    val mFrame = com.motionsalt.ccstudio.core.MatchFrame(w, h, pixels.map { c ->
+                                    val rgbArr = Array(w * h) { i ->
+                                        val c = pixels[i]
                                         doubleArrayOf(
                                             android.graphics.Color.red(c) / 255.0,
                                             android.graphics.Color.green(c) / 255.0,
                                             android.graphics.Color.blue(c) / 255.0
                                         )
-                                    })
+                                    }
+                                    val mFrame = com.motionsalt.ccstudio.core.MatchFrame(w, h, rgbArr)
                                     val bars = com.motionsalt.ccstudio.core.FrameAlignment.letterbox(mFrame)
                                     if (bars.isNotEmpty()) {
                                         val topBar = bars.firstOrNull { it.top == 0.0 }
