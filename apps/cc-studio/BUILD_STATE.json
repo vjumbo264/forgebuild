@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T1: extract original colour/detail/look definitions and document full multipass host requirements",
+  "current_task": "T2: establish Gojo regression baseline and locate missing reference_match.py before faithful port",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "T0 complete. T1 scaffold: original APK recovered from private release, SHA256 verified; JADX reveals real readable Sharpen and 14-pass Unsharp Mask, contradicting prior native-only claims. Host parser mismatch proven. No effect copied or runtime verified yet. Next operation: T1: extract original colour/detail/look definitions and document full multipass host requirements",
+  "notes": "T1 study complete in inspected scope: original private APK recovered; 24 original effects / 65 byte-preserved passes and exact controls/graphs stored; 65/65 glslang compilation passes, hashes recorded. Sharpen and 14-pass Unsharp are readable; Glow/Curves/Levels/HSL sealed, calibration needs explicit. Native effect UI not visually run; only original parameter metadata verified, ruler fallback documented. No GPU equivalence or new APK claimed. Next operation: T2: establish Gojo regression baseline and locate missing reference_match.py before faithful port",
   "reset_queue": [
     {
       "id": "T0",
@@ -199,8 +199,8 @@
     {
       "id": "T1",
       "title": "Study Keyflaw's own implementation (the link expires; do right after T0)",
-      "status": "in_progress",
-      "notes": "T0 complete. T1 scaffold: original APK recovered from private release, SHA256 verified; JADX reveals real readable Sharpen and 14-pass Unsharp Mask, contradicting prior native-only claims. Host parser mismatch proven. No effect copied or runtime verified yet."
+      "status": "done",
+      "notes": "T1 study complete in inspected scope: original private APK recovered; 24 original effects / 65 byte-preserved passes and exact controls/graphs stored; 65/65 glslang compilation passes, hashes recorded. Sharpen and 14-pass Unsharp are readable; Glow/Curves/Levels/HSL sealed, calibration needs explicit. Native effect UI not visually run; only original parameter metadata verified, ruler fallback documented. No GPU equivalence or new APK claimed."
     },
     {
       "id": "T2",
