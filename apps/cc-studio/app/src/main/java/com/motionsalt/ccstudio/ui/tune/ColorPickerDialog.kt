@@ -70,7 +70,7 @@ fun ColorPickerDialog(
                         onActivateEyedropper()
                         onDismiss()
                     }) {
-                        Icon(EngineIcons.Colorize, contentDescription = "Sample Color Eyedropper")
+                        Icon(EngineIcons.Edit, contentDescription = "Sample Color Eyedropper")
                     }
                 }
             }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -312,7 +313,7 @@ fun TuneStage(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(EngineIcons.Colorize, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(EngineIcons.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                         Text("Tap image to sample color", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         TextButton(onClick = { isEyedropperActive = false }) {
                             Text("Cancel", fontSize = 11.sp)
@@ -351,7 +352,7 @@ fun TuneStage(
                         ) {
                             Text(if (isWipeVertical) "Vert" else "Horiz", color = Color.White, fontSize = 11.sp)
                             IconButton(onClick = { isWipeVertical = !isWipeVertical }, modifier = Modifier.size(24.dp)) {
-                                Icon(EngineIcons.Refresh, contentDescription = "Flip Orientation", tint = Color.White)
+                                Icon(EngineIcons.Sync, contentDescription = "Flip Orientation", tint = Color.White)
                             }
                         }
                         Slider(

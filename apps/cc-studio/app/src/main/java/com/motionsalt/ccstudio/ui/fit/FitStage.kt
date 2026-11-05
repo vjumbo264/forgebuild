@@ -115,9 +115,11 @@ fun FitStage(
 
             // Honest Recreated and Heatmap generation
             val pair = completePairs.firstOrNull()
-            if (pair?.base?.filePath != null && File(pair.base.filePath).exists()) {
+            val baseFrame = pair?.base
+            val targetFrame = pair?.target
+            if (baseFrame?.filePath != null && File(baseFrame.filePath).exists()) {
                 try {
-                    val baseBmp = BitmapFactory.decodeFile(pair.base.filePath)
+                    val baseBmp = BitmapFactory.decodeFile(baseFrame.filePath)
                     if (baseBmp != null) {
                         val w = baseBmp.width
                         val h = baseBmp.height
@@ -133,8 +135,8 @@ fun FitStage(
                         }
 
                         // Generate Heatmap if target exists
-                        if (pair.target?.filePath != null && File(pair.target.filePath).exists()) {
-                            val targetBmp = BitmapFactory.decodeFile(pair.target.filePath)
+                        if (targetFrame?.filePath != null && File(targetFrame.filePath).exists()) {
+                            val targetBmp = BitmapFactory.decodeFile(targetFrame.filePath)
                             if (targetBmp != null) {
                                 val scaledTarget = if (targetBmp.width != w || targetBmp.height != h) {
                                     Bitmap.createScaledBitmap(targetBmp, w, h, true)
