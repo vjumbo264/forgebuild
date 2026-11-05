@@ -846,3 +846,17 @@ There are three issues I have right now with the app, and you must fix them.
 
 https://cf.linkulu.com/dl/6aec2bebde32c56eaccc624d
 """
+
+
+---
+
+## 2026-11-05 — Fix counterpart effect stack export, parameter tuning propagation, and disable state mapping
+"""
+When I thought everything had been fixed, I still see yet another issue. The issue I'm having right now is that when I export the pack, the settings in the pack are different from the settings in the app. Sometimes I disable some things in the effects, but when I put the pack in the editing app and load it, I see the effects enabled, and the parameters that I changed are still enabled. Some of the effects I add, like unsharp mask and other things, they don't appear in the effect. They don't appear, and the ones that do appear are not doing their work.
+
+The one that I'm sure is very, very buggy and bad right now is the sharpening effect, and I know that many others are bad, so you have to fix them all. When I try to increase the sharpening effect, it's the color that ends up being manipulated. I don't know why the effects are not being properly wired in the pack. Even the main CC effect, anything I do there, once I put it in the editing app, it is a different thing that is showing. It just shows me the default values. It will not carry on the adjustments I need.
+
+That is what I specifically said in one of the edits. I said that if I tune anything, when I put them in the app, when I export it as a pack and put them in the editing app, it must also be tuned, and the effects must work exactly as they're supposed to work. Because right now, if I import effects, they are not working. Either they don't appear, or they are doing something different from their actual work. I thought the effects are supposed to be wired to their exact counterpart in the app, so why is it not working the way it should work? Please fix it.
+
+https://cf.linkulu.com/dl/6aec2bebde32c56eaccc624d
+"""
