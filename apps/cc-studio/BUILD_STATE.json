@@ -1,7 +1,7 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": false,
+  "build_complete": true,
   "status": "complete",
   "updated_by": "build-agent",
   "current_task": "U15",
@@ -314,12 +314,12 @@
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
-  "last_verified_release": "cc-studio-v7",
+  "last_verified_release": "cc-studio-v8",
   "ci_verification": {
-    "id": 42073309327,
+    "id": 42083522572,
     "conclusion": "success",
-    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42073309327",
-    "head_sha": "87eb1f0935b14d198bd6f4a4bf1f280caa46ebf9"
+    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42083522572",
+    "head_sha": "54dffb421f417f3d3f28fdf815b06367e3a3c355"
   },
   "update_queue": [
     {
