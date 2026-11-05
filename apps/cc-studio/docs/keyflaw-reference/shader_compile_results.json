@@ -1,0 +1,392 @@
+[
+  {
+    "effect": "sharpen",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_01.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_02.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_03.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_04.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_05.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_06.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_07.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_08.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_09.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_10.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_11.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_12.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "unsharp_mask",
+    "pass_file": "pass_13.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "brightness_contrast",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "hue_saturation",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "vignette",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_01.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_02.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_03.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_04.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_05.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "haze_flare",
+    "pass_file": "pass_06.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_01.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_02.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_03.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_04.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_05.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_06.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_07.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_08.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_09.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_10.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_11.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_12.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_13.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_14.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_15.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_16.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_17.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "diffusion",
+    "pass_file": "pass_18.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "neg_bleach_bypass",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "tritone",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "gamma_exposure",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "invert",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "spot_exposure",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "gradient_exposure",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "film_grain",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "change_to_color",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "spectral_map",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "cc_color_neutralizer",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "cc_color_offset",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "cc_kernel",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "inner_glow",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "inner_glow",
+    "pass_file": "pass_01.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "inner_glow",
+    "pass_file": "pass_02.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "inner_glow",
+    "pass_file": "pass_03.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "inner_glow",
+    "pass_file": "pass_04.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "chromatic_glow",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "glint_glare",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "edge_rays",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  },
+  {
+    "effect": "defocus_prism",
+    "pass_file": "shader.glsl",
+    "success": true,
+    "log": ""
+  }
+]

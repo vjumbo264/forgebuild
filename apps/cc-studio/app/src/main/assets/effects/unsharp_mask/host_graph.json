@@ -1,0 +1,145 @@
+{
+  "source": "Keyflaw 1.4.9 built-in EffectPass metadata",
+  "passes": [
+    {
+      "file": "shader.glsl",
+      "scale": 0.5,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_01.glsl",
+      "scale": 0.25,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_02.glsl",
+      "scale": 0.125,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_03.glsl",
+      "scale": 0.0625,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_04.glsl",
+      "scale": 0.03125,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_05.glsl",
+      "scale": 0.015625,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_06.glsl",
+      "scale": 0.015625,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_07.glsl",
+      "scale": 0.015625,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_08.glsl",
+      "scale": 0.0625,
+      "prevPass": 3,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_09.glsl",
+      "scale": 0.0625,
+      "prevPass": 7,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_10.glsl",
+      "scale": 0.25,
+      "prevPass": 1,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_11.glsl",
+      "scale": 0.25,
+      "prevPass": 9,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_12.glsl",
+      "scale": 1.0,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    },
+    {
+      "file": "pass_13.glsl",
+      "scale": 1.0,
+      "prevPass": 11,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    }
+  ]
+}

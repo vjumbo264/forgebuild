@@ -1,0 +1,73 @@
+{
+  "id": "cc_color_offset",
+  "name": "Color Offset",
+  "category": "Warna",
+  "expandBounds": 0.0,
+  "parameters": [
+    {
+      "key": "redPhase",
+      "label": "Red Phase",
+      "default": 0.0,
+      "min": -36000.0,
+      "max": 36000.0,
+      "displayScale": 10.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 1,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "greenPhase",
+      "label": "Green Phase",
+      "default": 0.0,
+      "min": -36000.0,
+      "max": 36000.0,
+      "displayScale": 10.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 1,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "bluePhase",
+      "label": "Blue Phase",
+      "default": 0.0,
+      "min": -36000.0,
+      "max": 36000.0,
+      "displayScale": 10.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 1,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "overflow",
+      "label": "Overflow",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 2.0,
+      "displayScale": 1.0,
+      "type": "CHOICE",
+      "group": null,
+      "options": [
+        "Wrap",
+        "Solarize",
+        "Polarize"
+      ],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 1.0
+    }
+  ],
+  "description": "Original Keyflaw 1.4.9 implementation; requires original host graph where specified."
+}

@@ -1,0 +1,54 @@
+{
+  "id": "hue_saturation",
+  "name": "Hue/Saturation",
+  "category": "Warna",
+  "expandBounds": 0.0,
+  "parameters": [
+    {
+      "key": "hue",
+      "label": "Hue",
+      "default": 0.0,
+      "min": -1.0,
+      "max": 1.0,
+      "displayScale": 180.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.005555555555555556
+    },
+    {
+      "key": "saturation",
+      "label": "Saturation",
+      "default": 0.0,
+      "min": -1.0,
+      "max": 1.0,
+      "displayScale": 100.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "lightness",
+      "label": "Lightness",
+      "default": 0.0,
+      "min": -1.0,
+      "max": 1.0,
+      "displayScale": 100.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    }
+  ],
+  "description": "Original Keyflaw 1.4.9 implementation; requires original host graph where specified."
+}

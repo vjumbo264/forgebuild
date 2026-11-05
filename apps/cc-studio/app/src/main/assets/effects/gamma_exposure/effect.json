@@ -1,0 +1,54 @@
+{
+  "id": "gamma_exposure",
+  "name": "Gamma & Exposure",
+  "category": "Warna",
+  "expandBounds": 0.0,
+  "parameters": [
+    {
+      "key": "exposure",
+      "label": "Exposure",
+      "default": 0.0,
+      "min": -4.0,
+      "max": 4.0,
+      "displayScale": 100.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "offset",
+      "label": "Offset",
+      "default": 0.0,
+      "min": -0.5,
+      "max": 0.5,
+      "displayScale": 100.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "gamma",
+      "label": "Gamma",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "displayScale": 100.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    }
+  ],
+  "description": "Original Keyflaw 1.4.9 implementation; requires original host graph where specified."
+}

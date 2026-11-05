@@ -1,0 +1,24 @@
+{
+  "id": "sharpen",
+  "name": "Sharpen",
+  "category": "Blur",
+  "expandBounds": 0.0,
+  "parameters": [
+    {
+      "key": "amount",
+      "label": "Sharpen Amount",
+      "default": 25.0,
+      "min": 0.0,
+      "max": 4000.0,
+      "displayScale": 1.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 1.0
+    }
+  ],
+  "description": "Original Keyflaw 1.4.9 implementation; requires original host graph where specified."
+}

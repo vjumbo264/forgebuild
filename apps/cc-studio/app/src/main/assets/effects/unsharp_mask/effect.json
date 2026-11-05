@@ -1,0 +1,70 @@
+{
+  "id": "unsharp_mask",
+  "name": "Unsharp Mask",
+  "category": "Blur",
+  "expandBounds": 0.0,
+  "parameters": [
+    {
+      "key": "amount",
+      "label": "Amount",
+      "default": 50.0,
+      "min": 0.0,
+      "max": 500.0,
+      "displayScale": 1.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 1.0
+    },
+    {
+      "key": "radius",
+      "label": "Radius",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 500.0,
+      "displayScale": 10.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 1,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 0.01
+    },
+    {
+      "key": "threshold",
+      "label": "Threshold",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 255.0,
+      "displayScale": 1.0,
+      "type": "SCALAR",
+      "group": null,
+      "options": [],
+      "decimals": 0,
+      "hiddenWhenOn": null,
+      "shownForChoice": null,
+      "step": 1.0
+    }
+  ],
+  "passes": [
+    "shader.glsl",
+    "pass_01.glsl",
+    "pass_02.glsl",
+    "pass_03.glsl",
+    "pass_04.glsl",
+    "pass_05.glsl",
+    "pass_06.glsl",
+    "pass_07.glsl",
+    "pass_08.glsl",
+    "pass_09.glsl",
+    "pass_10.glsl",
+    "pass_11.glsl",
+    "pass_12.glsl",
+    "pass_13.glsl"
+  ],
+  "description": "Original Keyflaw 1.4.9 implementation; requires original host graph where specified."
+}

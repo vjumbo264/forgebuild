@@ -1,0 +1,15 @@
+{
+  "source": "Keyflaw 1.4.9 built-in EffectPass metadata",
+  "passes": [
+    {
+      "file": "shader.glsl",
+      "scale": 1.0,
+      "prevPass": null,
+      "requiredParam": null,
+      "requiredMinimum": 0.0,
+      "compOctaves": false,
+      "requiredAnyParams": [],
+      "floatTarget": false
+    }
+  ]
+}
