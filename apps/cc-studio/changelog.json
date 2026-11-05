@@ -1,5 +1,19 @@
 [
   {
+    "version": "v5",
+    "date": "2026-11-05",
+    "items": [
+      "Pivot: Parametric colour matching replacing 3D LUT pipeline completely (no LUT, Hald, or .cube anywhere)",
+      "Proven reference match: linear-light 3x3 matrix, monotone tone curves, and 24-bin CIELAB hue-keyed selective stage (mean \u0394E 4.88 / p95 11.40 vs identity 10.12 / 24.53 on Gojo pair)",
+      "Renderer Y-flip fixed: upright preview in all 8 view modes (Result, Wipe, Side by side, Top/bottom, Vs Target, Difference, Channels, Scopes)",
+      "Scrolling ruler scrubber sliders: live uniform updates on touch move without lag or release-only delays; velocity fling decay and snap-to-round",
+      "Exact Keyflaw 1.4.9 effects: 14-pass Unsharp Mask, Sharpen, and Diffusion Glow using exact Keyflaw host contract and shader graphs",
+      "Letterbox bar auto-detect in CropEditorDialog using row threshold luminance analysis",
+      "Safe .kfpack export: SAF Storage Access Framework saving with application/octet-stream, read-back display name validation, and skill-compliant ZIP layout",
+      "Settings and privacy: explicit 4-row permission model with live status, fallbacks, and offline Android storage info card (zero INTERNET)"
+    ]
+  },
+  {
     "version": "v4",
     "date": "2026-11-05",
     "items": [
