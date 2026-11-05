@@ -187,7 +187,7 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Implemented U6 (pass files loading & bundling), U7 (.kfpack format & MediaStore/direct Downloads write), U8 (tuned default state & clean effect IDs), and U9 (0-error kfpack validation). Preparing release cc-studio-v7.",
+  "last_session_note": "Successfully resolved missing pass file export error, repaired .kfpack export file extension and MediaStore save, confirmed tuned default state propagation, validated with 0 errors against Keyflaw 1.4.9 spec, published release cc-studio-v7 live on GitHub Releases, and restored public visibility on forgebuild repo.",
   "current_phase": "complete",
   "pivot_queue": [
     {
@@ -284,12 +284,12 @@
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
-  "last_verified_release": "cc-studio-v6",
+  "last_verified_release": "cc-studio-v7",
   "ci_verification": {
-    "id": 42059941708,
+    "id": 42073309327,
     "conclusion": "success",
-    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42059941708",
-    "head_sha": "9fe003915b604af714fd1b5f162f837f43e65d59"
+    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42073309327",
+    "head_sha": "87eb1f0935b14d198bd6f4a4bf1f280caa46ebf9"
   },
   "update_queue": [
     {
@@ -349,8 +349,8 @@
     {
       "id": "U10",
       "title": "Release cc-studio-v7 and make forgebuild repo public",
-      "status": "in_progress",
-      "notes": "Ready to release cc-studio-v7 via release.yml workflow and make repo public."
+      "status": "done",
+      "notes": "Release cc-studio-v7 successfully published and verified live on GitHub Releases with signed app-cc-studio-v7.apk (2,260,135 bytes), release.json, and forgebuild-manifest.json. Repo made public with 0 leaked credentials."
     }
   ]
 }
