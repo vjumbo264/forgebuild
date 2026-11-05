@@ -1,7 +1,7 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": true,
+  "build_complete": false,
   "status": "complete",
   "updated_by": "build-agent",
   "current_task": "U5",
@@ -115,6 +115,36 @@
       "title": "Repair Round 2 (S1-S8)",
       "status": "in_progress",
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
+    },
+    {
+      "id": "U11",
+      "title": "Fix missing pass file export error across all effects (unsharp_mask pass loading bug)",
+      "status": "in_progress",
+      "notes": "Diagnosed root cause: EffectRepository.kt line 74 attempted to open context.assets.open(\"effects//\") due to missing string interpolation, causing passShaders map to remain empty and failing PackBuilder require(passCode != null) check for unsharp_mask. Also sanitize multi-pass unsharp_mask into a rock-solid single-pass kernel to prevent device crashes."
+    },
+    {
+      "id": "U12",
+      "title": "Deep Glow quality overhaul (Vogel spiral / continuous multi-scale blur, zero ring banding)",
+      "status": "pending",
+      "notes": "Replace the 4-concentric-ring 32-sample shader in assets/effects/glow/shader.glsl and the exported pass with authentic Deep Glow: continuous Vogel spiral sampling (golden angle 2.39996323), quadratic smoothstep highlight knee, continuous Gaussian falloff with inverse-square decay, chromatic dispersion, and tone-mapped exposure."
+    },
+    {
+      "id": "U13",
+      "title": "Unified single-effect stack export architecture (stack all grade + tuned effects under 1 single effect with grouped parameters)",
+      "status": "pending",
+      "notes": "Architect stack export so that the entire tuned project look exports as ONE single effect in the .kfpack (effects/<look_id>/). Group parameters cleanly by sub-effect (Color Correction, Glow, Sharpen, etc.), embed sequential multi-pass GLSL execution, and ensure tuned values are preserved as the default state for every control."
+    },
+    {
+      "id": "U14",
+      "title": "Comprehensive validation with kfpack_build.py, unit tests, and live pack verification",
+      "status": "pending",
+      "notes": "Verify generated single-effect multi-pass .kfpack against tools/kfpack_build.py with 0 errors. Update PackContractTest.kt and run Gradle test suite to guarantee pass integrity and group bindings."
+    },
+    {
+      "id": "U15",
+      "title": "Release cc-studio-v8 via GitHub Actions and verify live release",
+      "status": "pending",
+      "notes": "Trigger release.yml for apps/cc-studio, verify release cc-studio-v8 live via GitHub API, verify public repo status, and update build_complete: true."
     }
   ],
   "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed.\nAndroid integration now compiles and debug APK builds on GitHub Actions, and :core:test passes (13 tests), verified run 42044224862. This is BUILD proof only: no emulator/device journey, original multipass visual equality, final signed release, live drag/recomposition telemetry, or Keyflaw import claim. Sample direct-match .kfpack validated against supplied skill with exact entry-byte parity; user delivery is a test sample, not a final release.",

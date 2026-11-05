@@ -832,3 +832,17 @@ I noticed a critical issue. I am unable to export the kfpack. It is saying "miss
 
 The previous versions were exporting, but the only issue I had was that the kfpack device I was exporting was not importing properly into the editing app, and it was exporting it as a zip file, not a kfpack. So please fix the issue so that it can export properly. Also, help me confirm that when it is exporting, the same effects that I tuned is what shows up. I already implemented that before, but just help me confirm it. And additionally, the default state of the effect should be the state I exported it as. For example, if I set the sharpness to 15% and exported it, that means when someone uses the effect in the editing app, the default state should be that 15% unless they change it. Also make the forgebuild repo public again, ensure that there is no leaking creds.
 """
+
+---
+
+## 2026-11-05 — Fix export missing pass file error, Deep Glow quality overhaul, and unified single-effect stack export
+
+"""
+There are three issues I have right now with the app, and you must fix them.
+
+1. First of all, sometimes there are some effects that stop me from being able to export the KF pack, as you can see in the screenshots. So, fix that so that I can export the KF pack.
+2. Secondly, the glow is terrible. It's not like deep glow. Fix it because right now the glow is not the quality or the is not as good as real deep glow. I can see the multiple layers that are being created and stacked on top. Copy the exact glow from the app and don't change anything about it. Copy the exact glow from the original app. I'll paste the link so that you'll see the app itself.
+3. Thirdly, and very important, you made a very stupid mistake. What I mean by I need the effects to be there means that each color correction that I create, I need them to be stacked inside one effect, not as separate effects. For example, I did it, I added glow, I added unsharp mask just for me to export the KF pack and end up seeing the glow and unsharp mask as separate effects in the KF pack. No, the entire color correction is one effect. The glow and unsharp mask is under it. So that every color correction I make is their own separate effect. So if I'm adding them to the KF pack, all the effects that is inside them is inside that one effect. That's what I want, not separated. How will I be able to organize things if it's like that? And it's very inconvenient for the user because once you click it, you're supposed to see all the effects that were used inside, then you can tune them, not separated out. Please let me attach the skill also so that you see what I mean, so that you understand how the effects work.
+
+https://cf.linkulu.com/dl/6aec2bebde32c56eaccc624d
+"""
