@@ -166,7 +166,7 @@ fun TuneStage(
             }
 
             // Real-time stack rendering of the active frame through the complete effect stack
-            val bitmap = remember(activeFramePath, tuneStateJson, isPressingBefore, currentViewMode, wipeDividerFraction, isWipeVertical, diffGain, selectedChannel) {
+            val bitmap = remember(activeFramePath, lutTransform, tuneStateJson, isPressingBefore, currentViewMode, wipeDividerFraction, isWipeVertical, diffGain, selectedChannel) {
                 if (activeFramePath != null && File(activeFramePath!!).exists()) {
                     val rawBmp = BitmapFactory.decodeFile(activeFramePath)
                     if (rawBmp != null) {

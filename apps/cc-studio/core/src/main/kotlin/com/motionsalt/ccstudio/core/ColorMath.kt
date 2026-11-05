@@ -188,6 +188,69 @@ object ColorMath {
         return sb.toString()
     }
 
+    fun parseCube33(cubeText: String): FittedTransform? {
+        var size = 33
+        val triples = ArrayList<Triple<Float, Float, Float>>(33 * 33 * 33)
+        for (rawLine in cubeText.lineSequence()) {
+            val line = rawLine.trim()
+            if (line.isEmpty() || line.startsWith("#")) continue
+            if (line.startsWith("TITLE") || line.startsWith("DOMAIN_MIN") || line.startsWith("DOMAIN_MAX")) continue
+            if (line.startsWith("LUT_3D_SIZE")) {
+                val parts = line.split(Regex("\\s+"))
+                if (parts.size >= 2) {
+                    size = parts[1].toIntOrNull() ?: 33
+                }
+                continue
+            }
+            val parts = line.split(Regex("\\s+"))
+            if (parts.size >= 3) {
+                val r = parts[0].toFloatOrNull()
+                val g = parts[1].toFloatOrNull()
+                val b = parts[2].toFloatOrNull()
+                if (r != null && g != null && b != null) {
+                    triples.add(Triple(r, g, b))
+                }
+            }
+        }
+        val expected = size * size * size
+        if (size < 2 || triples.size < expected) return null
+        val curveR = FloatArray(256) { it / 255f }
+        val curveG = FloatArray(256) { it / 255f }
+        val curveB = FloatArray(256) { it / 255f }
+        val matrix = arrayOf(
+            floatArrayOf(1f, 0f, 0f),
+            floatArrayOf(0f, 1f, 0f),
+            floatArrayOf(0f, 0f, 1f)
+        )
+        val matrixOffset = floatArrayOf(0f, 0f, 0f)
+        val residual = FloatArray(expected * 3)
+        for (iz in 0 until size) {
+            val baseB = iz.toFloat() / (size - 1)
+            for (iy in 0 until size) {
+                val baseG = iy.toFloat() / (size - 1)
+                for (ix in 0 until size) {
+                    val baseR = ix.toFloat() / (size - 1)
+                    val flat = iz * size * size + iy * size + ix
+                    val (outR, outG, outB) = triples[flat]
+                    val idx = flat * 3
+                    residual[idx] = outR - baseR
+                    residual[idx + 1] = outG - baseG
+                    residual[idx + 2] = outB - baseB
+                }
+            }
+        }
+        return FittedTransform(
+            curveR = curveR,
+            curveG = curveG,
+            curveB = curveB,
+            matrix = matrix,
+            matrixOffset = matrixOffset,
+            gridSize = size,
+            residual = residual,
+            strength = 1.0f
+        )
+    }
+
     /**
      * Generates a HaldCLUT Level 8 (512x512) raw RGB buffer.
      * Hald 8 has 8^3 = 512 pixels per row and 512 rows, representing a 64x64x64 color cube.

@@ -105,4 +105,3 @@ class EffectRepository(private val context: Context) {
         }
     }
 }
-}
