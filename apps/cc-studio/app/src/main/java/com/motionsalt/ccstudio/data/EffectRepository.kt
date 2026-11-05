@@ -72,12 +72,24 @@ class EffectRepository(private val context: Context) {
                     val passShaders = mutableMapOf<String, String>()
                     for (passFile in passesList) {
                         try {
-                            val passContent = context.assets.open("effects//").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                            val passContent = if (passFile == "shader.glsl") glslStr else {
+                                context.assets.open("effects/$dir/$passFile").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                            }
                             passShaders[passFile] = passContent
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
                     }
+                    try {
+                        val filesInDir = context.assets.list("effects/$dir") ?: emptyArray()
+                        for (fn in filesInDir) {
+                            if (fn.endsWith(".glsl") && !passShaders.containsKey(fn)) {
+                                runCatching {
+                                    context.assets.open("effects/$dir/$fn").bufferedReader(StandardCharsets.UTF_8).use { it.readText() }
+                                }.getOrNull()?.let { passShaders[fn] = it }
+                            }
+                        }
+                    } catch (_: Exception) {}
 
                     cachedEffects.add(
                         EffectDefinition(
