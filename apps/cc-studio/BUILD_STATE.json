@@ -4,7 +4,7 @@
   "build_complete": true,
   "status": "complete",
   "updated_by": "build-agent",
-  "current_task": "All pivot queue items T0-T12 verified and complete. Monotonic release cc-studio-v5 ready to trigger via release workflow.",
+  "current_task": "Release cc-studio-v5 verified live on GitHub Releases API with signed APK and sample MOTIONSALT.kfpack asset.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -282,7 +282,7 @@
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
-  "last_verified_release": "cc-studio-v4",
+  "last_verified_release": "cc-studio-v5",
   "ci_verification": {
     "id": 42044224862,
     "conclusion": "success",
