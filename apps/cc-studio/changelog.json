@@ -1,0 +1,16 @@
+[
+  {
+    "version": "v1",
+    "date": "2026-11-05",
+    "items": [
+      "MOTIONSALT CC Studio: 100% offline mobile Android color grading studio and Keyflaw 1.4.9 effect builder",
+      "Multi-stage color solver: 1D Tone curves, 3x3 chromatic matrix regression, and 3D residual lattice with Laplacian smoothing",
+      "True identity Hald Level 8 (512x512) PNG generation and 33x33x33 .cube LUT export with zero distortion",
+      "Real-time preview renderer with 8 inspection view modes: Result (with hold Before), Wipe, Side-by-side, Top/bottom, Vs Target, Difference with gain, Channels, and live Scopes",
+      "Four live scopes: RGB Parade, Vectorscope, Histogram, and Waveform",
+      "Native Keyflaw 1.4.9 .kfpack exporter: single fused shader or full suite packaging directly to Downloads/MOTIONSALT/CC Studio/",
+      "17 built-in in-scope effects: 3D LUT, Brightness/Contrast, Exposure/Gamma, Levels/Curves, White Balance, Hue/Saturation, Color Balance, Selective Color, Channel Mixer, Sharpen, AE Unsharp Mask, Clarity, Glow, Tritone, Haze Flare, Vignette, and Film Grain",
+      "Zero telemetry, zero internet permission, fully offline standalone operation"
+    ]
+  }
+]

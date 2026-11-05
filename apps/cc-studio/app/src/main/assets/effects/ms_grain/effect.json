@@ -1,0 +1,29 @@
+{
+  "id": "ms_grain",
+  "name": "Analog Film Grain",
+  "category": "Look",
+  "description": "High-frequency organic film silver grain tailored to mid-tones.",
+  "expandBounds": 0,
+  "parameters": [
+    {
+      "key": "intensity",
+      "label": "Grain Intensity",
+      "type": "SCALAR",
+      "default": 0.16,
+      "min": 0,
+      "max": 0.8,
+      "step": 0.01,
+      "group": "Grain"
+    },
+    {
+      "key": "size",
+      "label": "Grain Size",
+      "type": "SCALAR",
+      "default": 1,
+      "min": 0.5,
+      "max": 3,
+      "step": 0.1,
+      "group": "Grain"
+    }
+  ]
+}

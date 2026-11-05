@@ -1,0 +1,29 @@
+{
+  "id": "ms_clarity",
+  "name": "Clarity & Midtone Punch",
+  "category": "Detail",
+  "description": "Local contrast enhancement targeting mid-frequency details without clipping highlights.",
+  "expandBounds": 0,
+  "parameters": [
+    {
+      "key": "strength",
+      "label": "Clarity Strength",
+      "type": "SCALAR",
+      "default": 0.35,
+      "min": -1,
+      "max": 1,
+      "step": 0.02,
+      "group": "Clarity"
+    },
+    {
+      "key": "radius",
+      "label": "Radius",
+      "type": "SCALAR",
+      "default": 6,
+      "min": 2,
+      "max": 16,
+      "step": 0.5,
+      "group": "Clarity"
+    }
+  ]
+}

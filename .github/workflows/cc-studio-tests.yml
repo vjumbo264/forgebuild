@@ -1,0 +1,41 @@
+name: "MOTIONSALT CC Studio Tests & Offline Verification"
+
+on:
+  push:
+    paths:
+      - "apps/cc-studio/**"
+      - ".github/workflows/cc-studio-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Offline Manifest Enforcement Check
+        run: |
+          MANIFEST="apps/cc-studio/app/src/main/AndroidManifest.xml"
+          if grep -iE 'permission.*(INTERNET|ACCESS_NETWORK_STATE)' "$MANIFEST"; then
+            echo "CRITICAL SECURITY VIOLATION: Offline app declares network permissions!"
+            exit 1
+          fi
+          echo "Offline manifest check PASSED: zero network permissions found."
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Run JVM Unit Tests
+        run: |
+          cd apps/cc-studio
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Build Debug APK
+        run: |
+          cd apps/cc-studio
+          ./gradlew :app:assembleDebug --no-daemon

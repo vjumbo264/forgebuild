@@ -1,0 +1,99 @@
+{
+  "id": "ms_channel_mixer",
+  "name": "Channel Mixer",
+  "category": "Warna",
+  "description": "Full 3x3 matrix reassignment for deep anime infrared and stylistic looks.",
+  "expandBounds": 0,
+  "parameters": [
+    {
+      "key": "redR",
+      "label": "Red -> Red",
+      "type": "SCALAR",
+      "default": 1,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Red Output"
+    },
+    {
+      "key": "redG",
+      "label": "Green -> Red",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Red Output"
+    },
+    {
+      "key": "redB",
+      "label": "Blue -> Red",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Red Output"
+    },
+    {
+      "key": "greenR",
+      "label": "Red -> Green",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Green Output"
+    },
+    {
+      "key": "greenG",
+      "label": "Green -> Green",
+      "type": "SCALAR",
+      "default": 1,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Green Output"
+    },
+    {
+      "key": "greenB",
+      "label": "Blue -> Green",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Green Output"
+    },
+    {
+      "key": "blueR",
+      "label": "Red -> Blue",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Blue Output"
+    },
+    {
+      "key": "blueG",
+      "label": "Green -> Blue",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Blue Output"
+    },
+    {
+      "key": "blueB",
+      "label": "Blue -> Blue",
+      "type": "SCALAR",
+      "default": 1,
+      "min": -2,
+      "max": 2,
+      "step": 0.02,
+      "group": "Blue Output"
+    }
+  ]
+}

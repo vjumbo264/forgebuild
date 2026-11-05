@@ -1,0 +1,39 @@
+{
+  "id": "ms_lut",
+  "name": "3D LUT Grade",
+  "category": "Warna",
+  "description": "Applies the fitted multi-stage 3D color correction transform with intensity control.",
+  "expandBounds": 0,
+  "parameters": [
+    {
+      "key": "intensity",
+      "label": "Look Intensity",
+      "type": "SCALAR",
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "group": "Grading"
+    },
+    {
+      "key": "warmth",
+      "label": "Shadow Warmth",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "group": "Fine Tuning"
+    },
+    {
+      "key": "highlightCool",
+      "label": "Highlight Cool",
+      "type": "SCALAR",
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "group": "Fine Tuning"
+    }
+  ]
+}
