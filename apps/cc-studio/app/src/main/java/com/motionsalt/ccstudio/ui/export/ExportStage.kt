@@ -45,13 +45,13 @@ enum class PackMode {
 }
 
 @Composable
-fun ExportStage(project: Project, repository: ProjectRepository) {
+fun ExportStage(project: Project, repository: ProjectRepository, effectRepository: EffectRepository? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mode by remember { mutableStateOf(PackMode.CREATE_NEW) }
     var name by remember { mutableStateOf(project.title.ifBlank { "MOTIONSALT Look" }) }
     var suite by remember { mutableStateOf("MOTIONSALT") }
-    val available = remember { EffectRepository(context).getAvailableEffects() }
+    val available = remember { (effectRepository ?: EffectRepository(context)).getAvailableEffects() }
     var imported by remember { mutableStateOf<ByteArray?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
