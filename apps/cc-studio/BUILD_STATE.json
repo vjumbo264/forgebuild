@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: supplied Appendix A and skill resolve missing-reference prerequisite; resume faithful Kotlin port and real-pair tests before subsequent slices.",
+  "current_task": "T2: integrate validated parametric model, remove legacy runtime, then T3 GPU parity.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "T2 prerequisite checkpoint only. Original pair preserved; new pure Kotlin CIEDE2000 verified on 20 Sharma cases and independently vs scikit-image (<0.0003 mean difference). Aligned identity 10.14/24.60; LEGACY solver 5.83/12.68, blurred 4.85: fails gate, not a new match. Viewed upright four-panel proof: target cyan cloth, legacy blue but dark/muddy, varied edge-heavy heatmap; not operator olive screenshot. Full core 29 tests/1 pre-existing sharpen failure. Missing reference_match.py prevents required faithful port. No new APK or pack; build_complete=false. Next operation: T2: obtain reference_match.py and port faithfully; then replace runtime LUT model and validate all plain/blurred/held-out gates before T3",
+  "notes": "T2 core port validated (not app release): 7/7 new/metric tests pass. Own Kotlin affine alignment: identity CIEDE2000 mean 10.1244 / p95 24.5314; matched 4.8776 / 11.3980; right-20% holdout 4.8896 / 10.0559; blurred 3.8916 / 8.4946. All numeric gates pass. Opened gojo_parametric_proof.png: all panels upright, cloth cyan-blue, forest remains green/olive, hair red-brown; skin retains prototype small tonal patches and edge errors remain, heatmap varied purple/yellow with black excluded border and scale. Faithful stages/constants retained; equal-input ties averaged before binning to remove platform-sort bias (stable Kotlin ordering produced worse held-out 5.8665; tie averaging 4.8896). Runtime LUT removal/wiring and shared shader still pending; T2 NOT done.",
   "reset_queue": [
     {
       "id": "T0",
@@ -206,7 +206,7 @@
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
       "status": "in_progress",
-      "notes": "Complete Appendix A and skill now supplied. Faithful Kotlin port in progress; no app repair or release claimed yet."
+      "notes": "T2 core port validated (not app release): 7/7 new/metric tests pass. Own Kotlin affine alignment: identity CIEDE2000 mean 10.1244 / p95 24.5314; matched 4.8776 / 11.3980; right-20% holdout 4.8896 / 10.0559; blurred 3.8916 / 8.4946. All numeric gates pass. Opened gojo_parametric_proof.png: all panels upright, cloth cyan-blue, forest remains green/olive, hair red-brown; skin retains prototype small tonal patches and edge errors remain, heatmap varied purple/yellow with black excluded border and scale. Faithful stages/constants retained; equal-input ties averaged before binning to remove platform-sort bias (stable Kotlin ordering produced worse held-out 5.8665; tie averaging 4.8896). Runtime LUT removal/wiring and shared shader still pending; T2 NOT done."
     },
     {
       "id": "T3",
@@ -274,7 +274,6 @@
     "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases."
   ],
   "known_issues": [
-    "Missing reference_match.py: cannot faithfully port same constants/fitting order required by operator. Pair and metrics harness complete; no new parametric solver yet.",
     "Runtime app not yet repaired: LUT removal, GPU orientation, view/reference association, live scrubbers, colour controls, pack format and export remain T2-T12 acceptance work.",
     "Original Glow/Curves/Levels/HSL shaders sealed; calibration requirements recorded. Original Sharpen/Unsharp readable and preserved; renderer not wired yet.",
     "Full local core suite has pre-existing testSharpenLaplacianResponse failure (diff=0.006597229); not a green build."
