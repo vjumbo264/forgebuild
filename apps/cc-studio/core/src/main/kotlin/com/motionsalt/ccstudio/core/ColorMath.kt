@@ -91,7 +91,7 @@ object ColorMath {
         val bl = srgbToLinear(b)
 
         val x = (rl * 0.4124564f + gl * 0.3575761f + bl * 0.1804375f) / 0.95047f
-        val y = (rl * 0.2126729f + gl * 0.7151522f + bl * 0.0721750f)
+        val y = (rl * 0.2126729f + gl * 0.7151522f + bl * 0.0721750f) / 1.00000f
         val z = (rl * 0.0193339f + gl * 0.1191920f + bl * 0.9503041f) / 1.08883f
 
         fun f(t: Float) = if (t > 0.008856f) t.pow(1f / 3f) else 7.787f * t + 16f / 116f
@@ -112,11 +112,12 @@ object ColorMath {
 
     fun generateCubeText(transform: FittedTransform, size: Int = 33): String {
         val sb = StringBuilder()
-        sb.append("# Created by MOTIONSALT CC Studio (100% Offline)\\n")
-        sb.append("TITLE \"MOTIONSALT_Grade\"\\n")
-        sb.append("LUT_3D_SIZE $size\\n")
-        sb.append("DOMAIN_MIN 0.0 0.0 0.0\\n")
-        sb.append("DOMAIN_MAX 1.0 1.0 1.0\\n\\n")
+        sb.appendLine("# Created by MOTIONSALT CC Studio (100% Offline)")
+        sb.appendLine("TITLE \"MOTIONSALT_Grade\"")
+        sb.appendLine("LUT_3D_SIZE $size")
+        sb.appendLine("DOMAIN_MIN 0.0 0.0 0.0")
+        sb.appendLine("DOMAIN_MAX 1.0 1.0 1.0")
+        sb.appendLine()
 
         for (b in 0 until size) {
             val bVal = b.toFloat() / (size - 1)
@@ -125,7 +126,7 @@ object ColorMath {
                 for (r in 0 until size) {
                     val rVal = r.toFloat() / (size - 1)
                     val out = transform.evaluate(rVal, gVal, bVal)
-                    sb.append(String.format(java.util.Locale.US, \"%.6f %.6f %.6f\\n\", out.first, out.second, out.third))
+                    sb.appendLine(String.format(java.util.Locale.US, "%.6f %.6f %.6f", out.first, out.second, out.third))
                 }
             }
         }

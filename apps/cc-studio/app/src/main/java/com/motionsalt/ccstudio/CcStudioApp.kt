@@ -173,7 +173,7 @@ fun ProjectDetailView(
         )
 
         // 4 Stages Tab Row
-        PrimaryTabRow(
+        TabRow(
             selectedTabIndex = currentStage.ordinal,
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ) {
