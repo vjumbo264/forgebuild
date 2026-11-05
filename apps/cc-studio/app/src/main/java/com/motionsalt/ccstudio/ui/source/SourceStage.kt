@@ -399,6 +399,76 @@ fun SourceStage(
 }
 
 @Composable
+private fun CropEditorDialog(
+    frame: ImageFrame,
+    title: String,
+    onDismiss: () -> Unit,
+    onSave: (ImageFrame) -> Unit
+) {
+    var left by remember { mutableStateOf(frame.cropRect.left) }
+    var top by remember { mutableStateOf(frame.cropRect.top) }
+    var right by remember { mutableStateOf(frame.cropRect.right) }
+    var bottom by remember { mutableStateOf(frame.cropRect.bottom) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Left: ${(left * 100).toInt()}%", fontSize = 12.sp)
+                Slider(
+                    value = left,
+                    onValueChange = { left = it.coerceIn(0f, (right - 0.05f).coerceAtLeast(0f)) },
+                    valueRange = 0f..0.95f
+                )
+                Text("Top: ${(top * 100).toInt()}%", fontSize = 12.sp)
+                Slider(
+                    value = top,
+                    onValueChange = { top = it.coerceIn(0f, (bottom - 0.05f).coerceAtLeast(0f)) },
+                    valueRange = 0f..0.95f
+                )
+                Text("Right: ${(right * 100).toInt()}%", fontSize = 12.sp)
+                Slider(
+                    value = right,
+                    onValueChange = { right = it.coerceIn((left + 0.05f).coerceAtMost(1f), 1f) },
+                    valueRange = 0.05f..1f
+                )
+                Text("Bottom: ${(bottom * 100).toInt()}%", fontSize = 12.sp)
+                Slider(
+                    value = bottom,
+                    onValueChange = { bottom = it.coerceIn((top + 0.05f).coerceAtMost(1f), 1f) },
+                    valueRange = 0.05f..1f
+                )
+                TextButton(
+                    onClick = {
+                        left = 0f
+                        top = 0f
+                        right = 1f
+                        bottom = 1f
+                    }
+                ) {
+                    Text("Reset Crop")
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSave(frame.copy(cropRect = CropRect(left, top, right, bottom)))
+                }
+            ) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 fun PairCard(
     pair: FramePair,
     index: Int,

@@ -191,7 +191,6 @@ fun SettingsScreen(
             }
         )
     }
-}
     if (showDiagnosticsDialog) {
         val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
         AlertDialog(
