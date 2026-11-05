@@ -28,7 +28,7 @@ import com.forgebuild.engine.files.SafeSave
 import com.motionsalt.ccstudio.core.*
 import com.motionsalt.ccstudio.data.EffectRepository
 import com.motionsalt.ccstudio.data.PackSave
-import com.motionsalt.ccstudio.data.Project
+import com.motionsalt.ccstudio.data.ProjectData
 import com.motionsalt.ccstudio.data.ProjectRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +45,7 @@ enum class PackMode {
 }
 
 @Composable
-fun ExportStage(project: Project, repository: ProjectRepository, effectRepository: EffectRepository? = null) {
+fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepository: EffectRepository? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mode by remember { mutableStateOf(PackMode.CREATE_NEW) }
