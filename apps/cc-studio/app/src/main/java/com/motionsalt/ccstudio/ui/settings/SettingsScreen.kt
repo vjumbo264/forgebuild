@@ -209,7 +209,7 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
-                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString("MOTIONSALT CC Studio Diagnostics: 22 effects compiled, stack evaluator ACTIVE, zero network permissions."))
+                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString("MOTIONSALT CC Studio: offline manifest; runtime shader/GL acceptance remains pending."))
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {

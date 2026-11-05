@@ -68,7 +68,7 @@ fun ExportStage(project:ProjectData,repository:ProjectRepository,effectRepositor
         OutlinedTextField(name,{name=it},label={Text("Effect name")},modifier=Modifier.fillMaxWidth())
         if(mode==PackMode.CREATE_NEW)OutlinedTextField(suite,{suite=it},label={Text("Pack name")})
         Text("Expose controls in Keyflaw: defaults are your tuned values. Control-free export is not yet verified for original multi-pass graphs.")
-        project.tuneState.stack.forEach{item->Row{Checkbox(item.expose,{item.expose=it;repository.saveProject(project)});Text(available.firstOrNull{it.id==item.effectId}?.name?:item.effectId)}}
+        project.tuneState.stack.forEach{item->Text((available.firstOrNull{it.id==item.effectId}?.name?:item.effectId)+": controls exposed")}
         OutlinedButton(onClick={folder.launch(SafeSave.openTreeIntent())}){Text(if(tree==null)"Change folder (user-selected)" else "Selected folder: ${tree?.lastPathSegment}")}
         Text("Suggested folder: MOTIONSALT/CC Studio. Android's file picker owns the destination; no broad storage permission is needed.")
         Row{Checkbox(saveProof,{saveProof=it});Text("Also save colour-match proof PNG (before added stack effects)")}

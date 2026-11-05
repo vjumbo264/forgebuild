@@ -11,9 +11,10 @@ class ParametricMatchTest {
         return MatchFrame.fromArgb(img.width,img.height,img.getRGB(0,0,img.width,img.height,null,0,img.width))
     }
     @Test fun originalGojoPairOwnAlignmentPassesAllQualityGates() {
-        val pair=FrameAlignment.align(image("gojo_before.png"),image("gojo_target.png"))
-        val train=pair.valid.indices.filter { pair.valid[it]&&it%pair.base.width<(pair.base.width*.8).toInt() }
-        val m=ParametricSolver.fit(train.map{pair.base.rgb[it]}.toTypedArray(),train.map{pair.target.rgb[it]}.toTypedArray())
+        val pipeline=MatchPipeline.fit(listOf(MatchInput(image("gojo_before.png"),image("gojo_target.png"))))
+        val pair=pipeline.pairs.single()
+        val m=pipeline.model
+        assertTrue(pipeline.reports.single().aligned)
         val out=pair.base.apply(m)
         val valid=pair.valid.indices.filter { pair.valid[it] };val hold=valid.filter{it%pair.base.width>=(pair.base.width*.8).toInt()}
         fun stats(a:MatchFrame,b:MatchFrame,idx:List<Int>):ColourMetrics.Summary=ColourMetrics.summarize(idx.map { val p=MatchMath.lab(a.rgb[it]);val q=MatchMath.lab(b.rgb[it]);ColourMetrics.deltaE2000(ColourMetrics.Lab(p[0],p[1],p[2]),ColourMetrics.Lab(q[0],q[1],q[2])) }.toDoubleArray())

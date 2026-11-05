@@ -11,7 +11,8 @@ precision highp float;
 #else
 precision mediump float;
 #endif
-uniform highp sampler2D uTexture;
+precision highp sampler2D;
+uniform sampler2D uTexture;
 uniform float uStrength;
 uniform float uMatrixEnabled;
 uniform float uCurvesEnabled;

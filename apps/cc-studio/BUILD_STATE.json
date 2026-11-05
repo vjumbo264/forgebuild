@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "Validate Android parametric migration and T3 original-effect host before any signed release.",
+  "current_task": "Android migration acceptance and remaining T3-T12 gates; do not label this candidate complete.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "Parametric runtime migration candidate: removed old lattice solver, texture/export APIs and all ms_* approximation assets; replaced obsolete algorithm tests with 13 passing real-pair/metric/pack tests. Foreground fit service, cropped-pair proof files, target-following Tune, per-instance uniform overrides, ruler scrubbers, original effect graph host, SafeSave .kfpack export and actual root effect IDs implemented. Core and standalone Mesa GLES shader parity pass (max 0.001961953=0.501/255; zero strength exact). Android compile/runtime, emulator screenshots, drag/recomposition/performance and import acceptance NOT yet verified. No signed APK or complete release claimed. Public plugin retained-input multipass export is explicitly rejected, not silently approximated; Glow sealed calibration still needed. T2/T3 remain in progress pending integration acceptance.",
+  "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed.",
   "reset_queue": [
     {
       "id": "T0",
@@ -206,7 +206,7 @@
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
       "status": "in_progress",
-      "notes": "Parametric runtime migration candidate: removed old lattice solver, texture/export APIs and all ms_* approximation assets; replaced obsolete algorithm tests with 13 passing real-pair/metric/pack tests. Foreground fit service, cropped-pair proof files, target-following Tune, per-instance uniform overrides, ruler scrubbers, original effect graph host, SafeSave .kfpack export and actual root effect IDs implemented. Core and standalone Mesa GLES shader parity pass (max 0.001961953=0.501/255; zero strength exact). Android compile/runtime, emulator screenshots, drag/recomposition/performance and import acceptance NOT yet verified. No signed APK or complete release claimed. Public plugin retained-input multipass export is explicitly rejected, not silently approximated; Glow sealed calibration still needed. T2/T3 remain in progress pending integration acceptance."
+      "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed."
     },
     {
       "id": "T3",
@@ -278,7 +278,9 @@
     "Public Keyflaw sequential plugin host does not establish retained uInput/uPrev graph export support; exporting such stack effects is explicitly blocked.",
     "Glow/Curves/Levels/HSL sealed original shaders still require reference calibration.",
     "Scopes overlay, original grouped RGB picker integration, all view-mode screenshots and zero-allocation performance gates remain unverified.",
-    "Old tests tied to removed lattice APIs and handwritten effects were removed, not counted as passing; replacement suite has 13 tests."
+    "Old tests tied to removed lattice APIs and handwritten effects were removed, not counted as passing; replacement suite has 13 tests.",
+    "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
+    "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
   "last_verified_release": "cc-studio-v4"
 }

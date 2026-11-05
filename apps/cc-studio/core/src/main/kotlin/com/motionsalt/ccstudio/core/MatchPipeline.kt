@@ -20,8 +20,8 @@ object MatchPipeline {
         val pb=ArrayList<DoubleArray>();val pt=ArrayList<DoubleArray>()
         // Equal counts give every pair equal influence. Preserve every pixel for one regression pair.
         for(i in pairs.indices) {
-            val p=pairs[i];val indices=training[i];val b=Array(count){p.base.rgb[indices[it*indices.size/count]]}
-            val t=if(inputs[i].sameFrame)Array(count){p.target.rgb[indices[it*indices.size/count]]} else distributionTargets(b,Array(count){p.target.rgb[indices[it*indices.size/count]]})
+            val p=pairs[i];val indices=training[i];val b=Array(count){p.base.rgb[indices[(it.toLong()*indices.size/count).toInt()]]}
+            val t=if(inputs[i].sameFrame)Array(count){p.target.rgb[indices[(it.toLong()*indices.size/count).toInt()]]} else distributionTargets(b,Array(count){p.target.rgb[indices[(it.toLong()*indices.size/count).toInt()]]})
             pb.addAll(b);pt.addAll(t)
         }
         val model=ParametricSolver.fit(pb.toTypedArray(),pt.toTypedArray(),progress)

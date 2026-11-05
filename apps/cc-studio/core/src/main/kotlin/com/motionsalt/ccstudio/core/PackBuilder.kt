@@ -52,7 +52,7 @@ precision mediump float;
         val obj=JSONObject().put("id",effect.id).put("name",effect.name).put("category",effect.category).put("description",effect.description).put("expandBounds",effect.expandBounds.toDouble())
         val params=JSONArray();effect.parameters.forEach{p->val value=if(p.defaultValue is Boolean){if(p.defaultValue)1.0 else 0.0}else p.defaultValue
             val v=JSONObject().put("key",p.key).put("label",p.label).put("type",p.type.name).put("default",value).put("group",p.group)
-            if(p.type==ParamType.SCALAR)v.put("min",p.min.toDouble()).put("max",p.max.toDouble()).put("step",p.step.toDouble())
+            if(p.type!=ParamType.COLOR)v.put("min",p.min.toDouble()).put("max",p.max.toDouble()).put("step",p.step.toDouble())
             if(p.type==ParamType.CHOICE)v.put("options",JSONArray(p.options));params.put(v)}
         return obj.put("parameters",params)
     }
