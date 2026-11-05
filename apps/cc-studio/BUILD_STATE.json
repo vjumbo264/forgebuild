@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: obtain reference_match.py and port faithfully; then replace runtime LUT model and validate all plain/blurred/held-out gates before T3",
+  "current_task": "T2: supplied Appendix A and skill resolve missing-reference prerequisite; resume faithful Kotlin port and real-pair tests before subsequent slices.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -270,7 +270,8 @@
     }
   ],
   "decisions": [
-    "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed."
+    "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed.",
+    "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases."
   ],
   "known_issues": [
     "Missing reference_match.py: cannot faithfully port same constants/fitting order required by operator. Pair and metrics harness complete; no new parametric solver yet.",
