@@ -49,8 +49,8 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mode by remember { mutableStateOf(PackMode.CREATE_NEW) }
-    var name by remember { mutableStateOf(project.title.ifBlank { "MOTIONSALT Look" }) }
-    var suite by remember { mutableStateOf("MOTIONSALT") }
+    var name by remember { mutableStateOf<String>(project.lookName.ifBlank { project.name.ifBlank { "MOTIONSALT Look" } }) }
+    var suite by remember { mutableStateOf<String>("MOTIONSALT") }
     val available = remember { (effectRepository ?: EffectRepository(context)).getAvailableEffects() }
     var imported by remember { mutableStateOf<ByteArray?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
