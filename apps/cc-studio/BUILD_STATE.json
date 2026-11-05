@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: measure independent baseline on real pair and finish regression checkpoint; faithful port awaits reference_match.py",
+  "current_task": "T2: obtain reference_match.py and port faithfully; then replace runtime LUT model and validate all plain/blurred/held-out gates before T3",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "Added original 560x259 Gojo pair plus pure Kotlin CIEDE2000, honest threshold labels and exact regression gate. 20 published Sharma cases + symmetry, neutral, identity, percentile and label tests pass (3 JUnit tests). Not wired to UI and no fitted model claimed. reference_match.py remains absent. Next operation: T2: measure independent baseline on real pair and finish regression checkpoint; faithful port awaits reference_match.py",
+  "notes": "T2 prerequisite checkpoint only. Original pair preserved; new pure Kotlin CIEDE2000 verified on 20 Sharma cases and independently vs scikit-image (<0.0003 mean difference). Aligned identity 10.14/24.60; LEGACY solver 5.83/12.68, blurred 4.85: fails gate, not a new match. Viewed upright four-panel proof: target cyan cloth, legacy blue but dark/muddy, varied edge-heavy heatmap; not operator olive screenshot. Full core 29 tests/1 pre-existing sharpen failure. Missing reference_match.py prevents required faithful port. No new APK or pack; build_complete=false. Next operation: T2: obtain reference_match.py and port faithfully; then replace runtime LUT model and validate all plain/blurred/held-out gates before T3",
   "reset_queue": [
     {
       "id": "T0",
@@ -187,7 +187,7 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "T2-T9 completed: KeyflawHostRenderer, honest Recreated/Heatmap, 22 validated effects, ColorPickerDialog with eyedropper, debounced 60FPS performance pass, Diagnostics panel, export from identical shaders. Triggering cc-studio-v4 release.",
+  "last_session_note": "T2 prerequisite checkpoint only. Original pair preserved; new pure Kotlin CIEDE2000 verified on 20 Sharma cases and independently vs scikit-image (<0.0003 mean difference). Aligned identity 10.14/24.60; LEGACY solver 5.83/12.68, blurred 4.85: fails gate, not a new match. Viewed upright four-panel proof: target cyan cloth, legacy blue but dark/muddy, varied edge-heavy heatmap; not operator olive screenshot. Full core 29 tests/1 pre-existing sharpen failure. Missing reference_match.py prevents required faithful port. No new APK or pack; build_complete=false.",
   "current_phase": "pivot",
   "pivot_queue": [
     {
@@ -205,8 +205,8 @@
     {
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
-      "status": "in_progress",
-      "notes": "Added original 560x259 Gojo pair plus pure Kotlin CIEDE2000, honest threshold labels and exact regression gate. 20 published Sharma cases + symmetry, neutral, identity, percentile and label tests pass (3 JUnit tests). Not wired to UI and no fitted model claimed. reference_match.py remains absent."
+      "status": "blocked",
+      "notes": "T2 prerequisite checkpoint only. Original pair preserved; new pure Kotlin CIEDE2000 verified on 20 Sharma cases and independently vs scikit-image (<0.0003 mean difference). Aligned identity 10.14/24.60; LEGACY solver 5.83/12.68, blurred 4.85: fails gate, not a new match. Viewed upright four-panel proof: target cyan cloth, legacy blue but dark/muddy, varied edge-heavy heatmap; not operator olive screenshot. Full core 29 tests/1 pre-existing sharpen failure. Missing reference_match.py prevents required faithful port. No new APK or pack; build_complete=false."
     },
     {
       "id": "T3",
@@ -271,5 +271,12 @@
   ],
   "decisions": [
     "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed."
-  ]
+  ],
+  "known_issues": [
+    "Missing reference_match.py: cannot faithfully port same constants/fitting order required by operator. Pair and metrics harness complete; no new parametric solver yet.",
+    "Runtime app not yet repaired: LUT removal, GPU orientation, view/reference association, live scrubbers, colour controls, pack format and export remain T2-T12 acceptance work.",
+    "Original Glow/Curves/Levels/HSL shaders sealed; calibration requirements recorded. Original Sharpen/Unsharp readable and preserved; renderer not wired yet.",
+    "Full local core suite has pre-existing testSharpenLaplacianResponse failure (diff=0.006597229); not a green build."
+  ],
+  "last_verified_release": "cc-studio-v4"
 }

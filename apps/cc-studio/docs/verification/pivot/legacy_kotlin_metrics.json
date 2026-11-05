@@ -1,0 +1,17 @@
+{
+  "identity_ciede2000": {
+    "mean": 10.590101882440305,
+    "count": 138552,
+    "p95": 25.126198653351608
+  },
+  "legacy_training_cie76": {
+    "mean": 8.852894,
+    "p95": 17.542171
+  },
+  "legacy_ciede2000": {
+    "mean": 6.338913686968579,
+    "count": 138552,
+    "p95": 14.088928226782695
+  },
+  "scope": "Legacy solver audit; unaligned originals, 4px border. No new no-LUT solver or acceptance claim."
+}

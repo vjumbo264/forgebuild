@@ -1,0 +1,13 @@
+JUnit version 4.13.2
+.....................E........
+Time: 0.583
+There was 1 failure:
+1) testSharpenLaplacianResponse(com.motionsalt.ccstudio.core.PixelProofHarnessTest)
+java.lang.AssertionError: Sharpen must visibly boost detail (diff=0.006597229)
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.motionsalt.ccstudio.core.PixelProofHarnessTest.testSharpenLaplacianResponse(PixelProofHarnessTest.kt:240)
+
+FAILURES!!!
+Tests run: 29,  Failures: 1
+

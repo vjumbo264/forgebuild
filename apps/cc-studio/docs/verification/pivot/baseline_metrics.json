@@ -1,0 +1,69 @@
+{
+  "scope": "Audit baseline only; no reference optimizer was supplied or ported. Legacy reproduction is NOT the new match.",
+  "metric": "CIEDE2000, D65 2deg sRGB; 4px border + valid affine intersection; blurred sigma=2",
+  "fixture_sha256": {
+    "gojo_before.png": "9e0a9e9f42518297e2ab0558f44c0136d81b0c6898f94ae19dbf10d4427b2ea9",
+    "gojo_target.png": "475136bdc2c9dfe071b9b919bf50db73a4f9976fe2858f2a8e9323738f37f924"
+  },
+  "edge_ecc_correlation": 0.9769251603555913,
+  "base_to_target_affine": [
+    [
+      1.0019354820251465,
+      0.00023007523850537837,
+      0.013989455997943878
+    ],
+    [
+      -0.000401216879254207,
+      0.9999001622200012,
+      0.0577763095498085
+    ]
+  ],
+  "unaligned": {
+    "identity": {
+      "mean": 10.589870280195363,
+      "p95": 25.12559589995058,
+      "count": 138552
+    },
+    "legacy": {
+      "mean": 6.338809611573185,
+      "p95": 14.088731590901865,
+      "count": 138552
+    }
+  },
+  "aligned": {
+    "identity": {
+      "mean": 10.143125426535558,
+      "p95": 24.598463773585603,
+      "count": 137890
+    },
+    "legacy": {
+      "mean": 5.82715562088773,
+      "p95": 12.681230551814485,
+      "count": 137890
+    },
+    "identity_right20": {
+      "mean": 10.622300433713535,
+      "p95": 26.17777145635966,
+      "count": 26750
+    },
+    "legacy_right20_NOT_held_out": {
+      "mean": 6.076032306988213,
+      "p95": 10.981973182321704,
+      "count": 26750
+    },
+    "right20_note": "Legacy solver trained across the entire image; this region is diagnostic only, NOT held-out validation.",
+    "identity_blurred_sigma2": {
+      "mean": 9.72974782919803,
+      "p95": 24.088623957984716,
+      "count": 137890
+    },
+    "legacy_blurred_sigma2": {
+      "mean": 4.853752975712208,
+      "p95": 10.06639461633705,
+      "count": 137890
+    }
+  },
+  "new_model": null,
+  "new_model_gate_passed": false,
+  "missing_required_input": "reference_match.py (the specified faithful-port source); not present in attachments or repository trees"
+}
