@@ -48,7 +48,7 @@ fun ParameterScrubber(param:EffectParam,externalValue:Float,onValue:(Float)->Uni
                     val velocity=tracker.calculateVelocity().x
                     if(abs(velocity)>80f&&abs(dy)<24.dp.toPx()) {
                         val old=value;val factor=major/40.dp.toPx()
-                        fling=scope.launch { Animatable(0f).animateDecay(velocity,exponentialDecay(frictionMultiplier=2.5f)){change(old-this.value*factor);if(value<=param.min||value>=param.max)cancelAnimation()} }
+                        fling=scope.launch { Animatable(0f).animateDecay(velocity,exponentialDecay(frictionMultiplier=2.5f)){change(old-this.value*factor);if(value<=param.min||value>=param.max)throw kotlinx.coroutines.CancellationException("Scrubber reached bound")} }
                     }
                 })
             }) {

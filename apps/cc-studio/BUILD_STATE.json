@@ -280,6 +280,8 @@
     "Scopes overlay, original grouped RGB picker integration, all view-mode screenshots and zero-allocation performance gates remain unverified.",
     "Old tests tied to removed lattice APIs and handwritten effects were removed, not counted as passing; replacement suite has 13 tests.",
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
+    "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending.",
+    "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
   "last_verified_release": "cc-studio-v4"
