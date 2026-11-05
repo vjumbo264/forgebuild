@@ -46,9 +46,17 @@ jobs:
         run: |
           cd apps/cc-studio
           chmod +x gradlew
-          ./gradlew testDebugUnitTest --no-daemon
+          ./gradlew :core:test :app:testDebugUnitTest --no-daemon
 
       - name: Build Debug APK
         run: |
           cd apps/cc-studio
           ./gradlew :app:assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cc-studio-pivot-validation
+          path: |
+            apps/cc-studio/core/build/reports/tests/test/
+            apps/cc-studio/app/build/outputs/apk/debug/*.apk

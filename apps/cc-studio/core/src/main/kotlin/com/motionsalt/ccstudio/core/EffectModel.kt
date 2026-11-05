@@ -92,27 +92,8 @@ data class TuneState(
     val stack: MutableList<StackItem> = mutableListOf()
 ) {
     init {
-        // Enforce that the first item is always ms_lut
-        if (stack.isEmpty() || stack[0].effectId != "ms_lut") {
-            val lutItem = stack.firstOrNull { it.effectId == "ms_lut" }
-            if (lutItem != null) {
-                stack.remove(lutItem)
-                stack.add(0, lutItem)
-            } else {
-                val initialLut = StackItem(
-                    instanceId = "lut-grade-primary",
-                    effectId = "ms_lut",
-                    enabled = true,
-                    expose = true,
-                    params = mutableMapOf(
-                        "intensity" to 1.0,
-                        "warmth" to 0.0,
-                        "highlightCool" to 0.0
-                    )
-                )
-                stack.add(0, initialLut)
-            }
-        }
+        // Preserve order: Colour Match may move, but every state contains exactly one.
+        if(stack.none { it.effectId == "colour_match" }) stack.add(0,primary())
     }
 
     fun toJsonString(): String {
@@ -134,24 +115,13 @@ data class TuneState(
             val list = mutableListOf<StackItem>()
             for (i in 0 until arr.length()) {
                 val itemObj = arr.getJSONObject(i)
-                list.add(StackItem.fromJsonObject(itemObj))
+                val item=StackItem.fromJsonObject(itemObj)
+                if(item.effectId == "colour_match" || !item.effectId.startsWith("ms_")) list.add(item)
             }
             return TuneState(version, list)
         }
 
-        fun defaultState(): TuneState {
-            val lut = StackItem(
-                instanceId = "lut-grade-primary",
-                effectId = "ms_lut",
-                enabled = true,
-                expose = true,
-                params = mutableMapOf(
-                    "intensity" to 1.0,
-                    "warmth" to 0.0,
-                    "highlightCool" to 0.0
-                )
-            )
-            return TuneState(version = 1, stack = mutableListOf(lut))
-        }
+        fun primary() = StackItem(instanceId="colour-match-primary",effectId="colour_match",params=mutableMapOf("strength" to 1.0,"matrixEnabled" to 1.0,"curvesEnabled" to 1.0,"hueEnabled" to 1.0))
+        fun defaultState() = TuneState(stack=mutableListOf(primary()))
     }
 }

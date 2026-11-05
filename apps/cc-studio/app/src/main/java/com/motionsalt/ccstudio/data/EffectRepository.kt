@@ -27,7 +27,7 @@ class EffectRepository(private val context: Context) {
                     val obj = JSONObject(jsonStr)
                     val id = obj.getString("id")
                     val name = obj.getString("name")
-                    val category = mapCategory(obj.optString("category", "Colour correction"))
+                    val category = when(id) { "sharpen","unsharp_mask" -> "Detail"; "gamma_exposure","brightness_contrast" -> "Tone"; "tritone","spectral_map" -> "Toning"; "diffusion","haze_flare","vignette","film_grain","inner_glow","chromatic_glow","glint_glare","edge_rays","defocus_prism" -> "Look"; else -> "Colour correction" }
                     val description = obj.optString("description", "")
                     val expandBounds = obj.optDouble("expandBounds", 0.0).toFloat()
 
@@ -76,6 +76,7 @@ class EffectRepository(private val context: Context) {
                             description = description,
                             expandBounds = expandBounds,
                             parameters = paramsList,
+                            passes = obj.optJSONArray("passes")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
                             shaderCode = glslStr
                         )
                     )
@@ -87,9 +88,10 @@ class EffectRepository(private val context: Context) {
             e.printStackTrace()
         }
 
-        // Sort by category and name, with ms_lut first
+        cachedEffects.add(com.motionsalt.ccstudio.core.MatchEffect.definition())
+        // Stable category/name ordering, Colour Match first
         cachedEffects.sortBy { eff ->
-            if (eff.id == "ms_lut") "000" else "${eff.category}_${eff.name}"
+            if (eff.id == "colour_match") "000" else "${eff.category}_${eff.name}"
         }
         return cachedEffects
     }

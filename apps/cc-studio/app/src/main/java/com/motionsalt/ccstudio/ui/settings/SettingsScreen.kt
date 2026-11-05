@@ -108,7 +108,7 @@ fun SettingsScreen(
                             Text("Diagnostics & Engine Status", fontWeight = FontWeight.Bold)
                         }
                         Text(
-                            "Shows real-time renderer status, GLSL shader compiler states, 3D LUT identity metrics, and current tune state JSON.",
+                            "Shows real-time renderer status, GLSL shader compiler states, parametric colour-match metrics, and current tune state JSON.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -157,7 +157,7 @@ fun SettingsScreen(
     if (showDeleteAllDialogFirst) {
         ConfirmDeleteDialog(
             title = "Delete ALL Projects?",
-            message = "This will remove all project directories, images, fitted LUTs and tune states on this phone. Are you sure?",
+            message = "This will remove all project directories, images, fitted match models and tune states on this phone. Are you sure?",
             onConfirm = {
                 showDeleteAllDialogFirst = false
                 showDeleteAllDialogSecond = true

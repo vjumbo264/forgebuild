@@ -6,28 +6,6 @@ import kotlin.math.*
 object SyntheticGenerator {
 
     /**
-     * Generates a 24-color synthetic test chart (Base) and a styled/graded version (Target).
-     */
-    fun generateSyntheticPixelPairs(count: Int = 1200): List<PixelPair> {
-        val pairs = mutableListOf<PixelPair>()
-        val rand = java.util.Random(42)
-
-        for (i in 0 until count) {
-            val r = rand.nextFloat()
-            val g = rand.nextFloat()
-            val b = rand.nextFloat()
-
-            // Graded style: cinematic warm tone, boosted shadows, teal highlights
-            val tr = (r * 1.15f + 0.04f).coerceIn(0f, 1f)
-            val tg = (g * 0.98f + 0.01f).coerceIn(0f, 1f)
-            val tb = (b * 0.85f - 0.02f).coerceIn(0f, 1f)
-
-            pairs.add(PixelPair(Triple(r, g, b), Triple(tr, tg, tb)))
-        }
-        return pairs
-    }
-
-    /**
      * Generates a simple 24-patch synthetic color chart as raw uncompressed 24-bit BMP image bytes.
      * Dimensions: 240x160.
      */

@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: integrate validated parametric model, remove legacy runtime, then T3 GPU parity.",
+  "current_task": "Validate Android parametric migration and T3 original-effect host before any signed release.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "T2 core port validated (not app release): 7/7 new/metric tests pass. Own Kotlin affine alignment: identity CIEDE2000 mean 10.1244 / p95 24.5314; matched 4.8776 / 11.3980; right-20% holdout 4.8896 / 10.0559; blurred 3.8916 / 8.4946. All numeric gates pass. Opened gojo_parametric_proof.png: all panels upright, cloth cyan-blue, forest remains green/olive, hair red-brown; skin retains prototype small tonal patches and edge errors remain, heatmap varied purple/yellow with black excluded border and scale. Faithful stages/constants retained; equal-input ties averaged before binning to remove platform-sort bias (stable Kotlin ordering produced worse held-out 5.8665; tie averaging 4.8896). Runtime LUT removal/wiring and shared shader still pending; T2 NOT done.",
+  "notes": "Parametric runtime migration candidate: removed old lattice solver, texture/export APIs and all ms_* approximation assets; replaced obsolete algorithm tests with 13 passing real-pair/metric/pack tests. Foreground fit service, cropped-pair proof files, target-following Tune, per-instance uniform overrides, ruler scrubbers, original effect graph host, SafeSave .kfpack export and actual root effect IDs implemented. Core and standalone Mesa GLES shader parity pass (max 0.001961953=0.501/255; zero strength exact). Android compile/runtime, emulator screenshots, drag/recomposition/performance and import acceptance NOT yet verified. No signed APK or complete release claimed. Public plugin retained-input multipass export is explicitly rejected, not silently approximated; Glow sealed calibration still needed. T2/T3 remain in progress pending integration acceptance.",
   "reset_queue": [
     {
       "id": "T0",
@@ -206,7 +206,7 @@
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
       "status": "in_progress",
-      "notes": "T2 core port validated (not app release): 7/7 new/metric tests pass. Own Kotlin affine alignment: identity CIEDE2000 mean 10.1244 / p95 24.5314; matched 4.8776 / 11.3980; right-20% holdout 4.8896 / 10.0559; blurred 3.8916 / 8.4946. All numeric gates pass. Opened gojo_parametric_proof.png: all panels upright, cloth cyan-blue, forest remains green/olive, hair red-brown; skin retains prototype small tonal patches and edge errors remain, heatmap varied purple/yellow with black excluded border and scale. Faithful stages/constants retained; equal-input ties averaged before binning to remove platform-sort bias (stable Kotlin ordering produced worse held-out 5.8665; tie averaging 4.8896). Runtime LUT removal/wiring and shared shader still pending; T2 NOT done."
+      "notes": "Parametric runtime migration candidate: removed old lattice solver, texture/export APIs and all ms_* approximation assets; replaced obsolete algorithm tests with 13 passing real-pair/metric/pack tests. Foreground fit service, cropped-pair proof files, target-following Tune, per-instance uniform overrides, ruler scrubbers, original effect graph host, SafeSave .kfpack export and actual root effect IDs implemented. Core and standalone Mesa GLES shader parity pass (max 0.001961953=0.501/255; zero strength exact). Android compile/runtime, emulator screenshots, drag/recomposition/performance and import acceptance NOT yet verified. No signed APK or complete release claimed. Public plugin retained-input multipass export is explicitly rejected, not silently approximated; Glow sealed calibration still needed. T2/T3 remain in progress pending integration acceptance."
     },
     {
       "id": "T3",
@@ -274,9 +274,11 @@
     "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases."
   ],
   "known_issues": [
-    "Runtime app not yet repaired: LUT removal, GPU orientation, view/reference association, live scrubbers, colour controls, pack format and export remain T2-T12 acceptance work.",
-    "Original Glow/Curves/Levels/HSL shaders sealed; calibration requirements recorded. Original Sharpen/Unsharp readable and preserved; renderer not wired yet.",
-    "Full local core suite has pre-existing testSharpenLaplacianResponse failure (diff=0.006597229); not a green build."
+    "Android migration build and on-device acceptance pending; no final APK published.",
+    "Public Keyflaw sequential plugin host does not establish retained uInput/uPrev graph export support; exporting such stack effects is explicitly blocked.",
+    "Glow/Curves/Levels/HSL sealed original shaders still require reference calibration.",
+    "Scopes overlay, original grouped RGB picker integration, all view-mode screenshots and zero-allocation performance gates remain unverified.",
+    "Old tests tied to removed lattice APIs and handwritten effects were removed, not counted as passing; replacement suite has 13 tests."
   ],
   "last_verified_release": "cc-studio-v4"
 }

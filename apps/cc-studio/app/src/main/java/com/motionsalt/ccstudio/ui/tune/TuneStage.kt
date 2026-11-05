@@ -91,14 +91,7 @@ fun TuneStage(
     var isEyedropperActive by remember { mutableStateOf(false) }
 
     // Frame strip selection
-    val allFrames = remember(project.pairs) {
-        val list = mutableListOf<Pair<String, Boolean>>()
-        for (p in project.pairs) {
-            p.base?.let { list.add(it.filePath to false) }
-            p.target?.let { list.add(it.filePath to true) }
-        }
-        list
-    }
+    val allFrames = project.pairs.mapNotNull { p -> p.base?.filePath?.let { it to false } }
     var activeFramePath by remember {
         mutableStateOf(allFrames.firstOrNull()?.first)
     }
@@ -109,7 +102,9 @@ fun TuneStage(
         if (activeFramePath != null && File(activeFramePath!!).exists()) {
             withContext(Dispatchers.IO) {
                 try {
-                    val bmp = BitmapFactory.decodeFile(activeFramePath)
+                    val pair = project.pairs.firstOrNull { it.base?.filePath == activeFramePath }
+                    val proof = File(context.filesDir, "projects/${project.id}/results/before_${pair?.id}.png")
+                    val bmp = BitmapFactory.decodeFile(if(proof.exists())proof.absolutePath else activeFramePath)
                     activeBaseBitmap = bmp
                     hostRenderer.setBaseBitmap(bmp)
                 } catch (e: Exception) {
@@ -121,13 +116,14 @@ fun TuneStage(
     }
 
     // Load target frame into renderer if available
-    val completePair = project.pairs.firstOrNull { it.isComplete }
+    val completePair = project.pairs.firstOrNull { it.base?.filePath == activeFramePath && it.isComplete }
     LaunchedEffect(completePair?.target?.filePath) {
         val tPath = completePair?.target?.filePath
         if (tPath != null && File(tPath).exists()) {
             withContext(Dispatchers.IO) {
                 try {
-                    val bmp = BitmapFactory.decodeFile(tPath)
+                    val proof = File(context.filesDir, "projects/${project.id}/results/target_${completePair?.id}.png")
+                    val bmp = BitmapFactory.decodeFile(if(proof.exists())proof.absolutePath else tPath)
                     hostRenderer.setTargetBitmap(bmp)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -137,20 +133,13 @@ fun TuneStage(
         }
     }
 
-    // Load fitted 3D LUT transform into renderer
-    LaunchedEffect(project.fitResult?.lutPath) {
-        val lutPath = project.fitResult?.lutPath
-        if (lutPath != null && File(lutPath).exists()) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val transform = ColorMath.parseCube33(File(lutPath).readText(java.nio.charset.StandardCharsets.UTF_8))
-                    hostRenderer.setLutTransform(transform)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+    LaunchedEffect(project.fitResult?.modelPath) {
+        withContext(Dispatchers.IO) {
+            project.fitResult?.modelPath?.let { path ->
+                if(File(path).exists()) hostRenderer.setMatchModel(ParametricMatch.fromJson(org.json.JSONObject(File(path).readText())))
             }
-            glSurfaceViewRef?.requestRender()
         }
+        glSurfaceViewRef?.requestRender()
     }
 
     // Stack and Undo/Redo
@@ -179,6 +168,7 @@ fun TuneStage(
         hostRenderer.isWipeVertical = isWipeVertical
         hostRenderer.diffGain = diffGain
         hostRenderer.selectedChannel = selectedChannel
+        hostRenderer.clearOverrides()
         hostRenderer.activeTuneState = currentTuneState
         glSurfaceViewRef?.requestRender()
     }
@@ -190,6 +180,7 @@ fun TuneStage(
         tuneStateJson = newJson
         project.tuneState = newState
         repository.saveProject(project)
+        hostRenderer.clearOverrides()
         hostRenderer.activeTuneState = newState
         glSurfaceViewRef?.requestRender()
     }
@@ -260,7 +251,7 @@ fun TuneStage(
 
                                 val (targetItem, targetParam, _) = activeColorPickerParam!!
                                 targetItem.params[targetParam.key] = sampledHex
-                                hostRenderer.setEffectColorParam(targetItem.effectId, targetParam.key, r / 255f, g / 255f, b / 255f)
+                                hostRenderer.setEffectColorParam(targetItem.instanceId, targetParam.key, r / 255f, g / 255f, b / 255f)
                                 glSurfaceViewRef?.requestRender()
                                 commitTuneState(currentTuneState)
                                 isEyedropperActive = false
@@ -279,7 +270,7 @@ fun TuneStage(
             AndroidView(
                 factory = { ctx ->
                     GLSurfaceView(ctx).apply {
-                        setEGLContextClientVersion(2)
+                        setEGLContextClientVersion(3)
                         setRenderer(hostRenderer)
                         renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
                         glSurfaceViewRef = this
@@ -564,7 +555,7 @@ fun TuneStage(
                         StackItemCard(
                             item = item,
                             def = def,
-                            isFirst = index == 0,
+                            isFirst = item.effectId == "colour_match",
                             isExpanded = isExpanded,
                             onToggleExpand = {
                                 expandedItemId = if (isExpanded) null else item.instanceId
@@ -579,7 +570,7 @@ fun TuneStage(
                             },
                             onSliderDrag = { key, floatValue ->
                                 item.params[key] = floatValue
-                                hostRenderer.setEffectParam(item.effectId, key, floatValue)
+                                hostRenderer.setEffectParam(item.instanceId, key, floatValue)
                                 glSurfaceViewRef?.requestRender()
 
                                 saveJob?.cancel()
@@ -594,7 +585,7 @@ fun TuneStage(
                                 activeColorPickerParam = Triple(item, param, hex)
                             },
                             onMoveUp = {
-                                if (index > 1) { // 0 is always ms_lut
+                                if (index > 1) { // 0 is always colour_match
                                     currentTuneState.stack.removeAt(index)
                                     currentTuneState.stack.add(index - 1, item)
                                     commitTuneState(currentTuneState)
@@ -619,7 +610,7 @@ fun TuneStage(
                                 commitTuneState(currentTuneState)
                             },
                             onDelete = {
-                                if (item.effectId != "ms_lut") {
+                                if (item.effectId != "colour_match") {
                                     currentTuneState.stack.removeAt(index)
                                     commitTuneState(currentTuneState)
                                 }
@@ -664,7 +655,7 @@ fun TuneStage(
                 val r = ((num shr 16) and 0xFF) / 255.0f
                 val g = ((num shr 8) and 0xFF) / 255.0f
                 val b = (num and 0xFF) / 255.0f
-                hostRenderer.setEffectColorParam(item.effectId, param.key, r, g, b)
+                hostRenderer.setEffectColorParam(item.instanceId, param.key, r, g, b)
                 glSurfaceViewRef?.requestRender()
                 commitTuneState(currentTuneState)
                 activeColorPickerParam = null
@@ -724,7 +715,7 @@ fun StackItemCard(
                             fontSize = 14.sp
                         )
                         Text(
-                            text = if (isFirst) "Base 3D LUT Transform" else def?.category ?: "Effect",
+                            text = if (isFirst) "Fitted Colour Match" else def?.category ?: "Effect",
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -787,23 +778,11 @@ fun StackItemCard(
                                     is Number -> currentValue.toFloat()
                                     else -> p.defaultValue as? Float ?: 0f
                                 }
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(p.label, fontSize = 12.sp)
-                                        Text(String.format("%.2f", num), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                    }
-                                    Slider(
-                                        value = num,
-                                        onValueChange = { onSliderDrag?.invoke(p.key, it) ?: onParamChange(p.key, it) },
-                                        valueRange = p.min..p.max
-                                    )
-                                }
+                                ParameterScrubber(p, num) { value -> onSliderDrag?.invoke(p.key,value) ?: onParamChange(p.key,value) }
+
                             }
                             ParamType.BOOL -> {
-                                val b = currentValue as? Boolean ?: (currentValue == 1.0)
+                                val b = (currentValue as? Boolean) ?: ((currentValue as? Number)?.toDouble()?.let { it > .5 } ?: false)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,

@@ -2,7 +2,6 @@ package com.motionsalt.ccstudio.data
 
 import android.content.Context
 import android.net.Uri
-import com.motionsalt.ccstudio.core.SyntheticGenerator
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -125,19 +124,19 @@ class ProjectRepository(private val context: Context) {
 
     fun createDemoProject(): ProjectData {
         val project = createProject(
-            name = "Demo: Cyberpunk Anime Look",
-            lookName = "MOTIONSALT_Cyberpunk"
+            name = "Demo: Gojo real-pair regression",
+            lookName = "GOJO_CC"
         )
         val pDir = File(projectsRoot, project.id)
         val imagesDir = File(pDir, "images")
         if (!imagesDir.exists()) imagesDir.mkdirs()
 
         // Generate synthetic Base and Target charts
-        val baseBytes = SyntheticGenerator.generateChartBmp(graded = false)
-        val targetBytes = SyntheticGenerator.generateChartBmp(graded = true)
+        val baseBytes = context.assets.open("regression/gojo_before.png").use { it.readBytes() }
+        val targetBytes = context.assets.open("regression/gojo_target.png").use { it.readBytes() }
 
-        val baseFile = File(imagesDir, "demo_base.bmp")
-        val targetFile = File(imagesDir, "demo_target.bmp")
+        val baseFile = File(imagesDir, "gojo_before.png")
+        val targetFile = File(imagesDir, "gojo_target.png")
 
         baseFile.writeBytes(baseBytes)
         targetFile.writeBytes(targetBytes)

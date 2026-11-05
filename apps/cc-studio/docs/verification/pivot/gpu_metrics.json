@@ -1,0 +1,7 @@
+{
+  "renderer": "llvmpipe (LLVM 20.1.2, 256 bits)",
+  "maxChannelError": 0.0019619530622700943,
+  "meanChannelError": 0.0009662068941259992,
+  "tolerance": 0.0058823529411764705,
+  "strengthZeroExact": true
+}

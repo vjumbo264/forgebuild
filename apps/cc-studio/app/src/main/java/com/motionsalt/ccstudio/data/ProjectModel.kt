@@ -104,32 +104,23 @@ data class FramePair(
 }
 
 data class FitResultData(
-    val lutPath: String,
-    val haldPath: String,
-    val meanDeltaE: Float,
-    val p95DeltaE: Float,
-    val timestamp: Long
+    val modelPath:String,
+    val meanDeltaE:Float,
+    val p95DeltaE:Float,
+    val timestamp:Long,
+    val identityMean:Float,
+    val identityP95:Float,
+    val holdoutMean:Float,
+    val blurredMean:Float,
+    val aligned:Boolean=true
 ) {
-    fun toJsonObject(): JSONObject {
-        val o = JSONObject()
-        o.put("lutPath", lutPath)
-        o.put("haldPath", haldPath)
-        o.put("meanDeltaE", meanDeltaE.toDouble())
-        o.put("p95DeltaE", p95DeltaE.toDouble())
-        o.put("timestamp", timestamp)
-        return o
-    }
-
+    fun toJsonObject()=JSONObject().put("modelPath",modelPath).put("meanDeltaE",meanDeltaE.toDouble()).put("p95DeltaE",p95DeltaE.toDouble()).put("timestamp",timestamp)
+        .put("identityMean",identityMean.toDouble()).put("identityP95",identityP95.toDouble()).put("holdoutMean",holdoutMean.toDouble()).put("blurredMean",blurredMean.toDouble()).put("aligned",aligned)
     companion object {
-        fun fromJsonObject(o: JSONObject?): FitResultData? {
-            if (o == null) return null
-            return FitResultData(
-                lutPath = o.optString("lutPath", ""),
-                haldPath = o.optString("haldPath", ""),
-                meanDeltaE = o.optDouble("meanDeltaE", 0.0).toFloat(),
-                p95DeltaE = o.optDouble("p95DeltaE", 0.0).toFloat(),
-                timestamp = o.optLong("timestamp", System.currentTimeMillis())
-            )
+        fun fromJsonObject(o:JSONObject?):FitResultData? {
+            // Old result formats require a new fit, never pretend a colour lattice is this model.
+            if(o==null||!o.has("modelPath"))return null
+            return FitResultData(o.getString("modelPath"),o.getDouble("meanDeltaE").toFloat(),o.getDouble("p95DeltaE").toFloat(),o.getLong("timestamp"),o.getDouble("identityMean").toFloat(),o.getDouble("identityP95").toFloat(),o.getDouble("holdoutMean").toFloat(),o.getDouble("blurredMean").toFloat(),o.optBoolean("aligned",true))
         }
     }
 }

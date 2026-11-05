@@ -164,7 +164,7 @@ fun ProjectsScreen(
     projectToDelete?.let { p ->
         ConfirmDeleteDialog(
             title = "Delete Project?",
-            message = "Are you sure you want to delete '${p.name}'? This will permanently remove all copied frames, fitted LUTs, and tune states from this device.",
+            message = "Are you sure you want to delete '${p.name}'? This will permanently remove all copied frames, fitted match models, and tune states from this device.",
             onConfirm = {
                 repository.deleteProject(p.id)
                 onProjectDeleted(p.id)

@@ -2,644 +2,161 @@ package com.motionsalt.ccstudio.renderer
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.opengl.GLES20
+import android.opengl.GLES20 as GL
+import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
 import android.os.SystemClock
-import com.motionsalt.ccstudio.core.ColorMath
-import com.motionsalt.ccstudio.core.FittedTransform
-import com.motionsalt.ccstudio.core.TuneState
-import java.io.InputStreamReader
+import com.motionsalt.ccstudio.core.*
+import org.json.JSONObject
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.FloatBuffer
 import java.util.concurrent.ConcurrentHashMap
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.*
 
-/**
- * Keyflaw Effect Host OpenGL ES 2.0 / 3.0 Renderer.
- *
- * Implements Keyflaw host contract:
- * - Direct execution of Keyflaw shaders from assets/effects/
- * - Framebuffer Object (FBO) ping-pong between effect passes
- * - Half-texel corrected 3D LUT texture sampling (2D strip layout)
- * - Uniform-only display-rate updates during slider drags (30+ fps budget)
- * - Zero CPU readbacks and zero per-frame bitmap allocations in the hot path
- * - Real-time ViewMode compositing (Result, Before, Wipe with flip, Diff with gain, Channels)
- * - Frame time and FPS telemetry for the in-app Diagnostics screen
+/** Canonical textures have logical TOP at v=0. Only final display inverts v; never individual effect passes.
+ * Programs and graph FBOs persist. uInput and retained uPrev are bound independently of uTexture.
  */
-class KeyflawHostRenderer(private val context: Context) : GLSurfaceView.Renderer {
-
-    enum class ViewMode {
-        RESULT,
-        WIPE,
-        SIDE_BY_SIDE,
-        TOP_BOTTOM,
-        VS_TARGET,
-        DIFFERENCE,
-        CHANNELS,
-        SCOPES
-    }
-
-    // Geometry buffers
-    private val vertexBuffer: FloatBuffer
-    private val texCoordBuffer: FloatBuffer
-
-    // Textures
-    private var baseTextureId = 0
-    private var targetTextureId = 0
-    private var lutTextureId = 0
-    private var pendingBaseBitmap: Bitmap? = null
-    private var pendingTargetBitmap: Bitmap? = null
-    private var pendingLutTransform: FittedTransform? = null
-    private var lutSize = 33
-
-    // Framebuffer objects for multi-pass / effect stacking ping-pong
-    private val fboIds = IntArray(2)
-    private val fboTextureIds = IntArray(2)
-    private var fboWidth = 1280
-    private var fboHeight = 720
-
-    // Program cache: effectId -> Program
-    private val programCache = HashMap<String, Int>()
-    private val uniformLocations = HashMap<String, MutableMap<String, Int>>()
-
-    // Built-in programs
-    private var lutProgramId = 0
-    private var viewModeProgramId = 0
-
-    // Active state (thread-safe updates)
-    @Volatile var activeTuneState: TuneState = TuneState.defaultState()
-    @Volatile var activeViewMode: ViewMode = ViewMode.RESULT
-    @Volatile var isPressingBefore: Boolean = false
-    @Volatile var wipeFraction: Float = 0.5f
-    @Volatile var isWipeVertical: Boolean = true
-    @Volatile var diffGain: Float = 2.0f
-    @Volatile var selectedChannel: Int = 0 // 0: all, 1: R, 2: G, 3: B, 4: Luma
-
-    // Dynamic uniform overrides for slider drags
-    private val paramOverrides = ConcurrentHashMap<String, ConcurrentHashMap<String, Float>>()
-    private val colorOverrides = ConcurrentHashMap<String, ConcurrentHashMap<String, FloatArray>>()
-
-    // Telemetry
-    @Volatile var averageFrameTimeMs: Float = 0f
-        private set
-    @Volatile var currentFps: Float = 60f
-        private set
-    @Volatile var glRendererString: String = "Initializing"
-        private set
-    @Volatile var glVersionString: String = "OpenGL ES 2.0"
-        private set
-    @Volatile var compiledEffectsCount: Int = 0
-        private set
-
-    private var frameCount = 0
-    private var rollingFrameTimeSum = 0L
-
-    init {
-        // Standard full-screen quad: 2 triangles
-        val quadVertices = floatArrayOf(
-            -1.0f, -1.0f,
-             1.0f, -1.0f,
-            -1.0f,  1.0f,
-             1.0f,  1.0f
-        )
-        val quadTexCoords = floatArrayOf(
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            0.0f, 1.0f,
-            1.0f, 1.0f
-        )
-        vertexBuffer = ByteBuffer.allocateDirect(quadVertices.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .put(quadVertices)
-        vertexBuffer.position(0)
-
-        texCoordBuffer = ByteBuffer.allocateDirect(quadTexCoords.size * 4)
-            .order(ByteOrder.nativeOrder())
-            .asFloatBuffer()
-            .put(quadTexCoords)
-        texCoordBuffer.position(0)
-    }
-
-    fun setBaseBitmap(bitmap: Bitmap?) {
-        if (bitmap == null) return
-        val maxEdge = 1280
-        val scale = if (max(bitmap.width, bitmap.height) > maxEdge) {
-            maxEdge.toFloat() / max(bitmap.width, bitmap.height)
-        } else 1.0f
-        val scaled = if (scale < 1.0f) {
-            Bitmap.createScaledBitmap(
-                bitmap,
-                (bitmap.width * scale).toInt().coerceAtLeast(1),
-                (bitmap.height * scale).toInt().coerceAtLeast(1),
-                true
-            )
-        } else {
-            bitmap
+class KeyflawHostRenderer(private val context:Context):GLSurfaceView.Renderer {
+    enum class ViewMode { RESULT,WIPE,SIDE_BY_SIDE,TOP_BOTTOM,VS_TARGET,DIFFERENCE,CHANNELS,SCOPES }
+    @Volatile var activeTuneState=TuneState.defaultState()
+    @Volatile var activeViewMode=ViewMode.RESULT
+    @Volatile var isPressingBefore=false
+    @Volatile var wipeFraction=.5f
+    @Volatile var isWipeVertical=true
+    @Volatile var targetSplit=false
+    @Volatile var diffGain=2f
+    @Volatile var selectedChannel=0
+    @Volatile var averageFrameTimeMs=0f;private set
+    @Volatile var currentFps=0f;private set
+    @Volatile var glRendererString="Waiting for GL";private set
+    @Volatile var glVersionString="Waiting for GL";private set
+    @Volatile var compiledEffectsCount=0;private set
+    val compileStatus=ConcurrentHashMap<String,String>()
+    val parameterUpdateCount=java.util.concurrent.atomic.AtomicInteger(0)
+    private val overrides=ConcurrentHashMap<String,ConcurrentHashMap<String,Any>>()
+    private var baseBitmap:Bitmap?=null;private var targetBitmap:Bitmap?=null
+    @Volatile private var basePending:Bitmap?=null
+    @Volatile private var targetPending:Bitmap?=null
+    @Volatile private var matchPending:String?=null
+    private var matchSource:String?=null
+    private var baseTexture=0;private var targetTexture=0
+    private var imageW=1;private var imageH=1;private var viewW=1;private var viewH=1
+    private val programs=HashMap<String,Int>();private val locations=HashMap<Pair<Int,String>,Int>()
+    private data class Pass(val file:String,val scale:Float,val previous:Int?,val required:String?,val minimum:Float,val any:List<String>,val floating:Boolean)
+    private val graphs=HashMap<String,List<Pass>>()
+    private val definitions=HashMap<String,EffectDefinition>()
+    private data class Target(val texture:Int,val fbo:Int,val w:Int,val h:Int)
+    private val targets=HashMap<String,Target>()
+    private var displayProgram=0;private var copyProgram=0;private var matchProgram=0
+    private val vertices=ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder()).asFloatBuffer().apply{put(floatArrayOf(-1f,-1f,1f,-1f,-1f,1f,1f,1f));position(0)}
+    private var frames=0;private var elapsed=0L
+    fun setBaseBitmap(bitmap:Bitmap?){if(bitmap!=null)basePending=bitmap}
+    fun setTargetBitmap(bitmap:Bitmap?){if(bitmap!=null)targetPending=bitmap}
+    fun setMatchModel(model:ParametricMatch){matchPending=MatchShader.source(model)}
+    fun setEffectParam(instanceId:String,key:String,value:Float){overrides.getOrPut(instanceId){ConcurrentHashMap()}[key]=value;parameterUpdateCount.incrementAndGet()}
+    fun setEffectColorParam(instanceId:String,key:String,r:Float,g:Float,b:Float){overrides.getOrPut(instanceId){ConcurrentHashMap()}[key]=floatArrayOf(r,g,b);parameterUpdateCount.incrementAndGet()}
+    fun clearOverrides(){overrides.clear()}
+    override fun onSurfaceCreated(gl:GL10?,config:EGLConfig?) {
+        programs.clear();locations.clear();targets.clear();baseTexture=0;targetTexture=0;matchProgram=0;compiledEffectsCount=0
+        glRendererString=GL.glGetString(GL.GL_RENDERER)?:"Unknown";glVersionString=GL.glGetString(GL.GL_VERSION)?:"Unknown"
+        GL.glDisable(GL.GL_DEPTH_TEST);GL.glDisable(GL.GL_DITHER);GL.glClearColor(0f,0f,0f,1f)
+        copyProgram=program("copy",COPY);displayProgram=program("display",DISPLAY)
+        definitions.clear();graphs.clear()
+        com.motionsalt.ccstudio.data.EffectRepository(context).getAvailableEffects().filter{it.id!="colour_match"}.forEach{def->
+            definitions[def.id]=def
+            val graph=runCatching{JSONObject(context.assets.open("effects/${def.id}/host_graph.json").bufferedReader().use{it.readText()})}.getOrNull()?.optJSONArray("passes")
+            val passes=if(graph==null)listOf(Pass("shader.glsl",1f,null,null,0f,emptyList(),false)) else (0 until graph.length()).map{i->val p=graph.getJSONObject(i);val any=p.optJSONArray("requiredAnyParams");Pass(p.getString("file"),p.optDouble("scale",1.0).toFloat(),if(p.isNull("prevPass"))null else p.getInt("prevPass"),if(p.isNull("requiredParam"))null else p.getString("requiredParam"),p.optDouble("requiredMinimum",0.0).toFloat(),if(any==null)emptyList()else (0 until any.length()).map{any.getString(it)},p.optBoolean("floatTarget",false))}
+            graphs[def.id]=passes
+            passes.forEach{pass->runCatching{context.assets.open("effects/${def.id}/${pass.file}").bufferedReader().use{program("${def.id}/${pass.file}",it.readText())}}.onFailure{compileStatus["${def.id}/${pass.file}"]=it.message?:"Cannot read shader"}}
         }
-        pendingBaseBitmap = scaled
+        baseBitmap?.let{basePending=it};targetBitmap?.let{targetPending=it};matchSource?.let{matchPending=it}
     }
-
-    fun setTargetBitmap(bitmap: Bitmap?) {
-        pendingTargetBitmap = bitmap
-    }
-
-    fun setLutTransform(transform: FittedTransform?) {
-        pendingLutTransform = transform
-    }
-
-    fun setEffectParam(effectId: String, paramKey: String, value: Float) {
-        val map = paramOverrides.getOrPut(effectId) { ConcurrentHashMap() }
-        map[paramKey] = value
-    }
-
-    fun setEffectColorParam(effectId: String, paramKey: String, r: Float, g: Float, b: Float) {
-        val map = colorOverrides.getOrPut(effectId) { ConcurrentHashMap() }
-        map[paramKey] = floatArrayOf(r, g, b)
-    }
-
-    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        glRendererString = GLES20.glGetString(GLES20.GL_RENDERER) ?: "Unknown"
-        glVersionString = GLES20.glGetString(GLES20.GL_VERSION) ?: "OpenGL ES 2.0"
-
-        GLES20.glClearColor(0.05f, 0.05f, 0.05f, 1.0f)
-        GLES20.glDisable(GLES20.GL_DEPTH_TEST)
-
-        initBuiltInPrograms()
-        preloadEffectShaders()
-    }
-
-    override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-        GLES20.glViewport(0, 0, width, height)
-        setupFbos(width, height)
-    }
-
-    override fun onDrawFrame(gl: GL10?) {
-        val startTime = SystemClock.elapsedRealtimeNanos()
-
-        handlePendingTextures()
-
-        if (baseTextureId == 0) {
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-            return
-        }
-
-        var srcTexture = baseTextureId
-        var currentFboIndex = 0
-        val stack = activeTuneState.stack
-
-        // Step 1: Render 3D LUT if enabled
-        val lutItem = stack.firstOrNull { it.effectId == "ms_lut" && it.enabled }
-        if (lutItem != null && lutTextureId != 0) {
-            val intensity = paramOverrides["ms_lut"]?.get("intensity")
-                ?: (lutItem.params["intensity"] as? Number)?.toFloat()
-                ?: 1.0f
-
-            if (intensity > 0.001f) {
-                bindFbo(currentFboIndex)
-                renderLutPass(srcTexture, intensity)
-                srcTexture = fboTextureIds[currentFboIndex]
-                currentFboIndex = 1 - currentFboIndex
-            }
-        }
-
-        // Step 2: Render each enabled effect in the stack
-        for (item in stack) {
-            if (!item.enabled || item.effectId == "ms_lut") continue
-            val programId = programCache[item.effectId] ?: continue
-
-            bindFbo(currentFboIndex)
-            renderEffectPass(programId, item.effectId, srcTexture, item.params)
-            srcTexture = fboTextureIds[currentFboIndex]
-            currentFboIndex = 1 - currentFboIndex
-        }
-
-        // Step 3: Composite final result to default framebuffer
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
-        GLES20.glViewport(0, 0, fboWidth, fboHeight)
-        renderViewMode(srcTexture)
-
-        val elapsedNanos = SystemClock.elapsedRealtimeNanos() - startTime
-        rollingFrameTimeSum += elapsedNanos
-        frameCount++
-        if (frameCount >= 30) {
-            averageFrameTimeMs = (rollingFrameTimeSum.toFloat() / frameCount) / 1_000_000f
-            currentFps = if (averageFrameTimeMs > 0.001f) (1000f / averageFrameTimeMs).coerceAtMost(60f) else 60f
-            rollingFrameTimeSum = 0L
-            frameCount = 0
-        }
-    }
-
-    private fun handlePendingTextures() {
-        pendingBaseBitmap?.let { bmp ->
-            baseTextureId = uploadBitmapTexture(bmp, baseTextureId)
-            pendingBaseBitmap = null
-        }
-        pendingTargetBitmap?.let { bmp ->
-            targetTextureId = uploadBitmapTexture(bmp, targetTextureId)
-            pendingTargetBitmap = null
-        }
-        pendingLutTransform?.let { transform ->
-            lutSize = transform.gridSize
-            val strip = ColorMath.generateLut2DStrip(transform, lutSize)
-            lutTextureId = uploadStripTexture(strip, lutTextureId)
-            pendingLutTransform = null
-        }
-    }
-
-    private fun setupFbos(width: Int, height: Int) {
-        fboWidth = width.coerceAtLeast(1)
-        fboHeight = height.coerceAtLeast(1)
-
-        if (fboIds[0] != 0) GLES20.glDeleteFramebuffers(2, fboIds, 0)
-        if (fboTextureIds[0] != 0) GLES20.glDeleteTextures(2, fboTextureIds, 0)
-
-        GLES20.glGenFramebuffers(2, fboIds, 0)
-        GLES20.glGenTextures(2, fboTextureIds, 0)
-
-        for (i in 0..1) {
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, fboTextureIds[i])
-            GLES20.glTexImage2D(
-                GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA,
-                fboWidth, fboHeight, 0,
-                GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null
-            )
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-
-            GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboIds[i])
-            GLES20.glFramebufferTexture2D(
-                GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
-                GLES20.GL_TEXTURE_2D, fboTextureIds[i], 0
-            )
-        }
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
-    }
-
-    private fun bindFbo(index: Int) {
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboIds[index])
-        GLES20.glViewport(0, 0, fboWidth, fboHeight)
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-    }
-
-    private fun uploadBitmapTexture(bitmap: Bitmap, oldTextureId: Int): Int {
-        var texId = oldTextureId
-        if (texId == 0) {
-            val ids = IntArray(1)
-            GLES20.glGenTextures(1, ids, 0)
-            texId = ids[0]
-        }
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
-        return texId
-    }
-
-    private fun uploadStripTexture(strip: com.motionsalt.ccstudio.core.StackRenderer.PixelBuffer, oldTextureId: Int): Int {
-        var texId = oldTextureId
-        if (texId == 0) {
-            val ids = IntArray(1)
-            GLES20.glGenTextures(1, ids, 0)
-            texId = ids[0]
-        }
-        val byteBuf = ByteBuffer.allocateDirect(strip.width * strip.height * 4)
-            .order(ByteOrder.nativeOrder())
-        for (y in 0 until strip.height) {
-            for (x in 0 until strip.width) {
-                byteBuf.put((strip.getR(x, y) * 255f).toInt().coerceIn(0, 255).toByte())
-                byteBuf.put((strip.getG(x, y) * 255f).toInt().coerceIn(0, 255).toByte())
-                byteBuf.put((strip.getB(x, y) * 255f).toInt().coerceIn(0, 255).toByte())
-                byteBuf.put(255.toByte())
-            }
-        }
-        byteBuf.position(0)
-
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texId)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexImage2D(
-            GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA,
-            strip.width, strip.height, 0,
-            GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, byteBuf
-        )
-        return texId
-    }
-
-    private fun initBuiltInPrograms() {
-        val vertexShaderSource = """
-            attribute vec2 aPosition;
-            attribute vec2 aTexCoord;
-            varying vec2 vTex;
-            void main() {
-                vTex = aTexCoord;
-                gl_Position = vec4(aPosition, 0.0, 1.0);
-            }
-        """.trimIndent()
-
-        val lutFragmentSource = """
-            #ifdef GL_FRAGMENT_PRECISION_HIGH
-            precision highp float;
-            #else
-            precision mediump float;
-            #endif
-            uniform sampler2D uTexture;
-            uniform sampler2D uLutStrip;
-            uniform float uLutSize;
-            uniform float uIntensity;
-            varying vec2 vTex;
-
-            vec3 sampleLut(vec3 col, float size) {
-                float b = col.b * (size - 1.0);
-                float z0 = floor(b);
-                float z1 = min(size - 1.0, z0 + 1.0);
-                float fz = fract(b);
-
-                float u0 = (z0 * size + col.r * (size - 1.0) + 0.5) / (size * size);
-                float u1 = (z1 * size + col.r * (size - 1.0) + 0.5) / (size * size);
-                float v = (col.g * (size - 1.0) + 0.5) / size;
-
-                vec3 col0 = texture2D(uLutStrip, vec2(u0, v)).rgb;
-                vec3 col1 = texture2D(uLutStrip, vec2(u1, v)).rgb;
-
-                return mix(col0, col1, fz);
-            }
-
-            void main() {
-                vec4 c = texture2D(uTexture, clamp(vTex, 0.0, 1.0));
-                vec3 rgb = c.rgb / max(c.a, 0.0001);
-                vec3 graded = sampleLut(clamp(rgb, 0.0, 1.0), uLutSize);
-                vec3 res = mix(rgb, graded, uIntensity);
-                gl_FragColor = vec4(res * c.a, c.a);
-            }
-        """.trimIndent()
-
-        lutProgramId = createProgram(vertexShaderSource, lutFragmentSource)
-
-        val viewModeFragmentSource = """
-            #ifdef GL_FRAGMENT_PRECISION_HIGH
-            precision highp float;
-            #else
-            precision mediump float;
-            #endif
-            uniform sampler2D uTexture;
-            uniform sampler2D uBefore;
-            uniform sampler2D uTarget;
-            uniform int uViewMode;
-            uniform float uWipeDivider;
-            uniform int uWipeVertical;
-            uniform float uDiffGain;
-            uniform int uSelectedChannel;
-            varying vec2 vTex;
-
-            void main() {
-                vec4 res = texture2D(uTexture, vTex);
-                vec4 before = texture2D(uBefore, vTex);
-                vec4 target = texture2D(uTarget, vTex);
-
-                if (uViewMode == 0) {
-                    gl_FragColor = res;
-                } else if (uViewMode == 1) {
-                    float coord = (uWipeVertical == 1) ? vTex.x : vTex.y;
-                    if (coord < uWipeDivider) {
-                        gl_FragColor = before;
-                    } else if (abs(coord - uWipeDivider) < 0.002) {
-                        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-                    } else {
-                        gl_FragColor = res;
-                    }
-                } else if (uViewMode == 2) {
-                    if (vTex.x < 0.5) {
-                        gl_FragColor = texture2D(uBefore, vec2(vTex.x * 2.0, vTex.y));
-                    } else {
-                        gl_FragColor = texture2D(uTexture, vec2((vTex.x - 0.5) * 2.0, vTex.y));
-                    }
-                } else if (uViewMode == 3) {
-                    if (vTex.y < 0.5) {
-                        gl_FragColor = texture2D(uBefore, vec2(vTex.x, vTex.y * 2.0));
-                    } else {
-                        gl_FragColor = texture2D(uTexture, vec2(vTex.x, (vTex.y - 0.5) * 2.0));
-                    }
-                } else if (uViewMode == 4) {
-                    if (vTex.x < 0.5) {
-                        gl_FragColor = res;
-                    } else if (abs(vTex.x - 0.5) < 0.002) {
-                        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-                    } else {
-                        gl_FragColor = target;
-                    }
-                } else if (uViewMode == 5) {
-                    vec3 diff = abs(res.rgb - before.rgb) * uDiffGain;
-                    gl_FragColor = vec4(diff, 1.0);
-                } else if (uViewMode == 6) {
-                    float r = res.r; float g = res.g; float b = res.b;
-                    float luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    if (uSelectedChannel == 1) gl_FragColor = vec4(r, 0.0, 0.0, 1.0);
-                    else if (uSelectedChannel == 2) gl_FragColor = vec4(0.0, g, 0.0, 1.0);
-                    else if (uSelectedChannel == 3) gl_FragColor = vec4(0.0, 0.0, b, 1.0);
-                    else if (uSelectedChannel == 4) gl_FragColor = vec4(vec3(luma), 1.0);
-                    else gl_FragColor = res;
-                } else {
-                    gl_FragColor = res;
+    override fun onSurfaceChanged(gl:GL10?,width:Int,height:Int){viewW=width;viewH=height}
+    override fun onDrawFrame(gl:GL10?) {
+        val start=SystemClock.elapsedRealtimeNanos()
+        basePending?.let{bitmap->baseTexture=upload(bitmap,baseTexture);imageW=bitmap.width;imageH=bitmap.height;baseBitmap=bitmap;basePending=null}
+        targetPending?.let{targetTexture=upload(it,targetTexture);targetBitmap=it;targetPending=null}
+        matchPending?.let{source->matchProgram=program("colour_match",source);matchSource=source;matchPending=null}
+        if(baseTexture==0)return
+        var current=baseTexture
+        for(item in activeTuneState.stack)if(item.enabled) {
+            if(item.effectId=="colour_match") {
+                if(matchProgram!=0){val dst=target("${item.instanceId}/match",imageW,imageH,false);draw(matchProgram,current,baseTexture,baseTexture,dst,item,MatchEffect.definition(),imageW,imageH);current=dst.texture}
+            } else {
+                val def=definitions[item.effectId]?:continue;val graph=graphs[item.effectId]?:continue;val entry=current;val retained=ArrayList<Target>()
+                var sw=imageW;var sh=imageH
+                for((index,pass) in graph.withIndex()) {
+                    val enabled=(pass.required==null||numeric(item,pass.required,def)>pass.minimum)&&(pass.any.isEmpty()||pass.any.any{numeric(item,it,def)>0f})
+                    val dst=target("${item.instanceId}/$index",max(1,(imageW*pass.scale).roundToInt()),max(1,(imageH*pass.scale).roundToInt()),pass.floating)
+                    val prog=if(enabled)programs["${item.effectId}/${pass.file}"]?:0 else copyProgram
+                    if(prog==0){compileStatus[item.effectId]="Effect pass failed to compile";break}
+                    val previous=pass.previous?.let{retained.getOrNull(it)?.texture}?:entry
+                    draw(prog,current,entry,previous,dst,item,def,sw,sh);current=dst.texture;sw=dst.w;sh=dst.h;retained.add(dst)
                 }
             }
-        """.trimIndent()
-
-        viewModeProgramId = createProgram(vertexShaderSource, viewModeFragmentSource)
+        }
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,0);GL.glViewport(0,0,viewW,viewH);GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        // Preserve native frame aspect, including rectangular unsharp radii.
+        val scale=min(viewW.toFloat()/imageW,viewH.toFloat()/imageH);val dw=(imageW*scale).roundToInt();val dh=(imageH*scale).roundToInt()
+        GL.glViewport((viewW-dw)/2,(viewH-dh)/2,dw,dh);GL.glUseProgram(displayProgram);quad(displayProgram)
+        texture(displayProgram,"uTexture",if(isPressingBefore)baseTexture else current,0);texture(displayProgram,"uBefore",baseTexture,1);texture(displayProgram,"uTarget",if(targetTexture!=0)targetTexture else baseTexture,2)
+        GL.glUniform1i(loc(displayProgram,"uMode"),if(isPressingBefore)0 else activeViewMode.ordinal)
+        one(displayProgram,"uWipe",wipeFraction);one(displayProgram,"uHorizontal",if(isWipeVertical)0f else 1f);one(displayProgram,"uGain",diffGain);one(displayProgram,"uChannel",selectedChannel.toFloat());one(displayProgram,"uSplit",if(targetSplit)1f else 0f)
+        GL.glDrawArrays(GL.GL_TRIANGLE_STRIP,0,4)
+        elapsed+=SystemClock.elapsedRealtimeNanos()-start;frames++
+        if(frames>=30){averageFrameTimeMs=elapsed/frames/1e6f;currentFps=if(averageFrameTimeMs>0)min(60f,1000f/averageFrameTimeMs)else 0f;elapsed=0;frames=0}
     }
-
-    private fun preloadEffectShaders() {
-        val effectDirs = listOf(
-            "ms_brightness_contrast", "ms_exposure_gamma", "ms_highlights_shadows",
-            "ms_white_balance", "ms_hue_saturation", "ms_color_balance",
-            "ms_selective_color", "ms_channel_mixer", "ms_levels_curves",
-            "ms_tritone", "ms_duotone", "ms_gradient_map", "ms_split_toning",
-            "ms_sharpen", "ms_unsharp_mask", "ms_clarity",
-            "ms_glow", "ms_bloom_halation", "ms_haze_flare", "ms_vignette", "ms_grain"
-        )
-        val vSource = """
-            attribute vec2 aPosition;
-            attribute vec2 aTexCoord;
-            varying vec2 vTex;
-            void main() {
-                vTex = aTexCoord;
-                gl_Position = vec4(aPosition, 0.0, 1.0);
-            }
-        """.trimIndent()
-
-        for (effId in effectDirs) {
-            try {
-                val assetPath = "effects/$effId/shader.glsl"
-                context.assets.open(assetPath).use { stream ->
-                    val fSource = InputStreamReader(stream).readText()
-                    val prog = createProgram(vSource, fSource)
-                    if (prog != 0) {
-                        programCache[effId] = prog
-                        compiledEffectsCount++
-                    }
-                }
-            } catch (e: Exception) {
-                // ignore
-            }
-        }
+    private fun numeric(item:StackItem,key:String,def:EffectDefinition):Float {
+        val v=overrides[item.instanceId]?.get(key)?:item.params[key]?:def.parameters.firstOrNull{it.key==key}?.defaultValue
+        return when(v){is Number->v.toFloat();is Boolean->if(v)1f else 0f;else->0f}
     }
-
-    private fun renderLutPass(inputTextureId: Int, intensity: Float) {
-        GLES20.glUseProgram(lutProgramId)
-        bindQuadAttributes(lutProgramId)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, inputTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(lutProgramId, "uTexture"), 0)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, lutTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(lutProgramId, "uLutStrip"), 1)
-
-        GLES20.glUniform1f(GLES20.glGetUniformLocation(lutProgramId, "uLutSize"), lutSize.toFloat())
-        GLES20.glUniform1f(GLES20.glGetUniformLocation(lutProgramId, "uIntensity"), intensity)
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    private fun draw(p:Int,src:Int,input:Int,prev:Int,dst:Target,item:StackItem,def:EffectDefinition,sw:Int,sh:Int) {
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,dst.fbo);GL.glViewport(0,0,dst.w,dst.h);GL.glUseProgram(p);quad(p)
+        texture(p,"uTexture",src,0);texture(p,"uInput",input,1);texture(p,"uPrev",prev,2)
+        GL.glUniform2f(loc(p,"uTexelSize"),1f/dst.w,1f/dst.h);GL.glUniform2f(loc(p,"uSrcTexelSize"),1f/sw,1f/sh);GL.glUniform2f(loc(p,"uCompSize"),imageW.toFloat(),imageH.toFloat());one(p,"uTime",(SystemClock.elapsedRealtime()%100000)/1000f)
+        GL.glUniform4f(loc(p,"uLayerRect"),0f,0f,imageW.toFloat(),imageH.toFloat())
+        val identity=floatArrayOf(1f,0f,0f,0f,1f,0f,0f,0f,1f);GL.glUniformMatrix3fv(loc(p,"uLayerToLocal"),1,false,identity,0);GL.glUniformMatrix3fv(loc(p,"uLocalToUv"),1,false,identity,0)
+        for(param in def.parameters) {
+            val name="u"+param.key.replaceFirstChar{it.uppercase()};val v=overrides[item.instanceId]?.get(param.key)?:item.params[param.key]?:param.defaultValue
+            if(v is FloatArray)GL.glUniform3f(loc(p,name),v[0],v[1],v[2]) else if(v is String&&v.startsWith("#")){val c=android.graphics.Color.parseColor(v);GL.glUniform3f(loc(p,name),android.graphics.Color.red(c)/255f,android.graphics.Color.green(c)/255f,android.graphics.Color.blue(c)/255f)}else one(p,name,numeric(item,param.key,def))
+        }
+        GL.glDrawArrays(GL.GL_TRIANGLE_STRIP,0,4)
     }
-
-    private fun renderEffectPass(programId: Int, effectId: String, inputTextureId: Int, baseParams: Map<String, Any>) {
-        GLES20.glUseProgram(programId)
-        bindQuadAttributes(programId)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, inputTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(programId, "uTexture"), 0)
-
-        val texelLoc = GLES20.glGetUniformLocation(programId, "uTexelSize")
-        if (texelLoc != -1) {
-            GLES20.glUniform2f(texelLoc, 1.0f / fboWidth, 1.0f / fboHeight)
-        }
-
-        val timeLoc = GLES20.glGetUniformLocation(programId, "uTime")
-        if (timeLoc != -1) {
-            val time = (SystemClock.elapsedRealtime() % 100000L) / 1000.0f
-            GLES20.glUniform1f(timeLoc, time)
-        }
-
-        val overrides = paramOverrides[effectId]
-        val cOverrides = colorOverrides[effectId]
-
-        for ((key, value) in baseParams) {
-            val uniformName = "u" + key.replaceFirstChar { it.uppercase() }
-            val loc = GLES20.glGetUniformLocation(programId, uniformName)
-            if (loc == -1) continue
-
-            val cVal = cOverrides?.get(key)
-            if (cVal != null) {
-                GLES20.glUniform3f(loc, cVal[0], cVal[1], cVal[2])
-                continue
-            }
-
-            val floatVal = overrides?.get(key) ?: (value as? Number)?.toFloat()
-            if (floatVal != null) {
-                GLES20.glUniform1f(loc, floatVal)
-            } else if (value is String && value.startsWith("#")) {
-                val rgb = parseHex(value)
-                GLES20.glUniform3f(loc, rgb[0], rgb[1], rgb[2])
-            }
-        }
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    private fun target(key:String,w:Int,h:Int,floating:Boolean):Target {
+        targets[key]?.let{if(it.w==w&&it.h==h)return it;GL.glDeleteTextures(1,intArrayOf(it.texture),0);GL.glDeleteFramebuffers(1,intArrayOf(it.fbo),0)}
+        val t=IntArray(1);val f=IntArray(1);GL.glGenTextures(1,t,0);GL.glBindTexture(GL.GL_TEXTURE_2D,t[0]);params()
+        if(floating)GLES30.glTexImage2D(GL.GL_TEXTURE_2D,0,GLES30.GL_RGBA16F,w,h,0,GL.GL_RGBA,GLES30.GL_HALF_FLOAT,null) else GL.glTexImage2D(GL.GL_TEXTURE_2D,0,GL.GL_RGBA,w,h,0,GL.GL_RGBA,GL.GL_UNSIGNED_BYTE,null)
+        GL.glGenFramebuffers(1,f,0);GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,f[0]);GL.glFramebufferTexture2D(GL.GL_FRAMEBUFFER,GL.GL_COLOR_ATTACHMENT0,GL.GL_TEXTURE_2D,t[0],0)
+        check(GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)==GL.GL_FRAMEBUFFER_COMPLETE){"Unsupported render target: $key"}
+        return Target(t[0],f[0],w,h).also{targets[key]=it}
     }
-
-    private fun renderViewMode(resultTextureId: Int) {
-        GLES20.glUseProgram(viewModeProgramId)
-        bindQuadAttributes(viewModeProgramId)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (isPressingBefore) baseTextureId else resultTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uTexture"), 0)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, baseTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uBefore"), 1)
-
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE2)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, if (targetTextureId != 0) targetTextureId else baseTextureId)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uTarget"), 2)
-
-        val vmOrdinal = if (isPressingBefore) 0 else activeViewMode.ordinal
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uViewMode"), vmOrdinal)
-        GLES20.glUniform1f(GLES20.glGetUniformLocation(viewModeProgramId, "uWipeDivider"), wipeFraction)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uWipeVertical"), if (isWipeVertical) 1 else 0)
-        GLES20.glUniform1f(GLES20.glGetUniformLocation(viewModeProgramId, "uDiffGain"), diffGain)
-        GLES20.glUniform1i(GLES20.glGetUniformLocation(viewModeProgramId, "uSelectedChannel"), selectedChannel)
-
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+    private fun upload(bitmap:Bitmap,old:Int):Int{var id=old;if(id==0){val a=IntArray(1);GL.glGenTextures(1,a,0);id=a[0]};GL.glBindTexture(GL.GL_TEXTURE_2D,id);params();GLUtils.texImage2D(GL.GL_TEXTURE_2D,0,bitmap,0);return id}
+    private fun params(){GL.glTexParameteri(GL.GL_TEXTURE_2D,GL.GL_TEXTURE_MIN_FILTER,GL.GL_LINEAR);GL.glTexParameteri(GL.GL_TEXTURE_2D,GL.GL_TEXTURE_MAG_FILTER,GL.GL_LINEAR);GL.glTexParameteri(GL.GL_TEXTURE_2D,GL.GL_TEXTURE_WRAP_S,GL.GL_CLAMP_TO_EDGE);GL.glTexParameteri(GL.GL_TEXTURE_2D,GL.GL_TEXTURE_WRAP_T,GL.GL_CLAMP_TO_EDGE)}
+    private fun loc(p:Int,key:String)=locations.getOrPut(p to key){GL.glGetUniformLocation(p,key)}
+    private fun one(p:Int,key:String,v:Float){GL.glUniform1f(loc(p,key),v)}
+    private fun texture(p:Int,key:String,t:Int,unit:Int){GL.glActiveTexture(GL.GL_TEXTURE0+unit);GL.glBindTexture(GL.GL_TEXTURE_2D,t);GL.glUniform1i(loc(p,key),unit)}
+    private fun quad(p:Int){val a=GL.glGetAttribLocation(p,"aPosition");if(a>=0){vertices.position(0);GL.glEnableVertexAttribArray(a);GL.glVertexAttribPointer(a,2,GL.GL_FLOAT,false,0,vertices)}}
+    private fun program(key:String,source:String):Int {
+        fun shader(type:Int,s:String):Int{val id=GL.glCreateShader(type);GL.glShaderSource(id,s);GL.glCompileShader(id);val ok=IntArray(1);GL.glGetShaderiv(id,GL.GL_COMPILE_STATUS,ok,0);check(ok[0]!=0){GL.glGetShaderInfoLog(id)};return id}
+        return try {val v=shader(GL.GL_VERTEX_SHADER,VERTEX);val f=shader(GL.GL_FRAGMENT_SHADER,source);val p=GL.glCreateProgram();GL.glAttachShader(p,v);GL.glAttachShader(p,f);GL.glLinkProgram(p);val ok=IntArray(1);GL.glGetProgramiv(p,GL.GL_LINK_STATUS,ok,0);check(ok[0]!=0){GL.glGetProgramInfoLog(p)};GL.glDeleteShader(v);GL.glDeleteShader(f);programs.put(key,p)?.let{GL.glDeleteProgram(it)};compileStatus[key]="Compiled";compiledEffectsCount++;p} catch(e:Exception){compileStatus[key]=e.message?:"GL compile failure";0}
     }
-
-    private fun bindQuadAttributes(programId: Int) {
-        val posLoc = GLES20.glGetAttribLocation(programId, "aPosition")
-        if (posLoc != -1) {
-            GLES20.glEnableVertexAttribArray(posLoc)
-            GLES20.glVertexAttribPointer(posLoc, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-        }
-        val texLoc = GLES20.glGetAttribLocation(programId, "aTexCoord")
-        if (texLoc != -1) {
-            GLES20.glEnableVertexAttribArray(texLoc)
-            GLES20.glVertexAttribPointer(texLoc, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
-        }
-    }
-
-    private fun createProgram(vertexSource: String, fragmentSource: String): Int {
-        val vShader = compileShader(GLES20.GL_VERTEX_SHADER, vertexSource)
-        if (vShader == 0) return 0
-        val fShader = compileShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource)
-        if (fShader == 0) {
-            GLES20.glDeleteShader(vShader)
-            return 0
-        }
-        val program = GLES20.glCreateProgram()
-        GLES20.glAttachShader(program, vShader)
-        GLES20.glAttachShader(program, fShader)
-        GLES20.glLinkProgram(program)
-
-        val linkStatus = IntArray(1)
-        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
-        if (linkStatus[0] == 0) {
-            GLES20.glDeleteProgram(program)
-            GLES20.glDeleteShader(vShader)
-            GLES20.glDeleteShader(fShader)
-            return 0
-        }
-        return program
-    }
-
-    private fun compileShader(type: Int, source: String): Int {
-        val shader = GLES20.glCreateShader(type)
-        GLES20.glShaderSource(shader, source)
-        GLES20.glCompileShader(shader)
-        val compiled = IntArray(1)
-        GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0)
-        if (compiled[0] == 0) {
-            GLES20.glDeleteShader(shader)
-            return 0
-        }
-        return shader
-    }
-
-    private fun parseHex(hex: String): FloatArray {
-        val clean = hex.removePrefix("#")
-        val num = clean.toLongOrNull(16) ?: 0L
-        val r = ((num shr 16) and 0xFF) / 255.0f
-        val g = ((num shr 8) and 0xFF) / 255.0f
-        val b = (num and 0xFF) / 255.0f
-        return floatArrayOf(r, g, b)
+    companion object {
+        const val VERTEX="attribute vec2 aPosition;varying vec2 vTex;void main(){vTex=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.); }"
+        const val COPY="precision highp float;uniform highp sampler2D uTexture;varying vec2 vTex;void main(){gl_FragColor=texture2D(uTexture,vTex);}"
+        const val DISPLAY="""precision highp float;
+uniform highp sampler2D uTexture;uniform highp sampler2D uBefore;uniform highp sampler2D uTarget;
+uniform int uMode;uniform float uWipe;uniform float uHorizontal;uniform float uGain;uniform float uChannel;uniform float uSplit;varying vec2 vTex;
+void main(){vec2 uv=vec2(vTex.x,1.-vTex.y);vec4 res=texture2D(uTexture,uv);vec4 before=texture2D(uBefore,uv);vec4 target=texture2D(uTarget,uv);float axis=uHorizontal>.5?uv.y:uv.x;
+if(uMode==0)gl_FragColor=res;
+else if(uMode==1)gl_FragColor=axis<uWipe?before:res;
+else if(uMode==2)gl_FragColor=uv.x<.5?texture2D(uBefore,vec2(uv.x*2.,uv.y)):texture2D(uTexture,vec2((uv.x-.5)*2.,uv.y));
+else if(uMode==3)gl_FragColor=uv.y<.5?texture2D(uBefore,vec2(uv.x,uv.y*2.)):texture2D(uTexture,vec2(uv.x,(uv.y-.5)*2.));
+else if(uMode==4){if(uSplit>.5)gl_FragColor=uv.x<.5?texture2D(uTexture,vec2(uv.x*2.,uv.y)):texture2D(uTarget,vec2((uv.x-.5)*2.,uv.y));else gl_FragColor=axis<uWipe?res:target;}
+else if(uMode==5)gl_FragColor=vec4(abs(res.rgb-target.rgb)*uGain,1.);
+else if(uMode==6){float l=dot(res.rgb,vec3(.2126,.7152,.0722));if(uChannel<.5)gl_FragColor=res;else if(uChannel<1.5)gl_FragColor=vec4(res.r,0.,0.,1.);else if(uChannel<2.5)gl_FragColor=vec4(0.,res.g,0.,1.);else if(uChannel<3.5)gl_FragColor=vec4(0.,0.,res.b,1.);else gl_FragColor=vec4(l,l,l,1.);}
+else gl_FragColor=res;}"""
     }
 }
