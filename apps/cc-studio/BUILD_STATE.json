@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T0: Honest audit of v4 against operator evidence",
+  "current_task": "T1: extract original colour/detail/look definitions and document full multipass host requirements",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "Pivot started. v4 completion claims contradicted by operator evidence. No fixes or new releases claimed. Both repositories private, verified via API. Next: audit concrete source lines in T0.",
+  "notes": "T0 complete. T1 scaffold: original APK recovered from private release, SHA256 verified; JADX reveals real readable Sharpen and 14-pass Unsharp Mask, contradicting prior native-only claims. Host parser mismatch proven. No effect copied or runtime verified yet. Next operation: T1: extract original colour/detail/look definitions and document full multipass host requirements",
   "reset_queue": [
     {
       "id": "T0",
@@ -193,14 +193,14 @@
     {
       "id": "T0",
       "title": "Honest audit",
-      "status": "in_progress",
-      "notes": "Audit scaffold; not yet verified."
+      "status": "done",
+      "notes": "AUDIT4 concrete source/line causes and original-parser proof committed. Operator screenshots visually reviewed. Static assertions passed; no runtime repairs claimed."
     },
     {
       "id": "T1",
       "title": "Study Keyflaw's own implementation (the link expires; do right after T0)",
-      "status": "pending",
-      "notes": "Not started; prior implementation is not evidence of acceptance."
+      "status": "in_progress",
+      "notes": "T0 complete. T1 scaffold: original APK recovered from private release, SHA256 verified; JADX reveals real readable Sharpen and 14-pass Unsharp Mask, contradicting prior native-only claims. Host parser mismatch proven. No effect copied or runtime verified yet."
     },
     {
       "id": "T2",
