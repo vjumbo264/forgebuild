@@ -324,35 +324,24 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
     ) {
         Text("Export Keyflaw Pack (.kfpack)", style = MaterialTheme.typography.titleLarge)
 
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Pack Destination Mode", style = MaterialTheme.typography.labelLarge)
-                SegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                        onClick = { mode = PackMode.CREATE_NEW },
-                        selected = mode == PackMode.CREATE_NEW
-                    ) {
-                        Text("New Pack", fontSize = 12.sp)
+        Text("Exports ready-to-use Keyflower effects with your tuned settings. Each effect includes an on/off toggle and live controls.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        // Pack Mode Selector
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PackMode.entries.forEach { p ->
+                FilterChip(
+                    selected = mode == p,
+                    onClick = { mode = p },
+                    label = {
+                        Text(
+                            when (p) {
+                                PackMode.ADD_TO_EXISTING -> "Add to MOTIONSALT"
+                                PackMode.CREATE_NEW -> "Create new pack"
+                                PackMode.MERGE_IMPORTED -> "Merge imported"
+                            }
+                        )
                     }
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                        onClick = { mode = PackMode.ADD_TO_EXISTING },
-                        selected = mode == PackMode.ADD_TO_EXISTING
-                    ) {
-                        Text("Add Existing", fontSize = 12.sp)
-                    }
-                    SegmentedButton(
-                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                        onClick = { mode = PackMode.MERGE_IMPORTED },
-                        selected = mode == PackMode.MERGE_IMPORTED
-                    ) {
-                        Text("Merge Pack", fontSize = 12.sp)
-                    }
-                }
+                )
             }
         }
 
