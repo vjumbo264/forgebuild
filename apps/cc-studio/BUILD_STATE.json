@@ -1,16 +1,16 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": true,
-  "status": "complete",
+  "build_complete": false,
+  "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "None (cc-studio-v4 released and verified live)",
+  "current_task": "T0: Honest audit of v4 against operator evidence",
   "repair2_queue": [
     {
       "id": "S1",
       "title": "Pixel-level proof harness and root-cause trace",
-      "status": "done",
-      "notes": "PixelProofHarnessTest verifies LUT intensity 0 vs 1, parameter changes, disable/enable, reorder, and view modes; offline & zero-stubs CI checks pass."
+      "status": "in_progress",
+      "notes": "PixelProofHarnessTest verifies LUT intensity 0 vs 1, parameter changes, disable/enable, reorder, and view modes; offline & zero-stubs CI checks pass. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "S2",
@@ -21,20 +21,20 @@
     {
       "id": "S3",
       "title": "Fit produces a real LUT",
-      "status": "done",
-      "notes": "Foreground service runs LutSolver on pair images, saves 33x33x33 .cube LUT, and ColorMath.parseCube33 loads it in TuneStage."
+      "status": "in_progress",
+      "notes": "Foreground service runs LutSolver on pair images, saves 33x33x33 .cube LUT, and ColorMath.parseCube33 loads it in TuneStage. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "S4",
       "title": "Renderer applies the full stack",
-      "status": "done",
-      "notes": "StackRenderer evaluates fitted 3D LUT + enabled effects in order; all 8 view modes and press-and-hold Before verified by PixelProofHarnessTest."
+      "status": "in_progress",
+      "notes": "StackRenderer evaluates fitted 3D LUT + enabled effects in order; all 8 view modes and press-and-hold Before verified by PixelProofHarnessTest. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "S5",
       "title": "Effect library completeness and the picker",
-      "status": "done",
-      "notes": "All 22 effects across 5 categories (Colour correction, Tone, Toning incl. ms_tritone, Detail, Look) registered from assets and verified by EffectsCatalogTest and kfpack_build.py."
+      "status": "in_progress",
+      "notes": "All 22 effects across 5 categories (Colour correction, Tone, Toning incl. ms_tritone, Detail, Look) registered from assets and verified by EffectsCatalogTest and kfpack_build.py. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "S6",
@@ -45,14 +45,14 @@
     {
       "id": "S7",
       "title": "Export carries the real result, plus Diagnostics screen",
-      "status": "done",
-      "notes": "Export packages real fitted LUT and shaders into .kfpack (validated with 0 errors); Settings > Diagnostics shows engine, shader, and LUT status with copy."
+      "status": "in_progress",
+      "notes": "Export packages real fitted LUT and shaders into .kfpack (validated with 0 errors); Settings > Diagnostics shows engine, shader, and LUT status with copy. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "S8",
       "title": "Release and proof",
-      "status": "done",
-      "notes": "Release cc-studio-v3 published and verified live on GitHub Releases with signed app-cc-studio-v3.apk and MOTIONSALT.kfpack."
+      "status": "in_progress",
+      "notes": "Release cc-studio-v3 published and verified live on GitHub Releases with signed app-cc-studio-v3.apk and MOTIONSALT.kfpack. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
   "tasks": [
@@ -77,8 +77,8 @@
     {
       "id": "R4",
       "title": "Add frames to pairs",
-      "status": "done",
-      "notes": "Implemented SourceStage with 4 frame sources (Gallery, Video, Camera, Files), two-step base/target picking, on-selection file copying, swap, crop editor, and fit gating."
+      "status": "in_progress",
+      "notes": "Implemented SourceStage with 4 frame sources (Gallery, Video, Camera, Files), two-step base/target picking, on-selection file copying, swap, crop editor, and fit gating. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "R5",
@@ -89,103 +89,187 @@
     {
       "id": "R6",
       "title": "Add effects and the stack editor",
-      "status": "done",
-      "notes": "Implemented EffectRepository loading all 17 in-scope effects, AddEffectPickerSheet with search and 4 categories, stack reordering, duplicate, delete, all parameter control types, and undo/redo."
+      "status": "in_progress",
+      "notes": "Implemented EffectRepository loading all 17 in-scope effects, AddEffectPickerSheet with search and 4 categories, stack reordering, duplicate, delete, all parameter control types, and undo/redo. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "R7",
       "title": "View modes and the viewer",
-      "status": "done",
-      "notes": "Implemented 8 active view modes (Result with press-and-hold Before, Wipe with flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), pan/zoom viewer, and frame strip."
+      "status": "in_progress",
+      "notes": "Implemented 8 active view modes (Result with press-and-hold Before, Wipe with flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), pan/zoom viewer, and frame strip. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "R8",
       "title": "Fit stage and Export stage, end to end",
-      "status": "done",
-      "notes": "Implemented FitStage with foreground service, determinate progress, metrics, and ExportStage with MediaStore downloads, collision handling, .cube and Hald Level 8 generation."
+      "status": "in_progress",
+      "notes": "Implemented FitStage with foreground service, determinate progress, metrics, and ExportStage with MediaStore downloads, collision handling, .cube and Hald Level 8 generation. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "R9",
       "title": "Release and proof (last)",
-      "status": "done",
-      "notes": "Release cc-studio-v2 successfully created and verified on GitHub Releases with signed APK and MOTIONSALT.kfpack asset."
+      "status": "in_progress",
+      "notes": "Release cc-studio-v2 successfully created and verified on GitHub Releases with signed APK and MOTIONSALT.kfpack asset. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "R10",
       "title": "Repair Round 2 (S1-S8)",
-      "status": "done",
-      "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3."
+      "status": "in_progress",
+      "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "All reset_queue items T0-T10 completed. Verified release cc-studio-v4 live with signed APK and sample MOTIONSALT.kfpack.",
+  "notes": "Pivot started. v4 completion claims contradicted by operator evidence. No fixes or new releases claimed. Both repositories private, verified via API. Next: audit concrete source lines in T0.",
   "reset_queue": [
     {
       "id": "T0",
       "title": "Honest reset and audit (first)",
-      "status": "done",
-      "notes": "Completed AUDIT3.md documenting concrete file/line root causes: FitStage.kt:252 target fallback faking Recreated, ms_lut/shader.glsl fake S-curve without 3D LUT, TuneStage.kt:172-225 synchronous CPU decode & loop causing lag, StackRenderer.kt missing ms_unsharp_mask and wrong ms_sharpen param key, and TuneStage.kt:724 missing color picker. Set vjumbo264/forgebuild and lut-extractor to private. Uploaded Keyflaw-1.4.9-custom.apk as release asset to private tag keyflaw-ref-v1.4.9."
+      "status": "in_progress",
+      "notes": "Completed AUDIT3.md documenting concrete file/line root causes: FitStage.kt:252 target fallback faking Recreated, ms_lut/shader.glsl fake S-curve without 3D LUT, TuneStage.kt:172-225 synchronous CPU decode & loop causing lag, StackRenderer.kt missing ms_unsharp_mask and wrong ms_sharpen param key, and TuneStage.kt:724 missing color picker. Set vjumbo264/forgebuild and lut-extractor to private. Uploaded Keyflaw-1.4.9-custom.apk as release asset to private tag keyflaw-ref-v1.4.9. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T1",
       "title": "Study Keyflaw own implementation",
-      "status": "done",
-      "notes": "Unpacked Keyflaw 1.4.9 APK, audited DEX & libkeyflow_identity.so, confirmed host contract and native-only effects; created KEYFLAW_HOST.md and NOT_IN_KEYFLAW.md with SHA256 hashes recorded."
+      "status": "in_progress",
+      "notes": "Unpacked Keyflaw 1.4.9 APK, audited DEX & libkeyflow_identity.so, confirmed host contract and native-only effects; created KEYFLAW_HOST.md and NOT_IN_KEYFLAW.md with SHA256 hashes recorded. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T2",
       "title": "Keyflaw effect host renderer (slice 1, part 1)",
-      "status": "done",
-      "notes": "Implemented KeyflawHostRenderer with GLES 2.0/3.0 FBO ping-pong, 3D LUT 2D-strip texture sampling with half-texel correction, zero-copy uniform-only updates on slider drags, 8 ViewModes (Result, Wipe with flip, Diff with gain, Channels R/G/B/Luma, Scopes), and rolling frame-time telemetry."
+      "status": "in_progress",
+      "notes": "Implemented KeyflawHostRenderer with GLES 2.0/3.0 FBO ping-pong, 3D LUT 2D-strip texture sampling with half-texel correction, zero-copy uniform-only updates on slider drags, 8 ViewModes (Result, Wipe with flip, Diff with gain, Channels R/G/B/Luma, Scopes), and rolling frame-time telemetry. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T3",
       "title": "Fit produces a real LUT and Recreated is honest (slice 1, part 2)",
-      "status": "done",
-      "notes": "Fixed target fallback bug in FitStage.kt; Recreated frame generated honestly from base through fitted 3D LUT; Heatmap generated via deltaE76; added automated target-blind test, identity test, invert/channel-swap tests, GPU vs CPU sampling agreement test, and edge acutance unsharp-mask tests in PixelProofHarnessTest."
+      "status": "in_progress",
+      "notes": "Fixed target fallback bug in FitStage.kt; Recreated frame generated honestly from base through fitted 3D LUT; Heatmap generated via deltaE76; added automated target-blind test, identity test, invert/channel-swap tests, GPU vs CPU sampling agreement test, and edge acutance unsharp-mask tests in PixelProofHarnessTest. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T4",
       "title": "The effect library is Keyflaw own (slice 2, part 1)",
-      "status": "done",
-      "notes": "All 22 effects mapped to 5 non-empty categories, search keywords and After Effects matched implementations in StackRenderer and GLSL. All 22 effects pass Keyflaw pack validator with 0 errors and 0 warnings."
+      "status": "in_progress",
+      "notes": "All 22 effects mapped to 5 non-empty categories, search keywords and After Effects matched implementations in StackRenderer and GLSL. All 22 effects pass Keyflaw pack validator with 0 errors and 0 warnings. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T5",
       "title": "Stack editor and view modes on the new host (slice 2, part 2)",
-      "status": "done",
-      "notes": "Stack editor connected to KeyflawHostRenderer in TuneStage.kt; live ViewModes (Result with press-and-hold Before, Wipe with orientation flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), full stack reordering, duplicate, delete, reset, undo/redo."
+      "status": "in_progress",
+      "notes": "Stack editor connected to KeyflawHostRenderer in TuneStage.kt; live ViewModes (Result with press-and-hold Before, Wipe with orientation flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), full stack reordering, duplicate, delete, reset, undo/redo. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T6",
       "title": "Colour picker and controls",
-      "status": "done",
-      "notes": "Implemented ColorPickerDialog with interactive HSV canvas, hue slider, RGB/Hex inputs, preset palette swatches, and pixel-accurate eyedropper sampling directly from viewer frame."
+      "status": "in_progress",
+      "notes": "Implemented ColorPickerDialog with interactive HSV canvas, hue slider, RGB/Hex inputs, preset palette swatches, and pixel-accurate eyedropper sampling directly from viewer frame. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T7",
       "title": "Performance pass",
-      "status": "done",
-      "notes": "Preview resolution capped at 1280px; persistent GL context; uniform-only updates during slider drags; debounced 300ms persistence; zero CPU bitmap decode loops during tuning."
+      "status": "in_progress",
+      "notes": "Preview resolution capped at 1280px; persistent GL context; uniform-only updates during slider drags; debounced 300ms persistence; zero CPU bitmap decode loops during tuning. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T8",
       "title": "Diagnostics screen",
-      "status": "done",
-      "notes": "Diagnostics panel in Settings showing GL version & renderer, compile status of all 22 shaders, 3D LUT identity metrics, and live frame-time telemetry."
+      "status": "in_progress",
+      "notes": "Diagnostics panel in Settings showing GL version & renderer, compile status of all 22 shaders, 3D LUT identity metrics, and live frame-time telemetry. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T9",
       "title": "Export from the same effect folders",
-      "status": "done",
-      "notes": "Export builds .kfpack containing byte-identical shaders + fitted LUT, with MediaStore Downloads export, cube, and hald8 generation."
+      "status": "in_progress",
+      "notes": "Export builds .kfpack containing byte-identical shaders + fitted LUT, with MediaStore Downloads export, cube, and hald8 generation. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     },
     {
       "id": "T10",
       "title": "Release and proof (last)",
-      "status": "done",
-      "notes": "Release cc-studio-v4 published and verified live on GitHub Releases with signed app-cc-studio-v4.apk and MOTIONSALT.kfpack."
+      "status": "in_progress",
+      "notes": "Release cc-studio-v4 published and verified live on GitHub Releases with signed app-cc-studio-v4.apk and MOTIONSALT.kfpack. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "last_updated": "2026-11-05T11:23:07.168962+00:00",
-  "last_session_note": "T2-T9 completed: KeyflawHostRenderer, honest Recreated/Heatmap, 22 validated effects, ColorPickerDialog with eyedropper, debounced 60FPS performance pass, Diagnostics panel, export from identical shaders. Triggering cc-studio-v4 release."
+  "last_updated": "2026-11-05",
+  "last_session_note": "T2-T9 completed: KeyflawHostRenderer, honest Recreated/Heatmap, 22 validated effects, ColorPickerDialog with eyedropper, debounced 60FPS performance pass, Diagnostics panel, export from identical shaders. Triggering cc-studio-v4 release.",
+  "current_phase": "pivot",
+  "pivot_queue": [
+    {
+      "id": "T0",
+      "title": "Honest audit",
+      "status": "in_progress",
+      "notes": "Audit scaffold; not yet verified."
+    },
+    {
+      "id": "T1",
+      "title": "Study Keyflaw's own implementation (the link expires; do right after T0)",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T2",
+      "title": "Real-pair regression harness and the match solver (core)",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T3",
+      "title": "Renderer (right way up) and effect host; exact Keyflaw effects (slice 1)",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T4",
+      "title": "Fit and Tune wired to the match (slice 1)",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T5",
+      "title": "Scrubber sliders with live updates",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T6",
+      "title": "Colour picker and all control types",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T7",
+      "title": "Effect library = Keyflaw's, picker and categories",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T8",
+      "title": "View modes against the reference",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T9",
+      "title": "Export a real `.kfpack`",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T10",
+      "title": "Source stage and permissions finish",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T11",
+      "title": "Diagnostics and performance checks",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    },
+    {
+      "id": "T12",
+      "title": "Release and proof (last)",
+      "status": "pending",
+      "notes": "Not started; prior implementation is not evidence of acceptance."
+    }
+  ],
+  "decisions": [
+    "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed."
+  ]
 }
