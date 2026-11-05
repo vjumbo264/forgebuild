@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: establish Gojo regression baseline and locate missing reference_match.py before faithful port",
+  "current_task": "T2: add and run real-pair metric harness; faithfully port reference_match.py when provided",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "T1 study complete in inspected scope: original private APK recovered; 24 original effects / 65 byte-preserved passes and exact controls/graphs stored; 65/65 glslang compilation passes, hashes recorded. Sharpen and 14-pass Unsharp are readable; Glow/Curves/Levels/HSL sealed, calibration needs explicit. Native effect UI not visually run; only original parameter metadata verified, ruler fallback documented. No GPU equivalence or new APK claimed. Next operation: T2: establish Gojo regression baseline and locate missing reference_match.py before faithful port",
+  "notes": "T2 scaffold: original 560x259 Gojo pair available. reference_match.py and SKILL.md absent from supplied files and repository trees; not claiming a faithful port. Establish independent CIEDE2000 baseline / alignment / held-out metrics before any replacement model or deletion of current runtime. Next operation: T2: add and run real-pair metric harness; faithfully port reference_match.py when provided",
   "reset_queue": [
     {
       "id": "T0",
@@ -205,8 +205,8 @@
     {
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
-      "status": "pending",
-      "notes": "Not started; prior implementation is not evidence of acceptance."
+      "status": "in_progress",
+      "notes": "T2 scaffold: original 560x259 Gojo pair available. reference_match.py and SKILL.md absent from supplied files and repository trees; not claiming a faithful port. Establish independent CIEDE2000 baseline / alignment / held-out metrics before any replacement model or deletion of current runtime."
     },
     {
       "id": "T3",
