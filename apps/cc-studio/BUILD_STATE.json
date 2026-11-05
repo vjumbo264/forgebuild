@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "Android migration acceptance and remaining T3-T12 gates; do not label this candidate complete.",
+  "current_task": "Complete T2/T3 runtime acceptance (Android build green), then remaining pivot queue; final signed APK not released.",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3. [2026-11-05 pivot correction: prior completion claim invalidated by operator screenshots; must reverify in pivot_queue. Historical notes preserved, not current proof.]"
     }
   ],
-  "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed.",
+  "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed.\nAndroid integration now compiles and debug APK builds on GitHub Actions, and :core:test passes (13 tests), verified run 42044224862. This is BUILD proof only: no emulator/device journey, original multipass visual equality, final signed release, live drag/recomposition telemetry, or Keyflaw import claim. Sample direct-match .kfpack validated against supplied skill with exact entry-byte parity; user delivery is a test sample, not a final release.",
   "reset_queue": [
     {
       "id": "T0",
@@ -206,7 +206,7 @@
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
       "status": "in_progress",
-      "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed."
+      "notes": "Core pipeline and sample validated: 13 passing JVM tests now exercise MatchPipeline (fixed Long-index sampling overflow), real Gojo identity 10.1244/24.5314 -> 4.8776/11.3980; heldout 4.8896/10.0559; blurred 3.8916/8.4946. Shared GLSL software-GLES max error 0.501/255, strength zero exact. Sample MOTIONSALT.kfpack generated through MatchPipeline, supplied SKILL packer validates with 0 errors (custom MOTIONSALT category warning only), every archive entry byte-identical to skill-produced reference. Viewed upright proof panel with blue cloth, red-brown hair and green forest; residual skin/edge differences honestly visible. Android build and acceptance pending; no signed final APK. Runtime code is a candidate, not proof that all user symptoms are fixed.\nAndroid integration now compiles and debug APK builds on GitHub Actions, and :core:test passes (13 tests), verified run 42044224862. This is BUILD proof only: no emulator/device journey, original multipass visual equality, final signed release, live drag/recomposition telemetry, or Keyflaw import claim. Sample direct-match .kfpack validated against supplied skill with exact entry-byte parity; user delivery is a test sample, not a final release."
     },
     {
       "id": "T3",
@@ -274,15 +274,19 @@
     "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases."
   ],
   "known_issues": [
-    "Android migration build and on-device acceptance pending; no final APK published.",
+    "Android CI tests/debug build pass, but emulator/device acceptance and signed prerelease/final release remain unfinished.",
     "Public Keyflaw sequential plugin host does not establish retained uInput/uPrev graph export support; exporting such stack effects is explicitly blocked.",
     "Glow/Curves/Levels/HSL sealed original shaders still require reference calibration.",
     "Scopes overlay, original grouped RGB picker integration, all view-mode screenshots and zero-allocation performance gates remain unverified.",
     "Old tests tied to removed lattice APIs and handwritten effects were removed, not counted as passing; replacement suite has 13 tests.",
     "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
-    "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending.",
-    "Control-free per-item export not implemented; UI states controls remain exposed instead of offering an inert switch.",
     "Final/early signed APKs not yet published; on-device Keyflaw import and all image/view-mode acceptance remain pending."
   ],
-  "last_verified_release": "cc-studio-v4"
+  "last_verified_release": "cc-studio-v4",
+  "ci_verification": {
+    "id": 42044224862,
+    "conclusion": "success",
+    "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42044224862",
+    "head_sha": "b840368ce3af8ae6609cd1f5e8b35b83bd06be6b"
+  }
 }
