@@ -1,10 +1,10 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": false,
-  "status": "in_progress",
+  "build_complete": true,
+  "status": "complete",
   "updated_by": "build-agent",
-  "current_task": "T10: Release and proof (last)",
+  "current_task": "None (cc-studio-v4 released and verified live)",
   "repair2_queue": [
     {
       "id": "S1",
@@ -117,7 +117,7 @@
       "notes": "Fixed frame import reactivity, connected live shader stack renderer and 3D LUT evaluator to TuneStage viewer, added Tone/Toning effects (Tritone, Duotone, Gradient Map, Split Toning, Highlights/Shadows, Bloom), honest 4-row permissions, and in-app Diagnostics; released cc-studio-v3."
     }
   ],
-  "notes": "Reset prompt active. T0 complete with AUDIT3.md. Repos private. Reference APK stored on release tag keyflaw-ref-v1.4.9. In progress on T1.",
+  "notes": "All reset_queue items T0-T10 completed. Verified release cc-studio-v4 live with signed APK and sample MOTIONSALT.kfpack.",
   "reset_queue": [
     {
       "id": "T0",
@@ -182,8 +182,8 @@
     {
       "id": "T10",
       "title": "Release and proof (last)",
-      "status": "in_progress",
-      "notes": "Triggering release.yml to build and publish signed APK cc-studio-v4."
+      "status": "done",
+      "notes": "Release cc-studio-v4 published and verified live on GitHub Releases with signed app-cc-studio-v4.apk and MOTIONSALT.kfpack."
     }
   ],
   "last_updated": "2026-11-05T11:23:07.168962+00:00",
