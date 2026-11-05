@@ -1,10 +1,10 @@
 {
   "slug": "cc-studio",
   "project": "forgebuild-cc-studio",
-  "build_complete": true,
-  "status": "complete",
+  "build_complete": false,
+  "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "Release cc-studio-v5 verified live on GitHub Releases API with signed APK and sample MOTIONSALT.kfpack asset.",
+  "current_task": "U1",
   "repair2_queue": [
     {
       "id": "S1",
@@ -187,8 +187,8 @@
     }
   ],
   "last_updated": "2026-11-05",
-  "last_session_note": "Pivot completed: parametric colour matching (mean 4.88 / p95 11.40 vs identity 10.12 / 24.53), upright GLES preview in all 8 view modes, live scrubbing without release lag, HSV colour picker with eyedropper, exact Keyflaw 1.4.9 effects and host contract, letterbox auto-detect, verified .kfpack export with read-back validation, and offline manifest verified.",
-  "current_phase": "pivot",
+  "last_session_note": "Starting update for slider precision, Glow effect restoration, and export repair.",
+  "current_phase": "update_slider_glow_export",
   "pivot_queue": [
     {
       "id": "T0",
@@ -271,7 +271,8 @@
   ],
   "decisions": [
     "Use actual latest cc-studio-v4 source (state supersedes stale v2 in header). No in-progress app task existed at start. Retain historical notes but reopen contradicted claims. Pasted token never committed.",
-    "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases."
+    "2026-11-05: RESUME contract applies because T2 is in_progress. Continue existing pivot queue without resetting T0/T1. Complete reference and SKILL.md are now available. Preserve prior releases.",
+    "2026-11-05: Extend/Update contract applied. Operator requested fixing slider precision/offset/zero-increase bug, restoring missing main Glow effect, repairing export so files land visibly in Downloads with Keyflaw enable toggles and tuned controls."
   ],
   "known_issues": [
     "Android CI tests/debug build pass, but emulator/device acceptance and signed prerelease/final release remain unfinished.",
@@ -288,5 +289,37 @@
     "conclusion": "success",
     "html_url": "https://github.com/vjumbo264/forgebuild/actions/runs/42044224862",
     "head_sha": "b840368ce3af8ae6609cd1f5e8b35b83bd06be6b"
-  }
+  },
+  "update_queue": [
+    {
+      "id": "U1",
+      "title": "Slider precision and Material 3 overhaul",
+      "status": "in_progress",
+      "notes": "Replace custom ruler scrubber with official Material 3 Slider, fix zero-drag direction and peak offset, maintain live parameter updates and numerical tap-to-type."
+    },
+    {
+      "id": "U2",
+      "title": "Restore main Glow effect",
+      "status": "pending",
+      "notes": "Add exact Keyflaw Glow effect matching manifest parameters (threshold, softness, radius, falloff, exposure, tint, chromatic, addMode, glowOnly) with GLSL ES shader and asset definitions."
+    },
+    {
+      "id": "U3",
+      "title": "Repair Export, MediaStore Downloads, and Keyflaw pack controls",
+      "status": "pending",
+      "notes": "Ensure exported pack includes color correction enable toggle and individual effect enable toggles with tuned defaults. Fix SAF abort bug and save to MediaStore Downloads with clear path UI and FileProvider share."
+    },
+    {
+      "id": "U4",
+      "title": "Validation & testing",
+      "status": "pending",
+      "notes": "Compile app, run unit test suite, and validate generated .kfpack against tools/kfpack_build.py."
+    },
+    {
+      "id": "U5",
+      "title": "Release cc-studio-v6",
+      "status": "pending",
+      "notes": "Dispatch release.yml workflow, monitor CI run, verify cc-studio-v6 release live on GitHub Releases API, and set build_complete: true."
+    }
+  ]
 }

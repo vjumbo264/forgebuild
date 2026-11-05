@@ -790,3 +790,34 @@ if __name__=='__main__':
     cv2.imwrite(PANEL,cv2.cvtColor(panel,cv2.COLOR_RGB2BGR))
     json.dump({'A':m.A.tolist(),'o':m.o.tolist(),'hue':m.hue.tolist(),'curves':[[x.tolist(),y.tolist()] for x,y in m.curves]},open('match_model.json','w'))
 ```
+
+
+---
+
+## 2026-11-05 — Slider fix, Glow effect restore, and Export repair
+
+"""
+I'm facing these issues and I need you to fix it in the app.
+
+First of all, the slider needs to be fixed. The slider is not precise, it has an offset, and it looks very bad. Please fix the slider so it looks professional and it should not be offsetted. Right now, even if it's in the maximum value, it still looks as if it can still go further even if it has hit the peak. That needs to be fixed, and the slider is not precise at all. It looks very bad, so just fix it.
+
+Secondly, when the slider is at zero, I can't increase it. When I get it to zero, I can't increase it unless I manually put the value I want. So, fix it.
+
+The main glow that the original app had, that main glow, the glow effect is missing. The other chromatic glow and other ones, they are there, but that main glow effect, please copy the exact one and put in it so that I can use it.
+
+Lastly, it doesn't export properly. I don't know why, but it doesn't export. When I try to export, I don't see the file anywhere.
+
+Additionally, what are the settings that are in the pack once it has come out? These are the settings that I'm expecting from each effect when the pack has been exported:
+- The toggle to enable the color correction.
+- The toggle to enable the other effects that were added.
+
+One toggle for the color correction and another toggle for the other effects. The same effects that we used, that is what should appear in the effects when it is in Keyflower. I hope that is the case so that I'll be able to use it properly, so that if I want to still tune it, I can tune it.
+
+So the same things I did in the app, when I export the pack, I should still see that same controls when I import the effects.
+
+This is the link to the app, I've pasted it below. It's supposed to be in the repository. If it's there, just use it directly. If it's not there, you can download it from this link.
+
+Bring back the glow effect and make sure that the exported pack is working properly and the controls are working, and it is actually exporting because right now it is not exporting. So fix those things for me.
+
+https://cf.linkulu.com/dl/6aec2bebde32c56eaccc624d
+"""
