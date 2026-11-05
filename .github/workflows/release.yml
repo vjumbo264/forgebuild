@@ -112,7 +112,7 @@ jobs:
         run: |
           cd "$APP_PATH"
           chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon \
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace --info \
             -PforgebuildVersionCode="${{ steps.meta.outputs.code }}" \
             -PforgebuildVersionName="${{ steps.vername.outputs.name }}"
           echo "APK versionCode=${{ steps.meta.outputs.code }} versionName=${{ steps.vername.outputs.name }}"
