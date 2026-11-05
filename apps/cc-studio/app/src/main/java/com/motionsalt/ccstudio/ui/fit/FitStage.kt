@@ -113,6 +113,49 @@ fun FitStage(
             val haldBytes = ColorMath.generateHald8Bmp(result.transform)
             haldFile.writeBytes(haldBytes)
 
+            // Honest Recreated and Heatmap generation
+            val pair = completePairs.firstOrNull()
+            if (pair?.base?.filePath != null && File(pair.base.filePath).exists()) {
+                try {
+                    val baseBmp = BitmapFactory.decodeFile(pair.base.filePath)
+                    if (baseBmp != null) {
+                        val w = baseBmp.width
+                        val h = baseBmp.height
+                        val basePixels = IntArray(w * h)
+                        baseBmp.getPixels(basePixels, 0, w, 0, 0, w, h)
+                        val baseBuf = StackRenderer.PixelBuffer(w, h, basePixels)
+                        val recBuf = StackRenderer.applyLut(baseBuf, result.transform, 1.0f)
+
+                        val recBmp = Bitmap.createBitmap(recBuf.pixels, w, h, Bitmap.Config.ARGB_8888)
+                        val recFile = File(resultsDir, "recreated_${project.id}.png")
+                        FileOutputStream(recFile).use { fos ->
+                            recBmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                        }
+
+                        // Generate Heatmap if target exists
+                        if (pair.target?.filePath != null && File(pair.target.filePath).exists()) {
+                            val targetBmp = BitmapFactory.decodeFile(pair.target.filePath)
+                            if (targetBmp != null) {
+                                val scaledTarget = if (targetBmp.width != w || targetBmp.height != h) {
+                                    Bitmap.createScaledBitmap(targetBmp, w, h, true)
+                                } else targetBmp
+                                val targetPixels = IntArray(w * h)
+                                scaledTarget.getPixels(targetPixels, 0, w, 0, 0, w, h)
+                                val targetBuf = StackRenderer.PixelBuffer(w, h, targetPixels)
+                                val heatBuf = ColorMath.generateHeatmap(recBuf, targetBuf)
+                                val heatBmp = Bitmap.createBitmap(heatBuf.pixels, w, h, Bitmap.Config.ARGB_8888)
+                                val heatFile = File(resultsDir, "heatmap_${project.id}.png")
+                                FileOutputStream(heatFile).use { fos ->
+                                    heatBmp.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             val resData = FitResultData(
                 lutPath = cubeFile.absolutePath,
                 haldPath = haldFile.absolutePath,
@@ -249,13 +292,23 @@ fun FitStage(
                     1 -> pair?.target?.filePath
                     2 -> {
                         val resultsDir = File(context.filesDir, "projects/${project.id}/results")
-                        val recFile = resultsDir.listFiles()?.filter { it.name.startsWith("recreated_") }?.maxByOrNull { it.lastModified() }
-                        recFile?.absolutePath ?: pair?.target?.filePath
+                        val recFile = File(resultsDir, "recreated_${project.id}.png")
+                        if (recFile.exists()) {
+                            recFile.absolutePath
+                        } else {
+                            val fallbackRec = resultsDir.listFiles()?.filter { it.name.startsWith("recreated_") }?.maxByOrNull { it.lastModified() }
+                            fallbackRec?.absolutePath ?: pair?.base?.filePath
+                        }
                     }
                     3 -> {
                         val resultsDir = File(context.filesDir, "projects/${project.id}/results")
-                        val heatFile = resultsDir.listFiles()?.filter { it.name.startsWith("heatmap_") }?.maxByOrNull { it.lastModified() }
-                        heatFile?.absolutePath ?: pair?.base?.filePath
+                        val heatFile = File(resultsDir, "heatmap_${project.id}.png")
+                        if (heatFile.exists()) {
+                            heatFile.absolutePath
+                        } else {
+                            val fallbackHeat = resultsDir.listFiles()?.filter { it.name.startsWith("heatmap_") }?.maxByOrNull { it.lastModified() }
+                            fallbackHeat?.absolutePath ?: pair?.base?.filePath
+                        }
                     }
                     else -> pair?.base?.filePath
                 }

@@ -255,6 +255,169 @@ object ColorMath {
      * Generates a HaldCLUT Level 8 (512x512) raw RGB buffer.
      * Hald 8 has 8^3 = 512 pixels per row and 512 rows, representing a 64x64x64 color cube.
      */
+    
+    fun createIdentityTransform(gridSize: Int = 33): FittedTransform {
+        val identityCurve = FloatArray(256) { it / 255f }
+        val matrix = arrayOf(
+            floatArrayOf(1f, 0f, 0f),
+            floatArrayOf(0f, 1f, 0f),
+            floatArrayOf(0f, 0f, 1f)
+        )
+        val offset = floatArrayOf(0f, 0f, 0f)
+        val residual = FloatArray(gridSize * gridSize * gridSize * 3) { 0f }
+        return FittedTransform(identityCurve, identityCurve, identityCurve, matrix, offset, gridSize, residual, 1.0f)
+    }
+
+    fun createInvertTransform(gridSize: Int = 33): FittedTransform {
+        val identityCurve = FloatArray(256) { it / 255f }
+        val matrix = arrayOf(
+            floatArrayOf(1f, 0f, 0f),
+            floatArrayOf(0f, 1f, 0f),
+            floatArrayOf(0f, 0f, 1f)
+        )
+        val offset = floatArrayOf(0f, 0f, 0f)
+        val residual = FloatArray(gridSize * gridSize * gridSize * 3)
+        for (iz in 0 until gridSize) {
+            val baseB = iz.toFloat() / (gridSize - 1f)
+            for (iy in 0 until gridSize) {
+                val baseG = iy.toFloat() / (gridSize - 1f)
+                for (ix in 0 until gridSize) {
+                    val baseR = ix.toFloat() / (gridSize - 1f)
+                    val idx = (iz * gridSize * gridSize + iy * gridSize + ix) * 3
+                    residual[idx] = (1.0f - baseR) - baseR
+                    residual[idx + 1] = (1.0f - baseG) - baseG
+                    residual[idx + 2] = (1.0f - baseB) - baseB
+                }
+            }
+        }
+        return FittedTransform(identityCurve, identityCurve, identityCurve, matrix, offset, gridSize, residual, 1.0f)
+    }
+
+    fun createChannelSwapTransform(gridSize: Int = 33): FittedTransform {
+        val identityCurve = FloatArray(256) { it / 255f }
+        val matrix = arrayOf(
+            floatArrayOf(1f, 0f, 0f),
+            floatArrayOf(0f, 1f, 0f),
+            floatArrayOf(0f, 0f, 1f)
+        )
+        val offset = floatArrayOf(0f, 0f, 0f)
+        val residual = FloatArray(gridSize * gridSize * gridSize * 3)
+        for (iz in 0 until gridSize) {
+            val baseB = iz.toFloat() / (gridSize - 1f)
+            for (iy in 0 until gridSize) {
+                val baseG = iy.toFloat() / (gridSize - 1f)
+                for (ix in 0 until gridSize) {
+                    val baseR = ix.toFloat() / (gridSize - 1f)
+                    val idx = (iz * gridSize * gridSize + iy * gridSize + ix) * 3
+                    residual[idx] = baseB - baseR
+                    residual[idx + 1] = 0f
+                    residual[idx + 2] = baseR - baseB
+                }
+            }
+        }
+        return FittedTransform(identityCurve, identityCurve, identityCurve, matrix, offset, gridSize, residual, 1.0f)
+    }
+
+    fun generateLut2DStrip(transform: FittedTransform, size: Int = 33): StackRenderer.PixelBuffer {
+        val width = size * size
+        val height = size
+        val pixels = IntArray(width * height)
+        val buf = StackRenderer.PixelBuffer(width, height, pixels)
+        for (iz in 0 until size) {
+            val b = iz.toFloat() / (size - 1f)
+            for (iy in 0 until size) {
+                val g = iy.toFloat() / (size - 1f)
+                for (ix in 0 until size) {
+                    val r = ix.toFloat() / (size - 1f)
+                    val out = transform.evaluate(r, g, b)
+                    val x = iz * size + ix
+                    val y = iy
+                    buf.setRgb(x, y, out.first, out.second, out.third, 1.0f)
+                }
+            }
+        }
+        return buf
+    }
+
+    fun sampleLut2D(strip: StackRenderer.PixelBuffer, r: Float, g: Float, b: Float, size: Int = 33): Triple<Float, Float, Float> {
+        val bScaled = b.coerceIn(0f, 1f) * (size - 1f)
+        val z0 = floor(bScaled).toInt().coerceIn(0, size - 1)
+        val z1 = min(size - 1, z0 + 1)
+        val fz = bScaled - z0
+
+        val fx = r.coerceIn(0f, 1f) * (size - 1f)
+        val x0 = floor(fx).toInt().coerceIn(0, size - 1)
+        val x1 = min(size - 1, x0 + 1)
+        val wx = fx - x0
+
+        val fy = g.coerceIn(0f, 1f) * (size - 1f)
+        val y0 = floor(fy).toInt().coerceIn(0, size - 1)
+        val y1 = min(size - 1, y0 + 1)
+        val wy = fy - y0
+
+        fun sampleSlice(sliceZ: Int): Triple<Float, Float, Float> {
+            val px00 = sliceZ * size + x0
+            val px10 = sliceZ * size + x1
+            val c00r = strip.getR(px00, y0); val c00g = strip.getG(px00, y0); val c00b = strip.getB(px00, y0)
+            val c10r = strip.getR(px10, y0); val c10g = strip.getG(px10, y0); val c10b = strip.getB(px10, y0)
+            val c01r = strip.getR(px00, y1); val c01g = strip.getG(px00, y1); val c01b = strip.getB(px00, y1)
+            val c11r = strip.getR(px10, y1); val c11g = strip.getG(px10, y1); val c11b = strip.getB(px10, y1)
+
+            val botR = c00r * (1f - wx) + c10r * wx
+            val botG = c00g * (1f - wx) + c10g * wx
+            val botB = c00b * (1f - wx) + c10b * wx
+
+            val topR = c01r * (1f - wx) + c11r * wx
+            val topG = c01g * (1f - wx) + c11g * wx
+            val topB = c01b * (1f - wx) + c11b * wx
+
+            return Triple(
+                botR * (1f - wy) + topR * wy,
+                botG * (1f - wy) + topG * wy,
+                botB * (1f - wy) + topB * wy
+            )
+        }
+
+        val col0 = sampleSlice(z0)
+        val col1 = sampleSlice(z1)
+
+        return Triple(
+            col0.first * (1f - fz) + col1.first * fz,
+            col0.second * (1f - fz) + col1.second * fz,
+            col0.third * (1f - fz) + col1.third * fz
+        )
+    }
+
+    fun generateHeatmap(recreated: StackRenderer.PixelBuffer, target: StackRenderer.PixelBuffer): StackRenderer.PixelBuffer {
+        val w = min(recreated.width, target.width)
+        val h = min(recreated.height, target.height)
+        val out = StackRenderer.PixelBuffer(w, h, IntArray(w * h))
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val rR = recreated.getR(x, y); val rG = recreated.getG(x, y); val rB = recreated.getB(x, y)
+                val tR = target.getR(x, y); val tG = target.getG(x, y); val tB = target.getB(x, y)
+                val labR = rgbToLab(rR, rG, rB)
+                val labT = rgbToLab(tR, tG, tB)
+                val deltaE = deltaE76(labR, labT)
+                val norm = (deltaE / 10.0f).coerceIn(0f, 1f)
+                val hr = when {
+                    norm < 0.5f -> 0f
+                    else -> (norm - 0.5f) * 2f
+                }
+                val hg = when {
+                    norm < 0.5f -> norm * 2f
+                    else -> (1f - (norm - 0.5f) * 2f)
+                }
+                val hb = when {
+                    norm < 0.5f -> (1f - norm * 2f)
+                    else -> 0f
+                }
+                out.setRgb(x, y, hr, hg, hb, 1.0f)
+            }
+        }
+        return out
+    }
+
     fun generateHald8RgbBytes(transform: FittedTransform): ByteArray {
         val size = 512
         val lutDim = 64 // 64^3 = 262,144 pixels = 512 * 512

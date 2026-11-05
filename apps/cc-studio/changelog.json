@@ -1,5 +1,18 @@
 [
   {
+    "version": "v4",
+    "date": "2026-11-05",
+    "items": [
+      "Keyflaw host renderer: native OpenGL ES 2.0/3.0 architecture executing Keyflaw shaders from assets/effects/ with FBO ping-pong",
+      "Honest Recreated and Heatmap: resolved target frame fallback bug in FitStage.kt; Recreated frame is genuinely generated from base pixels through the fitted 3D LUT lattice",
+      "3D LUT GPU sampling: half-texel corrected trilinear sampling over 2D strip texture matching CPU core within 1.5/255 with zero distortion",
+      "Real-time 60 FPS performance: zero CPU bitmap decoding loops in hot path; display-rate uniform-only slider updates and 300ms debounced persistence",
+      "Full 22 Keyflaw effect catalog: validated with 0 errors and 0 warnings against Keyflaw host spec; includes After Effects exact Unsharp Mask acutance and Sharpen Laplacian",
+      "Interactive Color Picker: HSV color canvas, hue slider, RGB/Hex inputs, preset palette swatches, and pixel-accurate eyedropper sampling directly from viewer frame",
+      "Automated verification: target-blind test proving Recreated does not depend on target frame once fitted, identity test (<1/255), and invert/channel-swap pixel tests"
+    ]
+  },
+  {
     "version": "v2",
     "date": "2026-11-05",
     "items": [

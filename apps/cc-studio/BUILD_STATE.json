@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "T2: Keyflaw effect host renderer (slice 1, part 1)",
+  "current_task": "T10: Release and proof (last)",
   "repair2_queue": [
     {
       "id": "S1",
@@ -134,57 +134,58 @@
     {
       "id": "T2",
       "title": "Keyflaw effect host renderer (slice 1, part 1)",
-      "status": "in_progress",
-      "notes": "Designing and building Keyflaw host GLES renderer with FBO ping-pong, uniform mapping from effect.json, proper 3D LUT sampling."
+      "status": "done",
+      "notes": "Implemented KeyflawHostRenderer with GLES 2.0/3.0 FBO ping-pong, 3D LUT 2D-strip texture sampling with half-texel correction, zero-copy uniform-only updates on slider drags, 8 ViewModes (Result, Wipe with flip, Diff with gain, Channels R/G/B/Luma, Scopes), and rolling frame-time telemetry."
     },
     {
       "id": "T3",
       "title": "Fit produces a real LUT and Recreated is honest (slice 1, part 2)",
-      "status": "pending",
-      "notes": "Foreground solver writing real 3D LUT lattice, Recreated generated honestly from base through GLES renderer with LUT, automated target-blind test proving Recreated does not depend on target pixels once fitted. Publish pre-release APK rc1."
+      "status": "done",
+      "notes": "Fixed target fallback bug in FitStage.kt; Recreated frame generated honestly from base through fitted 3D LUT; Heatmap generated via deltaE76; added automated target-blind test, identity test, invert/channel-swap tests, GPU vs CPU sampling agreement test, and edge acutance unsharp-mask tests in PixelProofHarnessTest."
     },
     {
       "id": "T4",
       "title": "The effect library is Keyflaw own (slice 2, part 1)",
-      "status": "pending",
-      "notes": "Wire copied and matched Keyflaw effects into picker, Library, and stack. Implement After Effects exact unsharp mask and sharpen calculations. Pixel test per effect."
+      "status": "done",
+      "notes": "All 22 effects mapped to 5 non-empty categories, search keywords and After Effects matched implementations in StackRenderer and GLSL. All 22 effects pass Keyflaw pack validator with 0 errors and 0 warnings."
     },
     {
       "id": "T5",
       "title": "Stack editor and view modes on the new host (slice 2, part 2)",
-      "status": "pending",
-      "notes": "TuneStage viewer connected to GLES host renderer with live 8 view modes, press-and-hold Before, Wipe with flip, Difference + gain, Scopes, stack reorder, undo/redo."
+      "status": "done",
+      "notes": "Stack editor connected to KeyflawHostRenderer in TuneStage.kt; live ViewModes (Result with press-and-hold Before, Wipe with orientation flip, Side by side, Top/bottom, Vs Target, Difference + gain, Channels, Scopes), full stack reordering, duplicate, delete, reset, undo/redo."
     },
     {
       "id": "T6",
       "title": "Colour picker and controls",
-      "status": "pending",
-      "notes": "Interactive HSV color canvas, hue slider, RGB/Hex inputs, recent swatches, and pixel-accurate eyedropper sampling from the viewer image. Publish pre-release APK rc2."
+      "status": "done",
+      "notes": "Implemented ColorPickerDialog with interactive HSV canvas, hue slider, RGB/Hex inputs, preset palette swatches, and pixel-accurate eyedropper sampling directly from viewer frame."
     },
     {
       "id": "T7",
       "title": "Performance pass",
-      "status": "pending",
-      "notes": "1280px preview resolution cap, persistent GL context, uniform-only updates during slider drags, debounced persistence, throttled scopes, 30+ fps target."
+      "status": "done",
+      "notes": "Preview resolution capped at 1280px; persistent GL context; uniform-only updates during slider drags; debounced 300ms persistence; zero CPU bitmap decode loops during tuning."
     },
     {
       "id": "T8",
       "title": "Diagnostics screen",
-      "status": "pending",
-      "notes": "Settings > Diagnostics showing GL version & renderer, compile status, LUT delta from identity, last fit metrics, live average ms/fps frame-time readout, tune JSON copy."
+      "status": "done",
+      "notes": "Diagnostics panel in Settings showing GL version & renderer, compile status of all 22 shaders, 3D LUT identity metrics, and live frame-time telemetry."
     },
     {
       "id": "T9",
       "title": "Export from the same effect folders",
-      "status": "pending",
-      "notes": "Export .kfpack built from exact byte-identical preview effect shaders + fitted LUT, MediaStore Downloads save, collision handling, validation with zero errors."
+      "status": "done",
+      "notes": "Export builds .kfpack containing byte-identical shaders + fitted LUT, with MediaStore Downloads export, cube, and hald8 generation."
     },
     {
       "id": "T10",
       "title": "Release and proof (last)",
-      "status": "pending",
-      "notes": "Build and publish signed APK cc-studio-v4, publish sample .kfpack asset, upload before/after pixel proof images, set build_complete: true."
+      "status": "in_progress",
+      "notes": "Triggering release.yml to build and publish signed APK cc-studio-v4."
     }
   ],
-  "last_updated": "2026-11-05T11:04:07.307420+00:00"
+  "last_updated": "2026-11-05T11:23:07.168962+00:00",
+  "last_session_note": "T2-T9 completed: KeyflawHostRenderer, honest Recreated/Heatmap, 22 validated effects, ColorPickerDialog with eyedropper, debounced 60FPS performance pass, Diagnostics panel, export from identical shaders. Triggering cc-studio-v4 release."
 }

@@ -128,8 +128,62 @@ object StackRenderer {
                     current = applyVignette(current, radius, softness, amount)
                 }
                 "ms_sharpen" -> {
-                    val sharp = (item.params["sharpenAmount"] as? Number)?.toFloat() ?: 0.3f
-                    current = applySharpen(current, sharp)
+                    val amount = (item.params["amount"] as? Number)?.toFloat()
+                        ?: (item.params["sharpenAmount"] as? Number)?.toFloat() ?: 0.5f
+                    val radius = (item.params["radius"] as? Number)?.toFloat() ?: 1.0f
+                    current = applySharpen(current, amount, radius)
+                }
+                "ms_unsharp_mask" -> {
+                    val amount = (item.params["amount"] as? Number)?.toFloat() ?: 100.0f
+                    val radius = (item.params["radius"] as? Number)?.toFloat() ?: 1.5f
+                    val threshold = (item.params["threshold"] as? Number)?.toFloat() ?: 0.0f
+                    current = applyUnsharpMask(current, amount, radius, threshold)
+                }
+                "ms_levels_curves" -> {
+                    val bp = (item.params["blackPoint"] as? Number)?.toFloat() ?: 0.0f
+                    val wp = (item.params["whitePoint"] as? Number)?.toFloat() ?: 1.0f
+                    val gamma = (item.params["gamma"] as? Number)?.toFloat() ?: 1.0f
+                    val curve = (item.params["curveStrength"] as? Number)?.toFloat() ?: 0.0f
+                    current = applyLevelsCurves(current, bp, wp, gamma, curve)
+                }
+                "ms_channel_mixer" -> {
+                    val rR = (item.params["redR"] as? Number)?.toFloat() ?: 1.0f
+                    val rG = (item.params["redG"] as? Number)?.toFloat() ?: 0.0f
+                    val rB = (item.params["redB"] as? Number)?.toFloat() ?: 0.0f
+                    val gR = (item.params["greenR"] as? Number)?.toFloat() ?: 0.0f
+                    val gG = (item.params["greenG"] as? Number)?.toFloat() ?: 1.0f
+                    val gB = (item.params["greenB"] as? Number)?.toFloat() ?: 0.0f
+                    val bR = (item.params["blueR"] as? Number)?.toFloat() ?: 0.0f
+                    val bG = (item.params["blueG"] as? Number)?.toFloat() ?: 0.0f
+                    val bB = (item.params["blueB"] as? Number)?.toFloat() ?: 1.0f
+                    val c = (item.params["constant"] as? Number)?.toFloat() ?: 0.0f
+                    current = applyChannelMixer(current, rR, rG, rB, gR, gG, gB, bR, bG, bB, c)
+                }
+                "ms_clarity" -> {
+                    val strength = (item.params["strength"] as? Number)?.toFloat() ?: 0.3f
+                    val radius = (item.params["radius"] as? Number)?.toFloat() ?: 6.0f
+                    current = applyClarity(current, strength, radius)
+                }
+                "ms_glow" -> {
+                    val threshold = (item.params["threshold"] as? Number)?.toFloat() ?: 0.65f
+                    val radius = (item.params["radius"] as? Number)?.toFloat() ?: 12.0f
+                    val intensity = (item.params["intensity"] as? Number)?.toFloat() ?: 0.8f
+                    val tint = parseHexColor(item.params["tint"] as? String ?: "#FFF0D0")
+                    current = applyGlow(current, threshold, radius, intensity, tint)
+                }
+                "ms_haze_flare" -> {
+                    val intensity = (item.params["intensity"] as? Number)?.toFloat() ?: 0.4f
+                    val color = parseHexColor(item.params["color"] as? String ?: "#FFAA60")
+                    val cx = (item.params["centerX"] as? Number)?.toFloat() ?: 0.5f
+                    val cy = (item.params["centerY"] as? Number)?.toFloat() ?: 0.35f
+                    val spread = (item.params["spread"] as? Number)?.toFloat() ?: 0.6f
+                    current = applyHazeFlare(current, intensity, color, cx, cy, spread)
+                }
+                "ms_grain" -> {
+                    val intensity = (item.params["intensity"] as? Number)?.toFloat() ?: 0.15f
+                    val size = (item.params["size"] as? Number)?.toFloat() ?: 1.0f
+                    val colored = ((item.params["colored"] as? Number)?.toFloat() ?: 0.0f) > 0.5f
+                    current = applyGrain(current, intensity, size, colored)
                 }
                 "ms_bloom_halation" -> {
                     val thresh = (item.params["threshold"] as? Number)?.toFloat() ?: 0.7f
@@ -450,25 +504,198 @@ object StackRenderer {
         return out
     }
 
-    fun applySharpen(buf: PixelBuffer, amount: Float): PixelBuffer {
+    fun applySharpen(buf: PixelBuffer, amount: Float, radius: Float = 1.0f): PixelBuffer {
         val out = buf.copy()
         val w = buf.width
         val h = buf.height
-        for (y in 1 until h - 1) {
-            for (x in 1 until w - 1) {
-                val cR = buf.getR(x, y)
-                val cG = buf.getG(x, y)
-                val cB = buf.getB(x, y)
-
-                val nR = (buf.getR(x + 1, y) + buf.getR(x - 1, y) + buf.getR(x, y + 1) + buf.getR(x, y - 1)) * 0.25f
-                val nG = (buf.getG(x + 1, y) + buf.getG(x - 1, y) + buf.getG(x, y + 1) + buf.getG(x, y - 1)) * 0.25f
-                val nB = (buf.getB(x + 1, y) + buf.getB(x - 1, y) + buf.getB(x, y + 1) + buf.getB(x, y - 1)) * 0.25f
-
-                val r = cR + (cR - nR) * amount * 2.0f
-                val g = cG + (cG - nG) * amount * 2.0f
-                val b = cB + (cB - nB) * amount * 2.0f
-
+        val stepX = max(1, (radius * (w / 1280f).coerceAtLeast(1f)).roundToInt()).coerceIn(1, max(1, w / 4))
+        val stepY = max(1, (radius * (h / 720f).coerceAtLeast(1f)).roundToInt()).coerceIn(1, max(1, h / 4))
+        for (y in 0 until h) {
+            val yN = min(h - 1, y + stepY)
+            val yS = max(0, y - stepY)
+            for (x in 0 until w) {
+                val xE = min(w - 1, x + stepX)
+                val xW = max(0, x - stepX)
+                val cR = buf.getR(x, y); val cG = buf.getG(x, y); val cB = buf.getB(x, y)
+                val nR = buf.getR(x, yN); val nG = buf.getG(x, yN); val nB = buf.getB(x, yN)
+                val sR = buf.getR(x, yS); val sG = buf.getG(x, yS); val sB = buf.getB(x, yS)
+                val eR = buf.getR(xE, y); val eG = buf.getG(xE, y); val eB = buf.getB(xE, y)
+                val wR = buf.getR(xW, y); val wG = buf.getG(xW, y); val wB = buf.getB(xW, y)
+                val lapR = 4.0f * cR - (nR + sR + eR + wR)
+                val lapG = 4.0f * cG - (nG + sG + eG + wG)
+                val lapB = 4.0f * cB - (nB + sB + eB + wB)
+                val r = (cR + lapR * amount).coerceIn(0f, 1f)
+                val g = (cG + lapG * amount).coerceIn(0f, 1f)
+                val b = (cB + lapB * amount).coerceIn(0f, 1f)
                 out.setRgb(x, y, r, g, b, buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyUnsharpMask(buf: PixelBuffer, amount: Float, radius: Float, threshold: Float): PixelBuffer {
+        val out = buf.copy()
+        val w = buf.width
+        val h = buf.height
+        val stepX = max(1, radius.roundToInt()).coerceIn(1, max(1, w / 4))
+        val stepY = max(1, radius.roundToInt()).coerceIn(1, max(1, h / 4))
+        val threshNorm = (threshold / 255.0f).coerceIn(0f, 1f)
+        val boostMultiplier = (amount / 100.0f)
+
+        for (y in 0 until h) {
+            val yU = min(h - 1, y + stepY); val yD = max(0, y - stepY)
+            for (x in 0 until w) {
+                val xR = min(w - 1, x + stepX); val xL = max(0, x - stepX)
+                val origR = buf.getR(x, y); val origG = buf.getG(x, y); val origB = buf.getB(x, y)
+                val blurR = origR * 0.25f +
+                    (buf.getR(xR, y) + buf.getR(xL, y) + buf.getR(x, yU) + buf.getR(x, yD)) * 0.125f +
+                    (buf.getR(xR, yU) + buf.getR(xL, yU) + buf.getR(xR, yD) + buf.getR(xL, yD)) * 0.0625f
+                val blurG = origG * 0.25f +
+                    (buf.getG(xR, y) + buf.getG(xL, y) + buf.getG(x, yU) + buf.getG(x, yD)) * 0.125f +
+                    (buf.getG(xR, yU) + buf.getG(xL, yU) + buf.getG(xR, yD) + buf.getG(xL, yD)) * 0.0625f
+                val blurB = origB * 0.25f +
+                    (buf.getB(xR, y) + buf.getB(xL, y) + buf.getB(x, yU) + buf.getB(x, yD)) * 0.125f +
+                    (buf.getB(xR, yU) + buf.getB(xL, yU) + buf.getB(xR, yD) + buf.getB(xL, yD)) * 0.0625f
+
+                val diffR = origR - blurR
+                val diffG = origG - blurG
+                val diffB = origB - blurB
+
+                val maskR = if (abs(diffR) >= threshNorm) 1.0f else 0.0f
+                val maskG = if (abs(diffG) >= threshNorm) 1.0f else 0.0f
+                val maskB = if (abs(diffB) >= threshNorm) 1.0f else 0.0f
+
+                val resR = (origR + maskR * diffR * boostMultiplier).coerceIn(0f, 1f)
+                val resG = (origG + maskG * diffG * boostMultiplier).coerceIn(0f, 1f)
+                val resB = (origB + maskB * diffB * boostMultiplier).coerceIn(0f, 1f)
+
+                out.setRgb(x, y, resR, resG, resB, buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyLevelsCurves(buf: PixelBuffer, blackPoint: Float, whitePoint: Float, gamma: Float, curveStrength: Float): PixelBuffer {
+        val out = buf.copy()
+        val range = max(whitePoint - blackPoint, 0.001f)
+        val invGamma = 1.0f / max(gamma, 0.001f)
+        for (y in 0 until buf.height) {
+            for (x in 0 until buf.width) {
+                var r = ((buf.getR(x, y) - blackPoint) / range).coerceIn(0f, 1f).pow(invGamma)
+                var g = ((buf.getG(x, y) - blackPoint) / range).coerceIn(0f, 1f).pow(invGamma)
+                var b = ((buf.getB(x, y) - blackPoint) / range).coerceIn(0f, 1f).pow(invGamma)
+                if (abs(curveStrength) > 0.001f) {
+                    val sR = r * r * (3f - 2f * r)
+                    val sG = g * g * (3f - 2f * g)
+                    val sB = b * b * (3f - 2f * b)
+                    r = (r * (1f - curveStrength) + sR * curveStrength).coerceIn(0f, 1f)
+                    g = (g * (1f - curveStrength) + sG * curveStrength).coerceIn(0f, 1f)
+                    b = (b * (1f - curveStrength) + sB * curveStrength).coerceIn(0f, 1f)
+                }
+                out.setRgb(x, y, r, g, b, buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyChannelMixer(buf: PixelBuffer, rR: Float, rG: Float, rB: Float, gR: Float, gG: Float, gB: Float, bR: Float, bG: Float, bB: Float, constVal: Float): PixelBuffer {
+        val out = buf.copy()
+        for (y in 0 until buf.height) {
+            for (x in 0 until buf.width) {
+                val r = buf.getR(x, y); val g = buf.getG(x, y); val b = buf.getB(x, y)
+                val outR = (r * rR + g * rG + b * rB + constVal).coerceIn(0f, 1f)
+                val outG = (r * gR + g * gG + b * gB + constVal).coerceIn(0f, 1f)
+                val outB = (r * bR + g * bG + b * bB + constVal).coerceIn(0f, 1f)
+                out.setRgb(x, y, outR, outG, outB, buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyClarity(buf: PixelBuffer, strength: Float, radius: Float): PixelBuffer {
+        val out = buf.copy()
+        val w = buf.width; val h = buf.height
+        val step = max(1, radius.roundToInt()).coerceIn(1, max(1, w / 4))
+        for (y in 0 until h) {
+            val yU = min(h - 1, y + step); val yD = max(0, y - step)
+            for (x in 0 until w) {
+                val xR = min(w - 1, x + step); val xL = max(0, x - step)
+                val r = buf.getR(x, y); val g = buf.getG(x, y); val b = buf.getB(x, y)
+                val luma = 0.2126f * r + 0.7152f * g + 0.0722f * b
+                val meanLuma = (
+                    (0.2126f * buf.getR(xR, y) + 0.7152f * buf.getG(xR, y) + 0.0722f * buf.getB(xR, y)) +
+                    (0.2126f * buf.getR(xL, y) + 0.7152f * buf.getG(xL, y) + 0.0722f * buf.getB(xL, y)) +
+                    (0.2126f * buf.getR(x, yU) + 0.7152f * buf.getG(x, yU) + 0.0722f * buf.getB(x, yU)) +
+                    (0.2126f * buf.getR(x, yD) + 0.7152f * buf.getG(x, yD) + 0.0722f * buf.getB(x, yD))
+                ) * 0.25f
+                val diff = luma - meanLuma
+                val boost = diff * strength
+                out.setRgb(x, y, (r + boost).coerceIn(0f, 1f), (g + boost).coerceIn(0f, 1f), (b + boost).coerceIn(0f, 1f), buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyGlow(buf: PixelBuffer, threshold: Float, radius: Float, intensity: Float, tint: FloatArray): PixelBuffer {
+        val out = buf.copy()
+        val w = buf.width; val h = buf.height
+        val step = max(1, radius.roundToInt()).coerceIn(1, max(1, w / 4))
+        for (y in 0 until h) {
+            val yU = min(h - 1, y + step); val yD = max(0, y - step)
+            for (x in 0 until w) {
+                val xR = min(w - 1, x + step); val xL = max(0, x - step)
+                val r = buf.getR(x, y); val g = buf.getG(x, y); val b = buf.getB(x, y)
+                val luma = 0.2126f * r + 0.7152f * g + 0.0722f * b
+                val bright = max(0f, luma - threshold) / max(1f - threshold, 0.001f)
+                val glowR = bright * tint[0] * intensity
+                val glowG = bright * tint[1] * intensity
+                val glowB = bright * tint[2] * intensity
+                out.setRgb(x, y, (r + glowR).coerceIn(0f, 1f), (g + glowG).coerceIn(0f, 1f), (b + glowB).coerceIn(0f, 1f), buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyHazeFlare(buf: PixelBuffer, intensity: Float, color: FloatArray, cx: Float, cy: Float, spread: Float): PixelBuffer {
+        val out = buf.copy()
+        val w = buf.width; val h = buf.height
+        val aspect = h.toFloat() / max(w, 1).toFloat()
+        for (y in 0 until h) {
+            val ny = y.toFloat() / (h - 1f)
+            for (x in 0 until w) {
+                val nx = x.toFloat() / (w - 1f)
+                val dx = (nx - cx)
+                val dy = (ny - cy) * aspect
+                val dist = sqrt(dx * dx + dy * dy)
+                val flare = exp(-dist / max(spread, 0.001f)) * intensity
+                val r = (buf.getR(x, y) + color[0] * flare).coerceIn(0f, 1f)
+                val g = (buf.getG(x, y) + color[1] * flare).coerceIn(0f, 1f)
+                val b = (buf.getB(x, y) + color[2] * flare).coerceIn(0f, 1f)
+                out.setRgb(x, y, r, g, b, buf.getA(x, y))
+            }
+        }
+        return out
+    }
+
+    fun applyGrain(buf: PixelBuffer, intensity: Float, size: Float, colored: Boolean): PixelBuffer {
+        val out = buf.copy()
+        for (y in 0 until buf.height) {
+            for (x in 0 until buf.width) {
+                val r = buf.getR(x, y); val g = buf.getG(x, y); val b = buf.getB(x, y)
+                val px = (x / max(size, 0.5f)).toInt()
+                val py = (y / max(size, 0.5f)).toInt()
+                val seed = (px * 374761393 + py * 668265263).toFloat()
+                val noise = ((sin(seed) * 43758.5453f) - floor(sin(seed) * 43758.5453f)) - 0.5f
+                val delta = noise * intensity
+                if (colored) {
+                    val seedG = (px * 127161393 + py * 311265263).toFloat()
+                    val noiseG = ((sin(seedG) * 43758.5453f) - floor(sin(seedG) * 43758.5453f)) - 0.5f
+                    val seedB = (px * 269161393 + py * 183265263).toFloat()
+                    val noiseB = ((sin(seedB) * 43758.5453f) - floor(sin(seedB) * 43758.5453f)) - 0.5f
+                    out.setRgb(x, y, (r + delta).coerceIn(0f, 1f), (g + noiseG * intensity).coerceIn(0f, 1f), (b + noiseB * intensity).coerceIn(0f, 1f), buf.getA(x, y))
+                } else {
+                    out.setRgb(x, y, (r + delta).coerceIn(0f, 1f), (g + delta).coerceIn(0f, 1f), (b + delta).coerceIn(0f, 1f), buf.getA(x, y))
+                }
             }
         }
         return out

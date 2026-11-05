@@ -2,6 +2,7 @@ package com.motionsalt.ccstudio.ui.tune
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.opengl.GLSurfaceView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,21 +20,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.forgebuild.engine.ui.icons.EngineIcons
 import com.motionsalt.ccstudio.core.*
 import com.motionsalt.ccstudio.data.EffectRepository
 import com.motionsalt.ccstudio.data.ProjectData
 import com.motionsalt.ccstudio.data.ProjectRepository
+import com.motionsalt.ccstudio.renderer.KeyflawHostRenderer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
@@ -55,7 +63,15 @@ fun TuneStage(
     repository: ProjectRepository,
     effectRepository: EffectRepository
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val availableEffects = remember { effectRepository.getAvailableEffects() }
+
+    // Persistent Keyflaw host renderer
+    val hostRenderer = remember { KeyflawHostRenderer(context) }
+    var glSurfaceViewRef by remember { mutableStateOf<GLSurfaceView?>(null) }
+    var saveJob by remember { mutableStateOf<Job?>(null) }
+
     var currentViewMode by remember { mutableStateOf(ViewMode.RESULT) }
     var isPressingBefore by remember { mutableStateOf(false) }
 
@@ -69,9 +85,13 @@ fun TuneStage(
     // Channel isolation: 0=All, 1=Red, 2=Green, 3=Blue, 4=Luma
     var selectedChannel by remember { mutableStateOf(0) }
 
+    // Color picker and Eyedropper state
+    var activeColorPickerParam by remember { mutableStateOf<Triple<StackItem, EffectParam, String>?>(null) }
+    var isEyedropperActive by remember { mutableStateOf(false) }
+
     // Frame strip selection
     val allFrames = remember(project.pairs) {
-        val list = mutableListOf<Pair<String, Boolean>>() // filePath to isTarget
+        val list = mutableListOf<Pair<String, Boolean>>()
         for (p in project.pairs) {
             p.base?.let { list.add(it.filePath to false) }
             p.target?.let { list.add(it.filePath to true) }
@@ -81,17 +101,86 @@ fun TuneStage(
     var activeFramePath by remember {
         mutableStateOf(allFrames.firstOrNull()?.first)
     }
+    var activeBaseBitmap by remember { mutableStateOf<Bitmap?>(null) }
+
+    // Load active base frame into renderer
+    LaunchedEffect(activeFramePath) {
+        if (activeFramePath != null && File(activeFramePath!!).exists()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val bmp = BitmapFactory.decodeFile(activeFramePath)
+                    activeBaseBitmap = bmp
+                    hostRenderer.setBaseBitmap(bmp)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            glSurfaceViewRef?.requestRender()
+        }
+    }
+
+    // Load target frame into renderer if available
+    val completePair = project.pairs.firstOrNull { it.isComplete }
+    LaunchedEffect(completePair?.target?.filePath) {
+        val tPath = completePair?.target?.filePath
+        if (tPath != null && File(tPath).exists()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val bmp = BitmapFactory.decodeFile(tPath)
+                    hostRenderer.setTargetBitmap(bmp)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            glSurfaceViewRef?.requestRender()
+        }
+    }
+
+    // Load fitted 3D LUT transform into renderer
+    LaunchedEffect(project.fitResult?.lutPath) {
+        val lutPath = project.fitResult?.lutPath
+        if (lutPath != null && File(lutPath).exists()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val transform = ColorMath.parseCube33(File(lutPath).readText(java.nio.charset.StandardCharsets.UTF_8))
+                    hostRenderer.setLutTransform(transform)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            glSurfaceViewRef?.requestRender()
+        }
+    }
 
     // Stack and Undo/Redo
     val undoStack = remember { mutableStateListOf<String>() }
     val redoStack = remember { mutableStateListOf<String>() }
-
     var tuneStateJson by remember { mutableStateOf(project.tuneState.toJsonString()) }
     val currentTuneState = remember(tuneStateJson) { TuneState.fromJsonString(tuneStateJson) }
-
     var expandedItemId by remember { mutableStateOf<String?>(currentTuneState.stack.firstOrNull()?.instanceId) }
     var showAddEffectPicker by remember { mutableStateOf(false) }
     var isFullscreen by remember { mutableStateOf(false) }
+
+    // Sync state and view options to host renderer
+    LaunchedEffect(currentViewMode, isPressingBefore, wipeDividerFraction, isWipeVertical, diffGain, selectedChannel, currentTuneState) {
+        hostRenderer.activeViewMode = when (currentViewMode) {
+            ViewMode.RESULT -> KeyflawHostRenderer.ViewMode.RESULT
+            ViewMode.WIPE -> KeyflawHostRenderer.ViewMode.WIPE
+            ViewMode.SIDE_BY_SIDE -> KeyflawHostRenderer.ViewMode.SIDE_BY_SIDE
+            ViewMode.TOP_BOTTOM -> KeyflawHostRenderer.ViewMode.TOP_BOTTOM
+            ViewMode.VS_TARGET -> KeyflawHostRenderer.ViewMode.VS_TARGET
+            ViewMode.DIFFERENCE -> KeyflawHostRenderer.ViewMode.DIFFERENCE
+            ViewMode.CHANNELS -> KeyflawHostRenderer.ViewMode.CHANNELS
+            ViewMode.SCOPES -> KeyflawHostRenderer.ViewMode.SCOPES
+        }
+        hostRenderer.isPressingBefore = isPressingBefore
+        hostRenderer.wipeFraction = wipeDividerFraction
+        hostRenderer.isWipeVertical = isWipeVertical
+        hostRenderer.diffGain = diffGain
+        hostRenderer.selectedChannel = selectedChannel
+        hostRenderer.activeTuneState = currentTuneState
+        glSurfaceViewRef?.requestRender()
+    }
 
     fun commitTuneState(newState: TuneState) {
         undoStack.add(tuneStateJson)
@@ -100,6 +189,8 @@ fun TuneStage(
         tuneStateJson = newJson
         project.tuneState = newState
         repository.saveProject(project)
+        hostRenderer.activeTuneState = newState
+        glSurfaceViewRef?.requestRender()
     }
 
     fun undo() {
@@ -107,8 +198,11 @@ fun TuneStage(
             val prev = undoStack.removeAt(undoStack.size - 1)
             redoStack.add(tuneStateJson)
             tuneStateJson = prev
-            project.tuneState = TuneState.fromJsonString(prev)
+            val restored = TuneState.fromJsonString(prev)
+            project.tuneState = restored
             repository.saveProject(project)
+            hostRenderer.activeTuneState = restored
+            glSurfaceViewRef?.requestRender()
         }
     }
 
@@ -117,8 +211,11 @@ fun TuneStage(
             val next = redoStack.removeAt(redoStack.size - 1)
             undoStack.add(tuneStateJson)
             tuneStateJson = next
-            project.tuneState = TuneState.fromJsonString(next)
+            val restored = TuneState.fromJsonString(next)
+            project.tuneState = restored
             repository.saveProject(project)
+            hostRenderer.activeTuneState = restored
+            glSurfaceViewRef?.requestRender()
         }
     }
 
@@ -131,7 +228,7 @@ fun TuneStage(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // TOP: Viewer Box
+        // TOP: Viewer Box (Keyflaw GLES Host Renderer)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -141,9 +238,33 @@ fun TuneStage(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
-                            isPressingBefore = true
-                            tryAwaitRelease()
-                            isPressingBefore = false
+                            if (!isEyedropperActive) {
+                                isPressingBefore = true
+                                tryAwaitRelease()
+                                isPressingBefore = false
+                            }
+                        },
+                        onTap = { tapOffset ->
+                            if (isEyedropperActive && activeBaseBitmap != null && activeColorPickerParam != null) {
+                                val bmp = activeBaseBitmap!!
+                                val nx = (tapOffset.x / size.width).coerceIn(0f, 1f)
+                                val ny = (tapOffset.y / size.height).coerceIn(0f, 1f)
+                                val px = (nx * (bmp.width - 1)).toInt().coerceIn(0, bmp.width - 1)
+                                val py = (ny * (bmp.height - 1)).toInt().coerceIn(0, bmp.height - 1)
+                                val pixel = bmp.getPixel(px, py)
+                                val r = (pixel shr 16) and 0xFF
+                                val g = (pixel shr 8) and 0xFF
+                                val b = pixel and 0xFF
+                                val sampledHex = String.format("#%02X%02X%02X", r, g, b)
+
+                                val (targetItem, targetParam, _) = activeColorPickerParam!!
+                                targetItem.params[targetParam.key] = sampledHex
+                                hostRenderer.setEffectColorParam(targetItem.effectId, targetParam.key, r / 255f, g / 255f, b / 255f)
+                                glSurfaceViewRef?.requestRender()
+                                commitTuneState(currentTuneState)
+                                isEyedropperActive = false
+                                activeColorPickerParam = null
+                            }
                         },
                         onDoubleTap = {
                             scale = if (scale > 1.2f) 1f else 2f
@@ -153,109 +274,51 @@ fun TuneStage(
                 },
             contentAlignment = Alignment.Center
         ) {
-            // Load fitted transform if project has fit result
-            val lutTransform = remember(project.fitResult?.lutPath) {
-                val lutPath = project.fitResult?.lutPath
-                if (lutPath != null && File(lutPath).exists()) {
-                    try {
-                        ColorMath.parseCube33(File(lutPath).readText(java.nio.charset.StandardCharsets.UTF_8))
-                    } catch (e: Exception) {
-                        null
+            // GLSurfaceView embedded via AndroidView
+            AndroidView(
+                factory = { ctx ->
+                    GLSurfaceView(ctx).apply {
+                        setEGLContextClientVersion(2)
+                        setRenderer(hostRenderer)
+                        renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+                        glSurfaceViewRef = this
                     }
-                } else null
-            }
+                },
+                update = { view ->
+                    glSurfaceViewRef = view
+                    view.requestRender()
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+            )
 
-            // Real-time stack rendering of the active frame through the complete effect stack
-            val bitmap = remember(activeFramePath, lutTransform, tuneStateJson, isPressingBefore, currentViewMode, wipeDividerFraction, isWipeVertical, diffGain, selectedChannel) {
-                if (activeFramePath != null && File(activeFramePath!!).exists()) {
-                    val rawBmp = BitmapFactory.decodeFile(activeFramePath)
-                    if (rawBmp != null) {
-                        if (isPressingBefore) {
-                            rawBmp // True original before
-                        } else {
-                            val w = rawBmp.width
-                            val h = rawBmp.height
-                            val pixels = IntArray(w * h)
-                            rawBmp.getPixels(pixels, 0, w, 0, 0, w, h)
-                            val inBuf = StackRenderer.PixelBuffer(w, h, pixels)
-                            val outBuf = StackRenderer.render(inBuf, currentTuneState, lutTransform)
-
-                            // Apply ViewMode modifications
-                            when (currentViewMode) {
-                                ViewMode.WIPE -> {
-                                    val wipePixels = outBuf.pixels.clone()
-                                    for (y in 0 until h) {
-                                        for (x in 0 until w) {
-                                            val isBefore = if (isWipeVertical) {
-                                                (x.toFloat() / w) < wipeDividerFraction
-                                            } else {
-                                                (y.toFloat() / h) < wipeDividerFraction
-                                            }
-                                            if (isBefore) {
-                                                wipePixels[y * w + x] = pixels[y * w + x]
-                                            }
-                                        }
-                                    }
-                                    Bitmap.createBitmap(wipePixels, w, h, Bitmap.Config.ARGB_8888)
-                                }
-                                ViewMode.CHANNELS -> {
-                                    val chanPixels = IntArray(w * h)
-                                    for (i in 0 until (w * h)) {
-                                        val p = outBuf.pixels[i]
-                                        val a = (p ushr 24) and 0xFF
-                                        val r = (p ushr 16) and 0xFF
-                                        val g = (p ushr 8) and 0xFF
-                                        val b = p and 0xFF
-                                        chanPixels[i] = when (selectedChannel) {
-                                            1 -> (a shl 24) or (r shl 16) // R only
-                                            2 -> (a shl 24) or (g shl 8)  // G only
-                                            3 -> (a shl 24) or b          // B only
-                                            4 -> {
-                                                val luma = (0.2126f * r + 0.7152f * g + 0.0722f * b).toInt().coerceIn(0, 255)
-                                                (a shl 24) or (luma shl 16) or (luma shl 8) or luma
-                                            }
-                                            else -> p
-                                        }
-                                    }
-                                    Bitmap.createBitmap(chanPixels, w, h, Bitmap.Config.ARGB_8888)
-                                }
-                                ViewMode.DIFFERENCE -> {
-                                    val diffPixels = IntArray(w * h)
-                                    for (i in 0 until (w * h)) {
-                                        val pOrig = pixels[i]
-                                        val pProc = outBuf.pixels[i]
-                                        val rDiff = (Math.abs(((pProc ushr 16) and 0xFF) - ((pOrig ushr 16) and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
-                                        val gDiff = (Math.abs(((pProc ushr 8) and 0xFF) - ((pOrig ushr 8) and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
-                                        val bDiff = (Math.abs((pProc and 0xFF) - (pOrig and 0xFF)) * diffGain).toInt().coerceIn(0, 255)
-                                        diffPixels[i] = (0xFF shl 24) or (rDiff shl 16) or (gDiff shl 8) or bDiff
-                                    }
-                                    Bitmap.createBitmap(diffPixels, w, h, Bitmap.Config.ARGB_8888)
-                                }
-                                else -> {
-                                    Bitmap.createBitmap(outBuf.pixels, w, h, Bitmap.Config.ARGB_8888)
-                                }
-                            }
-                        }
-                    } else null
-                } else null
-            }
-
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = "Tune Preview Viewer",
-                    contentScale = ContentScale.Fit,
+            // Eyedropper sampling overlay banner
+            if (isEyedropperActive) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offset.x,
-                            translationY = offset.y
-                        )
-                )
-            } else {
-                Text("No Frame Selected", color = Color.White)
+                        .align(Alignment.TopCenter)
+                        .padding(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(EngineIcons.Colorize, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Text("Tap image to sample color", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        TextButton(onClick = { isEyedropperActive = false }) {
+                            Text("Cancel", fontSize = 11.sp)
+                        }
+                    }
+                }
             }
 
             // Mode Overlays
@@ -274,7 +337,6 @@ fun TuneStage(
                     }
                 }
                 ViewMode.WIPE -> {
-                    // Wipe divider overlay
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -289,13 +351,20 @@ fun TuneStage(
                         ) {
                             Text(if (isWipeVertical) "Vert" else "Horiz", color = Color.White, fontSize = 11.sp)
                             IconButton(onClick = { isWipeVertical = !isWipeVertical }, modifier = Modifier.size(24.dp)) {
-                                Icon(EngineIcons.Sync, contentDescription = "Flip wipe", tint = Color.White, modifier = Modifier.size(16.dp))
+                                Icon(EngineIcons.Refresh, contentDescription = "Flip Orientation", tint = Color.White)
                             }
                         }
                         Slider(
                             value = wipeDividerFraction,
-                            onValueChange = { wipeDividerFraction = it },
-                            modifier = Modifier.align(Alignment.BottomCenter)
+                            onValueChange = {
+                                wipeDividerFraction = it
+                                hostRenderer.wipeFraction = it
+                                glSurfaceViewRef?.requestRender()
+                            },
+                            valueRange = 0f..1f,
+                            modifier = Modifier
+                                .align(if (isWipeVertical) Alignment.BottomCenter else Alignment.CenterEnd)
+                                .width(if (isWipeVertical) 200.dp else 120.dp)
                         )
                     }
                 }
@@ -308,7 +377,16 @@ fun TuneStage(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Gain: ${diffGain.toInt()}x", color = Color.White, fontSize = 12.sp)
-                        Slider(value = diffGain, onValueChange = { diffGain = it }, valueRange = 1f..10f, modifier = Modifier.width(160.dp))
+                        Slider(
+                            value = diffGain,
+                            onValueChange = {
+                                diffGain = it
+                                hostRenderer.diffGain = it
+                                glSurfaceViewRef?.requestRender()
+                            },
+                            valueRange = 1f..10f,
+                            modifier = Modifier.width(160.dp)
+                        )
                     }
                 }
                 ViewMode.CHANNELS -> {
@@ -323,7 +401,11 @@ fun TuneStage(
                         listOf("RGB", "R", "G", "B", "Luma").forEachIndexed { index, label ->
                             FilterChip(
                                 selected = selectedChannel == index,
-                                onClick = { selectedChannel = index },
+                                onClick = {
+                                    selectedChannel = index
+                                    hostRenderer.selectedChannel = index
+                                    glSurfaceViewRef?.requestRender()
+                                },
                                 label = { Text(label, fontSize = 11.sp) }
                             )
                         }
@@ -341,7 +423,6 @@ fun TuneStage(
                         Column(modifier = Modifier.padding(6.dp)) {
                             Text("RGB Parade / Histogram", color = Color.LightGray, fontSize = 9.sp)
                             Spacer(Modifier.height(4.dp))
-                            // Simple waveform visualization
                             Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Box(modifier = Modifier.fillMaxHeight().width(24.dp).background(Color.Red.copy(alpha = 0.5f)))
                                 Box(modifier = Modifier.fillMaxHeight().width(24.dp).background(Color.Green.copy(alpha = 0.5f)))
@@ -431,7 +512,7 @@ fun TuneStage(
                 }
             }
 
-            // STACK PANEL (Bottom Sheet / Draggable Area)
+            // STACK PANEL
             Column(
                 modifier = Modifier
                     .weight(0.55f)
@@ -450,7 +531,6 @@ fun TuneStage(
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
-
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         IconButton(onClick = { undo() }, enabled = undoStack.isNotEmpty()) {
                             Icon(EngineIcons.Undo, contentDescription = "Undo")
@@ -495,6 +575,22 @@ fun TuneStage(
                             onParamChange = { key, value ->
                                 item.params[key] = value
                                 commitTuneState(currentTuneState)
+                            },
+                            onSliderDrag = { key, floatValue ->
+                                item.params[key] = floatValue
+                                hostRenderer.setEffectParam(item.effectId, key, floatValue)
+                                glSurfaceViewRef?.requestRender()
+
+                                saveJob?.cancel()
+                                saveJob = coroutineScope.launch {
+                                    delay(300)
+                                    tuneStateJson = currentTuneState.toJsonString()
+                                    project.tuneState = currentTuneState
+                                    repository.saveProject(project)
+                                }
+                            },
+                            onOpenColorPicker = { param, hex ->
+                                activeColorPickerParam = Triple(item, param, hex)
                             },
                             onMoveUp = {
                                 if (index > 1) { // 0 is always ms_lut
@@ -553,6 +649,30 @@ fun TuneStage(
             }
         )
     }
+
+    // Interactive Color Picker Dialog
+    activeColorPickerParam?.let { (item, param, currentHex) ->
+        ColorPickerDialog(
+            initialColorHex = currentHex,
+            paramLabel = param.label,
+            onDismiss = { activeColorPickerParam = null },
+            onColorSelected = { selectedHex ->
+                item.params[param.key] = selectedHex
+                val clean = selectedHex.removePrefix("#")
+                val num = clean.toLongOrNull(16) ?: 0L
+                val r = ((num shr 16) and 0xFF) / 255.0f
+                val g = ((num shr 8) and 0xFF) / 255.0f
+                val b = (num and 0xFF) / 255.0f
+                hostRenderer.setEffectColorParam(item.effectId, param.key, r, g, b)
+                glSurfaceViewRef?.requestRender()
+                commitTuneState(currentTuneState)
+                activeColorPickerParam = null
+            },
+            onActivateEyedropper = {
+                isEyedropperActive = true
+            }
+        )
+    }
 }
 
 @Composable
@@ -564,30 +684,32 @@ fun StackItemCard(
     onToggleExpand: () -> Unit,
     onToggleEnabled: () -> Unit,
     onParamChange: (String, Any) -> Unit,
+    onSliderDrag: ((String, Float) -> Unit)? = null,
+    onOpenColorPicker: ((EffectParam, String) -> Unit)? = null,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onDuplicate: () -> Unit,
     onReset: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (item.enabled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLowest
+            containerColor = if (item.enabled) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLowest
         )
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f).clickable { onToggleExpand() }
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onToggleExpand() }
                 ) {
                     Switch(
                         checked = item.enabled,
@@ -596,57 +718,55 @@ fun StackItemCard(
                     )
                     Column {
                         Text(
-                            def?.name ?: item.effectId,
+                            text = def?.name ?: item.effectId,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp
                         )
                         Text(
-                            def?.category ?: "Custom",
+                            text = if (isFirst) "Base 3D LUT Transform" else def?.category ?: "Effect",
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (!isFirst) {
-                        IconButton(onClick = onMoveUp, modifier = Modifier.size(28.dp)) {
-                            Icon(EngineIcons.KeyboardArrowUp, contentDescription = "Move up", modifier = Modifier.size(18.dp))
-                        }
-                        IconButton(onClick = onMoveDown, modifier = Modifier.size(28.dp)) {
-                            Icon(EngineIcons.KeyboardArrowDown, contentDescription = "Move down", modifier = Modifier.size(18.dp))
-                        }
+                    IconButton(onClick = onToggleExpand, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            if (isExpanded) EngineIcons.ExpandLess else EngineIcons.ExpandMore,
+                            contentDescription = "Expand"
+                        )
                     }
-
+                    var menuOpen by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(28.dp)) {
-                            Icon(EngineIcons.MoreVert, contentDescription = "More", modifier = Modifier.size(16.dp))
+                            Icon(EngineIcons.MoreVert, contentDescription = "Menu")
                         }
                         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            if (!isFirst) {
+                                DropdownMenuItem(
+                                    text = { Text("Move Up") },
+                                    onClick = { menuOpen = false; onMoveUp() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Move Down") },
+                                    onClick = { menuOpen = false; onMoveDown() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Duplicate") },
+                                    onClick = { menuOpen = false; onDuplicate() }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text("Duplicate") },
-                                onClick = { menuOpen = false; onDuplicate() }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Reset to Defaults") },
+                                text = { Text("Reset Defaults") },
                                 onClick = { menuOpen = false; onReset() }
                             )
                             if (!isFirst) {
-                                HorizontalDivider()
                                 DropdownMenuItem(
                                     text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
                                     onClick = { menuOpen = false; onDelete() }
                                 )
                             }
                         }
-                    }
-
-                    IconButton(onClick = onToggleExpand, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            if (isExpanded) EngineIcons.ExpandLess else EngineIcons.ExpandMore,
-                            contentDescription = "Expand",
-                            modifier = Modifier.size(18.dp)
-                        )
                     }
                 }
             }
@@ -660,7 +780,6 @@ fun StackItemCard(
                 ) {
                     def?.parameters?.forEach { p ->
                         val currentValue = item.params[p.key] ?: p.defaultValue
-
                         when (p.type) {
                             ParamType.SCALAR -> {
                                 val num = when (currentValue) {
@@ -677,7 +796,7 @@ fun StackItemCard(
                                     }
                                     Slider(
                                         value = num,
-                                        onValueChange = { onParamChange(p.key, it) },
+                                        onValueChange = { onSliderDrag?.invoke(p.key, it) ?: onParamChange(p.key, it) },
                                         valueRange = p.min..p.max
                                     )
                                 }
@@ -723,18 +842,37 @@ fun StackItemCard(
                             }
                             ParamType.COLOR -> {
                                 val colorStr = currentValue.toString()
+                                val parsedColor = try {
+                                    Color(android.graphics.Color.parseColor(colorStr))
+                                } catch (e: Exception) {
+                                    Color.White
+                                }
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(p.label, fontSize = 12.sp)
-                                    OutlinedTextField(
-                                        value = colorStr,
-                                        onValueChange = { onParamChange(p.key, it) },
-                                        modifier = Modifier.width(120.dp),
-                                        singleLine = true
-                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(parsedColor)
+                                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
+                                                .clickable { onOpenColorPicker?.invoke(p, colorStr) }
+                                        )
+                                        OutlinedButton(
+                                            onClick = { onOpenColorPicker?.invoke(p, colorStr) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(colorStr, fontSize = 11.sp)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -754,12 +892,13 @@ fun AddEffectPickerSheet(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
-
     val categories = listOf("All", "Colour correction", "Tone", "Toning", "Detail", "Look")
 
     val filtered = effects.filter { eff ->
         val matchesCat = selectedCategory == "All" || eff.category.equals(selectedCategory, ignoreCase = true)
-        val matchesSearch = searchQuery.isBlank() || eff.name.contains(searchQuery, ignoreCase = true) || eff.id.contains(searchQuery, ignoreCase = true)
+        val matchesSearch = searchQuery.isBlank() ||
+                eff.name.contains(searchQuery, ignoreCase = true) ||
+                eff.id.contains(searchQuery, ignoreCase = true)
         matchesCat && matchesSearch
     }
 
@@ -776,14 +915,14 @@ fun AddEffectPickerSheet(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search 17 Keyflaw effects...") },
+                label = { Text("Search 22 Keyflaw effects...") },
                 leadingIcon = { Icon(EngineIcons.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             ScrollableTabRow(
-                selectedTabIndex = categories.indexOf(selectedCategory),
+                selectedTabIndex = categories.indexOf(selectedCategory).coerceAtLeast(0),
                 edgePadding = 0.dp
             ) {
                 categories.forEach { cat ->
