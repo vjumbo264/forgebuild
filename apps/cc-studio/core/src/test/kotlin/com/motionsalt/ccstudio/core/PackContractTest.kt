@@ -55,4 +55,43 @@ class PackContractTest {
         val enableParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "enabled" }
         assertEquals(1.0, enableParam.getDouble("default"), 0.001)
     }
+    @Test fun unifiedSingleEffectStackExportsAllSubEffectsUnderOneEffectWithGroupsAndTunedDefaults() {
+        val stack = listOf(
+            StackItem(effectId = "colour_match", enabled = true, params = mutableMapOf("enabled" to 1.0, "strength" to 1.25)),
+            StackItem(effectId = "glow", enabled = true, params = mutableMapOf("enabled" to 1.0, "threshold" to 0.35, "radius" to 0.75, "exposure" to 2.0)),
+            StackItem(effectId = "unsharp_mask", enabled = true, params = mutableMapOf("enabled" to 1.0, "amount" to 15.0, "radius" to 1.2))
+        )
+        val unified = UnifiedLookBuilder.build(
+            lookId = "look_gojocc",
+            lookName = "Gojo CC",
+            category = "MOTIONSALT",
+            model = ParametricMatch(),
+            stackItems = stack
+        )
+        val b = pack(listOf(unified))
+        val files = entries(b)
+        val suiteJson = JSONObject(String(files.getValue("suite.json")))
+        val effectsArr = suiteJson.getJSONArray("effects")
+        assertEquals("Pack must contain exactly 1 unified effect for the look", 1, effectsArr.length())
+        assertEquals("look_gojocc", effectsArr.getString(0))
+
+        val effJson = JSONObject(String(files.getValue("effects/look_gojocc/effect.json")))
+        val params = effJson.getJSONArray("parameters")
+        val groups = (0 until params.length()).map { params.getJSONObject(it).optString("group") }.toSet()
+        assertTrue("Must have Color Correction group", groups.contains("Color Correction"))
+        assertTrue("Must have Glow group", groups.contains("Glow"))
+        assertTrue("Must have Sharpen group", groups.contains("Sharpen"))
+
+        val strengthParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "strength" }
+        assertEquals(1.25, strengthParam.getDouble("default"), 0.001)
+
+        val glowThreshParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "glowThreshold" }
+        assertEquals(0.35, glowThreshParam.getDouble("default"), 0.001)
+
+        val sharpAmtParam = (0 until params.length()).map { params.getJSONObject(it) }.first { it.getString("key") == "sharpenAmount" }
+        assertEquals(15.0, sharpAmtParam.getDouble("default"), 0.001)
+
+        val valResult = PackBuilder.validatePack(b.inputStream())
+        assertTrue("Pack validation failed: ${valResult.errors}", valResult.isValid)
+    }
 }

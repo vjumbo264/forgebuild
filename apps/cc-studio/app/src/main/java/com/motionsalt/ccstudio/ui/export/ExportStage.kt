@@ -208,37 +208,19 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                     }
 
                     val enabledItems = project.tuneState.stack.filter { it.enabled }
-                    val usedIds = mutableMapOf<String, Int>()
-                    val defs = enabledItems.map { item ->
-                        if (item.effectId == "colour_match") {
-                            MatchEffect.definition(
-                                model = model,
-                                name = name.ifBlank { "Colour Match" },
-                                id = "look_" + project.id.replace("-", "").take(10),
-                                params = item.params
-                            )
-                        } else {
-                            val original = available.firstOrNull { it.id == item.effectId }
-                                ?: error("Missing original effect: ${item.effectId}")
-                            val tunedParams = original.parameters.map { p ->
-                                val v = item.params[p.key] ?: p.defaultValue
-                                p.copy(defaultValue = v)
-                            }
-                            val count = usedIds.getOrDefault(original.id, 0)
-                            usedIds[original.id] = count + 1
-                            val effId = if (count == 0) original.id else "${original.id}_${count + 1}"
-                            PackBuilder.prepareEffect(
-                                original.copy(
-                                    id = effId,
-                                    category = "MOTIONSALT",
-                                    parameters = tunedParams,
-                                    passes = original.passes,
-                                    passShaders = original.passShaders
-                                )
-                            )
-                        }
-                    }
-                    require(defs.isNotEmpty()) { "Enable at least one effect in your stack before exporting" }
+                    require(enabledItems.isNotEmpty()) { "Enable at least one effect in your stack before exporting" }
+
+                    // Stack all color correction and tuned effects under 1 single effect
+                    val lookId = "look_" + project.id.replace("-", "").take(10)
+                    val lookDisplayName = name.ifBlank { project.lookName.ifBlank { project.name.ifBlank { "Color Correction" } } }
+                    val unifiedEffect = UnifiedLookBuilder.build(
+                        lookId = lookId,
+                        lookName = lookDisplayName,
+                        category = suite,
+                        model = model,
+                        stackItems = enabledItems
+                    )
+                    val defs = listOf(unifiedEffect)
 
                     val existing = when (mode) {
                         PackMode.CREATE_NEW -> null
