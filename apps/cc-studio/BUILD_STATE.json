@@ -205,8 +205,8 @@
     {
       "id": "T2",
       "title": "Real-pair regression harness and the match solver (core)",
-      "status": "blocked",
-      "notes": "T2 prerequisite checkpoint only. Original pair preserved; new pure Kotlin CIEDE2000 verified on 20 Sharma cases and independently vs scikit-image (<0.0003 mean difference). Aligned identity 10.14/24.60; LEGACY solver 5.83/12.68, blurred 4.85: fails gate, not a new match. Viewed upright four-panel proof: target cyan cloth, legacy blue but dark/muddy, varied edge-heavy heatmap; not operator olive screenshot. Full core 29 tests/1 pre-existing sharpen failure. Missing reference_match.py prevents required faithful port. No new APK or pack; build_complete=false."
+      "status": "in_progress",
+      "notes": "Complete Appendix A and skill now supplied. Faithful Kotlin port in progress; no app repair or release claimed yet."
     },
     {
       "id": "T3",
