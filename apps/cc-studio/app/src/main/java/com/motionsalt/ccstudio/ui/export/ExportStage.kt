@@ -98,7 +98,7 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                 }
             }
         } catch (_: Exception) {
-            // Direct write fallback on scoped storage
+            // Scoped storage fallback
         }
 
         // 2. Also register via MediaStore with exact .kfpack extension and octet-stream MIME
@@ -207,20 +207,56 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                         ParametricMatch()
                     }
 
-                    val enabledItems = project.tuneState.stack.filter { it.enabled }
-                    require(enabledItems.isNotEmpty()) { "Enable at least one effect in your stack before exporting" }
+                    // Export all stack effects so every effect added in Tune stage is present in the pack,
+                    // with its exact tuned parameters and enabled/disabled state preserved.
+                    val stack = project.tuneState.stack
+                    require(stack.isNotEmpty()) { "Stack must not be empty" }
 
-                    // Stack all color correction and tuned effects under 1 single effect
-                    val lookId = "look_" + project.id.replace("-", "").take(10)
-                    val lookDisplayName = name.ifBlank { project.lookName.ifBlank { project.name.ifBlank { "Color Correction" } } }
-                    val unifiedEffect = UnifiedLookBuilder.build(
-                        lookId = lookId,
-                        lookName = lookDisplayName,
-                        category = suite,
-                        model = model,
-                        stackItems = enabledItems
-                    )
-                    val defs = listOf(unifiedEffect)
+                    val usedIds = mutableMapOf<String, Int>()
+                    val defs = stack.map { item ->
+                        if (item.effectId == "colour_match") {
+                            val ccId = "look_" + project.id.replace("-", "").take(10)
+                            val ccName = name.ifBlank { project.lookName.ifBlank { project.name.ifBlank { "Color Correction" } } }
+                            MatchEffect.definition(
+                                model = model,
+                                name = ccName,
+                                id = ccId,
+                                params = item.params,
+                                isEnabled = item.enabled
+                            )
+                        } else {
+                            val original = available.firstOrNull { it.id == item.effectId }
+                                ?: error("Missing original effect: ${item.effectId}")
+
+                            val tunedParams = original.parameters.map { p ->
+                                val tunedVal = item.params[p.key] ?: p.defaultValue
+                                val finalVal = if (p.key == "enabled") {
+                                    if (item.enabled) PackBuilder.toEffectDefaultValue(tunedVal, ParamType.BOOL, 1.0) else 0.0
+                                } else {
+                                    PackBuilder.toEffectDefaultValue(tunedVal, p.type, p.defaultValue)
+                                }
+                                p.copy(defaultValue = finalVal)
+                            }
+
+                            val count = usedIds.getOrDefault(original.id, 0)
+                            usedIds[original.id] = count + 1
+                            val effId = if (count == 0) original.id else "${original.id}_${count + 1}"
+
+                            PackBuilder.prepareEffect(
+                                original.copy(
+                                    id = effId,
+                                    category = suite,
+                                    parameters = tunedParams,
+                                    passes = original.passes,
+                                    passShaders = original.passShaders
+                                ),
+                                suiteCategory = suite,
+                                isEnabled = item.enabled
+                            )
+                        }
+                    }
+
+                    require(defs.isNotEmpty()) { "At least one effect must be present in the pack" }
 
                     val existing = when (mode) {
                         PackMode.CREATE_NEW -> null
@@ -259,17 +295,11 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                 }
 
                 savedUri = shareUri
-                val safeSuite = if (suite.endsWith(".kfpack")) suite else "${suite}.kfpack"
-                savedPathDisplay = savedDlPath ?: "Downloads/CC_Studio/$safeSuite"
-                status = "Pack exported! Saved to $savedPathDisplay and Downloads/$safeSuite (${bytes.size / 1024} KB)"
+                savedPathDisplay = savedDlPath
+                status = "Pack exported successfully to $savedDlPath (${bytes.size} bytes, ${project.tuneState.stack.size} effects wired)"
 
-                // 3. If user selected a custom SAF tree or requested picker, handle that
                 if (launchPicker) {
-                    tree?.let { uri ->
-                        val out = PackSave.createInTree(context, uri, "${suite}.kfpack", "application/octet-stream")
-                            ?: error("Cannot create pack in selected folder")
-                        write(out)
-                    } ?: save.launch(PackSave.createDocumentIntent("${suite}.kfpack", "application/octet-stream"))
+                    save.launch(SafeSave.createDocumentIntent("${suite}.kfpack", "application/octet-stream"))
                 }
             } catch (e: Exception) {
                 status = "Export error: ${e.message}"
@@ -284,31 +314,39 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Export Keyflaw Pack (.kfpack)", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(
-            "Exports ready-to-use Keyflower effects with your tuned settings. Each effect includes an on/off toggle and live controls.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text("Export Keyflaw Pack (.kfpack)", style = MaterialTheme.typography.titleLarge)
 
-        // Pack Mode Selector
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PackMode.entries.forEach { p ->
-                FilterChip(
-                    selected = mode == p,
-                    onClick = { mode = p },
-                    label = {
-                        Text(
-                            when (p) {
-                                PackMode.ADD_TO_EXISTING -> "Add to MOTIONSALT"
-                                PackMode.CREATE_NEW -> "Create new pack"
-                                PackMode.MERGE_IMPORTED -> "Merge imported"
-                            }
-                        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Pack Destination Mode", style = MaterialTheme.typography.labelLarge)
+                SegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        onClick = { mode = PackMode.CREATE_NEW },
+                        selected = mode == PackMode.CREATE_NEW
+                    ) {
+                        Text("New Pack", fontSize = 12.sp)
                     }
-                )
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        onClick = { mode = PackMode.ADD_TO_EXISTING },
+                        selected = mode == PackMode.ADD_TO_EXISTING
+                    ) {
+                        Text("Add Existing", fontSize = 12.sp)
+                    }
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        onClick = { mode = PackMode.MERGE_IMPORTED },
+                        selected = mode == PackMode.MERGE_IMPORTED
+                    ) {
+                        Text("Merge Pack", fontSize = 12.sp)
+                    }
+                }
             }
         }
 
@@ -321,7 +359,7 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Effect look name") },
+            label = { Text("Color correction look name") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -340,23 +378,19 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Settings in exported pack:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                Text("• Enable Color Correction toggle + Strength, Matrix, Curves, Hue controls", style = MaterialTheme.typography.bodySmall)
-                val otherItems = project.tuneState.stack.filter { it.enabled && it.effectId != "colour_match" }
-                if (otherItems.isNotEmpty()) {
-                    otherItems.forEach { item ->
-                        val def = available.firstOrNull { it.id == item.effectId }
-                        val defName = def?.name ?: item.effectId
-                        val tunedDetails = def?.parameters?.filter { it.key != "enabled" }?.map { p ->
-                            val v = item.params[p.key] ?: p.defaultValue
-                            val vStr = if (v is Number) String.format(java.util.Locale.US, "%.1f", v.toFloat()) else v.toString()
-                            "${p.label}: $vStr"
-                        }?.joinToString(", ") ?: ""
-                        val suffix = if (tunedDetails.isNotBlank()) " (default: $tunedDetails)" else ""
-                        Text("• Enable $defName toggle$suffix", style = MaterialTheme.typography.bodySmall)
-                    }
-                } else {
-                    Text("• Additional effects added in Tune stage will also get individual enable toggles and controls", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Effects & settings wired in exported pack:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                project.tuneState.stack.forEach { item ->
+                    val isCC = item.effectId == "colour_match"
+                    val def = if (isCC) MatchEffect.definition() else available.firstOrNull { it.id == item.effectId }
+                    val defName = if (isCC) name.ifBlank { "Color Correction" } else (def?.name ?: item.effectId)
+                    val statusPrefix = if (item.enabled) "✓" else "✗ (disabled by default)"
+                    val tunedDetails = def?.parameters?.filter { it.key != "enabled" }?.map { p ->
+                        val v = item.params[p.key] ?: p.defaultValue
+                        val vStr = if (v is Number) String.format(java.util.Locale.US, "%.1f", v.toFloat()) else v.toString()
+                        "${p.label}: $vStr"
+                    }?.joinToString(", ") ?: ""
+                    val suffix = if (tunedDetails.isNotBlank()) " [$tunedDetails]" else ""
+                    Text("• $statusPrefix $defName$suffix", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -379,7 +413,6 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
             ) {
                 Text(if (busy) "Exporting…" else "Export to Downloads")
             }
-
             OutlinedButton(
                 enabled = !busy && name.isNotBlank(),
                 onClick = {
@@ -415,7 +448,6 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                         else
                             MaterialTheme.colorScheme.onPrimaryContainer
                     )
-
                     savedPathDisplay?.let { p ->
                         Text(
                             text = "Find in: $p",
@@ -452,7 +484,6 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
                         ) {
                             Text("Share Pack")
                         }
-
                         OutlinedButton(
                             onClick = {
                                 runCatching {
@@ -486,6 +517,7 @@ fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepos
             Checkbox(checked = saveProof, onCheckedChange = { saveProof = it })
             Text("Save colour-match proof PNG with export", fontSize = 13.sp)
         }
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = saveJson, onCheckedChange = { saveJson = it })
             Text("Save tune-state JSON with export", fontSize = 13.sp)

@@ -33,6 +33,21 @@ enum class CollisionPolicy {
 }
 
 object PackBuilder {
+    fun toEffectDefaultValue(v: Any?, paramType: ParamType, fallback: Any? = 0.0): Double {
+        val target = v ?: fallback
+        if (target == null) return 0.0
+        if (target is Boolean) return if (target) 1.0 else 0.0
+        if (target is Number) return target.toDouble()
+        val s = target.toString().trim().lowercase()
+        if (s == "true" || s == "1" || s == "1.0" || s == "yes" || s == "on") return 1.0
+        if (s == "false" || s == "0" || s == "0.0" || s == "no" || s == "off") return 0.0
+        return s.toDoubleOrNull() ?: when (fallback) {
+            is Boolean -> if (fallback) 1.0 else 0.0
+            is Number -> fallback.toDouble()
+            else -> 0.0
+        }
+    }
+
     const val MANDATORY_PRECISION_HEADER = """#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -97,9 +112,7 @@ precision mediump float;
         }
         val params = JSONArray()
         effect.parameters.forEach { p ->
-            val value = if (p.defaultValue is Boolean) {
-                if (p.defaultValue) 1.0 else 0.0
-            } else p.defaultValue
+            val value = toEffectDefaultValue(p.defaultValue, p.type, 0.0)
             val v = JSONObject()
                 .put("key", p.key)
                 .put("label", p.label)
@@ -119,17 +132,27 @@ precision mediump float;
         return obj.put("parameters", params)
     }
 
-    fun prepareEffect(effect: EffectDefinition, suiteCategory: String = "MOTIONSALT"): EffectDefinition {
+    fun prepareEffect(
+        effect: EffectDefinition,
+        suiteCategory: String = "MOTIONSALT",
+        isEnabled: Boolean = true
+    ): EffectDefinition {
         val hasEnabled = effect.parameters.any { it.key == "enabled" }
         val params = if (hasEnabled) {
-            effect.parameters
+            effect.parameters.map { p ->
+                if (p.key == "enabled") {
+                    val finalVal = if (isEnabled) toEffectDefaultValue(p.defaultValue, ParamType.BOOL, 1.0) else 0.0
+                    p.copy(defaultValue = finalVal)
+                } else p
+            }
         } else {
+            val initialVal = if (isEnabled) 1.0 else 0.0
             listOf(
                 EffectParam(
                     key = "enabled",
                     label = "Enable ${effect.name}",
                     type = ParamType.BOOL,
-                    defaultValue = 1.0,
+                    defaultValue = initialVal,
                     min = 0f,
                     max = 1f,
                     step = 1f,

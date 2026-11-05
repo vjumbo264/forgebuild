@@ -4,7 +4,7 @@
   "build_complete": false,
   "status": "in_progress",
   "updated_by": "build-agent",
-  "current_task": "U16",
+  "current_task": "U19",
   "repair2_queue": [
     {
       "id": "S1",
@@ -149,25 +149,25 @@
     {
       "id": "U16",
       "title": "Fix counterpart effect stack export, parameter tuning propagation, and disable state mapping",
-      "status": "in_progress",
+      "status": "done",
       "notes": "Diagnosed root cause: UnifiedLookBuilder in U13 collapsed all stack effects into a single look effect, dropping unsharp_mask and breaking sharpen math (subtracting unadjusted uTexture from current graded pixel blew up color). Also Boolean parameter values were cast with as? Number, evaluating to null and defaulting to 1.0 (enabled) even when disabled. Restore counterpart effect stack export where colour_match exports as look_<id> and every stack effect exports as its counterpart effect with tuned defaults, correct boolean-to-double mapping (0.0 for disabled), and enabled toggles."
     },
     {
       "id": "U17",
       "title": "Fix incomplete shaders and uniform wiring for multi-pass effects",
-      "status": "pending",
+      "status": "done",
       "notes": "Update diffusion, haze_flare, and inner_glow in assets/effects/ to use complete Keyflaw final compositing shaders from classes.dex, ensuring all uniform names match parameter declarations."
     },
     {
       "id": "U18",
       "title": "Comprehensive validation with kfpack_build, unit tests, and test pack export",
-      "status": "pending",
+      "status": "done",
       "notes": "Run ./gradlew test in apps/cc-studio, validate exported .kfpack against tools/kfpack_build.py with 0 errors, and verify parameter tuning and disabled states in generated effect.json files."
     },
     {
       "id": "U19",
       "title": "Release cc-studio-v9 via GitHub Actions and verify live release",
-      "status": "pending",
+      "status": "in_progress",
       "notes": "Trigger release.yml for apps/cc-studio, verify release cc-studio-v9 live via GitHub API, and update build_complete: true."
     }
   ],

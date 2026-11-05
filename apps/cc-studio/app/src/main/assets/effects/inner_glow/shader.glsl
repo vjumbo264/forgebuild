@@ -13,10 +13,20 @@
             return texture2D(uTexture,p).a;
         }
     
-        void main() {
-            vec2 d = uSrcTexelSize * 0.5;
-            float a = (alphaAt(vTex + vec2(-d.x,-d.y)) + alphaAt(vTex + vec2(d.x,-d.y)) +
-                       alphaAt(vTex + vec2(-d.x,d.y)) + alphaAt(vTex + vec2(d.x,d.y))) * 0.25;
-            gl_FragColor = vec4(0.0,0.0,0.0,a);
-        }
-    
+                uniform sampler2D uInput;
+                uniform float uOpacity,uFalloff,uColorR,uColorG,uColorB,uBlendMode;
+                void main() {
+                    vec4 base = texture2D(uInput,vTex);
+                    if(uSize <= 0.0 || uOpacity <= 0.0 || base.a <= 0.00001) {
+                        gl_FragColor = base; return;
+                    }
+                    float edge = clamp((base.a - texture2D(uTexture,vTex).a)/base.a,0.0,1.0);
+                    float amount = pow(max(edge,0.00001),uFalloff)*step(0.00001,edge)*
+                                   uOpacity*min(uSize/0.002,1.0);
+                    vec3 rgb = base.rgb/base.a;
+                    vec3 color = vec3(uColorR,uColorG,uColorB);
+                    vec3 lit = uBlendMode > 1.5 ? color : uBlendMode > 0.5 ?
+                               min(rgb + color,vec3(1.0)) : 1.0-(1.0-rgb)*(1.0-color);
+                    gl_FragColor = vec4(mix(rgb,lit,amount)*base.a,base.a);
+                }
+            
