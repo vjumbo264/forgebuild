@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "forgebuild-extend-pass12",
-  "current_task": "step-73",
+  "current_task": "step-74",
   "substitutions": [],
   "tasks": [
     {
@@ -443,8 +443,8 @@
     {
       "id": "step-73",
       "title": "Pass 12: Fix Gemini API token rejection root causes in AgentOrchestrator, GeminiClient, and GeminiKeyStore",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Fixed all root causes of valid Gemini API tokens being rejected in TaskFlow: (1) AgentOrchestrator.kt: fixed Pass 11 async StateFlow race in historyContents() by querying Room synchronously via chatDao.getAll() after insert, ensuring contents is never empty [] or ending with a model turn; excluded sendAudio placeholder row so audio requests stay clean; filtered internal error messages from history; defaulted missing functionCall args to empty JsonObject and preserved functionCall.id; handled BadRequestException separately from InvalidApiKeyException and logged diagnostics via CrashLogger. (2) GeminiClient.kt: stopped misclassifying all HTTP 400 responses as InvalidApiKeyException; implemented parseGoogleError() and isApiKeyRejected() to inspect Google error status/details.reason/message so only actual auth/key errors (401, 403, API_KEY_INVALID, API_KEY_*, ACCESS_TOKEN_TYPE_UNSUPPORTED) trigger key failover/InvalidApiKeyException, while malformed-request HTTP 400s fail fast with BadRequestException; sanitized keys before setting x-goog-api-key header. (3) GeminiKeyStore.kt: sanitized pasted/loaded keys to strip whitespace, newlines, and quotes so keys never split or fail OkHttp header checks; added EncryptedSharedPreferences keystore corruption recovery."
     },
     {
       "id": "step-74",

@@ -6,6 +6,7 @@ import com.forgebuild.taskflow.data.ChatMessage
 import com.forgebuild.taskflow.data.TaskFlowDb
 import com.forgebuild.taskflow.notify.NotificationHub
 import com.forgebuild.taskflow.settings.GeminiKeyStore
+import com.forgebuild.taskflow.util.CrashLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,17 +18,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
 /** Runs the multi-turn Gemini function-calling loop and records the chat transcript in Room. */
-
 typealias ChatMessage = com.forgebuild.taskflow.data.ChatMessage
 
 class AgentOrchestrator private constructor(context: Context) {
@@ -44,6 +44,15 @@ class AgentOrchestrator private constructor(context: Context) {
             instance ?: synchronized(this) {
                 instance ?: AgentOrchestrator(context.applicationContext).also { instance = it }
             }
+
+        private val INTERNAL_ERROR_PREFIXES = listOf(
+            "No Gemini API key configured.",
+            "Gemini servers are experiencing temporary high usage",
+            "Configured Gemini API key is invalid or rejected",
+            "Configured Gemini API keys failed.",
+            "Request error:",
+            "Error:"
+        )
     }
 
     private val db = TaskFlowDb.get(appContext)
@@ -102,11 +111,33 @@ class AgentOrchestrator private constructor(context: Context) {
         }
     }
 
-    private fun historyContents(): MutableList<JsonObject> {
+    /**
+     * Reads conversation history synchronously from Room SQLite rather than `messages.value`,
+     * preventing the async StateFlow emission race where newly inserted user turns are missing
+     * and Gemini receives empty `contents` or a conversation ending with a `model` turn.
+     */
+    private suspend fun historyContents(excludeMessageId: Long? = null): MutableList<JsonObject> {
+        val recent = chatDao.getAll()
+            .asSequence()
+            .filter { it.id != excludeMessageId }
+            .filter { it.role != ChatMessage.Role.ACTION }
+            .filter { m ->
+                m.role != ChatMessage.Role.MODEL ||
+                    INTERNAL_ERROR_PREFIXES.none { prefix -> m.text.startsWith(prefix) }
+            }
+            .filter { it.text.isNotBlank() }
+            .toList()
+            .takeLast(12)
+            .dropWhile { it.role != ChatMessage.Role.USER }
+
         val contents = mutableListOf<JsonObject>()
-        messages.value.takeLast(12).filter { it.role != ChatMessage.Role.ACTION }.forEach { m ->
-            contents.add(GeminiClient.content(if (m.role == ChatMessage.Role.USER) "user" else "model",
-                listOf(GeminiClient.textPart(m.text))))
+        recent.forEach { m ->
+            contents.add(
+                GeminiClient.content(
+                    if (m.role == ChatMessage.Role.USER) "user" else "model",
+                    listOf(GeminiClient.textPart(m.text))
+                )
+            )
         }
         return contents
     }
@@ -116,7 +147,13 @@ class AgentOrchestrator private constructor(context: Context) {
         if (_busy.value) return
         _busy.value = true
         chatDao.insert(ChatMessage(role = ChatMessage.Role.USER, text = userText))
-        runLoop(historyContents())
+        val contents = historyContents()
+        // Defensive guard: guarantee the newly sent user turn is always the final entry.
+        val lastRole = contents.lastOrNull()?.get("role")?.jsonPrimitive?.contentOrNull
+        if (contents.isEmpty() || lastRole != "user") {
+            contents.add(GeminiClient.content("user", listOf(GeminiClient.textPart(userText))))
+        }
+        runLoop(contents)
     }
 
     /**
@@ -126,14 +163,21 @@ class AgentOrchestrator private constructor(context: Context) {
     suspend fun sendAudio(mimeType: String, base64Audio: String) {
         if (_busy.value) return
         _busy.value = true
-        chatDao.insert(ChatMessage(role = ChatMessage.Role.USER, text = "Voice note (audio)"))
-        val contents = historyContents()
-        contents.add(GeminiClient.content("user", listOf(
-            GeminiClient.inlineDataPart(mimeType, base64Audio),
-            GeminiClient.textPart("This is a voice note the user just recorded. Listen to the audio, transcribe it yourself, then act on the spoken request (create/update/complete/list tasks as asked) exactly as if it were typed text.")
-        )))
+        val insertedId = chatDao.insert(ChatMessage(role = ChatMessage.Role.USER, text = "Voice note (audio)"))
+        val contents = historyContents(excludeMessageId = insertedId)
+        contents.add(
+            GeminiClient.content(
+                "user",
+                listOf(
+                    GeminiClient.inlineDataPart(mimeType, base64Audio),
+                    GeminiClient.textPart("This is a voice note the user just recorded. Listen to the audio, transcribe it yourself, then act on the spoken request (create/update/complete/list tasks as asked) exactly as if it were typed text.")
+                )
+            )
+        )
         runLoop(contents)
     }
+
+    private data class ParsedFnCall(val name: String, val args: JsonObject, val id: String?)
 
     private suspend fun runLoop(contents: MutableList<JsonObject>) {
         val actions = mutableListOf<String>()
@@ -150,13 +194,16 @@ class AgentOrchestrator private constructor(context: Context) {
                 // Gemini REST v1beta responds with camelCase "functionCall" parts.
                 val fnCalls = parts.mapNotNull { p ->
                     p.jsonObject["functionCall"]?.jsonObject?.let { fc ->
-                        fc["name"]?.jsonPrimitive?.content to fc["args"]?.jsonObject
+                        val name = fc["name"]?.jsonPrimitive?.contentOrNull ?: return@let null
+                        val args = (fc["args"] as? JsonObject) ?: JsonObject(emptyMap())
+                        val id = fc["id"]?.jsonPrimitive?.contentOrNull
+                        ParsedFnCall(name, args, id)
                     }
                 }
 
                 if (fnCalls.isEmpty()) {
                     // Final text response from model
-                    val text = parts.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.content }.joinToString("\n").trim()
+                    val text = parts.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull }.joinToString("\n").trim()
                     if (text.isNotEmpty()) {
                         chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL, text = text))
                         if (actions.isNotEmpty()) {
@@ -171,13 +218,13 @@ class AgentOrchestrator private constructor(context: Context) {
 
                 // Execute each function call and add function responses
                 val responseParts = mutableListOf<JsonObject>()
-                for ((name, args) in fnCalls) {
-                    if (name == null || args == null) continue
-                    val result = tools.execute(name, args)
+                for (call in fnCalls) {
+                    val result = tools.execute(call.name, call.args)
                     actions.add(result)
                     chatDao.insert(ChatMessage(role = ChatMessage.Role.ACTION, text = result))
-                    responseParts.add(GeminiClient.functionResponsePart(name, result))
+                    responseParts.add(GeminiClient.functionResponsePart(call.name, result, call.id))
                 }
+                if (responseParts.isEmpty()) break
                 contents.add(GeminiClient.content("user", responseParts))
             }
         } catch (e: GeminiClient.NoKeysException) {
@@ -188,14 +235,21 @@ class AgentOrchestrator private constructor(context: Context) {
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "Gemini servers are experiencing temporary high usage right now. The request was retried with backoff. Please try again in a few moments."))
         } catch (e: GeminiClient.InvalidApiKeyException) {
+            CrashLogger.logHandledException(appContext, "AgentOrchestrator", "Gemini API key rejected", e)
             NotificationHub.apiKeysFailed(appContext)
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "Configured Gemini API key is invalid or rejected. Check Settings."))
+        } catch (e: GeminiClient.BadRequestException) {
+            CrashLogger.logHandledException(appContext, "AgentOrchestrator", "Gemini request error (HTTP 400)", e)
+            chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
+                text = "Request error: ${e.message ?: "Could not complete request."}"))
         } catch (e: GeminiClient.AllKeysFailedException) {
+            CrashLogger.logHandledException(appContext, "AgentOrchestrator", "All Gemini API keys failed", e)
             NotificationHub.apiKeysFailed(appContext)
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "Configured Gemini API keys failed. Check Settings."))
         } catch (e: Exception) {
+            CrashLogger.logHandledException(appContext, "AgentOrchestrator", "Unexpected AI error", e)
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "Error: ${e.message ?: "Could not complete request."}"))
         } finally {

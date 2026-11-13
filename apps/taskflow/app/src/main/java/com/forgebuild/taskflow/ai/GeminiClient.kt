@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -31,7 +32,6 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
         install(HttpTimeout) { requestTimeoutMillis = 60_000; connectTimeoutMillis = 15_000 }
         expectSuccess = false
     }
-
     private val model = "gemini-flash-lite-latest"
     private fun url() = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
 
@@ -39,6 +39,24 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
     class NoKeysException : Exception("No Gemini API key configured.")
     class HighUsageExhaustedException(msg: String) : Exception(msg)
     class InvalidApiKeyException(msg: String) : Exception(msg)
+    class BadRequestException(msg: String) : Exception(msg)
+
+    private data class GoogleApiError(
+        val status: String = "",
+        val message: String = "",
+        val reasons: Set<String> = emptySet()
+    )
+
+    private fun parseGoogleError(body: String): GoogleApiError = runCatching {
+        val err = json.parseToJsonElement(body).jsonObject["error"]?.jsonObject ?: return GoogleApiError()
+        val status = err["status"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        val message = err["message"]?.jsonPrimitive?.contentOrNull.orEmpty()
+        val reasons = err["details"]?.jsonArray
+            ?.mapNotNull { runCatching { it.jsonObject["reason"]?.jsonPrimitive?.contentOrNull }.getOrNull() }
+            ?.toSet()
+            .orEmpty()
+        GoogleApiError(status = status, message = message, reasons = reasons)
+    }.getOrDefault(GoogleApiError())
 
     private fun isTemporaryHighUsage(status: Int, body: String): Boolean {
         if (status == 429 || status == 503 || status == 500 || status == 502 || status == 504) return true
@@ -52,10 +70,42 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
                 lower.contains("capacity")
     }
 
+    /**
+     * Distinguishes actual API key / auth rejections from malformed-request HTTP 400 errors
+     * (such as empty `contents` or invalid arguments), which must never be misreported as bad keys.
+     */
+    private fun isApiKeyRejected(httpStatus: Int, body: String, err: GoogleApiError): Boolean {
+        if (httpStatus == 401 || err.status == "UNAUTHENTICATED") return true
+        if (err.reasons.any {
+                it.startsWith("API_KEY_") ||
+                it == "ACCESS_TOKEN_TYPE_UNSUPPORTED" ||
+                it == "SERVICE_DISABLED" ||
+                it == "CONSUMER_INVALID"
+            }
+        ) return true
+        if (httpStatus == 403 || err.status == "PERMISSION_DENIED") return true
+        if (httpStatus == 400) {
+            val msgLower = err.message.lowercase()
+            val rawLower = body.lowercase()
+            return msgLower.contains("api key") ||
+                    msgLower.contains("api_key") ||
+                    rawLower.contains("api_key_") ||
+                    rawLower.contains("access_token_type_unsupported")
+        }
+        return false
+    }
+
+    private fun sanitizeKey(raw: String): String =
+        raw.replace(Regex("\\s+"), "").trim('"', '\'')
+
     /** Send the conversation; returns the parsed response JSON. Fails over across keys and retries high-load states. */
     suspend fun generate(contents: JsonArray, tools: JsonArray?, systemInstruction: String): JsonObject {
-        val keys = keyStore.keys.value
+        if (contents.isEmpty()) {
+            throw BadRequestException("Conversation contents cannot be empty.")
+        }
+        val keys = keyStore.keys.value.map { sanitizeKey(it) }.filter { it.isNotEmpty() }.distinct()
         if (keys.isEmpty()) throw NoKeysException()
+
         val body = buildJsonObject {
             putJsonObject("systemInstruction") {
                 putJsonArray("parts") { add(buildJsonObject { put("text", systemInstruction) }) }
@@ -80,11 +130,9 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
                     }
                     val text = resp.body<String>()
                     val status = resp.status.value
-
                     if (status in 200..299) {
                         return json.parseToJsonElement(text).jsonObject
                     }
-
                     if (isTemporaryHighUsage(status, text)) {
                         sawHighUsage = true
                         lastError = Exception("Gemini high usage (HTTP $status): $text")
@@ -108,12 +156,19 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
                         }
                     }
 
-                    if (status in listOf(400, 401, 403)) {
+                    val parsedError = parseGoogleError(text)
+                    if (isApiKeyRejected(status, text, parsedError)) {
                         sawInvalidKey = true
+                        lastError = Exception("HTTP $status (${parsedError.status}): ${parsedError.message.ifBlank { text }}")
+                        break
                     }
-                    lastError = Exception("HTTP $status: $text")
-                    break
 
+                    // Non-key HTTP 400 (e.g. malformed request payload): fail fast with real reason
+                    // instead of retrying other keys or blaming the user's API key.
+                    val detail = parsedError.message.ifBlank { "HTTP $status: $text" }
+                    throw BadRequestException(detail)
+                } catch (e: BadRequestException) {
+                    throw e
                 } catch (e: Exception) {
                     lastError = e
                     if (attempt < maxRetries) {
@@ -140,6 +195,7 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
 
     companion object {
         fun textPart(t: String): JsonObject = buildJsonObject { put("text", t) }
+
         /** Raw audio clip for Gemini's native audio understanding (no local transcription). */
         fun inlineDataPart(mimeType: String, base64Data: String): JsonObject = buildJsonObject {
             putJsonObject("inlineData") {
@@ -147,12 +203,19 @@ class GeminiClient(private val keyStore: GeminiKeyStore) {
                 put("data", base64Data)
             }
         }
+
         fun functionCallPart(name: String, args: JsonObject): JsonObject = buildJsonObject {
             putJsonObject("functionCall") { put("name", name); put("args", args) }
         }
-        fun functionResponsePart(name: String, result: String): JsonObject = buildJsonObject {
-            putJsonObject("functionResponse") { put("name", name); putJsonObject("response") { put("result", JsonPrimitive(result)) } }
+
+        fun functionResponsePart(name: String, result: String, id: String? = null): JsonObject = buildJsonObject {
+            putJsonObject("functionResponse") {
+                put("name", name)
+                if (!id.isNullOrBlank()) put("id", id)
+                putJsonObject("response") { put("result", JsonPrimitive(result)) }
+            }
         }
+
         fun content(role: String, parts: List<JsonObject>): JsonObject = buildJsonObject {
             put("role", role); put("parts", JsonArray(parts))
         }
