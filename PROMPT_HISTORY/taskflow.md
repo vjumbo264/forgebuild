@@ -369,3 +369,25 @@ Investigate and fix as follows:
 2. **Also check other LazyColumn/LazyRow usages in the app** (task lists, sub-task lists at every nesting level, completed list, unfinished list, week/month/year views, Settings lists) in case there's a second, unrelated instance of this same class of bug — particularly any list mixing recurring task instances or overnight/cross-midnight task segments with regular tasks, where two rendered rows could plausibly derive from the same underlying entity.
 3. **Fix the actual root cause, not just symptoms**: every list item's `key` must be a genuinely unique, stable identifier (e.g. a UUID or database primary key) assigned once per row and never recomputed or derived from mutable/content-based values. Never use a raw `hashCode()` of an object as a key — hashes of mutable data can coincidentally collide and are the classic cause of this exact error. Fix message persistence so every message (user-sent and AI-response) is reliably saved to durable storage as soon as it's created/received, not only once a full exchange completes.
 4. **Verify, don't assume**: after fixing, reproduce the exact sequence above (text, then separately voice note) and confirm no crash occurs and chat history survives an app restart. Also stress-test a task list containing several recurring tasks and their generated instances together. Confirm fixes work in practice, not just that the code compiles.
+
+---
+
+# TaskFlow — Revision Pass 12 (Gemini API Token Rejection Fix) — 2026-11-12
+
+There is an issue I'm having. It is rejecting my Gemini API tokens. The problem is that I tested these API tokens outside the app and it was working. So there is probably an issue with the app that is making it reject the tokens, and that issue is what I need you to fix so that I can be able to use the app and use the AI mode. Thank you.
+
+These are the tokens below so you can test them to know that they are actually working.
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...zN0A
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...MPTA
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...Yf_w
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...Hw2A
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...yMQw
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...cOgw
+
+AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...d-jw
