@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "forgebuild-extend-pass12",
-  "current_task": "step-74",
+  "current_task": "step-75",
   "substitutions": [],
   "tasks": [
     {
@@ -449,8 +449,8 @@
     {
       "id": "step-74",
       "title": "Pass 12: Verify all 7 operator tokens, multi-turn function calling, history persistence, and HTTP error classification",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified all 7 operator-provided Gemini API tokens (AQ.Ab8RN6... format) against generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent with x-goog-api-key header, systemInstruction, and TaskAgentTools declarations \u2014 all 7 returned HTTP 200 OK. Verified whitespace/quote sanitization, multi-turn function calling with functionCall.id preservation, and static Kotlin consistency across AgentOrchestrator.kt, GeminiClient.kt, and GeminiKeyStore.kt."
     },
     {
       "id": "step-75",
