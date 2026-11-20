@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-8",
-  "notes": "Step 7 complete: RecallNotificationHub, RecallScheduler, RecallController, RecallForegroundService, WakeLock RecallAlarmReceiver, RecallActionReceiver, RecallSystemReceiver, RecallApp, and AndroidManifest.xml.",
+  "current_task": "step-9",
+  "notes": "Step 8 complete: Material 3 Expressive UI (MainScreen, SettingsScreen, OnboardingScreen, RecallViewModel, MainActivity, 23 EngineIcons) and BUILD_PROGRESS.md updated.",
   "tasks": [
     {
       "id": "step-1",
@@ -52,8 +52,8 @@
     {
       "id": "step-8",
       "title": "Implement minimal Material 3 Expressive UI (MainScreen, SettingsScreen, OnboardingScreen, EngineIcons, ViewModel) and update BUILD_PROGRESS.md",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented RecallViewModel, MainScreen (real-time clock, EngineLinearWavyProgress countdown, Start/Pause/Resume/Stop, enabled intervals with quick preview), SettingsScreen (interval CRUD, 7-sound picker with live preview, independent app-gain sliders, output route detection & Global Test, heads-up & high-precision toggles, permission checks, diagnostics log viewer), OnboardingScreen, MainActivity, and 23 Material Symbols icons via tools/gen_icons.py."
     },
     {
       "id": "step-9",
