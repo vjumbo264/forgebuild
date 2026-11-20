@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-4",
-  "notes": "Step 3 complete: RECALL adaptive icon layers generated with vector/icon-style monochrome support.",
+  "current_task": "step-5",
+  "notes": "Step 4 complete: verified KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist on vjumbo264/forgebuild.",
   "tasks": [
     {
       "id": "step-1",
@@ -28,8 +28,8 @@
     {
       "id": "step-4",
       "title": "Confirm repo-level signing secrets exist (do not regenerate)",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Verified via GitHub Actions Secrets API: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD all present (not regenerated)."
     },
     {
       "id": "step-5",
