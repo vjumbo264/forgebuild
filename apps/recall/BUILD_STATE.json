@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-2",
-  "notes": "Phase 1 TaskFlow inspection complete. Engine copied into apps/recall/ and PROMPT_HISTORY/recall.md seeded.",
+  "current_task": "step-3",
+  "notes": "Identity configured and Phase 1 TaskFlow inspection documented in BUILD_PROGRESS.md.",
   "tasks": [
     {
       "id": "step-1",
@@ -16,8 +16,8 @@
     {
       "id": "step-2",
       "title": "Set identity inside apps/recall/ and write BUILD_PROGRESS.md (Phase 1 TaskFlow inspection + plan)",
-      "status": "pending",
-      "notes": "Set namespace/applicationId to com.forgebuild.recall, app_name to RECALL, launcher activity to com.forgebuild.recall.MainActivity, and document TaskFlow inspection findings & implementation plan in BUILD_PROGRESS.md."
+      "status": "done",
+      "notes": "namespace/applicationId=com.forgebuild.recall, app_name=RECALL, rootProject.name=RECALL, launcher activity com.forgebuild.recall.MainActivity, BUILD_PROGRESS.md written with full Phase 1 TaskFlow inspection findings."
     },
     {
       "id": "step-3",
