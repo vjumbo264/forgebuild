@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -147,6 +148,40 @@ object PermissionWiring {
         val can = bm.getMethod("canAuthenticate", Int::class.javaPrimitiveType).invoke(from, 0x000f) as Int
         can == 0 // BiometricManager.BIOMETRIC_SUCCESS
     }.getOrDefault(false)
+
+    fun isBatteryOptimizationExempt(context: Context): Boolean {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+        return pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    /** Triggers the OS-level battery optimization exemption prompt (with Settings fallback). */
+    fun requestBatteryExemption(context: Context) {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
+            try {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {
+                try {
+                    val fallback = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                        if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(fallback)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    /** True when the app may schedule exact alarms (API 31+); true below 31. */
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return true
+        val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+        return am.canScheduleExactAlarms()
+    }
 
     /** Exact alarms (Android 12+): opens the special-access screen if not already allowed. */
     fun requestExactAlarm(activity: Activity) {

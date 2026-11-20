@@ -159,7 +159,7 @@ fun MainScreen(
                         RecallStatus.PAUSED -> MaterialTheme.colorScheme.tertiaryContainer
                         RecallStatus.STOPPED -> ElevationTokens.tonalContainerColor(4)
                     },
-                    animationSpec = MotionTokens.defaultEffects,
+                    animationSpec = MotionTokens.scheme.defaultEffectsSpec(),
                     label = "statusBg",
                 )
                 val statusContentColor by animateColorAsState(
@@ -168,7 +168,7 @@ fun MainScreen(
                         RecallStatus.PAUSED -> MaterialTheme.colorScheme.onTertiaryContainer
                         RecallStatus.STOPPED -> MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                    animationSpec = MotionTokens.defaultEffects,
+                    animationSpec = MotionTokens.scheme.defaultEffectsSpec(),
                     label = "statusFg",
                 )
 
