@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-7",
-  "notes": "Step 6 complete: 44.1kHz PCM16 synthesizer (7 distinctive chimes), USAGE_ALARM AudioEngine with perceptual app-level gain, AudioFocus handling, output route detection, RecallDiagnostics, and sound synth unit tests.",
+  "current_task": "step-8",
+  "notes": "Step 7 complete: RecallNotificationHub, RecallScheduler, RecallController, RecallForegroundService, WakeLock RecallAlarmReceiver, RecallActionReceiver, RecallSystemReceiver, RecallApp, and AndroidManifest.xml.",
   "tasks": [
     {
       "id": "step-1",
@@ -46,8 +46,8 @@
     {
       "id": "step-7",
       "title": "Port & improve TaskFlow background execution, exact alarm scheduling, WakeLock receiver, reboot/time-change recovery, and notifications",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Ported and improved TaskFlow background architecture: event-driven specialUse RecallForegroundService, exact AlarmManager scheduler (setExactAndAllowWhileIdle + optional setAlarmClock), bounded WakeLock RecallAlarmReceiver with missed-event suppression, RecallActionReceiver (Pause/Resume/Stop), RecallSystemReceiver (BOOT_COMPLETED/MY_PACKAGE_REPLACED/TIME_SET/TIMEZONE_CHANGED/EXACT_ALARM_PERMISSION_STATE_CHANGED), RecallNotificationHub, and RecallApp."
     },
     {
       "id": "step-8",
