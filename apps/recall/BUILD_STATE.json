@@ -2,10 +2,10 @@
   "slug": "recall",
   "app_name": "RECALL",
   "package": "com.forgebuild.recall",
-  "build_complete": false,
+  "build_complete": true,
   "updated_by": "build-agent",
-  "current_task": "step-9",
-  "notes": "Step 8 complete: Material 3 Expressive UI (MainScreen, SettingsScreen, OnboardingScreen, RecallViewModel, MainActivity, 23 EngineIcons) and BUILD_PROGRESS.md updated.",
+  "current_task": "complete",
+  "notes": "All tasks complete. recall-v1 verified live on GitHub Releases (1,423,260 bytes, apksigner + SHA-256 verified) and all JVM unit tests pass.",
   "tasks": [
     {
       "id": "step-1",
@@ -58,14 +58,14 @@
     {
       "id": "step-9",
       "title": "Validate build configuration, dispatch release.yml (app_path=apps/recall), verify recall-v1 release + APK asset live",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "recall-tests.yml passed (:app:testDebugUnitTest + :app:assembleDebug) on dd51a7b; release.yml run 44802247502 succeeded; recall-v1 verified live via GitHub Releases API with app-recall-v1.apk (1,423,260 bytes), forgebuild-manifest.json, and release.json."
     },
     {
       "id": "step-10",
       "title": "Set apps/recall/BUILD_STATE.json build_complete: true after recall-v1 is verified live",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Set build_complete: true after verifying recall-v1 release and APK asset live on vjumbo264/forgebuild."
     }
   ],
   "dependencies_justified": [
@@ -77,5 +77,7 @@
       "dep": "junit:junit:4.13.2 (testImplementation)",
       "reason": "JVM unit tests for global clock synchronization, priority resolution, missed-event suppression, and persistence."
     }
-  ]
+  ],
+  "release_tag": "recall-v1",
+  "release_url": "https://github.com/vjumbo264/forgebuild/releases/tag/recall-v1"
 }
