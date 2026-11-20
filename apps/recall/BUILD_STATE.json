@@ -1,0 +1,71 @@
+{
+  "slug": "recall",
+  "app_name": "RECALL",
+  "package": "com.forgebuild.recall",
+  "build_complete": false,
+  "updated_by": "build-agent",
+  "current_task": "step-2",
+  "notes": "Phase 1 TaskFlow inspection complete. Engine copied into apps/recall/ and PROMPT_HISTORY/recall.md seeded.",
+  "tasks": [
+    {
+      "id": "step-1",
+      "title": "Choose slug, copy engine/ into apps/recall/, add PROMPT_HISTORY/recall.md, seed BUILD_STATE.json, commit & push proof",
+      "status": "done",
+      "notes": "Chosen slug 'recall' (verified no collision in apps/). Full engine/ content copied into apps/recall/ (excluding __pycache__). PROMPT_HISTORY/recall.md created with operator prompt."
+    },
+    {
+      "id": "step-2",
+      "title": "Set identity inside apps/recall/ and write BUILD_PROGRESS.md (Phase 1 TaskFlow inspection + plan)",
+      "status": "pending",
+      "notes": "Set namespace/applicationId to com.forgebuild.recall, app_name to RECALL, launcher activity to com.forgebuild.recall.MainActivity, and document TaskFlow inspection findings & implementation plan in BUILD_PROGRESS.md."
+    },
+    {
+      "id": "step-3",
+      "title": "Generate adaptive icon via apps/recall/tools/make_adaptive_icon.py",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-4",
+      "title": "Confirm repo-level signing secrets exist (do not regenerate)",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-5",
+      "title": "Implement core data model, persistence, clock-boundary synchronization, priority resolution, and unit tests",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-6",
+      "title": "Implement audio synthesis & USAGE_ALARM playback engine with app-level gain and AudioFocus handling",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-7",
+      "title": "Port & improve TaskFlow background execution, exact alarm scheduling, WakeLock receiver, reboot/time-change recovery, and notifications",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-8",
+      "title": "Implement minimal Material 3 Expressive UI (MainScreen, SettingsScreen, OnboardingScreen, EngineIcons, ViewModel) and update BUILD_PROGRESS.md",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-9",
+      "title": "Validate build configuration, dispatch release.yml (app_path=apps/recall), verify recall-v1 release + APK asset live",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-10",
+      "title": "Set apps/recall/BUILD_STATE.json build_complete: true after recall-v1 is verified live",
+      "status": "pending",
+      "notes": ""
+    }
+  ]
+}
