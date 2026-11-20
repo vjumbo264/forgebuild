@@ -85,4 +85,10 @@ dependencies {
     // dependency, do not remove even though the starter UI itself is coroutine-free.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     debugImplementation("androidx.compose.ui:ui-tooling:$composeTrain")
+
+    // --- RECALL feature dependencies (justified in BUILD_STATE.json) ---
+    // ViewModel-Compose integration for reactive clock/countdown & settings state.
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    // JUnit4 for JVM unit tests of clock-boundary synchronization & priority resolution.
+    testImplementation("junit:junit:4.13.2")
 }

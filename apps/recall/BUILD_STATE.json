@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-5",
-  "notes": "Step 4 complete: verified KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD exist on vjumbo264/forgebuild.",
+  "current_task": "step-6",
+  "notes": "Step 5 complete: data models, pure-Kotlin JSON codec, ClockSyncEngine, RecallRepository, 10 JVM unit tests, and CI test workflow.",
   "tasks": [
     {
       "id": "step-1",
@@ -34,8 +34,8 @@
     {
       "id": "step-5",
       "title": "Implement core data model, persistence, clock-boundary synchronization, priority resolution, and unit tests",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented RecallModels, RecallJsonCodec (pure Kotlin, zero extra deps), ClockSyncEngine (wall-clock boundary alignment + priority resolution + early/duplicate/missed guards), RecallRepository, 10 JUnit4 unit tests, and recall-tests.yml CI workflow."
     },
     {
       "id": "step-6",
@@ -66,6 +66,16 @@
       "title": "Set apps/recall/BUILD_STATE.json build_complete: true after recall-v1 is verified live",
       "status": "pending",
       "notes": ""
+    }
+  ],
+  "dependencies_justified": [
+    {
+      "dep": "androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0",
+      "reason": "ViewModel-Compose state management for reactive clock/countdown and interval editing."
+    },
+    {
+      "dep": "junit:junit:4.13.2 (testImplementation)",
+      "reason": "JVM unit tests for global clock synchronization, priority resolution, missed-event suppression, and persistence."
     }
   ]
 }
