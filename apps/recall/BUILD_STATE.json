@@ -4,8 +4,8 @@
   "package": "com.forgebuild.recall",
   "build_complete": false,
   "updated_by": "build-agent",
-  "current_task": "step-6",
-  "notes": "Step 5 complete: data models, pure-Kotlin JSON codec, ClockSyncEngine, RecallRepository, 10 JVM unit tests, and CI test workflow.",
+  "current_task": "step-7",
+  "notes": "Step 6 complete: 44.1kHz PCM16 synthesizer (7 distinctive chimes), USAGE_ALARM AudioEngine with perceptual app-level gain, AudioFocus handling, output route detection, RecallDiagnostics, and sound synth unit tests.",
   "tasks": [
     {
       "id": "step-1",
@@ -40,8 +40,8 @@
     {
       "id": "step-6",
       "title": "Implement audio synthesis & USAGE_ALARM playback engine with app-level gain and AudioFocus handling",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Implemented RecallSoundSynth (7 distinct chimes, perceptual app gain), RecallAudioEngine (USAGE_ALARM, transient ducking AudioFocusRequest, AudioDeviceInfo output inspection, blocking & preview playback), RecallDiagnostics, and RecallSoundSynthTest."
     },
     {
       "id": "step-7",
