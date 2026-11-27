@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.forgebuild.taskflow.data.TaskCategory
 
 private enum class Screen { LIST, SETTINGS, COMPLETED, UNFINISHED }
 
@@ -18,6 +19,7 @@ fun TaskFlowNav(vm: TaskViewModel) {
     var editingTaskId by remember { mutableStateOf<Long?>(null) }
     var chatOpen by remember { mutableStateOf(false) }
     var creationOpen by remember { mutableStateOf(false) }
+    var creationInitialCategory by remember { mutableStateOf(TaskCategory.DEFAULT) }
     var chatInitialMic by remember { mutableStateOf(false) }
     val path by vm.path.collectAsState()
 
@@ -61,7 +63,10 @@ fun TaskFlowNav(vm: TaskViewModel) {
             onOpenUnfinished = { screen = Screen.UNFINISHED },
             onOpenCompleted = { screen = Screen.COMPLETED },
             onOpenSettings = { screen = Screen.SETTINGS },
-            onCreateTask = { creationOpen = true },
+            onCreateTask = { initialCategory ->
+                creationInitialCategory = initialCategory
+                creationOpen = true
+            },
             onOpenChat = { startListening ->
                 chatInitialMic = startListening
                 chatOpen = true
@@ -73,6 +78,7 @@ fun TaskFlowNav(vm: TaskViewModel) {
         TaskCreationSheet(
             vm = vm,
             parentId = path.lastOrNull(),
+            initialCategory = creationInitialCategory,
             onClose = { creationOpen = false }
         )
     }

@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "forgebuild-extend-pass13",
-  "current_task": "step-78",
+  "current_task": "step-79",
   "substitutions": [],
   "tasks": [
     {
@@ -473,8 +473,8 @@
     {
       "id": "step-78",
       "title": "Pass 13: Update main home screen layout to 4-category responsive 2x2 grid / collapsible mobile cards with quick-add, move-category, search, and M3 Expressive UI",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Updated TaskFlow home screen and secondary screens for the 4-category Eisenhower Matrix: added CategoryUi.kt (M3 Expressive theme-role palette, 2x2 CategorySelector, MoveCategorySheet), updated TaskRowItem.kt (wrap-safe compact layout + Move category menu item), redesigned TaskListScreen.kt with responsive 2x2 grid (>=600dp) and collapsible stacked cards (<600dp), per-category counts, inline quick-add + full creation sheet scoping, search across quadrants, and clear empty states; updated TaskFlowNav, TaskCreationSheet, TaskEditScreen, CompletedTasksScreen, and UnfinishedTasksScreen."
     },
     {
       "id": "step-79",

@@ -1,3 +1,7 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class
+)
 package com.forgebuild.taskflow.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,13 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,12 +47,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Unfinished view — SEPARATE from Completed. Holds fixed-time tasks whose time passed
- * without completion. They leave the active list (no carry-over, no due-now pin) and can
- * be reviewed here, restored to active (as an untimed task) or deleted.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UnfinishedTasksScreen(
     vm: TaskViewModel,
@@ -58,7 +54,6 @@ fun UnfinishedTasksScreen(
 ) {
     val missedList by vm.unfinishedTasks.collectAsState()
     var showClearDialog by remember { mutableStateOf(false) }
-
     val dateFormat = remember { SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()) }
 
     Scaffold(
@@ -94,7 +89,6 @@ fun UnfinishedTasksScreen(
                 .padding(horizontal = SpacingTokens.Spacing.md)
         ) {
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
-
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth()
@@ -106,13 +100,12 @@ fun UnfinishedTasksScreen(
                 ) {
                     Icon(EngineIcons.Info, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                     Text(
-                        "Fixed-time tasks whose time passed without completion land here — they no longer carry over or stay pinned in the active list. Restore one to make it active again (as an untimed task).",
+                        "Fixed-time tasks whose time passed without completion land here — they no longer carry over or stay pinned in the active list. Restore one to return it to its Eisenhower quadrant (as an untimed task).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
             if (missedList.isEmpty()) {
@@ -201,7 +194,6 @@ private fun MissedTaskItem(
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(20.dp)
             )
-
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -214,23 +206,14 @@ private fun MissedTaskItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = whenText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Text(
-                        text = "• ${task.durationMinutes}m",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
+                Text(
+                    text = "$whenText • ${task.durationMinutes}m • ${task.category.label}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-
             TextButton(onClick = onRestore) { Text("Restore") }
             IconButton(onClick = onDelete) {
                 Icon(

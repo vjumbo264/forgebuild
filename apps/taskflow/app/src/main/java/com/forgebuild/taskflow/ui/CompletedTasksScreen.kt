@@ -1,3 +1,7 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class
+)
 package com.forgebuild.taskflow.ui
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,14 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,7 +49,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompletedTasksScreen(
     vm: TaskViewModel,
@@ -56,7 +57,6 @@ fun CompletedTasksScreen(
     val completedList by vm.completedTasks.collectAsState()
     val retentionDays by vm.retentionDays.collectAsState()
     var showClearDialog by remember { mutableStateOf(false) }
-
     val dateFormat = remember { SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()) }
 
     Scaffold(
@@ -92,8 +92,6 @@ fun CompletedTasksScreen(
                 .padding(horizontal = SpacingTokens.Spacing.md)
         ) {
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
-
-            // Retention banner
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 modifier = Modifier.fillMaxWidth()
@@ -105,13 +103,12 @@ fun CompletedTasksScreen(
                 ) {
                     Icon(EngineIcons.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Text(
-                        "Completed tasks auto-delete after $retentionDays days (adjustable in Settings). Uncheck any task to restore it to your active list.",
+                        "Completed tasks auto-delete after $retentionDays days (adjustable in Settings). Uncheck any task to restore it to its Eisenhower quadrant.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-
             Spacer(Modifier.height(SpacingTokens.Spacing.sm))
 
             if (completedList.isEmpty()) {
@@ -198,7 +195,6 @@ private fun CompletedTaskItem(
                 checked = true,
                 onCheckedChange = { onRestore() }
             )
-
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -211,23 +207,14 @@ private fun CompletedTaskItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = completedText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    Text(
-                        text = "• ${task.durationMinutes}m",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
+                Text(
+                    text = "$completedText • ${task.durationMinutes}m • ${task.category.label}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-
             IconButton(onClick = onDelete) {
                 Icon(
                     EngineIcons.Delete,

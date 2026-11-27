@@ -1,10 +1,14 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
+)
 package com.forgebuild.taskflow.ui
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +22,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +48,7 @@ import com.forgebuild.engine.ui.icons.EngineIcons
 import com.forgebuild.engine.ui.theme.SpacingTokens
 import com.forgebuild.taskflow.data.Recurrence
 import com.forgebuild.taskflow.data.RecurrenceEngine
+import com.forgebuild.taskflow.data.TaskCategory
 import com.forgebuild.taskflow.data.TaskType
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -52,20 +56,20 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Full up-front task creation sheet: the "+" action opens this BEFORE anything is saved.
- * Title, mandatory duration, fixed time, recurrence (+ optional expiration), info and the
- * resulting type are all configured here; the task is written only when the user confirms.
- * (Fields stay editable afterwards from the edit screen as before.)
+ * Full up-front task creation sheet: title, Eisenhower category, mandatory duration,
+ * scheduled date, fixed time, recurrence (+ optional expiration), and info are
+ * configured before saving.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskCreationSheet(
     vm: TaskViewModel,
     parentId: Long?,
+    initialCategory: TaskCategory = TaskCategory.DEFAULT,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
     var title by remember { mutableStateOf("") }
+    var category by remember(initialCategory) { mutableStateOf(initialCategory) }
     var durationMinutes by remember { mutableLongStateOf(30L) }
     var info by remember { mutableStateOf("") }
     var scheduledDate by remember { mutableStateOf<Long?>(null) }
@@ -75,7 +79,6 @@ fun TaskCreationSheet(
     var endDate by remember { mutableStateOf<Long?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val fmt = remember { SimpleDateFormat("EEE, MMM d yyyy · HH:mm", Locale.getDefault()) }
     val dateFmt = remember { SimpleDateFormat("MMM d yyyy", Locale.getDefault()) }
     val dateOnlyFmt = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault()) }
     val timeOnlyFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
@@ -130,7 +133,11 @@ fun TaskCreationSheet(
                 shape = MaterialTheme.shapes.medium
             )
 
-            // Duration (mandatory)
+            CategorySelector(
+                selected = category,
+                onSelect = { category = it }
+            )
+
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Duration (mandatory)", style = MaterialTheme.typography.titleSmall)
                 Row(
@@ -146,7 +153,7 @@ fun TaskCreationSheet(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
-                    OutlinedButton(onClick = { durationMinutes = durationMinutes + 15L }) {
+                    OutlinedButton(onClick = { durationMinutes += 15L }) {
                         Text("+15m")
                     }
                 }
@@ -164,7 +171,6 @@ fun TaskCreationSheet(
                 }
             }
 
-            // Scheduled date (optional, defaults to Today)
             Text("Scheduled date", style = MaterialTheme.typography.titleSmall)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
@@ -208,7 +214,6 @@ fun TaskCreationSheet(
                 }
             }
 
-            // Fixed clock time (optional)
             Text("Fixed clock time (optional)", style = MaterialTheme.typography.titleSmall)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
@@ -236,7 +241,6 @@ fun TaskCreationSheet(
                 }
             }
 
-            // Recurrence
             Text("Repeat rule", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                 Recurrence.entries.forEach { r ->
@@ -261,7 +265,6 @@ fun TaskCreationSheet(
                 }
             }
 
-            // Recurrence expiration (optional): repeat until <date>, then stop generating instances.
             if (recurrence != Recurrence.NONE) {
                 Text("Until (optional — recurrence stops after this date)", style = MaterialTheme.typography.titleSmall)
                 Row(
@@ -286,7 +289,6 @@ fun TaskCreationSheet(
                 }
             }
 
-            // Info / notes
             OutlinedTextField(
                 value = info,
                 onValueChange = { info = it },
@@ -296,7 +298,6 @@ fun TaskCreationSheet(
                 shape = MaterialTheme.shapes.medium
             )
 
-            // Type preview (color/type derived from the choices above)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -325,7 +326,6 @@ fun TaskCreationSheet(
 
             Spacer(Modifier.height(SpacingTokens.Spacing.xs))
 
-            // The task is written ONLY on this confirm — never bare-created first.
             Button(
                 onClick = {
                     if (title.isBlank()) {
@@ -341,7 +341,9 @@ fun TaskCreationSheet(
                         recurrence = recurrence,
                         weekdaysMask = weekdaysMask,
                         info = info.trim(),
-                        recurrenceEndDate = if (recurrence == Recurrence.NONE) null else endDate
+                        recurrenceEndDate = if (recurrence == Recurrence.NONE) null else endDate,
+                        parentId = parentId,
+                        category = category
                     )
                     onClose()
                 },
@@ -351,8 +353,8 @@ fun TaskCreationSheet(
             ) {
                 Text("Create task")
             }
-            TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
 
+            TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
             Spacer(Modifier.height(SpacingTokens.Spacing.lg))
         }
     }

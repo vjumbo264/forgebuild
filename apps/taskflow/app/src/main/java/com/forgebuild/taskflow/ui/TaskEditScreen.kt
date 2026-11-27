@@ -1,12 +1,15 @@
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
+)
 package com.forgebuild.taskflow.ui
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -25,7 +27,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +40,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -63,7 +63,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskEditScreen(
     vm: TaskViewModel,
@@ -72,12 +71,7 @@ fun TaskEditScreen(
 ) {
     val task by produceState<Task?>(null, taskId) { value = vm.repo.get(taskId) }
     val subtasks by produceState<List<Task>>(emptyList(), taskId) { value = vm.repo.siblingsOf(taskId) }
-    // Parent duration-cap error (live): cumulative direct children must stay ≤ parent duration.
-    val childCapError by produceState<String?>(null, taskId, subtasks.size) {
-        value = vm.repo.childDurationError(taskId, 0L)
-    }
     val context = LocalContext.current
-
     val current = task
     if (current == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ExpressiveLoading() }
@@ -85,6 +79,7 @@ fun TaskEditScreen(
     }
 
     var title by remember(current.id) { mutableStateOf(current.title) }
+    var category by remember(current.id) { mutableStateOf(current.category) }
     var durationMinutes by remember(current.id) { mutableLongStateOf(current.durationMinutes) }
     var info by remember(current.id) { mutableStateOf(current.info) }
     var scheduledDate by remember(current.id) { mutableStateOf(current.scheduledDate) }
@@ -92,14 +87,12 @@ fun TaskEditScreen(
     var recurrence by remember(current.id) { mutableStateOf(current.recurrence) }
     var weekdaysMask by remember(current.id) { mutableIntStateOf(current.weekdaysMask) }
     var endDate by remember(current.id) { mutableStateOf(current.recurrenceEndDate) }
-
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
     var newSubtaskTitle by remember { mutableStateOf("") }
-    var newSubtaskDuration by remember { mutableLongStateOf(15L) }
+    val newSubtaskDuration = 15L
 
-    val fmt = remember { SimpleDateFormat("EEE, MMM d yyyy · HH:mm", Locale.getDefault()) }
     val dateFmt = remember { SimpleDateFormat("MMM d yyyy", Locale.getDefault()) }
     val dateOnlyFmt = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.getDefault()) }
     val timeOnlyFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
@@ -143,7 +136,6 @@ fun TaskEditScreen(
                 }
             }
 
-            // Title
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -152,7 +144,11 @@ fun TaskEditScreen(
                 shape = MaterialTheme.shapes.medium
             )
 
-            // Duration (mandatory)
+            CategorySelector(
+                selected = category,
+                onSelect = { category = it }
+            )
+
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Duration (mandatory)", style = MaterialTheme.typography.titleSmall)
                 Row(
@@ -168,11 +164,10 @@ fun TaskEditScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
-                    OutlinedButton(onClick = { durationMinutes = durationMinutes + 15L }) {
+                    OutlinedButton(onClick = { durationMinutes += 15L }) {
                         Text("+15m")
                     }
                 }
-
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(15L, 30L, 45L, 60L, 90L, 120L).forEach { d ->
                         val sel = durationMinutes == d
@@ -187,7 +182,6 @@ fun TaskEditScreen(
                 }
             }
 
-            // Notes / Info
             OutlinedTextField(
                 value = info,
                 onValueChange = { info = it },
@@ -197,7 +191,6 @@ fun TaskEditScreen(
                 shape = MaterialTheme.shapes.medium
             )
 
-            // Scheduled date (optional, defaults to Today)
             Text("Scheduled date", style = MaterialTheme.typography.titleSmall)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
@@ -241,7 +234,6 @@ fun TaskEditScreen(
                 }
             }
 
-            // Fixed clock time (optional)
             Text("Fixed clock time (optional)", style = MaterialTheme.typography.titleSmall)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs),
@@ -268,7 +260,7 @@ fun TaskEditScreen(
                     OutlinedButton(onClick = { fixedTime = null }) { Text("Clear time") }
                 }
             }
-            // Recurrence
+
             Text("Repeat rule", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
                 Recurrence.entries.forEach { r ->
@@ -279,7 +271,6 @@ fun TaskEditScreen(
                     )
                 }
             }
-
             if (recurrence == Recurrence.WEEKLY) {
                 Text("Select active days:", style = MaterialTheme.typography.labelMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)) {
@@ -294,7 +285,6 @@ fun TaskEditScreen(
                 }
             }
 
-            // Recurrence expiration (optional): repeat until <date>, then stop generating instances.
             if (recurrence != Recurrence.NONE) {
                 Text("Until (optional — recurrence stops after this date)", style = MaterialTheme.typography.titleSmall)
                 Row(
@@ -319,10 +309,8 @@ fun TaskEditScreen(
                 }
             }
 
-            // Sub-tasks section
             Spacer(Modifier.height(SpacingTokens.Spacing.xs))
             Text("Sub-tasks (${subtasks.size})", style = MaterialTheme.typography.titleSmall)
-            // Live budget: Σ direct children durations ≤ this task's duration (incl. overnight spans).
             val subUsed = subtasks.sumOf { it.durationMinutes.coerceAtLeast(1L) }
             Text(
                 "Sub-task budget: ${subUsed}m of ${current.durationMinutes}m used",
@@ -354,7 +342,6 @@ fun TaskEditScreen(
                 }
             }
 
-            // Add sub-task
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(SpacingTokens.Spacing.xs)
@@ -370,12 +357,11 @@ fun TaskEditScreen(
                 IconButton(
                     onClick = {
                         if (newSubtaskTitle.isNotBlank()) {
-                            // Pass 7 FIX: nest under THIS task (was defaulting to the nav
-                            // level, creating a standalone root task instead of a child).
                             vm.addTask(
                                 title = newSubtaskTitle,
                                 durationMinutes = newSubtaskDuration,
-                                parentId = current.id
+                                parentId = current.id,
+                                category = category
                             )
                             newSubtaskTitle = ""
                         }
@@ -398,6 +384,7 @@ fun TaskEditScreen(
                     vm.saveEdit(
                         current.copy(
                             title = title.trim(),
+                            category = category,
                             durationMinutes = durationMinutes.coerceAtLeast(1L),
                             info = info.trim(),
                             fixedTime = fixedTime,

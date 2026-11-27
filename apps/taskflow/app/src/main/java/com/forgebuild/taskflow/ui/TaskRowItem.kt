@@ -1,19 +1,16 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
-
 package com.forgebuild.taskflow.ui
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.graphics.graphicsLayer
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -21,6 +18,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,15 +29,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -96,20 +95,22 @@ private fun fmtCountdown(ms: Long): String {
 }
 
 /**
- * Expressive task row: full-bleed container on the largeIncreased shape tier,
- * type-dot + per-type container tint, loud pulsing DUE NOW state that persists for
- * the task's whole span, a subtle "time passed" state once the span elapses
- * uncompleted, and an inline countdown timer control (play / pause / extend / done).
+ * Expressive task row inside Eisenhower quadrant cards and subtask views.
+ * Adapts cleanly to both compact 2x2 grid quadrants and full-width mobile cards
+ * so titles and metadata wrap cleanly without clipping or horizontal overflow.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TaskRowItem(
     task: Task,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     nowTick: Long = System.currentTimeMillis(),
     onToggle: () -> Unit,
     onOpen: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onMoveCategory: () -> Unit = {},
     onPeekInfo: () -> Unit,
     onTimerToggle: () -> Unit = {},
     onTimerExtend: () -> Unit = {},
@@ -140,9 +141,6 @@ fun TaskRowItem(
     val timerState = TimerEngine.stateOf(task, nowTick)
     val timerRemaining = TimerEngine.remainingMs(task, nowTick)
 
-    // Pass 6: subtle "time's passed but not done" window — the fixed-time span
-    // (start .. start+duration) fully elapsed, task still active & uncompleted.
-    // Distinct from BOTH the loud due-now alert and the normal state.
     val overdueWindow = !task.dueNow && !task.completed && task.fixedTime != null &&
         (task.fixedTime + task.durationMinutes.coerceAtLeast(1L) * 60_000L) <= nowTick
 
@@ -165,9 +163,6 @@ fun TaskRowItem(
         label = "dueNowAlpha"
     )
 
-    // 4-type colour language; Pass 6 dark-mode fix: recurring containers were too
-    // bright/harsh in dark theme — tone their alpha down there, mirroring how the
-    // other type tints already sit quietly against dark surfaces.
     val dark = isSystemInDarkTheme()
     val typeColor = when (task.taskType) {
         TaskType.RECURRING_FIXED -> MaterialTheme.colorScheme.tertiary
@@ -175,6 +170,7 @@ fun TaskRowItem(
         TaskType.FIXED_TIME -> MaterialTheme.colorScheme.secondary
         TaskType.NORMAL -> MaterialTheme.colorScheme.outline
     }
+
     val targetContainer = when {
         isCompleting -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (dark) 0.85f else 0.95f)
         task.dueNow -> MaterialTheme.colorScheme.errorContainer
@@ -182,12 +178,12 @@ fun TaskRowItem(
             MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (dark) 0.34f else 0.55f)
         overdueWindow -> MaterialTheme.colorScheme.surfaceContainerHigh
         task.taskType == TaskType.RECURRING_FIXED ->
-            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (dark) 0.20f else 0.40f)
+            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = if (dark) 0.20f else 0.36f)
         task.taskType == TaskType.RECURRING_NO_TIME ->
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (dark) 0.16f else 0.32f)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (dark) 0.16f else 0.28f)
         task.taskType == TaskType.FIXED_TIME ->
-            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dark) 0.24f else 0.40f)
-        else -> MaterialTheme.colorScheme.surfaceContainerLow
+            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (dark) 0.24f else 0.36f)
+        else -> MaterialTheme.colorScheme.surfaceContainerLowest
     }
 
     val completingAlpha by animateFloatAsState(
@@ -200,6 +196,7 @@ fun TaskRowItem(
         animationSpec = tween(400, easing = FastOutSlowInEasing),
         label = "completingScale"
     )
+
     @Suppress("UNCHECKED_CAST")
     val effectsSpec = MotionTokens.defaultEffects as
         androidx.compose.animation.core.AnimationSpec<androidx.compose.ui.graphics.Color>
@@ -232,7 +229,7 @@ fun TaskRowItem(
     }
 
     Surface(
-        shape = MaterialTheme.shapes.largeIncreased,
+        shape = MaterialTheme.shapes.large,
         color = containerColor,
         modifier = modifier
             .graphicsLayer {
@@ -246,40 +243,43 @@ fun TaskRowItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = SpacingTokens.Spacing.xs, horizontal = SpacingTokens.Spacing.xs),
+                .padding(
+                    vertical = SpacingTokens.Spacing.xs,
+                    horizontal = if (compact) SpacingTokens.Spacing.xxs else SpacingTokens.Spacing.xs
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Drag handle (long-press to reorder by fractional rank).
-            Box(
-                modifier = Modifier
-                    .pointerInput(Unit) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { onDragStart() },
-                            onDragEnd = { onDragEnd() },
-                            onDragCancel = { onDragEnd() },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                onDragBy(dragAmount.y)
-                            }
-                        )
-                    }
-                    .padding(horizontal = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    EngineIcons.DragHandle,
-                    contentDescription = "Drag to reorder",
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
+            if (!compact) {
+                Box(
+                    modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { onDragStart() },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragEnd() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDragBy(dragAmount.y)
+                                }
+                            )
+                        }
+                        .padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        EngineIcons.DragHandle,
+                        contentDescription = "Drag to reorder",
+                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(if (task.dueNow) MaterialTheme.colorScheme.error else typeColor)
                 )
             }
-
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(if (task.dueNow) MaterialTheme.colorScheme.error else typeColor)
-            )
 
             Checkbox(
                 checked = task.completed || isCompleting,
@@ -295,29 +295,33 @@ fun TaskRowItem(
                     .weight(1f)
                     .padding(end = 4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = if (task.dueNow) FontWeight.Bold else FontWeight.Normal,
-                            textDecoration = if (task.completed || isCompleting) TextDecoration.LineThrough else null
-                        ),
-                        color = when {
-                            isCompleting -> MaterialTheme.colorScheme.onPrimaryContainer
-                            task.dueNow -> MaterialTheme.colorScheme.onErrorContainer
-                            overdueWindow -> MaterialTheme.colorScheme.onSurfaceVariant
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f, fill = false)
-                            .alpha(if (isCompleting) 0.7f else 1f)
-                    )
-                    Spacer(Modifier.width(6.dp))
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = if (task.dueNow) FontWeight.Bold else FontWeight.Medium,
+                        textDecoration = if (task.completed || isCompleting) TextDecoration.LineThrough else null
+                    ),
+                    color = when {
+                        isCompleting -> MaterialTheme.colorScheme.onPrimaryContainer
+                        task.dueNow -> MaterialTheme.colorScheme.onErrorContainer
+                        overdueWindow -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.alpha(if (isCompleting) 0.7f else 1f)
+                )
+
+                Spacer(Modifier.height(3.dp))
+
+                FlowRow(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically
+                ) {
                     DurationPill(minutes = task.durationMinutes)
+
                     if (isCompleting) {
-                        Spacer(Modifier.width(6.dp))
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.primary
@@ -341,14 +345,7 @@ fun TaskRowItem(
                             }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(2.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
                     when {
                         task.dueNow -> {
                             Surface(
@@ -375,7 +372,6 @@ fun TaskRowItem(
                             }
                         }
                         overdueWindow -> {
-                            // Subtle elapsed-time state: quiet outline-toned chip, no pulse.
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     EngineIcons.Timer, null,
@@ -411,15 +407,14 @@ fun TaskRowItem(
                 }
             }
 
-            // ── Countdown timer control (Pass 6) ────────────────────────────
             when (timerState) {
                 TimerEngine.TimerState.IDLE -> {
-                    IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = onTimerToggle, modifier = Modifier.size(34.dp)) {
                         Icon(
                             EngineIcons.PlayArrow,
                             contentDescription = "Start timer",
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -427,16 +422,16 @@ fun TaskRowItem(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             fmtCountdown(timerRemaining),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
-                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 EngineIcons.Pause,
                                 contentDescription = "Pause timer",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -445,50 +440,50 @@ fun TaskRowItem(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             fmtCountdown(timerRemaining),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(36.dp)) {
+                        IconButton(onClick = onTimerToggle, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 EngineIcons.PlayArrow,
                                 contentDescription = "Resume timer",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
                 TimerEngine.TimerState.FINISHED -> {
-                    // Pass 7 FIX: the extend affordance was a bare cropped text button — now a
-                    // clean filled-tonal button with the proper MoreTime icon beside Done.
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         FilledTonalButton(
                             onClick = onTimerExtend,
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                         ) {
                             Icon(
                                 EngineIcons.MoreTime, null,
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(14.dp)
                             )
-                            Spacer(Modifier.width(4.dp))
-                            Text("Extend", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.width(3.dp))
+                            Text("Extend", style = MaterialTheme.typography.labelSmall)
                         }
-                        TextButton(onClick = onTimerComplete) {
-                            Text("Done", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        TextButton(
+                            onClick = onTimerComplete,
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text("Done", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
             }
 
-            // Single overflow menu carries the secondary actions.
             Box {
-                IconButton(onClick = { rowMenuOpen = true }, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { rowMenuOpen = true }, modifier = Modifier.size(34.dp)) {
                     Icon(
                         EngineIcons.MoreVert,
                         contentDescription = "Task actions",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 DropdownMenu(expanded = rowMenuOpen, onDismissRequest = { rowMenuOpen = false }) {
@@ -499,6 +494,11 @@ fun TaskRowItem(
                             onClick = { rowMenuOpen = false; onTimerExtend() }
                         )
                     }
+                    DropdownMenuItem(
+                        text = { Text("Move category") },
+                        leadingIcon = { Icon(EngineIcons.KeyboardArrowRight, null) },
+                        onClick = { rowMenuOpen = false; onMoveCategory() }
+                    )
                     DropdownMenuItem(
                         text = { Text("Subtasks") },
                         leadingIcon = { Icon(EngineIcons.SubdirectoryArrowRight, null) },
