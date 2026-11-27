@@ -43,7 +43,9 @@ class KeyflawHostRenderer:GLSurfaceView.Renderer {
     private val programs=HashMap<String,Int>();private val locations=HashMap<Pair<Int,String>,Int>()
     private data class Target(val texture:Int,val fbo:Int,val w:Int,val h:Int)
     private val targets=HashMap<String,Target>()
-    private var displayProgram=0
+    private var displayProgram=0;private var scopeProgram=0;private var scopeTime=0L
+    @Volatile var onHistogram: ((Array<IntArray>)->Unit)?=null
+    private val scopePixels=ByteBuffer.allocateDirect(64*64*4)
     @Volatile private var clearTarget=false
     private val vertices=ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder()).asFloatBuffer().apply{put(floatArrayOf(-1f,-1f,1f,-1f,-1f,1f,1f,1f));position(0)}
     private var frames=0;private var elapsed=0L
@@ -55,7 +57,7 @@ class KeyflawHostRenderer:GLSurfaceView.Renderer {
         programs.clear();locations.clear();targets.clear();baseTexture=0;targetTexture=0;compiledEffectsCount=0
         glRendererString=GL.glGetString(GL.GL_RENDERER)?:"Unknown";glVersionString=GL.glGetString(GL.GL_VERSION)?:"Unknown"
         GL.glDisable(GL.GL_DEPTH_TEST);GL.glDisable(GL.GL_DITHER);GL.glClearColor(0f,0f,0f,1f)
-        displayProgram=program("display",DISPLAY)
+        displayProgram=program("display",DISPLAY);scopeProgram=program("scope",COPY)
         baseBitmap?.let{basePending=it};targetBitmap?.let{targetPending=it}
         if(pendingGraph==null && graph.isNotEmpty())pendingGraph=graph
     }
@@ -81,6 +83,17 @@ class KeyflawHostRenderer:GLSurfaceView.Renderer {
             val previous=pass.reference?.let{retained[it]}?:baseTexture
             draw(graphPrograms[index],current,previous,dst,parameters,sw,sh)
             current=dst.texture;sw=dst.w;sh=dst.h;retained[index]=current
+        }
+        if(activeViewMode==ViewMode.SCOPES && start-scopeTime>=125_000_000L && scopeProgram!=0) {
+            scopeTime=start
+            val dst=target("scope",64,64,false)
+            GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,dst.fbo);GL.glViewport(0,0,64,64)
+            GL.glUseProgram(scopeProgram);quad(scopeProgram);texture(scopeProgram,"uTexture",current,0)
+            GL.glDrawArrays(GL.GL_TRIANGLE_STRIP,0,4)
+            scopePixels.clear();GL.glReadPixels(0,0,64,64,GL.GL_RGBA,GL.GL_UNSIGNED_BYTE,scopePixels)
+            val counts=Array(3){IntArray(32)}
+            for(i in 0 until 64*64)for(c in 0..2)counts[c][(scopePixels.get(i*4+c).toInt() and 255)/8]++
+            onHistogram?.invoke(counts)
         }
         GL.glBindFramebuffer(GL.GL_FRAMEBUFFER,0);GL.glViewport(0,0,viewW,viewH);GL.glClear(GL.GL_COLOR_BUFFER_BIT)
         // Preserve native frame aspect, including rectangular unsharp radii.

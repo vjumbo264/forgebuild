@@ -123,14 +123,23 @@ fun SourceStage(
         }
     )
 
+    var pickVideo by remember { mutableStateOf(false) }
+    fun openMediaPicker(){ photoPickerLauncher.launch(PickVisualMediaRequest(if(pickVideo) ActivityResultContracts.PickVisualMedia.VideoOnly else ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     // Permission launchers
     val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted ->
-            // Open picker either way (graceful fallback)
-            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        }
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { openMediaPicker() }
     )
+    fun requestMedia(video:Boolean) {
+        pickVideo=video
+        val permissions=when {
+            Build.VERSION.SDK_INT>=34 -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES,Manifest.permission.READ_MEDIA_VIDEO,Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            Build.VERSION.SDK_INT>=33 -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES,Manifest.permission.READ_MEDIA_VIDEO)
+            else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        if(permissions.all{ ContextCompat.checkSelfPermission(context,it)==PackageManager.PERMISSION_GRANTED }) openMediaPicker()
+        else permissionExplanationDialog="Media access is optional. You can still choose a photo or video with the system picker if you deny it." to { requestPermissionLauncher.launch(permissions) }
+    }
 
     val requestCameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -283,19 +292,7 @@ fun SourceStage(
                     leadingContent = { Icon(EngineIcons.Image, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            Manifest.permission.READ_MEDIA_IMAGES
-                        } else {
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                        }
-                        val granted = ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
-                        if (!granted) {
-                            permissionExplanationDialog = "CC Studio requests media access to quickly browse and import high-res frames from your gallery." to {
-                                requestPermissionLauncher.launch(perm)
-                            }
-                        } else {
-                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }
+                        requestMedia(false)
                     }
                 )
 
@@ -305,7 +302,7 @@ fun SourceStage(
                     leadingContent = { Icon(EngineIcons.Movie, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                        requestMedia(true)
                     }
                 )
 
@@ -332,7 +329,7 @@ fun SourceStage(
                     leadingContent = { Icon(EngineIcons.Folder, contentDescription = null) },
                     modifier = Modifier.clickable {
                         showSourceSheet = false
-                        filePickerLauncher.launch(arrayOf("image/*"))
+                        filePickerLauncher.launch(arrayOf("image/*","video/*"))
                     }
                 )
 

@@ -56,6 +56,9 @@ android {
     }
     buildTypes { release { if (rootProject.file("keystore/release.jks").exists()) signingConfig = signingConfigs.getByName("release") } }
 
+    if (project.findProperty("ccAbiSplits") == "true") {
+        splits { abi { isEnable = true; reset(); include("arm64-v8a", "armeabi-v7a", "x86", "x86_64"); isUniversalApk = true } }
+    }
     buildFeatures { compose = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }

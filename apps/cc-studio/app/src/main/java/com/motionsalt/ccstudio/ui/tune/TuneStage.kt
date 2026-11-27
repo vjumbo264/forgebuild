@@ -79,6 +79,12 @@ fun TuneStage(
 
     // Channel isolation: 0=All, 1=Red, 2=Green, 3=Blue, 4=Luma
     var selectedChannel by remember { mutableStateOf(0) }
+    var histogram by remember { mutableStateOf<Array<IntArray>?>(null) }
+    DisposableEffect(hostRenderer) {
+        val main=android.os.Handler(android.os.Looper.getMainLooper())
+        hostRenderer.onHistogram={ bins-> main.post { histogram=bins } }
+        onDispose { hostRenderer.onHistogram=null;main.removeCallbacksAndMessages(null) }
+    }
 
     // Frame strip selection
     val allFrames = project.pairs.mapNotNull { p -> p.base?.filePath?.let { it to false } }
@@ -110,8 +116,7 @@ fun TuneStage(
         if (tPath != null && File(tPath).exists()) {
             withContext(Dispatchers.IO) {
                 try {
-                    val proof = File(context.filesDir, "projects/${project.id}/results/target_${completePair?.id}.png")
-                    val bmp = BitmapFactory.decodeFile(if(proof.exists())proof.absolutePath else tPath)
+                    val bmp = BitmapFactory.decodeFile(tPath)
                     hostRenderer.setTargetBitmap(bmp)
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -211,7 +216,6 @@ fun TuneStage(
                 },
                 update = { view ->
                     glSurfaceViewRef = view
-                    view.requestRender()
                 },
                 modifier = Modifier
                     .fillMaxSize()
@@ -323,12 +327,18 @@ fun TuneStage(
                             .size(120.dp, 80.dp)
                     ) {
                         Column(modifier = Modifier.padding(6.dp)) {
-                            Text("RGB Parade / Histogram", color = Color.LightGray, fontSize = 9.sp)
+                            Text("RGB histogram", color = Color.LightGray, fontSize = 9.sp)
                             Spacer(Modifier.height(4.dp))
-                            Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Box(modifier = Modifier.fillMaxHeight().width(24.dp).background(Color.Red.copy(alpha = 0.5f)))
-                                Box(modifier = Modifier.fillMaxHeight().width(24.dp).background(Color.Green.copy(alpha = 0.5f)))
-                                Box(modifier = Modifier.fillMaxHeight().width(24.dp).background(Color.Blue.copy(alpha = 0.5f)))
+                            Canvas(Modifier.fillMaxSize()) {
+                                val bins=histogram
+                                if(bins!=null) {
+                                    val peak=bins.maxOf{it.maxOrNull()?:1}.coerceAtLeast(1).toFloat()
+                                    val colors=listOf(Color.Red,Color.Green,Color.Cyan)
+                                    for(c in 0..2)for(i in 1 until 32) {
+                                        drawLine(colors[c],Offset(size.width*(i-1)/31,size.height*(1-bins[c][i-1]/peak)),
+                                            Offset(size.width*i/31,size.height*(1-bins[c][i]/peak)),1.5.dp.toPx())
+                                    }
+                                }
                             }
                         }
                     }

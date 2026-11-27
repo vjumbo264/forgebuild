@@ -53,7 +53,7 @@ fun SettingsScreen(
                             Text("100% Offline Architecture", fontWeight = FontWeight.Bold)
                         }
                         Text(
-                            "MOTIONSALT CC Studio has ZERO network permissions declared in AndroidManifest.xml. It never communicates with any server, telegram, or internet API. All fitting, GLSL rendering, and .kfpack creation happen strictly on-device.",
+                            "MOTIONSALT CC Studio has ZERO network permissions declared in AndroidManifest.xml. It never communicates with any server, telegram, or internet API. All fitting, GLSL rendering, and .kfplug creation happen strictly on-device.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -218,7 +218,7 @@ fun SettingsScreen(
                     Text("• Engine: OpenGL ES 1.00 / 2.0 Offscreen & Software Pipeline: ACTIVE", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Text("• Shader Library: 22 effects loaded and compiled", fontSize = 12.sp)
                     Text("• Offline Manifest: Verified zero network permissions (INTERNET=NONE)", fontSize = 12.sp)
-                    Text("• Target Spec: Keyflaw 1.4.9 (.kfpack suite with expandBounds & COLOR)", fontSize = 12.sp)
+                    Text("• Target Spec: Keyflaw Plugin API 1 (.kfplug)", fontSize = 12.sp)
                     Text("• Stack Evaluator: Live live-state rendering enabled", fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     Button(

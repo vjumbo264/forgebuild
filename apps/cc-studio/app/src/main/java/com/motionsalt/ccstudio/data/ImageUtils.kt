@@ -24,6 +24,17 @@ object ImageUtils {
         baseName: String = "frame"
     ): String {
         if (!destDir.exists()) destDir.mkdirs()
+        if(context.contentResolver.getType(uri)?.startsWith("video/")==true) {
+            val retriever=android.media.MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context,uri)
+                val duration=retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?:0L
+                val bitmap=checkNotNull(retriever.getFrameAtTime(duration*500,android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)){"Cannot read a frame from the video"}
+                val file=File(destDir,"${baseName}_${System.currentTimeMillis()}.png")
+                FileOutputStream(file).use { check(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) }
+                bitmap.recycle();return file.absolutePath
+            } finally { retriever.release() }
+        }
         val tempRaw = File(destDir, "raw_${System.currentTimeMillis()}.tmp")
 
         // 1. Copy stream to temp file to read EXIF and bounds
@@ -53,20 +64,24 @@ object ImageUtils {
             ?: throw IllegalStateException("Failed to decode image from file: $uri")
 
         // 3. EXIF orientation correction
-        val rotation = try {
+        val orientation = try {
             val exif = ExifInterface(tempRaw.absolutePath)
-            when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                else -> 0f
-            }
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
         } catch (e: Exception) {
-            0f
+            ExifInterface.ORIENTATION_NORMAL
         }
-
-        val finalBitmap = if (rotation != 0f) {
-            val matrix = Matrix().apply { postRotate(rotation) }
+        val matrix=Matrix().apply {
+            when (orientation) {
+                ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> setScale(-1f,1f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> setRotate(180f)
+                ExifInterface.ORIENTATION_FLIP_VERTICAL -> setScale(1f,-1f)
+                ExifInterface.ORIENTATION_TRANSPOSE -> { setRotate(90f);postScale(-1f,1f) }
+                ExifInterface.ORIENTATION_ROTATE_90 -> setRotate(90f)
+                ExifInterface.ORIENTATION_TRANSVERSE -> { setRotate(-90f);postScale(-1f,1f) }
+                ExifInterface.ORIENTATION_ROTATE_270 -> setRotate(-90f)
+            }
+        }
+        val finalBitmap = if (!matrix.isIdentity) {
             val rotated = Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
             if (rotated != decoded) decoded.recycle()
             rotated
