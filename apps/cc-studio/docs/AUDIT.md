@@ -94,3 +94,21 @@ Victor's report is 100% accurate: the app in cc-studio-v1 was a visual shell wit
 
 ## Conclusion & Action Plan
 All six symptoms are confirmed and documented with line numbers. The repair queue R1 through R9 will systematically replace the shell with production-grade, fully exercised implementations.
+
+
+---
+
+# CC Studio Round 4 baseline audit
+
+Baseline: ForgeBuild `163e335`; most recent CC Studio release at audit: `cc-studio-v9`. The private state repository still called v5 its last verified release; Round 4 records its own baseline instead of rewriting older state. ForgeBuild's prior CI run 42095123552 succeeded; this is build/unit-test evidence for the prior version, not a phone or Keyflaw test.
+
+| Area | Observed in the source | Round 4 disposition |
+| --- | --- | --- |
+| Projects, Source and Fit | `ProjectRepository`, `SourceStage`, `FitStage` and `FitService` are present. The JVM core has the existing parametric solver, shader generator, Gojo fixtures and regression tests. | Keep and re-run the Gojo gate; retain crop, bar handling and paired image selection. |
+| Tune | `TuneStage` currently exposes `StackItemCard` and `AddEffectPickerSheet`; bundled effect definitions and `EffectRepository` support the legacy stack. | Replace stack and library with a single five-section CC panel; remove bundled legacy finishing effects. |
+| Preview | `KeyflawHostRenderer` already has a GLES multipass host, but uses legacy effect assets / `host_graph.json` and a separate match program. | Bind the API 1 graph and compile the exact same fragment bytes that export writes. Re-test the views, especially Vs Target and the asymmetric F orientation. |
+| Export | `ExportStage` generates `.kfpack` with legacy pack tools. `PackSave` already exposes SAF primitives. | Use API 1 `.kfplug` and strict read-back validation; retain useful SAF primitives, not the old format dependency. |
+| Permissions | The app manifest has no INTERNET or ACCESS_NETWORK_STATE permission. It still declares legacy WRITE_EXTERNAL_STORAGE in addition to the requested permissions. | Keep app offline; verify runtime permission timing and migrate storage paths away from broad access. |
+| Release | ForgeBuild release workflow signs using existing Actions secrets but derives normal release tags and version codes from prior tags. | Preserve application ID and stable signing key; add a separate CC Studio RC path without overwriting release tags. |
+
+The imported Round 4 text ends mid-script in Appendix C. Its Clarity/Structure and Gaussian/Unsharp shader bodies are intact. Appendix D is absent from that text; the separately supplied skill provides the API 1 contract and packer. No Android interaction, GPU timing, or Keyflaw install is claimed by this audit.
