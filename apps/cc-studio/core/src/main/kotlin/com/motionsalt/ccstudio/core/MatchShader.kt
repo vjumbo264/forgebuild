@@ -5,7 +5,7 @@ import java.util.Locale
 /** One source generator for preview AND exported shader.glsl. No sampler except the input image. */
 object MatchShader {
     fun number(x:Double):String { require(x.isFinite());return String.format(Locale.US,"%.12e",x) }
-    fun source(model:ParametricMatch):String=buildString {
+    fun source(model:ParametricMatch, plugin:Boolean=false):String=buildString {
         append("""#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -32,7 +32,11 @@ vec3 rgb(vec3 l) { float y=(l.x+16.0)/116.0;float x=l.y/500.0+y;float z=max(0.0,
                 val last=i==curve.x.size-2
                 if(!last)append("if(v<${number(curve.x[i+1])}) ")
                 append("{float h=${number(curve.x[i+1]-curve.x[i])};float t=(v-${number(curve.x[i])})/h;float t2=t*t;float t3=t2*t;")
-                append("return clamp((2.0*t3-3.0*t2+1.0)*${number(curve.y[i])}+(t3-2.0*t2+t)*h*${number(curve.slopes[i])}+(-2.0*t3+3.0*t2)*${number(curve.y[i+1])}+(t3-t2)*h*${number(curve.slopes[i+1])},0.0,1.0);}\n")
+                if (plugin) {
+                    val h=curve.x[i+1]-curve.x[i]; val y=curve.y[i]; val dy=curve.y[i+1]-y
+                    val k0=h*curve.slopes[i]; val k1=h*curve.slopes[i+1]
+                    append("return clamp(((${number(-2*dy+k0+k1)}*t+${number(3*dy-2*k0-k1)})*t+${number(k0)})*t+${number(y)},0.0,1.0);}\n")
+                } else append("return clamp((2.0*t3-3.0*t2+1.0)*${number(curve.y[i])}+(t3-2.0*t2+t)*h*${number(curve.slopes[i])}+(-2.0*t3+3.0*t2)*${number(curve.y[i+1])}+(t3-t2)*h*${number(curve.slopes[i+1])},0.0,1.0);}\n")
             };append("}\n")
         }
         append("vec3 hueParam(float i) {\n")
@@ -42,5 +46,16 @@ vec3 rgb(vec3 l) { float y=(l.x+16.0)/116.0;float x=l.y/500.0+y;float z=max(0.0,
         append("if(uMatrixEnabled>0.5){g=vec3(")
         append((0..2).joinToString(","){c->"enc(dot(p,vec3(${model.matrix[c].joinToString(","){number(it)}}))+${number(model.offset[c])})"});append(");}\n")
         append("""if(uCurvesEnabled>0.5)g=vec3(curve0(g.r),curve1(g.g),curve2(g.b));if(uHueEnabled>0.5){vec3 l=lab(g);float h=atan(l.z,l.y);float c=length(l.yz);float w=c/(c+10.0);float k=mod(h/6.283185307179586,1.0)*24.0;float i=floor(k);float f=fract(k);vec3 v=mix(hueParam(i),hueParam(mod(i+1.0,24.0)),f);float c2=c*(1.0+v.y*w);float h2=h+v.z*w;g=rgb(vec3(l.x+v.x*w,c2*cos(h2),c2*sin(h2)));}gl_FragColor=vec4(mix(inputRgb,g,clamp(uStrength,0.0,1.0))*src.a,src.a);}""")
+    }.let { shader ->
+        if (!plugin) shader else shader
+            .replace("uniform float uMatrixEnabled;\n", "")
+            .replace("uniform float uCurvesEnabled;\n", "")
+            .replace("uniform float uHueEnabled;\n", "")
+            .replace("if(uMatrixEnabled>0.5)", "")
+            .replace("if(uCurvesEnabled>0.5)", "")
+            .replace("if(uHueEnabled>0.5)", "")
+            .replace("uEnabled", "uMatchOn")
+            .replace("uStrength", "uMatchStrength")
+            .replace("if(uMatchOn<=0.5)", "if(uMatchOn<=0.5||uMatchStrength<=0.0)")
     }
 }

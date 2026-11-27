@@ -48,6 +48,13 @@ jobs:
           chmod +x gradlew
           ./gradlew :core:test :app:testDebugUnitTest --no-daemon
 
+      - name: Generate and validate Gojo API 1 sample
+        run: |
+          cd apps/cc-studio
+          ./gradlew :core:generateGojoPlugin --no-daemon
+          python3 tools/kfplug_build.py core/build/gojo-plugin/tree /tmp/validator.kfplug
+          python3 tools/verify_cc_archive.py core/build/gojo-plugin/motionsalt.cc.kfplug /tmp/validator.kfplug
+
       - name: Build Debug APK
         run: |
           cd apps/cc-studio
@@ -59,4 +66,5 @@ jobs:
           name: cc-studio-pivot-validation
           path: |
             apps/cc-studio/core/build/reports/tests/test/
+            apps/cc-studio/core/build/gojo-plugin/motionsalt.cc.kfplug
             apps/cc-studio/app/build/outputs/apk/debug/*.apk
