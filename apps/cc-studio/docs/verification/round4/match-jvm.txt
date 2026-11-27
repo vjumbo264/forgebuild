@@ -1,0 +1,7 @@
+JUnit version 4.13.2
+....Gojo CIEDE2000: identity=Summary(mean=10.124443806107065, p95=24.53135340114204, count=135356) fitted=Summary(mean=4.877615116578355, p95=11.39803292067382, count=135356) heldout=Summary(mean=4.889562518688972, p95=10.055910901101065, count=26182) blurred=Summary(mean=3.891646553000949, p95=8.494637513558835, count=135356)
+.............
+Time: 3.751
+
+OK (17 tests)
+

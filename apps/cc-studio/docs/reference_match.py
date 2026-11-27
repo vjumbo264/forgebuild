@@ -119,3 +119,4 @@ if __name__=='__main__':
     panel=cv2.resize(panel,None,fx=1.4,fy=1.4,interpolation=cv2.INTER_CUBIC)
     cv2.imwrite(PANEL,cv2.cvtColor(panel,cv2.COLOR_RGB2BGR))
     json.dump({'A':m.A.tolist(),'o':m.o.tolist(),'hue':m.hue.tolist(),'curves':[[x.tolist(),y.tolist()] for x,y in m.curves]},open('match_model.json','w'))
+
