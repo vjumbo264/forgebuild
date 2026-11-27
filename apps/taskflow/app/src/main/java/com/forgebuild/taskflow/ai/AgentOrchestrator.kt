@@ -3,6 +3,9 @@ package com.forgebuild.taskflow.ai
 import android.content.Context
 import android.os.PowerManager
 import com.forgebuild.taskflow.data.ChatMessage
+import com.forgebuild.taskflow.data.Recurrence
+import com.forgebuild.taskflow.data.TaskCategory
+import com.forgebuild.taskflow.data.TaskCategoryHelper
 import com.forgebuild.taskflow.data.TaskFlowDb
 import com.forgebuild.taskflow.notify.NotificationHub
 import com.forgebuild.taskflow.settings.GeminiKeyStore
@@ -31,6 +34,7 @@ import java.util.TimeZone
 typealias ChatMessage = com.forgebuild.taskflow.data.ChatMessage
 
 class AgentOrchestrator private constructor(context: Context) {
+
     private val appContext = context.applicationContext
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val powerManager = appContext.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -83,11 +87,17 @@ class AgentOrchestrator private constructor(context: Context) {
     private suspend fun buildSystemInstruction(): String {
         val now = System.currentTimeMillis()
         val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss (EEEE)", Locale.getDefault())
+        val dateOnlyFmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dateTimeFmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val tz = TimeZone.getDefault()
         val tzName = tz.getDisplayName(tz.inDaylightTime(Date(now)), TimeZone.LONG)
         val tzId = tz.id
         val remainingToday = repo.getRemainingMinutesToday()
         val allocatedToday = repo.getAllocatedMinutesToday()
+
+        val activeTasks = repo.allActiveNow()
+        val grouped = TaskCategoryHelper.groupByCategory(activeTasks)
+
         return buildString {
             append("You are TaskFlow's built-in intelligent task assistant. ")
             append("CURRENT DEVICE CLOCK & TIME ZONE: ")
@@ -96,26 +106,57 @@ class AgentOrchestrator private constructor(context: Context) {
             append("Today's schedule: ").append(allocatedToday).append(" minutes allocated, ")
             append(remainingToday).append(" minutes remaining unallocated before midnight. ")
             append("You manage the user's to-do list by calling the provided tools. ")
-            append("FUTURE TASKS & TIME BUDGETS: Each day has its own independent 1440-minute budget. For today, there are ").append(remainingToday).append(" minutes unallocated left before midnight. For tomorrow or any future date (next week, next month, etc.), the task uses THAT target date's budget (up to 1440m unallocated minus tasks on that date). NEVER check a future task against today's remaining time. Use scheduled_date (yyyy-MM-dd) for plain/normal tasks without a clock time, or fixed_time (yyyy-MM-dd HH:mm) for timed tasks. If a task does not fit on today, you can schedule it for tomorrow or a future date. ")
-            append("FULL TASK CAPABILITIES: You have full access to create and manage every task type supported by TaskFlow: (1) untimed normal tasks for today or any future date; (2) fixed-time tasks for any datetime, including overnight/cross-midnight spans; (3) recurring tasks (daily, weekly with specific weekdays, monthly, yearly) with or without an expiration end date; (4) sub-tasks at any depth using parent_title or parent_id; (5) countdown timers (start, pause, extend). ")
+
+            append("EISENHOWER MATRIX CATEGORIES: Every task belongs to one of four canonical categories: ")
+            append("(1) urgent_important = 'Important and urgent' (Urgent & Important; Do first — crises, immediate deadlines); ")
+            append("(2) not_urgent_important = 'Important but not urgent' (Not Urgent & Important; Schedule — strategic goals, deep work, planning; DEFAULT when category is unspecified); ")
+            append("(3) urgent_not_important = 'Unimportant and urgent' (Urgent & Unimportant; Delegate/minimize — interruptions, routine urgent requests); ")
+            append("(4) not_urgent_not_important = 'Unimportant but not urgent' (Not Urgent & Unimportant; Eliminate/later — low-value backlog). ")
+            append("Use category IDs ('urgent_important', 'not_urgent_important', 'urgent_not_important', 'not_urgent_not_important') when calling create_task, update_task, move_task_category, list_tasks, complete_task, or delete_task. ")
+            append("When creating a task without an explicit category, infer the best Eisenhower category from context or default to 'not_urgent_important'. ")
+            append("When asked to move or reclassify a task, call move_task_category (or update_task with category). ")
+            append("When asked to summarize, prioritize, or triage tasks across the four quadrants, use summarize_matrix (or the current snapshot below) and provide clear, structured quadrant guidance. ")
+
+            append("\n\nCURRENT ACTIVE TASKS BY CATEGORY:\n")
+            TaskCategory.entries.forEach { cat ->
+                val list = grouped[cat].orEmpty()
+                append("- ${cat.label} [${cat.id}] (${list.size} active):\n")
+                if (list.isEmpty()) {
+                    append("  (none)\n")
+                } else {
+                    list.take(25).forEach { t ->
+                        val sched = when {
+                            t.fixedTime != null -> " @ ${dateTimeFmt.format(Date(t.fixedTime))}"
+                            t.scheduledDate != null -> " on ${dateOnlyFmt.format(Date(t.scheduledDate))}"
+                            else -> ""
+                        }
+                        val rec = if (t.recurrence != Recurrence.NONE) " [${t.recurrence}]" else ""
+                        val parent = if (t.parentId != null) " [subtask of #${t.parentId}]" else ""
+                        val notes = if (t.info.isNotBlank()) " — ${t.info.take(80)}" else ""
+                        append("  • #${t.id} \"${t.title}\" (${t.durationMinutes}m)$sched$rec$parent$notes\n")
+                    }
+                    if (list.size > 25) {
+                        append("  • ...and ${list.size - 25} more (call list_tasks for full list)\n")
+                    }
+                }
+            }
+
+            append("\nFUTURE TASKS & TIME BUDGETS: Each day has its own independent 1440-minute budget. For today, there are ")
+            append(remainingToday).append(" minutes unallocated left before midnight. For tomorrow or any future date (next week, next month, etc.), the task uses THAT target date's budget (up to 1440m unallocated minus tasks on that date). NEVER check a future task against today's remaining time. Use scheduled_date (yyyy-MM-dd) for plain/normal tasks without a clock time, or fixed_time (yyyy-MM-dd HH:mm) for timed tasks. If a task does not fit on today, you can schedule it for tomorrow or a future date. ")
+            append("FULL TASK CAPABILITIES: You have full access to create and manage every task type supported by TaskFlow: (1) untimed normal tasks for today or any future date; (2) fixed-time tasks for any datetime, including overnight/cross-midnight spans; (3) recurring tasks (daily, weekly with specific weekdays, monthly, yearly) with or without an expiration end date; (4) sub-tasks at any depth using parent_title or parent_id; (5) countdown timers (start, pause, extend); (6) all four Eisenhower Matrix categories. ")
             append("FIXED TIMES: A task must only get a fixed_time when the user explicitly specifies a time or clearly implies one (e.g. \"remind me at 3pm\", \"tomorrow at 9\"). NEVER auto-assign or invent a fixed time — when no time is requested, create the task with NO fixed_time, exactly as if the user added it manually without one. ")
             append("PROACTIVELY WRITE TASK INFO: When the user verbally or in text explains details, reasoning, steps, background context, contacts, locations, or specifics about a task, you MUST proactively populate the info field of create_task or update_task with those explanatory details. Strongly lean toward capturing this context so the user can reference it later, rather than creating a bare task title and discarding the specifics. ")
             append("SUB-TASK NESTING: When asked to create a task inside another task, or when adding sub-tasks, you MUST specify either parent_id (numeric ID) or parent_title (the title/name of the parent task, e.g. parent_title=Groceries). The system will automatically resolve the parent task by title or ID and nest the sub-task under it. Never create a sub-task as a top-level task when a parent was requested. ")
-            append("TASK TIMERS: Every task has a countdown timer (based on its duration) that the user can play/start, pause, resume, and extend at any moment — including mid-countdown and after it has finished. Use start_timer, pause_timer and extend_timer (amount + unit minutes/hours) whenever the user asks. When a timer finishes, the app plays a ding and offers extend or complete. ")
+            append("TASK TIMERS: Every task has a countdown timer (based on its duration) that the user can play/start, pause, resume, and extend at any moment — including mid-countdown and after it has finished. Use start_timer, pause_timer and extend_timer (amount + unit minutes/hours) whenever the user asks. ")
             append("MANDATORY DURATION: Every task MUST have a duration in minutes (e.g. 15, 30, 45, 60). If the user does not specify a duration, you MUST estimate and assign a sensible duration yourself. Never leave duration blank. ")
             append("OPEN-ENDED INSTRUCTIONS: Understand vague requests like 'Set this to only happen on Tuesdays' (weekly, tue), or 'scatter three tasks across the week' (create 3 tasks on different days with reasonable durations). ")
             append("RECURRING TASKS may have an optional end date ('repeat every day until 2026-12-31'); set recurrence_end when the user gives an end condition, otherwise leave it unset (indefinite). ")
             append("VOICE INPUT: The user may send a raw audio voice note. Listen to the audio directly, transcribe it yourself, and act on the spoken request exactly as if it were typed. ")
-            append("Use list_tasks or get_day_status whenever needed. ")
-            append("After completing actions, reply with one concise natural-language sentence summarizing exactly what you did.")
+            append("Use list_tasks, summarize_matrix, or get_day_status whenever needed. ")
+            append("After completing actions, reply clearly and concisely summarizing what you did (or giving the requested summary/triage across the four categories).")
         }
     }
 
-    /**
-     * Reads conversation history synchronously from Room SQLite rather than `messages.value`,
-     * preventing the async StateFlow emission race where newly inserted user turns are missing
-     * and Gemini receives empty `contents` or a conversation ending with a `model` turn.
-     */
     private suspend fun historyContents(excludeMessageId: Long? = null): MutableList<JsonObject> {
         val recent = chatDao.getAll()
             .asSequence()
@@ -129,7 +170,6 @@ class AgentOrchestrator private constructor(context: Context) {
             .toList()
             .takeLast(12)
             .dropWhile { it.role != ChatMessage.Role.USER }
-
         val contents = mutableListOf<JsonObject>()
         recent.forEach { m ->
             contents.add(
@@ -148,7 +188,6 @@ class AgentOrchestrator private constructor(context: Context) {
         _busy.value = true
         chatDao.insert(ChatMessage(role = ChatMessage.Role.USER, text = userText))
         val contents = historyContents()
-        // Defensive guard: guarantee the newly sent user turn is always the final entry.
         val lastRole = contents.lastOrNull()?.get("role")?.jsonPrimitive?.contentOrNull
         if (contents.isEmpty() || lastRole != "user") {
             contents.add(GeminiClient.content("user", listOf(GeminiClient.textPart(userText))))
@@ -170,7 +209,7 @@ class AgentOrchestrator private constructor(context: Context) {
                 "user",
                 listOf(
                     GeminiClient.inlineDataPart(mimeType, base64Audio),
-                    GeminiClient.textPart("This is a voice note the user just recorded. Listen to the audio, transcribe it yourself, then act on the spoken request (create/update/complete/list tasks as asked) exactly as if it were typed text.")
+                    GeminiClient.textPart("This is a voice note the user just recorded. Listen to the audio, transcribe it yourself, then act on the spoken request (create/update/move/complete/list/summarize tasks as asked) exactly as if it were typed text.")
                 )
             )
         )
@@ -190,8 +229,6 @@ class AgentOrchestrator private constructor(context: Context) {
                 val resp = client.generate(JsonArray(contents), tools.apiTools(), systemInstruction)
                 val candidate = resp["candidates"]?.jsonArray?.firstOrNull()?.jsonObject ?: break
                 val parts = candidate["content"]?.jsonObject?.get("parts")?.jsonArray ?: break
-
-                // Gemini REST v1beta responds with camelCase "functionCall" parts.
                 val fnCalls = parts.mapNotNull { p ->
                     p.jsonObject["functionCall"]?.jsonObject?.let { fc ->
                         val name = fc["name"]?.jsonPrimitive?.contentOrNull ?: return@let null
@@ -200,9 +237,7 @@ class AgentOrchestrator private constructor(context: Context) {
                         ParsedFnCall(name, args, id)
                     }
                 }
-
                 if (fnCalls.isEmpty()) {
-                    // Final text response from model
                     val text = parts.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.contentOrNull }.joinToString("\n").trim()
                     if (text.isNotEmpty()) {
                         chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL, text = text))
@@ -212,11 +247,7 @@ class AgentOrchestrator private constructor(context: Context) {
                     }
                     break
                 }
-
-                // Add model response containing function calls to contents history
                 contents.add(candidate["content"]!!.jsonObject)
-
-                // Execute each function call and add function responses
                 val responseParts = mutableListOf<JsonObject>()
                 for (call in fnCalls) {
                     val result = tools.execute(call.name, call.args)
@@ -231,7 +262,6 @@ class AgentOrchestrator private constructor(context: Context) {
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "No Gemini API key configured. Open Settings to add your key."))
         } catch (e: GeminiClient.HighUsageExhaustedException) {
-            // Distinct message for high load without false API key error notification
             chatDao.insert(ChatMessage(role = ChatMessage.Role.MODEL,
                 text = "Gemini servers are experiencing temporary high usage right now. The request was retried with backoff. Please try again in a few moments."))
         } catch (e: GeminiClient.InvalidApiKeyException) {

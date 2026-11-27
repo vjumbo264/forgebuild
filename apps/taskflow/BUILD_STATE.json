@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "forgebuild-extend-pass13",
-  "current_task": "step-79",
+  "current_task": "step-80",
   "substitutions": [],
   "tasks": [
     {
@@ -479,8 +479,8 @@
     {
       "id": "step-79",
       "title": "Pass 13: Adapt in-app AI system context, tool schemas, and execution handlers for full category awareness and triage",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Adapted AgentOrchestrator and TaskAgentTools for full Eisenhower Matrix category awareness: system instruction now defines all 4 canonical categories and injects a live snapshot of active tasks grouped by category; updated list_tasks (category + include_completed + grouped output), create_task (category param defaulting to not_urgent_important), update_task (preserves or updates category + optional completed status), delete_task/complete_task (category disambiguation), and added move_task_category and summarize_matrix tools."
     },
     {
       "id": "step-80",
