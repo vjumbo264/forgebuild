@@ -1,0 +1,22 @@
+softpipe
+gojo        default          mean=0.000  p99=0.0  max=0
+gojo        clarity          mean=0.000  p99=0.0  max=1
+gojo        structure        mean=0.000  p99=0.0  max=1
+gojo        unsharp          mean=0.008  p99=0.0  max=1
+gojo        unsharp_extreme  mean=0.020  p99=1.0  max=1
+gojo        haze             mean=0.009  p99=0.0  max=1
+gojo        haze_extreme     mean=0.006  p99=0.0  max=1
+gojo_target default          mean=0.000  p99=0.0  max=0
+gojo_target clarity          mean=0.000  p99=0.0  max=1
+gojo_target structure        mean=0.000  p99=0.0  max=1
+gojo_target unsharp          mean=0.007  p99=0.0  max=1
+gojo_target unsharp_extreme  mean=0.013  p99=1.0  max=1
+gojo_target haze             mean=0.011  p99=1.0  max=1
+gojo_target haze_extreme     mean=0.009  p99=0.0  max=1
+f           default          mean=0.000  p99=0.0  max=0
+f           clarity          mean=0.000  p99=0.0  max=0
+f           structure        mean=0.000  p99=0.0  max=0
+f           unsharp          mean=0.009  p99=0.0  max=1
+f           unsharp_extreme  mean=0.004  p99=0.0  max=1
+f           haze             mean=0.013  p99=1.0  max=1
+f           haze_extreme     mean=0.010  p99=1.0  max=1
