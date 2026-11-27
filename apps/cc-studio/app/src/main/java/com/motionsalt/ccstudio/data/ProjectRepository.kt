@@ -96,7 +96,7 @@ class ProjectRepository(private val context: Context) {
                 )
             }.toMutableList(),
             fitResult = orig.fitResult,
-            tuneState = orig.tuneState,
+            ccValues = orig.ccValues,
             exportHistory = mutableListOf()
         )
         saveProject(copy)

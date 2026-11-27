@@ -7,13 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.forgebuild.engine.ui.icons.EngineIcons
-import com.motionsalt.ccstudio.data.EffectRepository
 import com.motionsalt.ccstudio.data.ProjectData
 import com.motionsalt.ccstudio.data.ProjectRepository
 import com.motionsalt.ccstudio.ui.export.ExportStage
 import com.motionsalt.ccstudio.ui.fit.FitStage
-import com.motionsalt.ccstudio.ui.library.LibraryScreen
-import com.motionsalt.ccstudio.ui.packs.PacksScreen
 import com.motionsalt.ccstudio.ui.projects.ProjectsScreen
 import com.motionsalt.ccstudio.ui.settings.SettingsScreen
 import com.motionsalt.ccstudio.ui.source.SourceStage
@@ -21,8 +18,6 @@ import com.motionsalt.ccstudio.ui.tune.TuneStage
 
 enum class NavDestination {
     PROJECTS,
-    PACKS,
-    LIBRARY,
     SETTINGS
 }
 
@@ -38,7 +33,6 @@ enum class ProjectStage(val title: String) {
 fun CcStudioApp() {
     val context = LocalContext.current
     val projectRepository = remember { ProjectRepository(context) }
-    val effectRepository = remember { EffectRepository(context) }
 
     var currentNav by remember { mutableStateOf(NavDestination.PROJECTS) }
     var activeProjectId by remember { mutableStateOf<String?>(null) }
@@ -76,18 +70,6 @@ fun CcStudioApp() {
                     onClick = { currentNav = NavDestination.PROJECTS },
                     icon = { Icon(EngineIcons.Home, contentDescription = "Projects") },
                     label = { Text("Projects") }
-                )
-                NavigationBarItem(
-                    selected = currentNav == NavDestination.PACKS,
-                    onClick = { currentNav = NavDestination.PACKS },
-                    icon = { Icon(EngineIcons.Bolt, contentDescription = "Packs") },
-                    label = { Text("Packs") }
-                )
-                NavigationBarItem(
-                    selected = currentNav == NavDestination.LIBRARY,
-                    onClick = { currentNav = NavDestination.LIBRARY },
-                    icon = { Icon(EngineIcons.MenuBook, contentDescription = "Library") },
-                    label = { Text("Library") }
                 )
                 NavigationBarItem(
                     selected = currentNav == NavDestination.SETTINGS,
@@ -167,26 +149,18 @@ fun CcStudioApp() {
                                 ProjectStage.TUNE -> {
                                     TuneStage(
                                         project = activeProject,
-                                        repository = projectRepository,
-                                        effectRepository = effectRepository
+                                        repository = projectRepository
                                     )
                                 }
                                 ProjectStage.EXPORT -> {
                                     ExportStage(
                                         project = activeProject,
-                                        repository = projectRepository,
-                                        effectRepository = effectRepository
+                                        repository = projectRepository
                                     )
                                 }
                             }
                         }
                     }
-                }
-                NavDestination.PACKS -> {
-                    PacksScreen(effectRepository = effectRepository)
-                }
-                NavDestination.LIBRARY -> {
-                    LibraryScreen(effectRepository = effectRepository)
                 }
                 NavDestination.SETTINGS -> {
                     SettingsScreen(

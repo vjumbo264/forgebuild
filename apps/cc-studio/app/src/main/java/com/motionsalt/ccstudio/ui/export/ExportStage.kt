@@ -1,11 +1,12 @@
 package com.motionsalt.ccstudio.ui.export
 
-import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.net.Uri
-import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -17,542 +18,224 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
-import com.forgebuild.engine.files.SafeSave
 import com.motionsalt.ccstudio.core.*
-import com.motionsalt.ccstudio.data.EffectRepository
 import com.motionsalt.ccstudio.data.PackSave
 import com.motionsalt.ccstudio.data.ProjectData
 import com.motionsalt.ccstudio.data.ProjectRepository
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.Locale
+import kotlin.math.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
 
-enum class PackMode {
-    CREATE_NEW,
-    ADD_TO_EXISTING,
-    MERGE_IMPORTED
-}
+private const val MIME="application/octet-stream"
+private const val DIR="MOTIONSALT/CC Studio"
+private data class Payload(val filename:String,val bytes:ByteArray,val stem:String,val proof:ByteArray,val tune:ByteArray)
+private enum class Mode(val title:String) { NEW("Create new"), ADD("Add to last export"), MERGE("Merge imported plugin") }
 
 @Composable
-fun ExportStage(project: ProjectData, repository: ProjectRepository, effectRepository: EffectRepository? = null) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var mode by remember { mutableStateOf(PackMode.CREATE_NEW) }
-    var name by remember { mutableStateOf<String>(project.lookName.ifBlank { project.name.ifBlank { "MOTIONSALT Look" } }) }
-    var suite by remember { mutableStateOf<String>("MOTIONSALT") }
-    val available = remember { (effectRepository ?: EffectRepository(context)).getAvailableEffects() }
-    var imported by remember { mutableStateOf<ByteArray?>(null) }
-    var status by remember { mutableStateOf<String?>(null) }
+fun ExportStage(project: ProjectData, repository: ProjectRepository) {
+    val context=LocalContext.current
+    val scope=rememberCoroutineScope()
+    val prefs=remember{ context.getSharedPreferences("cc_plugin_export",Context.MODE_PRIVATE) }
+    var mode by remember { mutableStateOf(Mode.NEW) }
+    var imported by remember { mutableStateOf<Uri?>(null) }
+    var folder by remember { mutableStateOf(prefs.getString("folder",null)?.let(Uri::parse)) }
+    var selectedName by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var collision by remember { mutableStateOf(false) }
-    var pending by remember { mutableStateOf<ByteArray?>(null) }
-    var policy by remember { mutableStateOf(CollisionPolicy.REPLACE) }
-    var saveProof by remember { mutableStateOf(false) }
-    var saveJson by remember { mutableStateOf(false) }
-    var tree by remember { mutableStateOf<Uri?>(null) }
-    var savedUri by remember { mutableStateOf<Uri?>(null) }
-    var savedPathDisplay by remember { mutableStateOf<String?>(null) }
-
-    val local = File(context.filesDir, "packs/${suite}.kfpack")
-
-    fun displayName(uri: Uri): String =
-        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-            if (c.moveToFirst()) c.getString(0) else ""
-        } ?: ""
-
-    fun saveToPublicDownloads(bytes: ByteArray, filename: String): String? {
-        val safeFilename = if (filename.endsWith(".kfpack")) filename else "$filename.kfpack"
-        var writtenPath: String? = null
-
-        // 1. Direct file write: saves both in Downloads/CC_Studio/ and root Downloads/
-        try {
-            val dlDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (dlDir != null && (dlDir.exists() || dlDir.mkdirs())) {
-                val subDir = File(dlDir, "CC_Studio").apply { mkdirs() }
-                val targetFile = File(subDir, safeFilename)
-                targetFile.writeBytes(bytes)
-                writtenPath = "Downloads/CC_Studio/$safeFilename"
-
-                val rootFile = File(dlDir, safeFilename)
-                runCatching { rootFile.writeBytes(bytes) }
-
-                runCatching {
-                    MediaScannerConnection.scanFile(
-                        context,
-                        arrayOf(targetFile.absolutePath, rootFile.absolutePath),
-                        arrayOf("application/octet-stream", "application/octet-stream"),
-                        null
-                    )
-                }
-            }
-        } catch (_: Exception) {
-            // Scoped storage fallback
-        }
-
-        // 2. Also register via MediaStore with exact .kfpack extension and octet-stream MIME
-        try {
-            val cv = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, safeFilename)
-                put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/CC_Studio")
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                }
-            }
-            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv)
-            if (uri != null) {
-                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    cv.clear()
-                    cv.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    context.contentResolver.update(uri, cv, null, null)
-                }
-                if (writtenPath == null) {
-                    writtenPath = "Downloads/CC_Studio/$safeFilename"
-                }
-            }
-        } catch (_: Exception) {
-        }
-
-        return writtenPath ?: "Downloads/CC_Studio/$safeFilename"
+    var message by remember { mutableStateOf<String?>(null) }
+    var success by remember { mutableStateOf<Pair<Uri,String>?>(null) }
+    var collision by remember { mutableStateOf<Pair<CcArchive.Pack,CcPlugin.Look>?>(null) }
+    var pending by remember { mutableStateOf<Payload?>(null) }
+    val local = remember { File(context.filesDir,"latest_cc_plugin.kfplug") }
+    val pickImport=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        imported=uri
+        selectedName=uri?.let { nameOf(context,it) }.orEmpty()
     }
-
-    fun write(uri: Uri) {
-        val bytes = pending ?: return
+    val pickFolder=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        result.data?.data?.let { folder=it;PackSave.persistGrant(context,it);prefs.edit().putString("folder",it.toString()).apply() }
+    }
+    fun record(payload:Payload,uri:Uri) {
+        local.writeBytes(payload.bytes)
+        val name=nameOf(context,uri)
+        project.exportHistory.add(name)
+        repository.saveProject(project)
+    }
+    fun verify(payload:Payload,uri:Uri) {
+        check(nameOf(context,uri).endsWith(".kfplug")) { "Storage provider did not preserve the .kfplug extension" }
+        val read=readPlugin(context,uri)
+        check(read.contentEquals(payload.bytes)) { "Saved plugin differs from the generated archive" }
+        CcArchive.inspect(read)
+    }
+    val pickFile=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val payload=pending
+        val uri=result.data?.data
+        pending=null
+        if(uri!=null && payload!=null) scope.launch {
+            busy=true
+            runCatching { withContext(Dispatchers.IO) {
+                PackSave.writeToUri(context,uri,payload.bytes);verify(payload,uri)
+                val privateProof=File(context.filesDir,"cc_proof").apply{mkdirs()}
+                File(privateProof,"${payload.stem}.png").writeBytes(payload.proof)
+                File(privateProof,"${payload.stem}.json").writeBytes(payload.tune)
+                record(payload,uri)
+            } }.onSuccess{ success=uri to "Proof PNG and tune JSON saved in app storage." }
+                .onFailure{ message=it.message?:"Could not save plugin" }
+            busy=false
+        }
+    }
+    fun publish(look:CcPlugin.Look,base:CcArchive.Pack?,policy:CcArchive.Collision) {
         scope.launch {
-            busy = true
-            try {
-                withContext(Dispatchers.IO) {
-                    check(PackSave.writeToUri(context, uri, bytes)) { "Could not save pack to selected URI" }
-                    local.parentFile?.mkdirs()
-                    local.writeBytes(bytes)
-                    tree?.let { folder ->
-                        if (saveJson) {
-                            val out = PackSave.createInTree(context, folder, "${name}_tune.json", "application/json")
-                            if (out != null) PackSave.writeToUri(context, out, project.tuneState.toJsonString().toByteArray())
+            busy=true;message=null
+            runCatching { withContext(Dispatchers.IO) {
+                val version=max(System.currentTimeMillis().div(1000).toInt(),1)
+                val bytes=if(base==null) CcPlugin.zip(CcPlugin.entries(listOf(look),version)) else checkNotNull(CcArchive.add(base,look,policy))
+                val pack=CcArchive.inspect(bytes)
+                val filename=pack.manifest.getString("id")+".kfplug"
+                val payload=Payload(filename,bytes,"${look.id}-proof",proof(context,project,look),JSONObject(look.values).toString(2).encodeToByteArray())
+                val tree=folder
+                if(tree!=null || Build.VERSION.SDK_INT>=29) {
+                    fun save(name:String,mime:String,data:ByteArray):Uri {
+                        if(tree!=null) {
+                            val target=checkNotNull(PackSave.createInTree(context,tree,name,mime)) { "Cannot create a file in the selected folder" }
+                            PackSave.writeToUri(context,target,data);return target
                         }
-                        if (saveProof) {
-                            val pair = project.pairs.firstOrNull { it.isComplete }
-                            val proof = File(context.filesDir, "projects/${project.id}/results/recreated_${pair?.id}.png")
-                            if (proof.exists()) {
-                                val out = PackSave.createInTree(context, folder, "${name}_match_proof.png", "image/png")
-                                if (out != null) PackSave.writeToUri(context, out, proof.readBytes())
-                            }
-                        }
+                        return saveDownload(context,name,mime,data)
                     }
-                }
-                savedUri = uri
-                val nameDisp = displayName(uri).ifBlank { "${suite}.kfpack" }
-                project.exportHistory.add(uri.toString())
-                repository.saveProject(project)
-                status = "Saved to: $nameDisp"
-            } catch (e: Exception) {
-                status = "Write error: ${e.message}"
-            } finally {
-                busy = false
-            }
+                    val uri=save(payload.filename,MIME,payload.bytes);verify(payload,uri)
+                    save("${payload.stem}.png","image/png",payload.proof)
+                    save("${payload.stem}.json","application/json",payload.tune)
+                    record(payload,uri)
+                    payload to uri
+                } else payload to null
+            } }.onSuccess { (payload,uri) ->
+                if(uri!=null) success=uri to (if(folder==null) "Saved to Downloads/$DIR with proof PNG and tune JSON." else "Saved in your selected folder with proof PNG and tune JSON.")
+                else { pending=payload;pickFile.launch(PackSave.createDocumentIntent(payload.filename,MIME)) }
+            }.onFailure { message=it.message?:"Could not create plugin" }
+            busy=false
         }
     }
-
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        if (r.resultCode == Activity.RESULT_OK) r.data?.data?.let { write(it) }
-    }
-
-    val folder = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
-        if (r.resultCode == Activity.RESULT_OK) r.data?.data?.let { uri ->
-            tree = uri
-            PackSave.persistGrant(context, uri)
-        }
-    }
-
-    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            try {
-                val bytes = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
-                }
-                val v = PackBuilder.validatePack(ByteArrayInputStream(bytes))
-                require(v.isValid) { v.errors.joinToString() }
-                imported = bytes
-                status = "Imported ${v.suiteInfo?.name}: ${v.effectIds.size} effects"
-            } catch (e: Exception) {
-                status = e.message
-            }
-        }
-    }
-
-    fun export(chosen: CollisionPolicy, launchPicker: Boolean = false) {
+    fun start() {
         scope.launch {
-            busy = true
-            try {
-                val bytes = withContext(Dispatchers.IO) {
-                    val fit = project.fitResult
-                    val model = if (fit != null && File(fit.modelPath).exists()) {
-                        runCatching {
-                            ParametricMatch.fromJson(JSONObject(File(fit.modelPath).readText()))
-                        }.getOrDefault(ParametricMatch())
-                    } else {
-                        ParametricMatch()
-                    }
-
-                    // Export all stack effects so every effect added in Tune stage is present in the pack,
-                    // with its exact tuned parameters and enabled/disabled state preserved.
-                    val stack = project.tuneState.stack
-                    require(stack.isNotEmpty()) { "Stack must not be empty" }
-
-                    val usedIds = mutableMapOf<String, Int>()
-                    val defs = stack.map { item ->
-                        if (item.effectId == "colour_match") {
-                            val ccId = "look_" + project.id.replace("-", "").take(10)
-                            val ccName = name.ifBlank { project.lookName.ifBlank { project.name.ifBlank { "Color Correction" } } }
-                            MatchEffect.definition(
-                                model = model,
-                                name = ccName,
-                                id = ccId,
-                                params = item.params,
-                                isEnabled = item.enabled
-                            )
-                        } else {
-                            val original = available.firstOrNull { it.id == item.effectId }
-                                ?: error("Missing original effect: ${item.effectId}")
-
-                            val tunedParams = original.parameters.map { p ->
-                                val tunedVal = item.params[p.key] ?: p.defaultValue
-                                val finalVal = if (p.key == "enabled") {
-                                    if (item.enabled) PackBuilder.toEffectDefaultValue(tunedVal, ParamType.BOOL, 1.0) else 0.0
-                                } else {
-                                    PackBuilder.toEffectDefaultValue(tunedVal, p.type, p.defaultValue)
-                                }
-                                p.copy(defaultValue = finalVal)
-                            }
-
-                            val count = usedIds.getOrDefault(original.id, 0)
-                            usedIds[original.id] = count + 1
-                            val effId = if (count == 0) original.id else "${original.id}_${count + 1}"
-
-                            PackBuilder.prepareEffect(
-                                original.copy(
-                                    id = effId,
-                                    category = suite,
-                                    parameters = tunedParams,
-                                    passes = original.passes,
-                                    passShaders = original.passShaders
-                                ),
-                                suiteCategory = suite,
-                                isEnabled = item.enabled
-                            )
-                        }
-                    }
-
-                    require(defs.isNotEmpty()) { "At least one effect must be present in the pack" }
-
-                    val existing = when (mode) {
-                        PackMode.CREATE_NEW -> null
-                        PackMode.ADD_TO_EXISTING -> local.takeIf { it.exists() }?.readBytes()
-                        PackMode.MERGE_IMPORTED -> imported ?: error("Import a pack first")
-                    }
-
-                    val out = ByteArrayOutputStream()
-                    if (existing == null) {
-                        PackBuilder.buildPack(SuiteInfo(name = suite), defs, out)
-                    } else {
-                        PackBuilder.mergePacks(ByteArrayInputStream(existing), defs, chosen, out)
-                    }
-                    val result = out.toByteArray()
-                    val validation = PackBuilder.validatePack(ByteArrayInputStream(result))
-                    require(validation.isValid) { validation.errors.joinToString("\n") }
-                    result
+            busy=true;message=null
+            runCatching { withContext(Dispatchers.IO) {
+                val path=checkNotNull(project.fitResult?.modelPath) { "Fit the look first" }
+                val model=ParametricMatch.fromJson(JSONObject(File(path).readText()))
+                val id=project.lookName.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9_-]+"),"-").trim('-').take(32).ifBlank { "cc-look" }
+                val look=CcPlugin.Look(id,project.lookName,model,project.ccValues)
+                val base=when(mode) {
+                    Mode.NEW -> null
+                    Mode.ADD -> CcArchive.inspect(local.readBytes())
+                    Mode.MERGE -> CcArchive.inspect(readPlugin(context,checkNotNull(imported)))
                 }
-
-                pending = bytes
-
-                // 1. Always save directly to public Downloads folder so it is immediately accessible
-                val savedDlPath = withContext(Dispatchers.IO) {
-                    saveToPublicDownloads(bytes, "${suite}.kfpack")
-                }
-
-                // 2. Cache file for sharing via FileProvider
-                val shareUri = withContext(Dispatchers.IO) {
-                    val cacheFile = File(context.cacheDir, "${suite}.kfpack")
-                    cacheFile.writeBytes(bytes)
-                    local.parentFile?.mkdirs()
-                    local.writeBytes(bytes)
-                    runCatching {
-                        FileProvider.getUriForFile(context, "com.motionsalt.ccstudio.fileprovider", cacheFile)
-                    }.getOrNull()
-                }
-
-                savedUri = shareUri
-                savedPathDisplay = savedDlPath
-                status = "Pack exported successfully to $savedDlPath (${bytes.size} bytes, ${project.tuneState.stack.size} effects wired)"
-
-                if (launchPicker) {
-                if (launchPicker) {
-                    tree?.let { uri ->
-                        val out = PackSave.createInTree(context, uri, "${suite}.kfpack", "application/octet-stream")
-                            ?: error("Cannot create pack in selected folder")
-                        write(out)
-                    } ?: save.launch(PackSave.createDocumentIntent("${suite}.kfpack", "application/octet-stream"))
-                }
-                }
-            } catch (e: Exception) {
-                status = "Export error: ${e.message}"
-            } finally {
-                busy = false
-            }
+                look to base
+            } }.onSuccess { (look,base) ->
+                if(base!=null && look.id in base.effectIds) collision=base to look else publish(look,base,CcArchive.Collision.CANCEL)
+            }.onFailure { message=it.message?:"Could not read the look" }
+            busy=false
         }
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Export Keyflaw Pack (.kfpack)", style = MaterialTheme.typography.titleLarge)
-
-        Text("Exports ready-to-use Keyflower effects with your tuned settings. Each effect includes an on/off toggle and live controls.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-        // Pack Mode Selector
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PackMode.entries.forEach { p ->
-                FilterChip(
-                    selected = mode == p,
-                    onClick = { mode = p },
-                    label = {
-                        Text(
-                            when (p) {
-                                PackMode.ADD_TO_EXISTING -> "Add to MOTIONSALT"
-                                PackMode.CREATE_NEW -> "Create new pack"
-                                PackMode.MERGE_IMPORTED -> "Merge imported"
-                            }
-                        )
-                    }
-                )
-            }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Text("Export Keyflaw plugin (.kfplug)",style=MaterialTheme.typography.titleLarge)
+        Text("One effect per look. Colour Match, Clarity, Structure, AE Unsharp Mask and Haze Flare are controls inside it.")
+        for(option in Mode.entries) Row {
+            RadioButton(selected=mode==option,onClick={mode=option},enabled=!busy && (option!=Mode.ADD || local.isFile))
+            Text(option.title,Modifier.padding(top=12.dp))
         }
-
-        if (mode == PackMode.MERGE_IMPORTED) {
-            OutlinedButton(onClick = { importer.launch(arrayOf("*/*")) }) {
-                Text("Select .kfpack to Merge")
-            }
+        if(mode==Mode.MERGE) OutlinedButton(onClick={pickImport.launch(arrayOf("*/*"))},enabled=!busy) { Text(selectedName.ifBlank { "Select .kfplug" }) }
+        Text(if(folder==null) "Downloads/$DIR" else "Custom save folder")
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick={pickFolder.launch(PackSave.openTreeIntent())},enabled=!busy) { Text("Choose folder") }
+            if(folder!=null) TextButton(onClick={folder=null;prefs.edit().remove("folder").apply()},enabled=!busy){Text("Use Downloads")}
         }
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Color correction look name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (mode == PackMode.CREATE_NEW) {
-            OutlinedTextField(
-                value = suite,
-                onValueChange = { suite = it },
-                label = { Text("Pack suite name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        // Settings in Pack Info Card
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Effects & settings wired in exported pack:", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                project.tuneState.stack.forEach { item ->
-                    val isCC = item.effectId == "colour_match"
-                    val def = if (isCC) MatchEffect.definition() else available.firstOrNull { it.id == item.effectId }
-                    val defName = if (isCC) name.ifBlank { "Color Correction" } else (def?.name ?: item.effectId)
-                    val statusPrefix = if (item.enabled) "✓" else "✗ (disabled by default)"
-                    val tunedDetails = def?.parameters?.filter { it.key != "enabled" }?.map { p ->
-                        val v = item.params[p.key] ?: p.defaultValue
-                        val vStr = if (v is Number) String.format(java.util.Locale.US, "%.1f", v.toFloat()) else v.toString()
-                        "${p.label}: $vStr"
-                    }?.joinToString(", ") ?: ""
-                    val suffix = if (tunedDetails.isNotBlank()) " [$tunedDetails]" else ""
-                    Text("• $statusPrefix $defName$suffix", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-
-        // Export Actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                enabled = !busy && name.isNotBlank(),
-                onClick = {
-                    if (mode != PackMode.CREATE_NEW && (imported != null || local.exists())) {
-                        collision = true
-                    } else {
-                        export(policy, launchPicker = false)
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(if (busy) "Exporting…" else "Export to Downloads")
-            }
-            OutlinedButton(
-                enabled = !busy && name.isNotBlank(),
-                onClick = {
-                    if (mode != PackMode.CREATE_NEW && (imported != null || local.exists())) {
-                        collision = true
-                    } else {
-                        export(policy, launchPicker = true)
-                    }
-                }
-            ) {
-                Text("Custom Folder (SAF)")
-            }
-        }
-
-        // Success / Status display
-        status?.let { msg ->
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (msg.startsWith("Export error") || msg.startsWith("Write error"))
-                        MaterialTheme.colorScheme.errorContainer
-                    else
-                        MaterialTheme.colorScheme.primaryContainer
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = msg,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (msg.startsWith("Export error") || msg.startsWith("Write error"))
-                            MaterialTheme.colorScheme.onErrorContainer
-                        else
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    savedPathDisplay?.let { p ->
-                        Text(
-                            text = "Find in: $p",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Share & Open in Keyflaw buttons
-        savedUri?.let { uri ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Use your pack:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                runCatching {
-                                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "application/octet-stream"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Share .kfpack"))
-                                }.onFailure { status = "Share error: ${it.message}" }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Share Pack")
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                runCatching {
-                                    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(uri, "application/octet-stream")
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(viewIntent)
-                                }.onFailure {
-                                    status = "Keyflaw app not registered for direct open; import the file from Keyflaw: $savedPathDisplay"
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Open in Keyflaw")
-                        }
-                    }
-                }
-            }
-        }
-
-        // Folder selection details
-        OutlinedButton(
-            onClick = { folder.launch(PackSave.openTreeIntent()) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (tree == null) "Pick Optional SAF Target Folder" else "Selected Folder: ${tree?.lastPathSegment}")
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = saveProof, onCheckedChange = { saveProof = it })
-            Text("Save colour-match proof PNG with export", fontSize = 13.sp)
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = saveJson, onCheckedChange = { saveJson = it })
-            Text("Save tune-state JSON with export", fontSize = 13.sp)
-        }
+        Button(onClick={start()},enabled=!busy && (mode!=Mode.MERGE || imported!=null)) { Text("Export plugin") }
+        if(busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        message?.let{ Text(it,color=MaterialTheme.colorScheme.error) }
     }
-
-    if (collision) {
-        AlertDialog(
-            onDismissRequest = { collision = false },
-            title = { Text("Effect ID collision policy") },
-            text = {
-                Column {
-                    Text("Apply to duplicate IDs only; other existing effects are preserved.")
-                    TextButton(
-                        onClick = {
-                            collision = false
-                            policy = CollisionPolicy.KEEP_BOTH_NEW_ID
-                            export(policy)
-                        }
-                    ) {
-                        Text("Keep both with new ID")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        collision = false
-                        policy = CollisionPolicy.REPLACE
-                        export(policy)
-                    }
-                ) {
-                    Text("Replace matching IDs")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { collision = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
+    collision?.let { (pack,look) ->
+        AlertDialog(onDismissRequest={collision=null},title={Text("A look with this ID already exists")},text={Text(look.id)},
+            confirmButton={TextButton(onClick={collision=null;publish(look,pack,CcArchive.Collision.REPLACE)}){Text("Replace")}},
+            dismissButton={Row {
+                TextButton(onClick={collision=null}){Text("Cancel")}
+                TextButton(onClick={collision=null;publish(look,pack,CcArchive.Collision.KEEP_BOTH)}){Text("Keep both")}
+            }})
     }
+    success?.let { (uri,where) ->
+        AlertDialog(onDismissRequest={success=null},title={Text("Plugin exported")},text={Text(where)},
+            confirmButton={TextButton(onClick={context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(MIME).putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),"Share .kfplug"))}){Text("Share")}},
+            dismissButton={Row {
+                TextButton(onClick={success=null}){Text("Done")}
+                TextButton(onClick={runCatching {
+                    val tree=folder
+                    if(tree==null) context.startActivity(Intent("android.intent.action.VIEW_DOWNLOADS"))
+                    else context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(tree,"vnd.android.document/directory").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                }.onFailure{success=null;message="Open your Files app to view the export folder."}}){Text("Open folder")}
+            }})
+    }
+}
+
+private fun nameOf(context:Context,uri:Uri):String = context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)
+    ?.use { if(it.moveToFirst()) it.getString(0) else null }.orEmpty()
+
+private fun readPlugin(context:Context,uri:Uri):ByteArray = checkNotNull(context.contentResolver.openInputStream(uri)).use { input ->
+    val out= ByteArrayOutputStream(); val buffer=ByteArray(16384)
+    while(true) {
+        val n=input.read(buffer)
+        if(n<0)break
+        require(out.size()+n<=CcArchive.MAX_ZIP) { "Plugin exceeds the 2 MB limit" }
+        out.write(buffer,0,n)
+    }
+    out.toByteArray()
+}
+
+@androidx.annotation.RequiresApi(29)
+private fun saveDownload(context:Context,name:String,mime:String,data:ByteArray):Uri {
+    val resolver=context.contentResolver
+    val values=ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME,name);put(MediaStore.MediaColumns.MIME_TYPE,mime)
+        put(MediaStore.MediaColumns.RELATIVE_PATH,"${Environment.DIRECTORY_DOWNLOADS}/$DIR")
+        put(MediaStore.MediaColumns.IS_PENDING,1)
+    }
+    val uri=checkNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values))
+    try {
+        PackSave.writeToUri(context,uri,data)
+        resolver.update(uri,ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING,0) },null,null)
+        return uri
+    } catch(e:Exception) { resolver.delete(uri,null,null);throw e }
+}
+
+private fun proof(context:Context,project:ProjectData,look:CcPlugin.Look):ByteArray {
+    val pair=checkNotNull(project.pairs.firstOrNull { it.isComplete })
+    val prepared=File(context.filesDir,"projects/${project.id}/results/before_${pair.id}.png")
+    val original=checkNotNull(BitmapFactory.decodeFile(if(prepared.isFile) prepared.path else checkNotNull(pair.base).filePath)) { "Cannot read proof source" }
+    val factor=min(1.0,560.0/max(original.width,original.height))
+    val w=max(1,(original.width*factor).roundToInt());val h=max(1,(original.height*factor).roundToInt())
+    val source=Bitmap.createScaledBitmap(original,w,h,true)
+    val argb=IntArray(w*h);source.getPixels(argb,0,w,0,0,w,h)
+    if(source!==original)source.recycle();original.recycle()
+    fun v(id:String)=look.values[id]?:CcPlugin.initial.getValue(id)
+    fun on(id:String)=v(id)>=.5
+    val data=FloatArray(w*h*4)
+    for (y in 0 until h) for(x in 0 until w) {
+        val c=argb[(h-1-y)*w+x].let { if(on("matchOn")) look.model.applyArgb(it,v("matchStrength")) else it }
+        val at=(y*w+x)*4
+        val alpha=Color.alpha(c)/255f
+        data[at]=Color.red(c)/255f*alpha;data[at+1]=Color.green(c)/255f*alpha;data[at+2]=Color.blue(c)/255f*alpha;data[at+3]=alpha
+    }
+    var frame=CcFinishing.detail(CcFrame(w,h,data),if(on("clarityOn"))v("clarity") else 0.0,if(on("structureOn"))v("structure") else 0.0)
+    if(on("usmOn")) frame=CcFinishing.unsharp(frame,v("usmAmount"),v("usmRadius"),v("usmThreshold"))
+    if(on("hazeOn")) frame=CcFinishing.haze(frame,CcHaze(v("hazeIntensity"),v("hazeThreshold"),v("hazeOpacity"),v("hazeSpread"),v("hazeBand"),v("hazeSide"),v("hazeCenter"),v("hazeGain"),v("hazeMode").toInt()))
+    for(y in 0 until h)for(x in 0 until w) {
+        val at=(y*w+x)*4;val a=frame.rgba[at+3]
+        fun channel(i:Int)=(255*frame.rgba[at+i]/a.coerceAtLeast(.0001f)).roundToInt().coerceIn(0,255)
+        argb[(h-1-y)*w+x]=Color.argb((a*255).roundToInt(),channel(0),channel(1),channel(2))
+    }
+    val result=Bitmap.createBitmap(argb,w,h,Bitmap.Config.ARGB_8888)
+    return ByteArrayOutputStream().use { out -> check(result.compress(Bitmap.CompressFormat.PNG,100,out));result.recycle();out.toByteArray() }
 }

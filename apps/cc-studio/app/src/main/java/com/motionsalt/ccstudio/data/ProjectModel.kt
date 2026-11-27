@@ -1,6 +1,7 @@
 package com.motionsalt.ccstudio.data
 
 import com.motionsalt.ccstudio.core.TuneState
+import com.motionsalt.ccstudio.core.CcPlugin
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -133,8 +134,8 @@ data class ProjectData(
     var updatedAt: Long,
     val pairs: MutableList<FramePair> = mutableListOf(),
     var fitResult: FitResultData? = null,
-    var tuneState: TuneState = TuneState.defaultState(),
-    val exportHistory: MutableList<String> = mutableListOf()
+    val exportHistory: MutableList<String> = mutableListOf(),
+    var ccValues: Map<String, Double> = CcPlugin.initial
 ) {
     fun toJsonObject(): JSONObject {
         val o = JSONObject()
@@ -149,7 +150,7 @@ data class ProjectData(
         o.put("pairs", pairsArr)
 
         if (fitResult != null) o.put("fitResult", fitResult!!.toJsonObject())
-        o.put("tuneState", JSONObject(tuneState.toJsonString()))
+        o.put("ccValues", JSONObject(ccValues))
 
         val expArr = JSONArray()
         for (eh in exportHistory) expArr.put(eh)
@@ -197,8 +198,15 @@ data class ProjectData(
                 updatedAt = updatedAt,
                 pairs = pairsList,
                 fitResult = fitResult,
-                tuneState = tuneState,
-                exportHistory = expList
+                exportHistory = expList,
+                ccValues = o.optJSONObject("ccValues")?.let { values ->
+                    CcPlugin.params.associate { p -> p.id to values.optDouble(p.id, p.initial).takeIf { it.isFinite() && it in p.min..p.max } .let { it ?: p.initial } }
+                } ?: CcPlugin.initial.toMutableMap().apply {
+                    tuneState.stack.firstOrNull { it.effectId == "colour_match" }?.let { old ->
+                        put("matchOn", if (old.enabled) 1.0 else 0.0)
+                        (old.params["strength"] as? Number)?.toDouble()?.takeIf { it.isFinite() }?.let { put("matchStrength",it.coerceIn(0.0,1.0)) }
+                    }
+                }
             )
         }
     }

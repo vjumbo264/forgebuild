@@ -105,7 +105,7 @@ object PermissionsHelper {
                 id = "manage_storage",
                 permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Manifest.permission.MANAGE_EXTERNAL_STORAGE else null,
                 name = "Direct Folder Access",
-                purpose = "Directly overwrite and merge .kfpack packs in Downloads without extra confirmation prompts",
+                purpose = "Optional access for managing existing files; not needed for plugin export",
                 whenRequested = "When enabled in Settings > Direct folder access",
                 fallback = "Standard per-file SAF document picker",
                 isGranted = manageGranted,
