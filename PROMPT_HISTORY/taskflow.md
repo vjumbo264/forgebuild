@@ -391,3 +391,48 @@ AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...yMQw
 AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...cOgw
 
 AQ.Ab8RN6...[REDACTED_FOR_GIT_PUSH_PROTECTION]...d-jw
+
+
+---
+
+# TaskFlow — Revision Pass 13 (Eisenhower Matrix Categories & AI Adaptation) — 2026-11-27
+
+Add a four-category Eisenhower Matrix structure to my to-do list application, update the main home screen layout to display all tasks organized inside these four categories, and adapt the integrated in-app AI so it can read, create, edit, move, and manage tasks across these categories.
+
+### 1. Categories & Data Model
+Define four task categories with clear canonical IDs, display labels, and urgency/importance attributes:
+1. `urgent_important` — **Important and urgent**
+2. `not_urgent_important` — **Important but not urgent**
+3. `urgent_not_important` — **Unimportant and urgent**
+4. `not_urgent_not_important` — **Unimportant but not urgent**
+
+Requirements:
+- Every task must belong to one of these four categories (set a sensible default, such as `not_urgent_important` or `urgent_important`, when a category is omitted).
+- Migrate or map existing tasks cleanly without losing data or breaking existing fields (title, notes, due date, completion state, tags, IDs, etc.).
+- Add helper functions/selectors to query tasks by category, count tasks per category, and move a task between categories.
+
+### 2. Main Home Screen Layout
+Update the main home screen so tasks are grouped into the four categories:
+- Render all four categories (`Important and urgent`, `Important but not urgent`, `Unimportant and urgent`, `Unimportant but not urgent`) clearly on the home screen.
+- Support a responsive 2x2 grid on wider screens and a clean stacked/collapsible view on narrow/mobile screens so text never clips or overflows.
+- Each category section/card should show:
+  - Category title and task count
+  - Task items with completion toggle, edit/delete/move actions, and quick-add scoped to that category
+  - A clear empty state when a category has zero tasks
+- Keep existing task interactions (checking off, editing, filtering/search if present, persistence) working smoothly with the new grouped layout.
+
+### 3. In-App AI Adaptation
+Update the AI assistant integrated inside the to-do list app so it is fully category-aware:
+- Include the four category definitions and current tasks grouped by category in the context/system instructions passed to the in-app AI.
+- Update or add AI tool/action schemas and execution handlers so the AI can:
+  - Create a new task in a specific category (`urgent_important`, `not_urgent_important`, `urgent_not_important`, `not_urgent_not_important`)
+  - Move/reclassify an existing task from one category to another
+  - Edit task details (title, due date, notes, completion status) while preserving or updating its category
+  - Delete or complete tasks within a specific category
+  - Summarize, prioritize, or triage tasks across the four quadrants when asked
+- Ensure UI state and persistence update immediately whenever the AI modifies tasks or categories.
+
+### 4. Implementation Rules
+- Inspect the existing codebase first and match its architecture, state management, styling, storage/API layer, and AI tool/action patterns.
+- Avoid breaking existing routes, tests, or persistence behavior.
+- Summarize all files changed, explain how existing tasks and AI actions were updated, and list any edge cases or follow-ups to verify.

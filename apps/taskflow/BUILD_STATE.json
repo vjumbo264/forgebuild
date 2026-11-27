@@ -4,8 +4,8 @@
   "app_name": "TaskFlow",
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
-  "updated_by": "forgebuild-extend-pass12",
-  "current_task": "step-75",
+  "updated_by": "forgebuild-extend-pass13",
+  "current_task": "step-77",
   "substitutions": [],
   "tasks": [
     {
@@ -455,6 +455,36 @@
     {
       "id": "step-75",
       "title": "Pass 12: Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v12, verify release + assets live via GitHub Releases API, and set build_complete: true",
+      "status": "done",
+      "notes": "Verified live via GitHub Releases API: tag 'taskflow-v12' (published 2026-11-13T07:06:02Z) with assets app-taskflow-v12.apk, forgebuild-manifest.json, and release.json."
+    },
+    {
+      "id": "step-76",
+      "title": "Pass 13: Append Revision Pass 13 operator instruction to PROMPT_HISTORY/taskflow.md and seed BUILD_STATE.json tasks",
+      "status": "done",
+      "notes": "Appended Revision Pass 13 (Eisenhower Matrix categories, responsive 2x2/stacked home layout, and category-aware AI adaptation) under 2026-11-27 in PROMPT_HISTORY/taskflow.md; finalized step-75 status for live taskflow-v12 and seeded steps 76-80."
+    },
+    {
+      "id": "step-77",
+      "title": "Pass 13: Implement TaskCategory Eisenhower Matrix model, Room v7->v8 migration, category DAO/repository helpers, and ViewModel selectors",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-78",
+      "title": "Pass 13: Update main home screen layout to 4-category responsive 2x2 grid / collapsible mobile cards with quick-add, move-category, search, and M3 Expressive UI",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-79",
+      "title": "Pass 13: Adapt in-app AI system context, tool schemas, and execution handlers for full category awareness and triage",
+      "status": "pending",
+      "notes": ""
+    },
+    {
+      "id": "step-80",
+      "title": "Pass 13: Validate build, dispatch release.yml (app_path=apps/taskflow) -> taskflow-v13, verify release + assets live via GitHub Releases API, and set build_complete: true",
       "status": "pending",
       "notes": ""
     }
