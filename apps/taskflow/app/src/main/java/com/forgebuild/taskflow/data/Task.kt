@@ -2,6 +2,7 @@ package com.forgebuild.taskflow.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 
 /** Recurrence rules; WEEKLY carries [weekdaysMask] (bit 0=Monday … bit 6=Sunday). */
 enum class Recurrence { NONE, DAILY, WEEKLY, MONTHLY, YEARLY }
@@ -18,6 +19,107 @@ enum class TaskType {
     FIXED_TIME,
     RECURRING_FIXED,
     RECURRING_NO_TIME
+}
+
+/**
+ * Eisenhower Matrix task categories with canonical IDs, display labels,
+ * and urgency/importance attributes.
+ */
+enum class TaskCategory(
+    val id: String,
+    val label: String,
+    val isUrgent: Boolean,
+    val isImportant: Boolean,
+    val actionHint: String
+) {
+    URGENT_IMPORTANT(
+        id = "urgent_important",
+        label = "Important and urgent",
+        isUrgent = true,
+        isImportant = true,
+        actionHint = "Do first"
+    ),
+    NOT_URGENT_IMPORTANT(
+        id = "not_urgent_important",
+        label = "Important but not urgent",
+        isUrgent = false,
+        isImportant = true,
+        actionHint = "Schedule"
+    ),
+    URGENT_NOT_IMPORTANT(
+        id = "urgent_not_important",
+        label = "Unimportant and urgent",
+        isUrgent = true,
+        isImportant = false,
+        actionHint = "Delegate"
+    ),
+    NOT_URGENT_NOT_IMPORTANT(
+        id = "not_urgent_not_important",
+        label = "Unimportant but not urgent",
+        isUrgent = false,
+        isImportant = false,
+        actionHint = "Later"
+    );
+
+    companion object {
+        val DEFAULT: TaskCategory = NOT_URGENT_IMPORTANT
+
+        fun fromId(raw: String?): TaskCategory? {
+            if (raw.isNullOrBlank()) return null
+            val norm = raw.trim().lowercase()
+                .replace("-", "_")
+                .replace(" ", "_")
+            return when (norm) {
+                "urgent_important", "important_and_urgent", "important_urgent", "q1", "do", "do_first" ->
+                    URGENT_IMPORTANT
+                "not_urgent_important", "important_but_not_urgent", "important_not_urgent", "q2", "schedule" ->
+                    NOT_URGENT_IMPORTANT
+                "urgent_not_important", "unimportant_and_urgent", "not_important_and_urgent", "unimportant_urgent", "q3", "delegate" ->
+                    URGENT_NOT_IMPORTANT
+                "not_urgent_not_important", "unimportant_but_not_urgent", "unimportant_not_urgent", "not_important_not_urgent", "q4", "eliminate", "later" ->
+                    NOT_URGENT_NOT_IMPORTANT
+                else -> entries.firstOrNull {
+                    it.id.equals(norm, ignoreCase = true) ||
+                        it.name.equals(norm, ignoreCase = true) ||
+                        it.label.equals(raw.trim(), ignoreCase = true)
+                }
+            }
+        }
+
+        fun fromIdOrDefault(raw: String?): TaskCategory = fromId(raw) ?: DEFAULT
+    }
+}
+
+class TaskConverters {
+    @TypeConverter
+    fun fromCategory(category: TaskCategory): String = category.id
+
+    @TypeConverter
+    fun toCategory(raw: String?): TaskCategory = TaskCategory.fromIdOrDefault(raw)
+}
+
+/** Pure selector and grouping helpers for the four Eisenhower categories. */
+object TaskCategoryHelper {
+    fun filterByCategory(tasks: List<Task>, category: TaskCategory): List<Task> =
+        tasks.filter { it.category == category }
+
+    fun groupByCategory(tasks: List<Task>): Map<TaskCategory, List<Task>> {
+        val grouped = tasks.groupBy { it.category }
+        return linkedMapOf<TaskCategory, List<Task>>().apply {
+            TaskCategory.entries.forEach { cat ->
+                put(cat, grouped[cat].orEmpty())
+            }
+        }
+    }
+
+    fun countByCategory(tasks: List<Task>): Map<TaskCategory, Int> {
+        val counts = tasks.groupingBy { it.category }.eachCount()
+        return linkedMapOf<TaskCategory, Int>().apply {
+            TaskCategory.entries.forEach { cat ->
+                put(cat, counts[cat] ?: 0)
+            }
+        }
+    }
 }
 
 @Entity(tableName = "tasks")
@@ -37,6 +139,8 @@ data class Task(
     val weekdaysMask: Int = 0,
     /** Free-text notes ("info"). Shown via eye-icon quick-peek, edited on the edit screen. */
     val info: String = "",
+    /** Eisenhower Matrix category (defaults to Important but not urgent). */
+    val category: TaskCategory = TaskCategory.DEFAULT,
     /** Nullable parent for infinitely nestable sub-tasks. */
     val parentId: Long? = null,
     val completed: Boolean = false,

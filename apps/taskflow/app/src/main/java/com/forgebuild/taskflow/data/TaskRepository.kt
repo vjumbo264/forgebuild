@@ -11,9 +11,10 @@ import java.util.Calendar
 /**
  * Single source of truth for the task graph.
  * Handles priority rank generation, recursive deletion, recurrence spawning,
- * due-now pinning, and daily duration allocation tracking.
+ * due-now pinning, Eisenhower Matrix category management, and daily duration allocation tracking.
  */
 class TaskRepository(private val dao: TaskDao, private val appContext: Context? = null) {
+
     /** Hook wired to ReminderScheduler.rescheduleAll. */
     var onTimedTasksChanged: (suspend () -> Unit)? = null
     /** Low-priority ping hook when a recurring instance is generated. */
@@ -22,6 +23,8 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
     var onOverdue: (suspend (Task) -> Unit)? = null
 
     fun activeChildren(parentId: Long?): Flow<List<Task>> = dao.observeActiveChildren(parentId)
+    fun observeByCategory(parentId: Long?, category: TaskCategory): Flow<List<Task>> =
+        dao.observeActiveChildrenByCategory(parentId, category)
     fun children(parentId: Long?): Flow<List<Task>> = dao.observeChildren(parentId)
     fun completedTasks(): Flow<List<Task>> = dao.observeCompleted()
     fun byId(id: Long): Flow<Task?> = dao.observeById(id)
@@ -31,18 +34,51 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
     suspend fun get(id: Long): Task? = dao.getById(id)
     /** One-shot snapshot of all active tasks (used by the foreground service timer watcher). */
     suspend fun allActiveNow(): List<Task> = withContext(Dispatchers.IO) { dao.allActive() }
+    suspend fun allTasksIncludingCompleted(): List<Task> = withContext(Dispatchers.IO) { dao.all() }
     suspend fun childCount(parentId: Long?): Int = dao.childCount(parentId)
     suspend fun activeChildCount(parentId: Long?): Int = dao.activeChildCount(parentId)
     suspend fun siblingsOf(parentId: Long?): List<Task> = withContext(Dispatchers.IO) { dao.children(parentId) }
     suspend fun activeSiblingsOf(parentId: Long?): List<Task> = withContext(Dispatchers.IO) { dao.activeChildren(parentId) }
 
-    /** Find an active task by full or partial title match for AI parent-task resolution. */
-    suspend fun findByTitle(query: String): Task? = withContext(Dispatchers.IO) {
+    suspend fun tasksByCategory(category: TaskCategory, parentId: Long? = null): List<Task> = withContext(Dispatchers.IO) {
+        dao.activeChildrenByCategory(parentId, category)
+    }
+
+    suspend fun countByCategory(parentId: Long? = null): Map<TaskCategory, Int> = withContext(Dispatchers.IO) {
+        TaskCategoryHelper.countByCategory(dao.activeChildren(parentId))
+    }
+
+    suspend fun moveToCategory(id: Long, category: TaskCategory, includeSubtasks: Boolean = false): Task? =
+        withContext(Dispatchers.IO) {
+            val t = dao.getById(id) ?: return@withContext null
+            val now = System.currentTimeMillis()
+            val updated = t.copy(category = category, updatedAt = now)
+            dao.update(updated)
+            if (includeSubtasks) {
+                moveSubtasksCategory(id, category, now)
+            }
+            updated
+        }
+
+    private suspend fun moveSubtasksCategory(parentId: Long, category: TaskCategory, now: Long) {
+        dao.children(parentId).forEach { child ->
+            dao.update(child.copy(category = category, updatedAt = now))
+            moveSubtasksCategory(child.id, category, now)
+        }
+    }
+
+    /** Find an active task by full or partial title match, optionally scoped to [category]. */
+    suspend fun findByTitle(query: String, category: TaskCategory? = null): Task? = withContext(Dispatchers.IO) {
         val q = query.trim()
         if (q.isBlank()) return@withContext null
         val all = dao.allActive()
-        all.firstOrNull { it.title.equals(q, ignoreCase = true) }
-            ?: all.firstOrNull { it.title.contains(q, ignoreCase = true) }
+        val scoped = if (category != null) all.filter { it.category == category } else all
+        scoped.firstOrNull { it.title.equals(q, ignoreCase = true) }
+            ?: scoped.firstOrNull { it.title.contains(q, ignoreCase = true) }
+            ?: if (category != null) {
+                all.firstOrNull { it.title.equals(q, ignoreCase = true) }
+                    ?: all.firstOrNull { it.title.contains(q, ignoreCase = true) }
+            } else null
     }
 
     suspend fun create(
@@ -55,7 +91,8 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         recurrence: Recurrence = Recurrence.NONE,
         weekdaysMask: Int = 0,
         info: String = "",
-        recurrenceEndDate: Long? = null
+        recurrenceEndDate: Long? = null,
+        category: TaskCategory = TaskCategory.DEFAULT
     ): Task = withContext(Dispatchers.IO) {
         val siblings = dao.children(parentId)
         val r = rank ?: PriorityRank.between(null, siblings.lastOrNull()?.rank)
@@ -70,6 +107,7 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
             recurrence = recurrence,
             weekdaysMask = weekdaysMask,
             info = info,
+            category = category,
             parentId = parentId,
             isRecurringTemplate = template,
             recurrenceEndDate = if (template) recurrenceEndDate else null
@@ -105,12 +143,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         val t = dao.getById(id) ?: return@withContext
         val now = System.currentTimeMillis()
         if (done && t.isRecurringTemplate) {
-            // Completing a recurring task = completing the occurrence the template
-            // currently represents. The template keeps its recurrence, children and
-            // identity; its fixedTime simply advances to the next occurrence. A
-            // separate completed record is written for the Completed view/history.
-            // This replaces the old behaviour that spawned a duplicate non-recurring,
-            // children-less copy next to a completed template (Pass 5 critical fix).
             val history = Task(
                 title = t.title,
                 rank = t.rank,
@@ -119,6 +151,7 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
                 recurrence = Recurrence.NONE,
                 weekdaysMask = t.weekdaysMask,
                 info = t.info,
+                category = t.category,
                 parentId = t.parentId,
                 completed = true,
                 completedAt = now,
@@ -130,7 +163,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
             if (next != null && (t.recurrenceEndDate == null || next <= t.recurrenceEndDate)) {
                 dao.update(t.copy(fixedTime = next, dueNow = false, missed = false, missedAt = null, updatedAt = now))
             } else {
-                // Recurrence expired (or uncomputable): retire the template itself.
                 dao.update(t.copy(completed = true, completedAt = now, dueNow = false, updatedAt = now))
             }
             reschedule()
@@ -138,8 +170,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         }
         dao.update(TimerEngine.clear(t.copy(completed = done, completedAt = if (done) now else null, dueNow = false, updatedAt = now)))
         if (done && t.recurrence != Recurrence.NONE) {
-            // Legacy generated instances carry their own recurrence; advance them in
-            // place too (same rule as templates) instead of spawning duplicates.
             dao.getById(t.id)?.let { cur ->
                 val next = RecurrenceEngine.nextAfter(cur, now)
                 if (next != null && (cur.recurrenceEndDate == null || next <= cur.recurrenceEndDate)) {
@@ -151,13 +181,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         reschedule()
     }
 
-    /**
-     * Parent/child duration constraint (applies at every nesting level):
-     * the sum of a task's immediate children's durations may never exceed the
-     * parent's own duration (for overnight parents, durationMinutes already IS
-     * the full cross-midnight span, e.g. 20:00->02:00 = 360m). Returns an error
-     * message when the proposed child duration would break the rule, else null.
-     */
     suspend fun childDurationError(parentId: Long?, durationMinutes: Long, excludeChildId: Long? = null): String? =
         withContext(Dispatchers.IO) {
             if (parentId == null) return@withContext null
@@ -172,10 +195,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
             else null
         }
 
-    /**
-     * Mirror of [childDurationError] for shrinking a parent: the parent's new
-     * duration may not drop below the sum of its direct children's durations.
-     */
     suspend fun parentShrinkError(taskId: Long, newDurationMinutes: Long): String? =
         withContext(Dispatchers.IO) {
             val kids = dao.children(taskId)
@@ -194,17 +213,9 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
     /** Missed fixed-time tasks feed for the Unfinished view. */
     fun unfinishedTasks(): Flow<List<Task>> = dao.observeMissed()
 
-    /**
-     * Move fixed-time tasks whose day has passed unfinished into the Unfinished view
-     * (they disappear from the active list; they do NOT carry over and do NOT stay pinned).
-     * Normal tasks carry over automatically (no action needed); recurring instances
-     * follow their own schedule.
-     */
     suspend fun sweepMissed() = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val todayStart = dayStart(now)
-        // An overnight task whose span still reaches into today (or is still running)
-        // is NOT missed — only sweep tasks whose whole span ended before today.
         val expired = dao.expiredFixedTime(todayStart).filter { t ->
             val spanEnd = (t.fixedTime ?: 0L) + t.durationMinutes.coerceAtLeast(1L) * 60_000L
             spanEnd <= todayStart
@@ -216,14 +227,12 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         if (expired.isNotEmpty()) reschedule()
     }
 
-    /** Auto-delete missed (Unfinished-view) tasks older than the retention cutoff — same retention as Completed. */
     suspend fun purgeExpiredMissed(retentionDays: Int): Int = withContext(Dispatchers.IO) {
         if (retentionDays <= 0) return@withContext 0
         val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 86_400_000L)
         dao.deleteMissedBefore(cutoff)
     }
 
-    /** Restore a missed task to the active list as an untimed (normal) task so it is not re-missed. */
     suspend fun restoreMissed(id: Long) = withContext(Dispatchers.IO) {
         val t = dao.getById(id) ?: return@withContext
         dao.update(t.copy(missed = false, missedAt = null, fixedTime = null, dueNow = false,
@@ -311,21 +320,13 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
     suspend fun rollover() = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val today = dayStart(now)
-        // Clear stale due-now pins — but keep the pin while an overnight task's span
-        // is still running past midnight (until fixedTime + duration has passed).
         val stale = dao.all().filter { t ->
             if (!t.dueNow || t.dueNowDay == null || t.dueNowDay!! >= today) return@filter false
             val spanEnd = (t.fixedTime ?: 0L) + t.durationMinutes.coerceAtLeast(1L) * 60_000L
             t.fixedTime == null || spanEnd <= now
         }
         stale.forEach { dao.update(it.copy(dueNow = false)) }
-        // Fixed-time tasks whose day passed unfinished -> Unfinished view (no carry-over, no pin).
-        // Normal tasks carry over automatically (no action); recurring instances follow their own schedule.
         sweepMissed()
-        // Recurring templates advance IN PLACE — no separate child-less non-recurring
-        // instances are ever generated (Pass 5 duplication fix). At rollover, any
-        // template whose occurrence anchor fell behind simply rolls forward to its
-        // next occurrence (respecting recurrence expiration).
         dao.recurringTemplates().forEach { tpl ->
             val anchor = tpl.fixedTime
             if (anchor != null && anchor < today && !tpl.completed && !tpl.missed) {
@@ -352,7 +353,6 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
 
     // ---- Per-task countdown timer (TimerEngine state machine, persisted on Task) ----
     suspend fun timerStart(id: Long) = withContext(Dispatchers.IO) {
-        // Pass 7: snapshot the Pomodoro settings at start so the plan survives later changes.
         var workMs: Long? = null
         var breakMs: Long? = null
         appContext?.let { ctx ->
@@ -364,24 +364,21 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
         }
         dao.getById(id)?.let { dao.update(TimerEngine.startOrResume(it, pomodoroWorkMs = workMs, pomodoroBreakMs = breakMs)) }
     }
+
     suspend fun timerPause(id: Long) = withContext(Dispatchers.IO) {
         dao.getById(id)?.let { dao.update(TimerEngine.pause(it)) }
     }
+
     suspend fun timerExtend(id: Long, extraMinutes: Long) = withContext(Dispatchers.IO) {
         dao.getById(id)?.let { dao.update(TimerEngine.extend(it, extraMinutes.coerceAtLeast(1L) * 60_000L)) }
     }
+
     suspend fun timerClear(id: Long) = withContext(Dispatchers.IO) {
         dao.getById(id)?.let { dao.update(TimerEngine.clear(it)) }
     }
 
     suspend fun pendingTimed(): List<Task> = withContext(Dispatchers.IO) { dao.pendingTimedTasks() }
 
-    /**
-     * Minutes allocated to today. Delegates to [DayAccounting] so EVERY category counts:
-     * one-off timed tasks, recurring templates occurring today, generated recurring
-     * instances (even with a stale past fixedTime), carried-over unfinished tasks, and
-     * the pre-midnight segment of overnight tasks.
-     */
     suspend fun getAllocatedMinutesToday(excludeTaskId: Long? = null): Long = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         DayAccounting.allocatedMinutesForDay(dao.allActive(), now, now, excludeTaskId)
@@ -414,14 +411,11 @@ class TaskRepository(private val dao: TaskDao, private val appContext: Context? 
     }
 
     fun dayStart(millis: Long): Long = DayAccounting.dayStart(millis)
-
     fun dayEnd(millis: Long): Long = DayAccounting.nextDayStart(millis) - 1L
-
     private suspend fun reschedule() { onTimedTasksChanged?.invoke() }
 
     companion object {
         @Volatile private var instance: TaskRepository? = null
-
         fun get(context: Context): TaskRepository =
             instance ?: synchronized(this) {
                 instance ?: TaskRepository(TaskFlowDb.get(context).taskDao(), context.applicationContext).also { instance = it }

@@ -31,6 +31,18 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND completed = 0 AND missed = 0 ORDER BY dueNow DESC, rank DESC")
     suspend fun activeChildren(parentId: Long?): List<Task>
 
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND category = :category AND completed = 0 AND missed = 0 ORDER BY dueNow DESC, rank DESC")
+    fun observeActiveChildrenByCategory(parentId: Long?, category: TaskCategory): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE parentId IS :parentId AND category = :category AND completed = 0 AND missed = 0 ORDER BY dueNow DESC, rank DESC")
+    suspend fun activeChildrenByCategory(parentId: Long?, category: TaskCategory): List<Task>
+
+    @Query("SELECT COUNT(*) FROM tasks WHERE category = :category AND completed = 0 AND missed = 0")
+    suspend fun countActiveByCategory(category: TaskCategory): Int
+
+    @Query("UPDATE tasks SET category = :category, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateCategory(id: Long, category: TaskCategory, updatedAt: Long)
+
     /** All tasks at one level regardless of completion (for reordering / nesting). */
     @Query("SELECT * FROM tasks WHERE parentId IS :parentId ORDER BY dueNow DESC, rank DESC")
     fun observeChildren(parentId: Long?): Flow<List<Task>>

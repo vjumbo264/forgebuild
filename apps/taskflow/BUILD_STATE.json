@@ -5,7 +5,7 @@
   "description": "Native Android to-do app with fractional-rank priority, infinitely nestable sub-tasks, exact-alarm fixed-time reminders, and a Gemini-powered voice/text AI agent with full task CRUD.",
   "build_complete": false,
   "updated_by": "forgebuild-extend-pass13",
-  "current_task": "step-77",
+  "current_task": "step-78",
   "substitutions": [],
   "tasks": [
     {
@@ -467,8 +467,8 @@
     {
       "id": "step-77",
       "title": "Pass 13: Implement TaskCategory Eisenhower Matrix model, Room v7->v8 migration, category DAO/repository helpers, and ViewModel selectors",
-      "status": "pending",
-      "notes": ""
+      "status": "done",
+      "notes": "Added TaskCategory enum (urgent_important, not_urgent_important, urgent_not_important, not_urgent_not_important) with urgency/importance attributes, TaskConverters, and TaskCategoryHelper selectors in Task.kt; bumped TaskFlowDb to v8 with non-destructive MIGRATION_7_8 defaulting existing tasks to not_urgent_important; added category DAO queries, TaskRepository.tasksByCategory/countByCategory/moveToCategory/category-aware findByTitle, and TaskViewModel groupedTasks/categoryCounts/searchQuery/moveTaskCategory."
     },
     {
       "id": "step-78",

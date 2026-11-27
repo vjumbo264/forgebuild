@@ -8,8 +8,8 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Task::class, ChatMessage::class], version = 7, exportSchema = false)
-@TypeConverters(ChatConverters::class)
+@Database(entities = [Task::class, ChatMessage::class], version = 8, exportSchema = false)
+@TypeConverters(ChatConverters::class, TaskConverters::class)
 abstract class TaskFlowDb : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun chatMessageDao(): ChatMessageDao
@@ -27,11 +27,19 @@ abstract class TaskFlowDb : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `tasks` ADD COLUMN `category` TEXT NOT NULL DEFAULT 'not_urgent_important'"
+                )
+            }
+        }
+
         @Volatile private var instance: TaskFlowDb? = null
         fun get(context: Context): TaskFlowDb =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(context.applicationContext, TaskFlowDb::class.java, "taskflow.db")
-                    .addMigrations(MIGRATION_6_7)
+                    .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                     .fallbackToDestructiveMigration()
                     .build().also { instance = it }
             }

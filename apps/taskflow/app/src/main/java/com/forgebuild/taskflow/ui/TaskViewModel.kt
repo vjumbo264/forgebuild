@@ -4,9 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.forgebuild.taskflow.data.DayAccounting
-import com.forgebuild.taskflow.data.PriorityRank
 import com.forgebuild.taskflow.data.Recurrence
 import com.forgebuild.taskflow.data.Task
+import com.forgebuild.taskflow.data.TaskCategory
+import com.forgebuild.taskflow.data.TaskCategoryHelper
 import com.forgebuild.taskflow.data.TaskRepository
 import com.forgebuild.taskflow.reminder.DueForegroundService
 import com.forgebuild.taskflow.reminder.ReminderScheduler
@@ -39,10 +40,12 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     private val _timeRange = MutableStateFlow(TimeRangeView.TODAY)
     val timeRange: StateFlow<TimeRangeView> = _timeRange.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     /** Navigation stack of parent ids; empty = top level. */
     private val _path = MutableStateFlow<List<Long>>(emptyList())
     val path: StateFlow<List<Long>> = _path.asStateFlow()
-
     val currentParentId: StateFlow<Long?> = _path.map { it.lastOrNull() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -51,11 +54,9 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { repo.activeChildren(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Filtered tasks according to the selected TimeRangeView, using shared [DayAccounting] day-occupancy rules. */
-    val tasks: StateFlow<List<Task>> = combine(rawActiveTasks, _timeRange) { list, range ->
+    /** Filtered tasks according to the selected TimeRangeView + search query, using shared [DayAccounting] rules. */
+    val tasks: StateFlow<List<Task>> = combine(rawActiveTasks, _timeRange, _searchQuery) { list, range, query ->
         val now = System.currentTimeMillis()
-
-        /** Day-start millis for every calendar day covered by the selected range. */
         fun daysInRange(): List<Long> {
             val todayStart = DayAccounting.dayStart(now)
             return when (range) {
@@ -84,22 +85,40 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         val days = daysInRange()
-
+        val q = query.trim()
         list.filter { t ->
-            if (t.dueNow) return@filter true
-            when {
-                // Untimed tasks belong to today (and therefore to every range that includes today).
+            val inRange = if (t.dueNow) {
+                true
+            } else when {
                 t.fixedTime == null && !t.isRecurringTemplate ->
                     days.any { DayAccounting.touchesDay(t, it, now) }
-                // Recurring template: show if it occurs on any day in range.
                 t.isRecurringTemplate ->
                     days.any { DayAccounting.occursOnDay(t, it) != null }
-                // Timed one-off / generated instance: show on any day its occupancy
-                // touches (incl. overnight spill into the next day and carry-over).
                 else -> days.any { DayAccounting.touchesDay(t, it, now) }
+            }
+            if (!inRange) return@filter false
+            if (q.isNotEmpty()) {
+                t.title.contains(q, ignoreCase = true) ||
+                    t.info.contains(q, ignoreCase = true) ||
+                    t.category.label.contains(q, ignoreCase = true)
+            } else {
+                true
             }
         }.distinctBy { it.id }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Tasks grouped into all four Eisenhower Matrix categories (always containing all 4 keys). */
+    val groupedTasks: StateFlow<Map<TaskCategory, List<Task>>> = tasks
+        .map { TaskCategoryHelper.groupByCategory(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TaskCategoryHelper.groupByCategory(emptyList()))
+
+    /** Task counts per Eisenhower Matrix category. */
+    val categoryCounts: StateFlow<Map<TaskCategory, Int>> = tasks
+        .map { TaskCategoryHelper.countByCategory(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TaskCategoryHelper.countByCategory(emptyList()))
+
+    fun tasksForCategory(category: TaskCategory): List<Task> =
+        TaskCategoryHelper.filterByCategory(tasks.value, category)
 
     /** Completed tasks list. */
     val completedTasks: StateFlow<List<Task>> = repo.completedTasks()
@@ -116,10 +135,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
 
     val themeMode: StateFlow<ThemeMode> = settings.themeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM)
-
     val onboardingDone: StateFlow<Boolean> = settings.onboardingDone
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
     val retentionDays: StateFlow<Int> = settings.retentionDays
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 14)
 
@@ -129,13 +146,11 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         DayAccounting.allocatedMinutesForDay(all, now, now)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    /** Pass 7: minutes of the 24h day already elapsed. */
     val elapsedMinutesToday: StateFlow<Long> = repo.allActive().map {
         val now = System.currentTimeMillis()
         ((now - DayAccounting.dayStart(now)) / 60000L).coerceIn(0L, 1440L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    /** Pass 7 (horizontal bar): day "used" = elapsed time + time still booked by tasks, vs 24h. */
     val usedDayMinutes: StateFlow<Long> = combine(allocatedMinutesToday, elapsedMinutesToday) { alloc, elapsed ->
         (elapsed + alloc).coerceIn(0L, 1440L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
@@ -153,7 +168,6 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         (minutesUntilMidnight - allocated).coerceAtLeast(0L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 
-    /** User feedback message channel (e.g. allocation error snackbar). */
     private val _userMessage = MutableSharedFlow<String>()
     val userMessage: SharedFlow<String> = _userMessage.asSharedFlow()
 
@@ -167,11 +181,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             scheduler.rescheduleAll()
-            // Day-rollover rules on every open: expired fixed-time tasks -> Unfinished view.
             repo.sweepMissed()
-            // Degrade any stale loud due-now pins whose full span already elapsed.
             repo.transitionDueNow()
-            // Auto-purge expired completed AND missed (Unfinished) tasks per retention setting
             val days = settings.retentionDays.first()
             repo.purgeExpiredCompleted(days)
             repo.purgeExpiredMissed(days)
@@ -179,7 +190,7 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setTimeRange(range: TimeRangeView) { _timeRange.value = range }
-
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
     fun openTask(taskId: Long) { _path.value = _path.value + taskId }
     fun navigateToBreadcrumb(index: Int) {
         if (index < 0) _path.value = emptyList()
@@ -200,12 +211,10 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
         weekdaysMask: Int = 0,
         info: String = "",
         recurrenceEndDate: Long? = null,
-        parentId: Long? = null
+        parentId: Long? = null,
+        category: TaskCategory = TaskCategory.DEFAULT
     ) = viewModelScope.launch {
         if (title.isBlank()) return@launch
-        // Pass 7 FIX: an explicit parentId (e.g. the edit screen adding a sub-task)
-        // overrides the navigation level, so the new task nests under the intended
-        // parent instead of becoming a root task.
         val effectiveParent = parentId ?: _path.value.lastOrNull()
         val dur = durationMinutes.coerceAtLeast(1L)
         val now = System.currentTimeMillis()
@@ -214,7 +223,8 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             rank = 0.0,
             durationMinutes = dur,
             fixedTime = fixedTime,
-            scheduledDate = scheduledDate
+            scheduledDate = scheduledDate,
+            category = category
         )
         val todayStart = DayAccounting.dayStart(now)
         val isFutureDay = scheduledDate != null && scheduledDate > todayStart
@@ -227,14 +237,10 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
         }
-        // Overnight rule: a task may only span past midnight when it has a fixed time
-        // (with duration). An untimed task is confined to a single day by construction
-        // (its whole duration is charged to today and blocked above when it overflows).
         if (!isFutureDay && fixedTime == null && dur > repo.getRemainingMinutesToday()) {
             _userMessage.emit("Cannot add \"$title\": tasks without a fixed time cannot run overnight — ${dur}m does not fit in today.")
             return@launch
         }
-        // Parent/child constraint: cumulative direct sub-task durations ≤ parent duration.
         repo.childDurationError(effectiveParent, dur)?.let {
             _userMessage.emit(it)
             return@launch
@@ -248,13 +254,21 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             recurrence = recurrence,
             weekdaysMask = weekdaysMask,
             info = info.trim(),
-            recurrenceEndDate = if (recurrence != Recurrence.NONE) recurrenceEndDate else null
+            recurrenceEndDate = if (recurrence != Recurrence.NONE) recurrenceEndDate else null,
+            category = category
         )
     }
+
+    fun moveTaskCategory(task: Task, category: TaskCategory) = viewModelScope.launch {
+        if (task.category == category) return@launch
+        repo.moveToCategory(task.id, category)
+        _userMessage.emit("Moved \"${task.title}\" to ${category.label}.")
+    }
+
     fun toggleComplete(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, !task.completed) }
 
     // ---- Countdown timer controls (play / pause / extend / complete) ----
-    fun timerToggle(task: com.forgebuild.taskflow.data.Task) = viewModelScope.launch {
+    fun timerToggle(task: Task) = viewModelScope.launch {
         when (com.forgebuild.taskflow.data.TimerEngine.stateOf(task)) {
             com.forgebuild.taskflow.data.TimerEngine.TimerState.RUNNING -> repo.timerPause(task.id)
             else -> {
@@ -263,16 +277,16 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-    fun timerExtend(task: com.forgebuild.taskflow.data.Task, minutes: Long) = viewModelScope.launch {
+
+    fun timerExtend(task: Task, minutes: Long) = viewModelScope.launch {
         repo.timerExtend(task.id, minutes)
         repo.get(task.id)?.timerEndsAt?.let { scheduler.scheduleTimerEnd(task.id, it) }
     }
+
     fun setPomodoroEnabled(enabled: Boolean) = viewModelScope.launch { settings.setPomodoroEnabled(enabled) }
     fun setPomodoroWorkMinutes(m: Int) = viewModelScope.launch { settings.setPomodoroWorkMinutes(m) }
     fun setPomodoroBreakMinutes(m: Int) = viewModelScope.launch { settings.setPomodoroBreakMinutes(m) }
-    fun timerComplete(task: com.forgebuild.taskflow.data.Task) = viewModelScope.launch {
-        repo.setCompleted(task.id, true)
-    }
+    fun timerComplete(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, true) }
     fun restoreMissed(task: Task) = viewModelScope.launch { repo.restoreMissed(task.id) }
     fun clearMissed() = viewModelScope.launch { repo.clearMissed() }
     fun restoreTask(task: Task) = viewModelScope.launch { repo.setCompleted(task.id, false) }
@@ -282,12 +296,10 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
     fun saveEdit(task: Task, onResult: (Boolean, String?) -> Unit) = viewModelScope.launch {
         val now = System.currentTimeMillis()
         val dur = task.durationMinutes.coerceAtLeast(1L)
-        // Overnight-aware: only the portion of the task landing on today counts against today.
         val todayStart = DayAccounting.dayStart(now)
         val isFutureDay = task.scheduledDate != null && task.scheduledDate > todayStart
         val todaySegment = if (isFutureDay) 0L else if (task.fixedTime == null) dur else DayAccounting.minutesOnDay(task, now, now)
         val isToday = !isFutureDay && (task.fixedTime == null || todaySegment > 0L)
-
         if (isToday) {
             val remainingWithOld = repo.getRemainingMinutesToday(excludeTaskId = task.id)
             if (todaySegment > remainingWithOld) {
@@ -295,8 +307,6 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
         }
-
-        // Overnight rule: without a fixed time a task must never span into the next day.
         if (!isFutureDay && task.fixedTime == null && dur > repo.getRemainingMinutesToday(excludeTaskId = task.id)) {
             onResult(false, "Tasks without a fixed time cannot run overnight — ${dur}m does not fit in today.")
             return@launch
@@ -309,7 +319,6 @@ class TaskViewModel(app: Application) : AndroidViewModel(app) {
             onResult(false, it)
             return@launch
         }
-
         repo.update(task)
         onResult(true, null)
     }
